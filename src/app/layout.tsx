@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Meine Website',
-  description: 'Eine einfache Next.js Website',
+  title: 'Digital Product Passport - DPP in unter 3 Minuten | ESPR-ready',
+  description: 'Erstellen Sie Ihren Digital Product Passport für Textil & Möbel. ESPR-konform, einfach und schnell. Jetzt kostenlos testen.',
 }
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body>{children}</body>
+      <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui, -apple-system, sans-serif' }}>{children}</body>
     </html>
   )
 }

@@ -1,0 +1,162 @@
+// Prisma Schema für T-Pass
+// MVP: SQLite (später einfach auf PostgreSQL umstellbar)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String       @id @default(cuid())
+  email           String       @unique
+  password        String       // bcrypt hash
+  name            String?
+  isPlatformAdmin Boolean      @default(false) // Meta-Admin Flag
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Many-to-Many: User kann Mitglied mehrerer Organisationen sein
+  memberships     Membership[]
+  
+  // Veröffentlichte DPP-Versionen (für Audit-Trail)
+  publishedVersions DppVersion[]
+
+  @@map("users")
+}
+
+model Organization {
+  id        String       @id @default(cuid())
+  name      String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Many-to-Many: Organization hat mehrere Mitglieder
+  memberships Membership[]
+  
+  // DPPs gehören zu einer Organization
+  dpps        Dpp[]
+
+  @@map("organizations")
+}
+
+// Join-Tabelle für User ↔ Organization (Many-to-Many)
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  createdAt      DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Ein User kann nur einmal Mitglied einer Organisation sein
+  @@unique([userId, organizationId])
+  @@map("memberships")
+}
+
+// Digital Product Passport (DPP)
+// WICHTIG: Dpp repräsentiert IMMER den Draft (editierbar)
+// Veröffentlichte Versionen werden in DppVersion gespeichert
+model Dpp {
+  id             String   @id @default(cuid())
+  // Basis- & Produktdaten (Pflicht)
+  name           String   // Produktname
+  description    String?  // Produktbeschreibung
+  category       String   @default("OTHER") // Produktkategorie: TEXTILE, FURNITURE, OTHER
+  sku            String?  // SKU / interne ID
+  gtin           String?  // GTIN / EAN (optional)
+  brand          String?  // Marke / Hersteller
+  countryOfOrigin String? // Herstellungsland
+  // Materialien & Zusammensetzung
+  materials      String?  // Materialliste (Freitext)
+  materialSource String?  // Datenquelle (z. B. Lieferant)
+  // Nutzung, Pflege & Lebensdauer
+  careInstructions String? // Pflegehinweise
+  isRepairable   String?  // Reparierbarkeit: "YES", "NO", null
+  sparePartsAvailable String? // Ersatzteile verfügbar: "YES", "NO", null
+  lifespan       String?  // Lebensdauerangabe
+  // Rechtliches & Konformität
+  conformityDeclaration String? // Konformitätserklärung (Text)
+  disposalInfo   String?  // Hinweise zu Entsorgung / Recycling
+  // Rücknahme & Second Life
+  takebackOffered String? // Rücknahme angeboten: "YES", "NO", null
+  takebackContact String? // Kontakt / URL
+  secondLifeInfo  String? // Second-Life-Informationen
+  // Status & Organisation
+  status         String   @default("DRAFT") // DRAFT = Entwurf, PUBLISHED = hat mind. 1 Version
+  organizationId String   // Zugehörigkeit zur Organization
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Medien sind getrennt modelliert (1:N Beziehung)
+  media          DppMedia[]
+  
+  // Versionen (veröffentlichte Versionen sind read-only)
+  versions       DppVersion[]
+
+  @@map("dpps")
+}
+
+// Medien & Dokumente für DPPs
+// WICHTIG: Getrenntes Modell für bessere Skalierbarkeit und Flexibilität
+model DppMedia {
+  id          String   @id @default(cuid())
+  dppId       String   // Zugehörigkeit zum DPP (nur Draft, nicht zu Versionen)
+  fileName    String   // Original-Dateiname
+  fileType    String   // MIME-Type (z.B. "image/jpeg", "application/pdf")
+  fileSize    Int      // Größe in Bytes
+  storageUrl  String   // URL/Path zur Datei im Storage
+  uploadedAt  DateTime @default(now())
+
+  dpp         Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+
+  @@map("dpp_media")
+}
+
+// Veröffentlichte Versionen eines DPPs
+// WICHTIG: Unveränderlich (immutable), dient ESPR-Konformität & Audit-Trail
+model DppVersion {
+  id             String   @id @default(cuid())
+  dppId          String   // Zugehörigkeit zum DPP (Draft)
+  version        Int      // Fortlaufende Versionsnummer (1, 2, 3, ...)
+  // Vollständige Kopie aller DPP-Daten (Snapshot)
+  name           String
+  description    String?
+  category       String
+  sku            String?
+  gtin           String?
+  brand          String?
+  countryOfOrigin String?
+  materials      String?
+  materialSource String?
+  careInstructions String?
+  isRepairable   String?
+  sparePartsAvailable String?
+  lifespan       String?
+  conformityDeclaration String?
+  disposalInfo   String?
+  takebackOffered String?
+  takebackContact String?
+  secondLifeInfo  String?
+  // Metadaten für ESPR/Audit
+  createdAt      DateTime @default(now()) // Veröffentlichungsdatum
+  createdByUserId String  // Bearbeiter (User ID)
+  
+  // Public Access & QR-Code
+  publicUrl      String?  // Öffentliche URL für diese Version (z.B. /public/dpp/[id]/v/[version])
+  qrCodeImageUrl String?  // URL zum QR-Code-Bild (Storage-Pfad)
+  
+  dpp            Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  createdBy      User     @relation(fields: [createdByUserId], references: [id])
+
+  // Eindeutigkeit: Ein DPP kann nur eine Version mit einer bestimmten Versionsnummer haben
+  @@unique([dppId, version])
+  @@map("dpp_versions")
+}
+

@@ -1,0 +1,7 @@
+/* Dashboard Grid: 3 Spalten auf Desktop, 1 Spalte auf Mobile */
+@media (min-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
