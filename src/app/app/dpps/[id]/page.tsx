@@ -40,6 +40,15 @@ export default async function DppEditorPage({
     redirect("/app/dpps")
   }
 
-  return <DppEditor dpp={dpp} isNew={false} />
-}
+  // Normalize category to expected union type for Dpp
+  const categoryValues = ["TEXTILE", "FURNITURE", "OTHER"] as const
+  type CategoryType = typeof categoryValues[number]
+  const normalizedDpp = {
+    ...dpp,
+    category: categoryValues.includes(dpp.category as CategoryType)
+      ? (dpp.category as CategoryType)
+      : "OTHER"
+  }
 
+  return <DppEditor dpp={normalizedDpp} isNew={false} />
+}
