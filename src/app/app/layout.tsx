@@ -36,7 +36,8 @@ export default async function AppLayout({
   }
 
   // Lade Organizations des Users (mit Fehlerbehandlung)
-  let organizations = []
+  type OrganizationsType = Awaited<ReturnType<typeof getUserOrganizations>>
+  let organizations: OrganizationsType = []
   try {
     organizations = await getUserOrganizations()
   } catch (error) {
