@@ -1,6 +1,6 @@
-"use client"
-
 export const dynamic = "force-dynamic"
+
+"use client"
 
 import { headers } from "next/headers"
 import { useState, useEffect } from "react"
