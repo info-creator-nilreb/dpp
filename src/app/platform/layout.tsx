@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { requirePlatformAdmin } from "@/lib/access"
 import { signOut } from "@/auth"
 import Link from "next/link"
