@@ -1,4 +1,3 @@
-import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 
 /**
@@ -12,6 +11,8 @@ export default async function AuthGate({
 }: {
   children: React.ReactNode
 }) {
+  // Dynamischer Import, um Prisma nicht zur Build-Zeit zu laden
+  const { auth } = await import("@/auth")
   const session = await auth()
 
   if (!session) {
