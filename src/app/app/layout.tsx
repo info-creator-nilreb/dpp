@@ -14,6 +14,11 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Build-safe: Skip server-only logic during build phase
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return <>{children}</>
+  }
+
   const session = await auth()
 
   if (!session) {
