@@ -4,19 +4,11 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { getUserOrganizations } from "@/lib/access"
 import DppEditor from "@/components/DppEditor"
+import AuthGate from "../../_auth/AuthGate"
 
-/**
- * Neuer Produktpass
- * 
- * Verwendet denselben One-Pager Editor wie die Bearbeitung
- */
-export default async function NewDppPage() {
+async function NewDppContent() {
   const session = await auth()
-
-  if (!session) {
-    redirect("/login")
-  }
-
+  
   // Lade Organizations des Users
   const organizations = await getUserOrganizations()
 
@@ -57,4 +49,12 @@ export default async function NewDppPage() {
   }
 
   return <DppEditor dpp={emptyDpp} isNew={true} />
+}
+
+export default async function NewDppPage() {
+  return (
+    <AuthGate>
+      <NewDppContent />
+    </AuthGate>
+  )
 }

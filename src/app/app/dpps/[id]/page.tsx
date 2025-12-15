@@ -1,29 +1,16 @@
 export const dynamic = "force-dynamic"
 
-import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { requireDppAccess } from "@/lib/dpp-access"
 import { prisma } from "@/lib/prisma"
 import DppEditor from "@/components/DppEditor"
+import AuthGate from "../../_auth/AuthGate"
 
-/**
- * DPP One-Pager Editor
- * 
- * Zeigt Editor für einen DPP mit:
- * - Produktinformationen
- * - Medien & Dokumente (Upload, Liste, Delete)
- */
-export default async function DppEditorPage({
+async function DppEditorContent({
   params,
 }: {
   params: { id: string }
 }) {
-  const session = await auth()
-
-  if (!session) {
-    redirect("/login")
-  }
-
   // Prüfe Zugriff auf DPP
   await requireDppAccess(params.id)
 
@@ -53,4 +40,16 @@ export default async function DppEditorPage({
   }
 
   return <DppEditor dpp={normalizedDpp} isNew={false} />
+}
+
+export default async function DppEditorPage({
+  params,
+}: {
+  params: { id: string }
+}) {
+  return (
+    <AuthGate>
+      <DppEditorContent params={params} />
+    </AuthGate>
+  )
 }

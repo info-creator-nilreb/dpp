@@ -1,29 +1,24 @@
 export const dynamic = "force-dynamic"
 
 import { auth } from "@/auth"
-import { redirect } from "next/navigation"
 import { getUserOrganizations } from "@/lib/access"
 import DashboardGrid from "@/components/DashboardGrid"
 import DashboardCard from "@/components/DashboardCard"
+import AuthGate from "../_auth/AuthGate"
 
-export default async function DashboardPage() {
+async function DashboardContent() {
+  const session = await auth()
+  
+  // Lade Organizations des Users
+  let organizations
   try {
-    const session = await auth()
+    organizations = await getUserOrganizations()
+  } catch (error) {
+    console.error("Error loading organizations:", error)
+    organizations = []
+  }
 
-    if (!session) {
-      redirect("/login")
-    }
-
-    // Lade Organizations des Users
-    let organizations
-    try {
-      organizations = await getUserOrganizations()
-    } catch (error) {
-      console.error("Error loading organizations:", error)
-      organizations = []
-    }
-
-    return (
+  return (
       <div>
         <h1 style={{
           fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
@@ -112,16 +107,13 @@ export default async function DashboardPage() {
           />
         </DashboardGrid>
       </div>
-    )
-  } catch (error) {
-    console.error("Dashboard error:", error)
-    // Fallback: Zeige Fehlerseite
-    return (
-      <div>
-        <h1>Fehler</h1>
-        <p>Ein Fehler ist aufgetreten beim Laden des Dashboards.</p>
-        <pre>{String(error)}</pre>
-      </div>
-    )
-  }
+  )
+}
+
+export default async function DashboardPage() {
+  return (
+    <AuthGate>
+      <DashboardContent />
+    </AuthGate>
+  )
 }

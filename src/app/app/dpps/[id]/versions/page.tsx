@@ -1,29 +1,18 @@
 export const dynamic = "force-dynamic"
 
-import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { requireDppAccess } from "@/lib/dpp-access"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import VersionCard from "@/components/VersionCard"
 import VersionLink from "@/components/VersionLink"
+import AuthGate from "../../../_auth/AuthGate"
 
-/**
- * Versionen-Liste
- * 
- * Zeigt alle veröffentlichten Versionen eines DPPs
- */
-export default async function VersionsPage({
+async function VersionsContent({
   params,
 }: {
   params: { id: string }
 }) {
-  const session = await auth()
-
-  if (!session) {
-    redirect("/login")
-  }
-
   // Prüfe Zugriff auf DPP
   await requireDppAccess(params.id)
 
@@ -168,3 +157,14 @@ export default async function VersionsPage({
   )
 }
 
+export default async function VersionsPage({
+  params,
+}: {
+  params: { id: string }
+}) {
+  return (
+    <AuthGate>
+      <VersionsContent params={params} />
+    </AuthGate>
+  )
+}

@@ -1,24 +1,15 @@
 export const dynamic = "force-dynamic"
 
 import { auth } from "@/auth"
-import { redirect } from "next/navigation"
 import { getUserOrganizations } from "@/lib/access"
 import { prisma } from "@/lib/prisma"
 import DppCard from "@/components/DppCard"
 import Link from "next/link"
+import AuthGate from "../_auth/AuthGate"
 
-/**
- * Produktpässe verwalten
- * 
- * Übersichtsliste aller DPPs
- */
-export default async function DppsPage() {
+async function DppsContent() {
   const session = await auth()
-
-  if (!session) {
-    redirect("/login")
-  }
-
+  
   // Lade Organizations des Users
   const organizations = await getUserOrganizations()
 
@@ -166,6 +157,14 @@ export default async function DppsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default async function DppsPage() {
+  return (
+    <AuthGate>
+      <DppsContent />
+    </AuthGate>
   )
 }
 
