@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { signOut } from "@/auth"
 
 interface UserData {
   email?: string
@@ -21,9 +21,11 @@ interface OrganizationData {
  * Fetches user and organization data via API calls.
  */
 export default function AppNavigation() {
+  const router = useRouter()
   const [user, setUser] = useState<UserData | null>(null)
   const [organization, setOrganization] = useState<OrganizationData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -53,6 +55,25 @@ export default function AppNavigation() {
 
     loadData()
   }, [])
+
+  async function handleLogout() {
+    setLoggingOut(true)
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      })
+
+      if (response.ok) {
+        router.push("/login")
+      } else {
+        console.error("Logout failed")
+        setLoggingOut(false)
+      }
+    } catch (error) {
+      console.error("Error during logout:", error)
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <nav style={{
@@ -130,23 +151,22 @@ export default function AppNavigation() {
               {user.email}
             </span>
           )}
-          <form action={async () => {
-            "use server"
-            const { signOut } = await import("@/auth")
-            await signOut({ redirectTo: "/login" })
-          }}>
-            <button type="submit" style={{
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            style={{
               padding: "clamp(0.5rem, 1.5vw, 0.75rem) clamp(0.75rem, 2vw, 1rem)",
               backgroundColor: "transparent",
               border: "1px solid #CDCDCD",
               borderRadius: "6px",
               color: "#0A0A0A",
-              cursor: "pointer",
-              fontSize: "clamp(0.8rem, 2vw, 0.9rem)"
-            }}>
-              Abmelden
-            </button>
-          </form>
+              cursor: loggingOut ? "not-allowed" : "pointer",
+              fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
+              opacity: loggingOut ? 0.6 : 1
+            }}
+          >
+            {loggingOut ? "Abmelden..." : "Abmelden"}
+          </button>
         </div>
       </div>
     </nav>
