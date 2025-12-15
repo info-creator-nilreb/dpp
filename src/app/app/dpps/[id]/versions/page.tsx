@@ -127,7 +127,7 @@ async function VersionsContent({
               version={version.version}
               createdAt={version.createdAt}
               createdBy={version.createdBy.name || version.createdBy.email}
-              hasQrCode={!!version.qrCodeImageUrl}
+              hasQrCode={version.hasQrCode}
               dppId={params.id}
             />
           ))}
