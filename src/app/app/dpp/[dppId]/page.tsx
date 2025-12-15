@@ -1,8 +1,6 @@
 export const dynamic = "force-dynamic"
 
 import { redirect } from "next/navigation"
-import { requireDppAccess } from "@/lib/dpp-access"
-import { prisma } from "@/lib/prisma"
 import DppEditor from "@/components/DppEditor"
 import AuthGate from "../../_auth/AuthGate"
 
@@ -11,19 +9,31 @@ async function DppEditorContent({
 }: {
   params: { dppId: string }
 }) {
-  // Prüfe Zugriff auf DPP
-  await requireDppAccess(params.dppId)
-
-  // Lade DPP mit Medien
-  const dpp = await prisma.dpp.findUnique({
-    where: { id: params.dppId },
-    include: {
-      organization: true,
-      media: {
-        orderBy: { uploadedAt: "desc" }
+  // Prüfe Zugriff und lade DPP via API
+  let dpp: any = null
+  try {
+    // Prüfe Zugriff
+    const accessResponse = await fetch(`/api/app/dpp/${params.dppId}/access`, {
+      cache: "no-store",
+    })
+    if (!accessResponse.ok) {
+      const accessData = await accessResponse.json()
+      if (!accessData.hasAccess) {
+        redirect("/app/dashboard")
       }
     }
-  })
+
+    // Lade DPP mit Medien
+    const dppResponse = await fetch(`/api/app/dpp/${params.dppId}`, {
+      cache: "no-store",
+    })
+    if (dppResponse.ok) {
+      const data = await dppResponse.json()
+      dpp = data.dpp
+    }
+  } catch (error) {
+    console.error("Error loading DPP:", error)
+  }
 
   if (!dpp) {
     redirect("/app/dashboard")
@@ -36,7 +46,13 @@ async function DppEditorContent({
     ...dpp,
     category: categoryValues.includes(dpp.category as CategoryType)
       ? (dpp.category as CategoryType)
-      : "OTHER"
+      : "OTHER",
+    createdAt: new Date(dpp.createdAt),
+    updatedAt: new Date(dpp.updatedAt),
+    media: dpp.media.map((m: any) => ({
+      ...m,
+      uploadedAt: new Date(m.uploadedAt)
+    }))
   }
 
   return <DppEditor dpp={normalizedDpp} isNew={false} />

@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { requireDppAccess } from "@/lib/dpp-access"
 import fs from "fs"
 import path from "path"
 
@@ -28,7 +27,27 @@ export async function GET(
     }
 
     // Prüfe Zugriff auf DPP
-    await requireDppAccess(params.dppId)
+    const accessCheck = await prisma.dpp.findUnique({
+      where: { id: params.dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: {
+                userId: session.user.id
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!accessCheck || accessCheck.organization.memberships.length === 0) {
+      return NextResponse.json(
+        { error: "Kein Zugriff auf diesen DPP" },
+        { status: 403 }
+      )
+    }
 
     const versionNumber = parseInt(params.versionNumber, 10)
     if (isNaN(versionNumber)) {

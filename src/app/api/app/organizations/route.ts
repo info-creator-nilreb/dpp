@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
-import { getUserOrganizations } from "@/lib/access"
+import { prisma } from "@/lib/prisma"
 
 /**
  * GET /api/app/organizations
@@ -21,12 +21,21 @@ export async function GET() {
       )
     }
 
-    const organizations = await getUserOrganizations()
+    const memberships = await prisma.membership.findMany({
+      where: {
+        userId: session.user.id
+      },
+      include: {
+        organization: true
+      }
+    })
 
-    return NextResponse.json(
-      { organizations: organizations.map(org => ({ id: org.id, name: org.name })) },
-      { status: 200 }
-    )
+    const organizations = memberships.map(m => ({
+      id: m.organization.id,
+      name: m.organization.name
+    }))
+
+    return NextResponse.json({ organizations }, { status: 200 })
   } catch (error: any) {
     console.error("Error fetching organizations:", error)
     return NextResponse.json(

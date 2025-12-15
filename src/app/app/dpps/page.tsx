@@ -1,75 +1,38 @@
 export const dynamic = "force-dynamic"
 
-import { auth } from "@/auth"
-import { getUserOrganizations } from "@/lib/access"
-import { prisma } from "@/lib/prisma"
 import DppCard from "@/components/DppCard"
 import Link from "next/link"
 import AuthGate from "../_auth/AuthGate"
 
 async function DppsContent() {
-  const session = await auth()
-  
-  // Lade Organizations des Users
-  const organizations = await getUserOrganizations()
+  // Lade DPPs via API
+  let dpps: Array<{
+    id: string
+    name: string
+    description: string | null
+    organizationName: string
+    mediaCount: number
+    status: string
+    updatedAt: string
+    latestVersion: {
+      version: number
+      createdAt: string
+      createdBy: string
+      hasQrCode: boolean
+    } | null
+  }> = []
 
-  // Lade DPPs der Organizations des Users mit Versionen-Info
-  const memberships = await prisma.membership.findMany({
-    where: {
-      userId: session!.user.id!
-    },
-    include: {
-      organization: {
-        include: {
-          dpps: {
-            include: {
-              media: {
-                select: {
-                  id: true
-                }
-              },
-              versions: {
-                orderBy: {
-                  version: "desc"
-                },
-                take: 1, // Nur neueste Version für Übersicht
-                include: {
-                  createdBy: {
-                    select: {
-                      name: true,
-                      email: true
-                    }
-                  }
-                }
-              }
-            },
-            orderBy: {
-              updatedAt: "desc"
-            }
-          }
-        }
-      }
+  try {
+    const response = await fetch("/api/app/dpps", {
+      cache: "no-store",
+    })
+    if (response.ok) {
+      const data = await response.json()
+      dpps = data.dpps || []
     }
-  })
-
-  // Sammle alle DPPs mit Versions-Info
-  const dpps = memberships.flatMap(m => 
-    m.organization.dpps.map(dpp => ({
-      id: dpp.id,
-      name: dpp.name,
-      description: dpp.description,
-      organizationName: m.organization.name,
-      mediaCount: dpp.media.length,
-      status: dpp.status || "DRAFT",
-      updatedAt: dpp.updatedAt,
-      latestVersion: dpp.versions.length > 0 ? {
-        version: dpp.versions[0].version,
-        createdAt: dpp.versions[0].createdAt,
-        createdBy: dpp.versions[0].createdBy.name || dpp.versions[0].createdBy.email,
-        hasQrCode: !!dpp.versions[0].qrCodeImageUrl
-      } : null
-    }))
-  )
+  } catch (error) {
+    console.error("Error loading DPPs:", error)
+  }
 
   return (
     <div>
@@ -118,8 +81,11 @@ async function DppsContent() {
               organizationName={dpp.organizationName}
               mediaCount={dpp.mediaCount}
               status={dpp.status}
-              updatedAt={dpp.updatedAt}
-              latestVersion={dpp.latestVersion}
+              updatedAt={new Date(dpp.updatedAt)}
+              latestVersion={dpp.latestVersion ? {
+                ...dpp.latestVersion,
+                createdAt: new Date(dpp.latestVersion.createdAt)
+              } : null}
             />
           ))}
         </div>

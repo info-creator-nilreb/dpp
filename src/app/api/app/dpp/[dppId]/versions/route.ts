@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { requireDppAccess } from "@/lib/dpp-access"
 
 /**
  * GET /api/app/dpp/[dppId]/versions
@@ -26,7 +25,27 @@ export async function GET(
     }
 
     // Prüfe Zugriff auf DPP
-    await requireDppAccess(params.dppId)
+    const accessCheck = await prisma.dpp.findUnique({
+      where: { id: params.dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: {
+                userId: session.user.id
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!accessCheck || accessCheck.organization.memberships.length === 0) {
+      return NextResponse.json(
+        { error: "Kein Zugriff auf diesen DPP" },
+        { status: 403 }
+      )
+    }
 
     // Hole alle Versionen (absteigend nach Versionsnummer)
     const versions = await prisma.dppVersion.findMany({
@@ -45,16 +64,32 @@ export async function GET(
       }
     })
 
+    // Also get DPP info for context
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: params.dppId },
+      select: {
+        id: true,
+        name: true,
+        status: true
+      }
+    })
+
     return NextResponse.json({
+      dpp: dpp ? {
+        id: dpp.id,
+        name: dpp.name,
+        status: dpp.status
+      } : null,
       versions: versions.map(v => ({
         id: v.id,
         version: v.version,
         name: v.name,
-        createdAt: v.createdAt,
+        createdAt: v.createdAt.toISOString(),
         createdBy: {
           name: v.createdBy.name || v.createdBy.email,
           email: v.createdBy.email
-        }
+        },
+        hasQrCode: !!v.qrCodeImageUrl
       }))
     }, { status: 200 })
   } catch (error: any) {

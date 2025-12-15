@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { hasOrganizationAccess } from "@/lib/dpp-access"
 
 /**
  * POST /api/app/dpp
@@ -77,8 +76,15 @@ export async function POST(request: Request) {
     }
 
     // Prüfe ob User Mitglied der Organization ist
-    const hasAccess = await hasOrganizationAccess(organizationId)
-    if (!hasAccess) {
+    const membership = await prisma.membership.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: session.user.id,
+          organizationId
+        }
+      }
+    })
+    if (!membership) {
       return NextResponse.json(
         { error: "Kein Zugriff auf diese Organisation" },
         { status: 403 }

@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { requireDppAccess } from "@/lib/dpp-access"
 import { generateQrCode } from "@/lib/qrcode"
 
 /**
@@ -31,7 +30,27 @@ export async function POST(
     }
 
     // Prüfe Zugriff auf DPP
-    await requireDppAccess(params.dppId)
+    const accessCheck = await prisma.dpp.findUnique({
+      where: { id: params.dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: {
+                userId: session.user.id
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!accessCheck || accessCheck.organization.memberships.length === 0) {
+      return NextResponse.json(
+        { error: "Kein Zugriff auf diesen DPP" },
+        { status: 403 }
+      )
+    }
 
     // Hole DPP mit allen Daten
     const dpp = await prisma.dpp.findUnique({

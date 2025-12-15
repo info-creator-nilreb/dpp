@@ -1,16 +1,23 @@
 export const dynamic = "force-dynamic"
 
-import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-import { getUserOrganizations } from "@/lib/access"
 import DppEditor from "@/components/DppEditor"
 import AuthGate from "../../_auth/AuthGate"
 
 async function NewDppContent() {
-  const session = await auth()
-  
-  // Lade Organizations des Users
-  const organizations = await getUserOrganizations()
+  // Lade Organizations des Users via API
+  let organizations: Array<{ id: string; name: string }> = []
+  try {
+    const response = await fetch("/api/app/organizations", {
+      cache: "no-store",
+    })
+    if (response.ok) {
+      const data = await response.json()
+      organizations = data.organizations || []
+    }
+  } catch (error) {
+    console.error("Error loading organizations:", error)
+  }
 
   if (organizations.length === 0) {
     redirect("/app/dashboard")

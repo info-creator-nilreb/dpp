@@ -1,8 +1,6 @@
 export const dynamic = "force-dynamic"
 
 import { redirect } from "next/navigation"
-import { requireDppAccess } from "@/lib/dpp-access"
-import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import DppViewer from "@/components/DppViewer"
 import VersionQrCodeSection from "@/components/VersionQrCodeSection"
@@ -13,38 +11,36 @@ async function VersionViewContent({
 }: {
   params: { id: string; versionNumber: string }
 }) {
-  // Prüfe Zugriff auf DPP
-  await requireDppAccess(params.id)
-
   const versionNumber = parseInt(params.versionNumber, 10)
   if (isNaN(versionNumber)) {
     redirect(`/app/dpps/${params.id}/versions`)
   }
 
-  // Lade Version
-  const version = await prisma.dppVersion.findUnique({
-    where: {
-      dppId_version: {
-        dppId: params.id,
-        version: versionNumber
-      }
-    },
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true
-        }
-      },
-      dpp: {
-        select: {
-          id: true,
-          name: true
-        }
+  // Prüfe Zugriff und lade Version via API
+  let version: any = null
+  try {
+    // Prüfe Zugriff
+    const accessResponse = await fetch(`/api/app/dpp/${params.id}/access`, {
+      cache: "no-store",
+    })
+    if (!accessResponse.ok) {
+      const accessData = await accessResponse.json()
+      if (!accessData.hasAccess) {
+        redirect(`/app/dpps/${params.id}/versions`)
       }
     }
-  })
+
+    // Lade Version
+    const versionResponse = await fetch(`/api/app/dpp/${params.id}/versions/${versionNumber}`, {
+      cache: "no-store",
+    })
+    if (versionResponse.ok) {
+      const data = await versionResponse.json()
+      version = data.version
+    }
+  } catch (error) {
+    console.error("Error loading version:", error)
+  }
 
   if (!version) {
     redirect(`/app/dpps/${params.id}/versions`)
@@ -128,7 +124,7 @@ async function VersionViewContent({
           fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
           color: "#7A7A7A"
         }}>
-          Diese Version wurde am {formatDate(version.createdAt)} von {version.createdBy.name || version.createdBy.email} veröffentlicht und kann nicht mehr geändert werden.
+          Diese Version wurde am {formatDate(new Date(version.createdAt))} von {version.createdBy.name || version.createdBy.email} veröffentlicht und kann nicht mehr geändert werden.
         </div>
       </div>
 
@@ -138,14 +134,14 @@ async function VersionViewContent({
         color: "#0A0A0A",
         marginBottom: "0.5rem"
       }}>
-        {version.dpp.name} • Version {version.version}
+        {version.dppName} • Version {version.version}
       </h1>
       <p style={{
         color: "#7A7A7A",
         fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
         marginBottom: "2rem"
       }}>
-        Veröffentlicht am {formatDate(version.createdAt)} von {version.createdBy.name || version.createdBy.email}
+        Veröffentlicht am {formatDate(new Date(version.createdAt))} von {version.createdBy.name || version.createdBy.email}
       </p>
 
       {/* Public URL & QR-Code */}

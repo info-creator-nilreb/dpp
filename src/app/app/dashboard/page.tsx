@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic"
 
 import { auth } from "@/auth"
-import { getUserOrganizations } from "@/lib/access"
 import DashboardGrid from "@/components/DashboardGrid"
 import DashboardCard from "@/components/DashboardCard"
 import AuthGate from "../_auth/AuthGate"
@@ -9,13 +8,18 @@ import AuthGate from "../_auth/AuthGate"
 async function DashboardContent() {
   const session = await auth()
   
-  // Lade Organizations des Users
-  let organizations
+  // Lade Organizations des Users via API
+  let organizations: Array<{ id: string; name: string }> = []
   try {
-    organizations = await getUserOrganizations()
+    const response = await fetch("/api/app/organizations", {
+      cache: "no-store",
+    })
+    if (response.ok) {
+      const data = await response.json()
+      organizations = data.organizations || []
+    }
   } catch (error) {
     console.error("Error loading organizations:", error)
-    organizations = []
   }
 
   return (

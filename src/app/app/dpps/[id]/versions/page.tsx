@@ -1,8 +1,6 @@
 export const dynamic = "force-dynamic"
 
 import { redirect } from "next/navigation"
-import { requireDppAccess } from "@/lib/dpp-access"
-import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import VersionCard from "@/components/VersionCard"
 import VersionLink from "@/components/VersionLink"
@@ -13,32 +11,46 @@ async function VersionsContent({
 }: {
   params: { id: string }
 }) {
-  // Prüfe Zugriff auf DPP
-  await requireDppAccess(params.id)
+  // Prüfe Zugriff und lade DPP mit Versionen via API
+  let dpp: { id: string; name: string; status: string; versions: Array<{
+    id: string
+    version: number
+    createdAt: string
+    createdBy: { name: string | null; email: string }
+    hasQrCode: boolean
+  }> } | null = null
 
-  // Lade DPP mit Versionen
-  const dpp = await prisma.dpp.findUnique({
-    where: { id: params.id },
-    select: {
-      id: true,
-      name: true,
-      status: true,
-      versions: {
-        include: {
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        },
-        orderBy: {
-          version: "desc"
+  try {
+    // Prüfe Zugriff
+    const accessResponse = await fetch(`/api/app/dpp/${params.id}/access`, {
+      cache: "no-store",
+    })
+    if (!accessResponse.ok) {
+      const accessData = await accessResponse.json()
+      if (!accessData.hasAccess) {
+        redirect("/app/dpps")
+      }
+    }
+
+    // Lade Versionen (API now includes DPP info)
+    const versionsResponse = await fetch(`/api/app/dpp/${params.id}/versions`, {
+      cache: "no-store",
+    })
+    if (versionsResponse.ok) {
+      const data = await versionsResponse.json()
+      const versions = data.versions || []
+      if (data.dpp) {
+        dpp = {
+          id: params.id,
+          name: data.dpp.name,
+          status: data.dpp.status || "DRAFT",
+          versions: versions
         }
       }
     }
-  })
+  } catch (error) {
+    console.error("Error loading versions:", error)
+  }
 
   if (!dpp) {
     redirect("/app/dpps")
