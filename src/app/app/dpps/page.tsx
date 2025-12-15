@@ -16,7 +16,7 @@ async function DppsContent() {
   // Lade DPPs der Organizations des Users mit Versionen-Info
   const memberships = await prisma.membership.findMany({
     where: {
-      userId: session.user.id!
+      userId: session!.user.id!
     },
     include: {
       organization: {
