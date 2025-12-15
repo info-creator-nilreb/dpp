@@ -5,7 +5,7 @@ import Link from "next/link"
 interface VersionCardProps {
   href: string
   version: number
-  createdAt: Date
+  createdAt: string
   createdBy: string
   hasQrCode: boolean
   dppId: string
@@ -15,8 +15,8 @@ interface VersionCardProps {
  * Version-Card mit QR-Code-Icon
  */
 export default function VersionCard({ href, version, createdAt, createdBy, hasQrCode, dppId }: VersionCardProps) {
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("de-DE", {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("de-DE", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

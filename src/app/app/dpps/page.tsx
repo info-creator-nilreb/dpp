@@ -82,10 +82,7 @@ async function DppsContent() {
               mediaCount={dpp.mediaCount}
               status={dpp.status}
               updatedAt={new Date(dpp.updatedAt)}
-              latestVersion={dpp.latestVersion ? {
-                ...dpp.latestVersion,
-                createdAt: new Date(dpp.latestVersion.createdAt)
-              } : null}
+              latestVersion={dpp.latestVersion}
             />
           ))}
         </div>

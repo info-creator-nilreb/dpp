@@ -15,7 +15,7 @@ interface DppCardProps {
   updatedAt?: Date
   latestVersion?: {
     version: number
-    createdAt: Date
+    createdAt: string
     createdBy: string
     hasQrCode?: boolean
   } | null
@@ -198,7 +198,13 @@ export default function DppCard({ id, name, description, organizationName, media
           color: "#7A7A7A",
           marginBottom: "0.75rem"
         }}>
-          Letzte Version: {formatDate(latestVersion.createdAt)} von {latestVersion.createdBy}
+          Letzte Version: {new Date(latestVersion.createdAt).toLocaleDateString("de-DE", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+          })} von {latestVersion.createdBy}
         </div>
       )}
 
