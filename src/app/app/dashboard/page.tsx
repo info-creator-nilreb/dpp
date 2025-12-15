@@ -33,7 +33,7 @@ async function DashboardContent() {
           fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
           marginBottom: "2rem"
         }}>
-          Willkommen zurück, {session.user?.name || session.user?.email}!
+          Willkommen zurück, {session!.user?.name || session!.user?.email}!
         </p>
 
         {/* Dashboard-Kacheln: 3 Spalten auf Desktop, 1 Spalte auf Mobile */}
