@@ -28,13 +28,13 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError("Ungültige E-Mail oder Passwort")
+        setLoading(false)
       } else {
-        router.push("/app/dashboard")
-        router.refresh()
+        // Session ist jetzt gesetzt - verwende replace für saubere Navigation
+        router.replace("/app/dashboard")
       }
     } catch (err) {
       setError("Ein Fehler ist aufgetreten")
-    } finally {
       setLoading(false)
     }
   }

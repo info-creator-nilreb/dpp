@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation"
-import { headers } from "next/headers"
 
 /**
  * AuthGate - Server Component
  * 
  * Handles authentication and onboarding checks for protected pages.
  * MUST be used in pages, NOT in layouts.
+ * 
+ * WICHTIG: AuthGate wird ausschließlich in /app/** Seiten verwendet.
+ * Die Middleware leitet bereits nicht-authentifizierte Requests zu /login um.
  */
 export default async function AuthGate({
   children,
@@ -17,29 +19,7 @@ export default async function AuthGate({
   const session = await auth()
 
   if (!session) {
-    // Prüfe aktuellen Pfad aus headers, um Redirect-Loops zu vermeiden
-    const headersList = await headers()
-    // Next.js setzt verschiedene Header für den Pfad - probiere mehrere Optionen
-    const pathname = headersList.get("x-pathname") || 
-                     headersList.get("x-invoke-path") || 
-                     headersList.get("referer")?.match(/https?:\/\/[^\/]+(\/[^?#]*)/)?.[1] || 
-                     ""
-    
-    // Wenn wir bereits auf einer öffentlichen Route sind, keine Weiterleitung
-    // Dies verhindert Redirect-Loops, falls AuthGate versehentlich auf öffentlichen Routen verwendet wird
-    const publicRoutes = ["/login", "/signup", "/onboarding"]
-    const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.endsWith(route))
-    
-    // Nur redirecten, wenn wir NICHT bereits auf einer öffentlichen Route sind
-    // Wenn wir bereits auf einer öffentlichen Route sind, einfach children rendern (verhindert Loop)
-    if (!isPublicRoute) {
-      redirect("/login")
-    }
-    
-    // Wenn wir bereits auf einer öffentlichen Route sind, einfach children rendern
-    // (Dies sollte eigentlich nie passieren, da AuthGate nur in /app/** verwendet wird,
-    // aber als Sicherheit gegen Redirect-Loops)
-    return <>{children}</>
+    redirect("/login")
   }
 
   // Prüfe ob Onboarding benötigt wird via API route (Prisma not in render path)
