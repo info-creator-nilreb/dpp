@@ -1,12 +1,11 @@
 // Prisma Schema für T-Pass
-// MVP: SQLite (später einfach auf PostgreSQL umstellbar)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

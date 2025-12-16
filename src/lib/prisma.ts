@@ -19,9 +19,6 @@ function getPrisma(): PrismaClient {
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   })
 
-  // SQLite: Foreign Keys werden von Prisma automatisch aktiviert
-  // Keine manuelle Aktivierung nötig, da Prisma das beim ersten Query macht
-
   if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = prisma
   }
