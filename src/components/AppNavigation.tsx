@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 import Link from "next/link"
 
 interface UserData {
@@ -31,8 +32,8 @@ export default function AppNavigation() {
     async function loadData() {
       try {
         const [userResponse, orgResponse] = await Promise.all([
-          fetch("/api/app/account"),
-          fetch("/api/app/organizations")
+          fetch("/api/app/account", { cache: "no-store" }),
+          fetch("/api/app/organizations", { cache: "no-store" })
         ])
 
         if (userResponse.ok) {
@@ -59,16 +60,9 @@ export default function AppNavigation() {
   async function handleLogout() {
     setLoggingOut(true)
     try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      })
-
-      if (response.ok) {
-        router.push("/login")
-      } else {
-        console.error("Logout failed")
-        setLoggingOut(false)
-      }
+      await signOut({ redirect: false })
+      router.replace("/login")
+      router.refresh()
     } catch (error) {
       console.error("Error during logout:", error)
       setLoggingOut(false)

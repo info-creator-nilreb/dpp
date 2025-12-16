@@ -47,8 +47,9 @@ export default function OnboardingPage() {
         setError(data.error || "Ein Fehler ist aufgetreten")
         setLoading(false)
       } else {
-        // Erfolgreich gespeichert → Weiterleitung zum Dashboard
-        window.location.href = "/app/dashboard"
+        // Erfolgreich gespeichert → Weiterleitung zum Dashboard mit Refresh
+        router.replace("/app/dashboard")
+        router.refresh() // Revalidiere Server Components, damit Organisation überall konsistent ist
       }
     } catch (err) {
       setError("Ein Fehler ist aufgetreten")

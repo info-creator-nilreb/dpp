@@ -26,8 +26,8 @@ export function AccountPageContent() {
       setLoading(true)
       try {
         const [orgResponse, userResponse] = await Promise.all([
-          fetch("/api/app/organizations"),
-          fetch("/api/app/account")
+          fetch("/api/app/organizations", { cache: "no-store" }),
+          fetch("/api/app/account", { cache: "no-store" })
         ])
 
         if (orgResponse.ok) {
@@ -96,8 +96,9 @@ export function AccountPageContent() {
         throw new Error(errorData.error || "Fehler beim Aktualisieren des Users")
       }
 
-      // Erfolg: Bearbeitungsmodus verlassen
+      // Erfolg: Bearbeitungsmodus verlassen und State aktualisieren
       setIsEditing(false)
+      router.refresh() // Revalidiere Server Components, damit Organisation überall konsistent ist
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten.")
       console.error("Error saving data:", err)

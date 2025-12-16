@@ -44,7 +44,7 @@ async function DashboardContent() {
         <DashboardGrid>
           {/* 1. Produktpass erstellen */}
           <DashboardCard
-            href={organizations.length > 0 ? "/app/dpps/new" : "#"}
+            href="/app/dpps/new"
             icon={
               <svg
                 xmlns="http://www.w3.org/2000/svg"
