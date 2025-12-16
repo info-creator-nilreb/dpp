@@ -77,6 +77,8 @@ export async function GET() {
       }))
     )
 
+    console.log("DPP LIST COUNT", dpps.length)
+
     return NextResponse.json({ dpps }, { status: 200 })
   } catch (error) {
     console.error("Error fetching DPPs:", error)

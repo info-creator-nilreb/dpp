@@ -186,41 +186,54 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
     try {
       if (isNew) {
         // Neuer DPP: Erstellen
+        const payload = {
+          name,
+          description,
+          category,
+          sku,
+          gtin,
+          brand,
+          countryOfOrigin,
+          materials,
+          materialSource,
+          careInstructions,
+          isRepairable,
+          sparePartsAvailable,
+          lifespan,
+          conformityDeclaration,
+          disposalInfo,
+          takebackOffered,
+          takebackContact,
+          secondLifeInfo,
+          organizationId: dpp.organizationId
+        }
+        
+        console.log("DPP CREATE REQUEST: payload", payload)
+
         const response = await fetch("/api/app/dpp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name,
-            description,
-            category,
-            sku,
-            gtin,
-            brand,
-            countryOfOrigin,
-            materials,
-            materialSource,
-            careInstructions,
-            isRepairable,
-            sparePartsAvailable,
-            lifespan,
-            conformityDeclaration,
-            disposalInfo,
-            takebackOffered,
-            takebackContact,
-            secondLifeInfo,
-            organizationId: dpp.organizationId
-          })
+          body: JSON.stringify(payload)
         })
 
-        if (response.ok) {
+        console.log("DPP CREATE RESPONSE: status", response.status)
+
+        if (!response.ok) {
+          // Response ist NICHT ok → Fehler anzeigen, KEIN Redirect
           const data = await response.json()
-          // Weiterleitung zum Editor mit neuer ID
-          window.location.href = `/app/dpps/${data.dpp.id}`
-        } else {
-          const data = await response.json()
-          showNotification(data.error || "Fehler beim Erstellen", "error")
+          const errorMessage = data.error === "NO_ORGANIZATION" 
+            ? "Sie benötigen eine Organisation. Bitte erstellen Sie zuerst eine Organisation in Ihren Kontoeinstellungen."
+            : data.error || "Fehler beim Erstellen"
+          showNotification(errorMessage, "error")
           setSaving(false)
+          return // Wichtig: Kein Redirect bei Fehler
         }
+
+        // Nur bei erfolgreichem Response → Redirect
+        const data = await response.json()
+        console.log("DPP CREATE SUCCESS: dpp.id", data.dpp.id)
+        // Weiterleitung zum Editor mit neuer ID
+        window.location.href = `/app/dpps/${data.dpp.id}`
       } else {
         // Bestehender DPP: Aktualisieren
         const response = await fetch(`/api/app/dpp/${dpp.id}`, {

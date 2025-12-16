@@ -16,12 +16,34 @@ export async function POST(request: Request) {
   try {
     const session = await auth()
 
+    // Explizite Validierung: session.user.id muss existieren
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Nicht autorisiert" },
         { status: 401 }
       )
     }
+
+    // Hole zuerst die Organisation des Users
+    const membership = await prisma.membership.findFirst({
+      where: {
+        userId: session.user.id
+      },
+      include: {
+        organization: true
+      }
+    })
+
+    // Wenn keine Organisation vorhanden → 400 mit klarem Fehler
+    if (!membership || !membership.organization) {
+      return NextResponse.json(
+        { error: "NO_ORGANIZATION" },
+        { status: 400 }
+      )
+    }
+
+    const resolvedOrganizationId = membership.organization.id
+    console.log("DPP CREATE: resolved organizationId", resolvedOrganizationId)
 
     const {
       name, description, category, organizationId,
@@ -68,30 +90,10 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!organizationId || typeof organizationId !== "string") {
-      return NextResponse.json(
-        { error: "Organisation ist erforderlich" },
-        { status: 400 }
-      )
-    }
+    // Verwende die aufgelöste organizationId (ignoriere organizationId aus Request, falls vorhanden)
+    // organizationId wird explizit gesetzt
 
-    // Prüfe ob User Mitglied der Organization ist
-    const membership = await prisma.membership.findUnique({
-      where: {
-        userId_organizationId: {
-          userId: session.user.id,
-          organizationId
-        }
-      }
-    })
-    if (!membership) {
-      return NextResponse.json(
-        { error: "Kein Zugriff auf diese Organisation" },
-        { status: 403 }
-      )
-    }
-
-    // DPP erstellen
+    // DPP erstellen - organizationId wird explizit gesetzt
     const dpp = await prisma.dpp.create({
       data: {
         name: name.trim(),
@@ -113,22 +115,21 @@ export async function POST(request: Request) {
         takebackContact: takebackContact?.trim() || null,
         secondLifeInfo: secondLifeInfo?.trim() || null,
         status: "DRAFT",
-        organizationId
+        organizationId: resolvedOrganizationId // Explizit gesetzt
       },
       include: {
         organization: true
       }
     })
 
+    console.log("DPP CREATED", dpp.id)
+
     return NextResponse.json(
       {
         message: "DPP erfolgreich erstellt",
         dpp: {
           id: dpp.id,
-          name: dpp.name,
-          description: dpp.description,
-          organizationId: dpp.organizationId,
-          createdAt: dpp.createdAt
+          name: dpp.name
         }
       },
       { status: 201 }
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Error creating DPP:", error)
     return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
+      { error: error instanceof Error ? error.message : "Ein Fehler ist aufgetreten" },
       { status: 500 }
     )
   }
