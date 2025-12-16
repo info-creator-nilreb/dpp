@@ -14,13 +14,8 @@ export default async function AuthGate({
 }: {
   children: React.ReactNode
 }) {
-  // Dynamischer Import, um Prisma nicht zur Build-Zeit zu laden
-  const { auth } = await import("@/auth")
-  const session = await auth()
-
-  if (!session) {
-    redirect("/login")
-  }
+  // Login wird bereits durch middleware.ts garantiert
+  // AuthGate prüft NUR Business-Logik (Onboarding)
 
   // Prüfe ob Onboarding benötigt wird via API route (Prisma not in render path)
   // Use relative URL - Next.js fetch automatically forwards cookies for same-origin requests

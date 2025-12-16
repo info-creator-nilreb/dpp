@@ -19,10 +19,30 @@ export default async function OnboardingLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Login wird bereits durch middleware.ts garantiert (falls /onboarding geschützt ist)
+  // Für öffentliche /onboarding-Route: Prüfe ob User eingeloggt ist und Onboarding benötigt
   const session = await auth()
 
+  // Wenn User nicht eingeloggt ist, zeige Onboarding-Seite (da öffentlich)
+  // Die Onboarding-Seite selbst kann entscheiden, ob sie für nicht-eingeloggte User angezeigt werden soll
   if (!session) {
-    redirect("/login")
+    return (
+      <div style={{ 
+        minHeight: "100vh", 
+        backgroundColor: "#F5F5F5",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }}>
+        <div style={{ 
+          width: "100%",
+          maxWidth: "600px",
+          padding: "clamp(1rem, 3vw, 2rem)"
+        }}>
+          {children}
+        </div>
+      </div>
+    )
   }
 
   // Prüfe ob User wirklich Onboarding benötigt

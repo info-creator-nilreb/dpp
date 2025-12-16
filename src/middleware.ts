@@ -6,19 +6,16 @@ export default auth(async (req) => {
   const session = req.auth
   const isLoggedIn = !!session
 
-  // Öffentliche Routen (Landingpage bleibt unverändert)
-  const publicRoutes = ["/", "/login", "/signup"]
+  // Öffentliche Routen
+  const publicRoutes = ["/", "/login", "/signup", "/onboarding"]
   const isPublicRoute = publicRoutes.includes(pathname)
-  
-  // Onboarding-Route (geschützt, aber nicht durch App-Layout)
-  const isOnboardingRoute = pathname === "/onboarding"
 
-  // Geschützte Routen
+  // Geschützte Routen - AUSSCHLIESSLICH /app/** wird hier geschützt
   const isAppRoute = pathname.startsWith("/app")
   const isPlatformRoute = pathname.startsWith("/platform")
 
   // Wenn nicht eingeloggt und geschützte Route → Redirect zu Login
-  if (!isLoggedIn && (isAppRoute || isPlatformRoute || isOnboardingRoute)) {
+  if (!isLoggedIn && (isAppRoute || isPlatformRoute)) {
     return NextResponse.redirect(new URL("/login", req.url))
   }
 
@@ -39,14 +36,6 @@ export default auth(async (req) => {
     }
     // Zugriff erlauben - Membership-Prüfung erfolgt im App-Layout
     return NextResponse.next()
-  }
-
-  // Wenn eingeloggt und auf Login/Signup → Redirect zu Dashboard
-  // WICHTIG: Keine Prisma-Queries hier, da Middleware im Edge Runtime läuft
-  // Die Membership-Prüfung und Onboarding-Prüfung erfolgen im App-Layout
-  if (isLoggedIn && (pathname === "/login" || pathname === "/signup")) {
-    // Weiterleitung zu Dashboard - Layout prüft dann die Membership und Onboarding
-    return NextResponse.redirect(new URL("/app/dashboard", req.url))
   }
 
   return NextResponse.next()
