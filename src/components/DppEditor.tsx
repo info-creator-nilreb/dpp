@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import DppMediaSection from "@/components/DppMediaSection"
 import CountrySelect from "@/components/CountrySelect"
@@ -136,6 +137,7 @@ function AccordionSection({
  * 5. Rücknahme & Second Life (einklappbar)
  */
 export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorProps) {
+  const router = useRouter()
   const { showNotification } = useNotification()
   
   // State für alle Felder
@@ -216,24 +218,56 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
           body: JSON.stringify(payload)
         })
 
-        console.log("DPP CREATE RESPONSE: status", response.status)
+        console.log("DPP CREATE RESPONSE: status", response.status, "ok:", response.ok)
 
         if (!response.ok) {
           // Response ist NICHT ok → Fehler anzeigen, KEIN Redirect
-          const data = await response.json()
-          const errorMessage = data.error === "NO_ORGANIZATION" 
+          let errorData
+          try {
+            errorData = await response.json()
+          } catch (parseError) {
+            console.error("DPP CREATE: Failed to parse error response", parseError)
+            showNotification(`Fehler beim Erstellen (Status: ${response.status})`, "error")
+            setSaving(false)
+            return
+          }
+
+          const errorMessage = errorData.error === "NO_ORGANIZATION" 
             ? "Sie benötigen eine Organisation. Bitte erstellen Sie zuerst eine Organisation in Ihren Kontoeinstellungen."
-            : data.error || "Fehler beim Erstellen"
+            : errorData.error || "Fehler beim Erstellen"
+          
+          console.error("DPP CREATE ERROR:", errorMessage, errorData)
           showNotification(errorMessage, "error")
           setSaving(false)
           return // Wichtig: Kein Redirect bei Fehler
         }
 
         // Nur bei erfolgreichem Response → Redirect
-        const data = await response.json()
+        let data
+        try {
+          data = await response.json()
+        } catch (parseError) {
+          console.error("DPP CREATE: Failed to parse response JSON", parseError)
+          showNotification("Fehler beim Verarbeiten der Antwort", "error")
+          setSaving(false)
+          return
+        }
+
+        if (!data?.dpp?.id) {
+          console.error("DPP CREATE: Response missing dpp.id", data)
+          showNotification("Fehler: DPP-ID fehlt in der Antwort", "error")
+          setSaving(false)
+          return
+        }
+
         console.log("DPP CREATE SUCCESS: dpp.id", data.dpp.id)
-        // Weiterleitung zum Editor mit neuer ID
-        window.location.href = `/app/dpps/${data.dpp.id}`
+        
+        // Erfolgreich gespeichert - Benachrichtigung anzeigen
+        showNotification("Produktpass erfolgreich erstellt", "success")
+        
+        // Weiterleitung zur DPP-Liste
+        // Da DppsContent jetzt eine Client Component ist, wird sie automatisch neu geladen
+        router.replace("/app/dpps")
       } else {
         // Bestehender DPP: Aktualisieren
         const response = await fetch(`/api/app/dpp/${dpp.id}`, {
@@ -272,7 +306,8 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
         }
       }
     } catch (error) {
-      showNotification("Ein Fehler ist aufgetreten", "error")
+      console.error("DPP CREATE ERROR:", error)
+      showNotification("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.", "error")
       setSaving(false)
     }
   }

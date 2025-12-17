@@ -62,7 +62,6 @@ const COUNTRIES = [
   { code: "SA", name: "Saudi-Arabien" },
   { code: "AE", name: "Vereinigte Arabische Emirate" },
   { code: "IL", name: "Israel" },
-  { code: "NZ", name: "Neuseeland" },
   // Weitere Länder können hier hinzugefügt werden
 ]
 

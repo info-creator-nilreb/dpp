@@ -61,7 +61,8 @@ export default function DppCard({ id, name, description, organizationName, media
       if (response.ok) {
         const data = await response.json()
         showNotification(`Produktpass erfolgreich als Version ${data.version.version} veröffentlicht!`, "success")
-        router.refresh()
+        // Reload die Seite, damit die aktualisierte Liste angezeigt wird
+        window.location.reload()
       } else {
         const errorData = await response.json()
         showNotification(errorData.error || "Fehler beim Veröffentlichen", "error")
