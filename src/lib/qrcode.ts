@@ -3,12 +3,7 @@ import QRCode from "qrcode"
 /**
  * QR-Code-Generierung für DPP-Versionen
  * 
-<<<<<<< HEAD
  * Generiert SVG-QR-Code on-demand (Vercel-compatible, kein Filesystem-Zugriff)
-=======
- * Generiert SVG-QR-Code als Base64 Data-URL für direkte Verwendung
- * Wird in der Datenbank gespeichert (Vercel-compatible)
->>>>>>> 3ab206b54c871eaaaa4130317bf03f948965e9fc
  */
 
 /**
@@ -34,19 +29,7 @@ export async function generateQrCodeSvg(publicUrl: string): Promise<string> {
     })
 
     console.log("QR code SVG generated, length:", qrCodeSvg.length)
-<<<<<<< HEAD
     return qrCodeSvg
-=======
-
-    // Konvertiere SVG zu Base64 Data-URL für direkte Verwendung
-    // Funktioniert auf Vercel (kein Filesystem-Zugriff nötig)
-    const base64Svg = Buffer.from(qrCodeSvg).toString("base64")
-    const dataUrl = `data:image/svg+xml;base64,${base64Svg}`
-    
-    console.log("QR code Data URL generated, length:", dataUrl.length)
-
-    return dataUrl
->>>>>>> 3ab206b54c871eaaaa4130317bf03f948965e9fc
   } catch (error: any) {
     console.error("Error generating QR code:", error)
     console.error("Error stack:", error.stack)
