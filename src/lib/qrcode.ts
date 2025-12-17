@@ -1,11 +1,10 @@
 import QRCode from "qrcode"
-import path from "path"
-import fs from "fs"
 
 /**
  * QR-Code-Generierung für DPP-Versionen
  * 
- * Generiert SVG-QR-Code und speichert ihn im Storage
+ * Generiert SVG-QR-Code als Base64 Data-URL für direkte Verwendung
+ * Wird in der Datenbank gespeichert (Vercel-compatible)
  */
 export async function generateQrCode(publicUrl: string, dppId: string, version: number): Promise<string> {
   console.log("generateQrCode called with:", { publicUrl, dppId, version })
@@ -25,34 +24,14 @@ export async function generateQrCode(publicUrl: string, dppId: string, version: 
 
     console.log("QR code SVG generated, length:", qrCodeSvg.length)
 
-    // Dateiname für QR-Code
-    const fileName = `qrcode-${dppId}-v${version}.svg`
-    const filePath = path.join(process.cwd(), "public", "uploads", "qrcodes", fileName)
+    // Konvertiere SVG zu Base64 Data-URL für direkte Verwendung
+    // Funktioniert auf Vercel (kein Filesystem-Zugriff nötig)
+    const base64Svg = Buffer.from(qrCodeSvg).toString("base64")
+    const dataUrl = `data:image/svg+xml;base64,${base64Svg}`
+    
+    console.log("QR code Data URL generated, length:", dataUrl.length)
 
-    console.log("QR code file path:", filePath)
-
-    // Stelle sicher, dass das Verzeichnis existiert
-    const qrCodeDir = path.dirname(filePath)
-    if (!fs.existsSync(qrCodeDir)) {
-      console.log("Creating QR code directory:", qrCodeDir)
-      fs.mkdirSync(qrCodeDir, { recursive: true })
-    }
-
-    // Speichere QR-Code als Datei
-    console.log("Writing QR code file...")
-    fs.writeFileSync(filePath, qrCodeSvg)
-    console.log("QR code file written successfully")
-
-    // Verifiziere, dass die Datei existiert
-    if (!fs.existsSync(filePath)) {
-      throw new Error("QR-Code-Datei wurde nicht erstellt")
-    }
-
-    // URL für den QR-Code (relativ zum public-Verzeichnis)
-    const qrCodeUrl = `/uploads/qrcodes/${fileName}`
-    console.log("QR code URL:", qrCodeUrl)
-
-    return qrCodeUrl
+    return dataUrl
   } catch (error: any) {
     console.error("Error generating QR code:", error)
     console.error("Error stack:", error.stack)

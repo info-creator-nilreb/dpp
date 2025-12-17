@@ -85,11 +85,14 @@ export async function POST(
     const nextVersion = latestVersion ? latestVersion.version + 1 : 1
 
     // Generiere Public URL für diese Version (IMMER erforderlich)
+    // Verwende Request-URL für Base-URL (funktioniert in allen Umgebungen)
+    const requestUrl = new URL(request.url)
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+      process.env.AUTH_URL ||
+      `${requestUrl.protocol}//${requestUrl.host}`
     const publicUrl = `${baseUrl}/public/dpp/${params.dppId}/v/${nextVersion}`
     
-    console.log("Generated public URL:", publicUrl)
+    console.log("Generated public URL:", publicUrl, "baseUrl:", baseUrl)
 
     // Generiere QR-Code (kann fehlschlagen, dann bleibt qrCodeImageUrl null)
     let qrCodeImageUrl: string | null = null

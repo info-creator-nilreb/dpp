@@ -4,13 +4,12 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import fs from "fs"
-import path from "path"
 
 /**
  * GET /api/app/dpp/[dppId]/versions/[versionNumber]/qr-code
  * 
  * Lädt QR-Code-Bild für Download
+ * QR-Code wird als Base64 Data-URL in der DB gespeichert
  */
 export async function GET(
   request: Request,
@@ -77,20 +76,25 @@ export async function GET(
       )
     }
 
-    // Lade QR-Code-Datei
-    const filePath = path.join(process.cwd(), "public", version.qrCodeImageUrl)
-
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json(
-        { error: "QR-Code-Datei nicht gefunden" },
-        { status: 404 }
-      )
+    // qrCodeImageUrl ist jetzt eine Base64 Data-URL (data:image/svg+xml;base64,...)
+    // Extrahiere Base64-Daten und konvertiere zu SVG
+    let svgContent: string
+    if (version.qrCodeImageUrl.startsWith("data:image/svg+xml;base64,")) {
+      // Base64 Data-URL: Extrahiere Base64-String und dekodiere
+      const base64Data = version.qrCodeImageUrl.split(",")[1]
+      svgContent = Buffer.from(base64Data, "base64").toString("utf-8")
+    } else if (version.qrCodeImageUrl.startsWith("data:image/svg+xml,")) {
+      // URL-encoded Data-URL (fallback)
+      const encodedData = version.qrCodeImageUrl.split(",")[1]
+      svgContent = decodeURIComponent(encodedData)
+    } else {
+      // Fallback: Versuche als direkten SVG-String zu behandeln
+      svgContent = version.qrCodeImageUrl
     }
 
-    const fileContent = fs.readFileSync(filePath)
     const fileName = `qrcode-dpp-${params.dppId}-v${versionNumber}.svg`
 
-    return new NextResponse(fileContent, {
+    return new NextResponse(svgContent, {
       headers: {
         "Content-Type": "image/svg+xml",
         "Content-Disposition": `attachment; filename="${fileName}"`
