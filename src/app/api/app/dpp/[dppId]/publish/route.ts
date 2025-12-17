@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { getBaseUrl } from "@/lib/getBaseUrl"
+import { getPublicUrl } from "@/lib/getPublicUrl"
 
 /**
  * POST /api/app/dpp/[dppId]/publish
@@ -84,27 +84,27 @@ export async function POST(
 
     const nextVersion = latestVersion ? latestVersion.version + 1 : 1
 
-    // Generiere Public URL für diese Version (IMMER erforderlich)
-    // Verwende zentrale getBaseUrl() Helper-Funktion für konsistente Base-URL
-    const baseUrl = getBaseUrl()
-    const publicUrl = `${baseUrl}/public/dpp/${params.dppId}/v/${nextVersion}`
+    // Speichere NUR den relativen Pfad in der DB (nicht die absolute URL)
+    // Absolute URLs werden dynamisch zur Laufzeit mit getBaseUrl() generiert
+    // Dies stellt sicher, dass URLs korrekt sind, auch nach Deployment-Umgebungswechsel
+    const publicPath = `/public/dpp/${params.dppId}/v/${nextVersion}`
     
-    console.log("Generated public URL:", publicUrl, "baseUrl:", baseUrl)
+    console.log("Generated public path (relative):", publicPath)
 
     // QR-Codes werden on-demand via API Route generiert (kein Speichern nötig)
     // qrCodeImageUrl wird nicht mehr verwendet, bleibt null für Kompatibilität
     const qrCodeImageUrl: string | null = null
 
-    // Stelle sicher, dass publicUrl gesetzt ist (sollte immer der Fall sein)
-    if (!publicUrl || publicUrl.trim() === "") {
-      console.error("ERROR: publicUrl is empty!")
+    // Stelle sicher, dass publicPath gesetzt ist (sollte immer der Fall sein)
+    if (!publicPath || publicPath.trim() === "") {
+      console.error("ERROR: publicPath is empty!")
       return NextResponse.json(
         { error: "Fehler bei der Generierung der öffentlichen URL" },
         { status: 500 }
       )
     }
     
-    console.log("Values to save:", { publicUrl, qrCodeImageUrl })
+    console.log("Values to save:", { publicPath, qrCodeImageUrl })
 
     // Transaktion: Erstelle Version und aktualisiere Status
     console.log("Starting publish transaction for DPP:", params.dppId)
@@ -116,8 +116,8 @@ export async function POST(
       console.log("Creating DPP version with data:", {
         dppId: params.dppId,
         version: nextVersion,
-        publicUrl: publicUrl,
-        hasPublicUrl: !!publicUrl
+        publicPath: publicPath,
+        hasPublicPath: !!publicPath
       })
       
       const versionData = {
@@ -142,7 +142,7 @@ export async function POST(
         takebackContact: dpp.takebackContact || null,
         secondLifeInfo: dpp.secondLifeInfo || null,
         createdByUserId: session.user.id,
-        publicUrl: publicUrl, // IMMER setzen
+        publicUrl: publicPath, // Relativer Pfad (z.B. /public/dpp/{id}/v/{version})
         qrCodeImageUrl: null // QR-Codes werden on-demand via API Route generiert (Vercel-compatible)
       }
       
@@ -153,7 +153,7 @@ export async function POST(
       })
 
       console.log("DPP version created successfully:", version.id)
-      console.log("Created version has publicUrl:", version.publicUrl)
+      console.log("Created version has publicPath:", version.publicUrl)
 
       // Setze Status auf PUBLISHED (falls noch nicht gesetzt)
       if (dpp.status !== "PUBLISHED") {
@@ -186,8 +186,11 @@ export async function POST(
     })
     
     console.log("Retrieved version from DB:")
-    console.log("  - publicUrl:", versionWithUser?.publicUrl)
+    console.log("  - publicPath (stored):", versionWithUser?.publicUrl)
     console.log("  - qrCodeImageUrl:", versionWithUser?.qrCodeImageUrl)
+
+    // Generiere absolute URL zur Laufzeit für Response (unterstützt auch bestehende absolute URLs)
+    const absolutePublicUrl = getPublicUrl(versionWithUser!.publicUrl)
 
     return NextResponse.json(
       {
@@ -196,7 +199,7 @@ export async function POST(
           id: versionWithUser!.id,
           version: versionWithUser!.version,
           createdAt: versionWithUser!.createdAt,
-          publicUrl: versionWithUser!.publicUrl,
+          publicUrl: absolutePublicUrl, // Absolute URL für Client
           qrCodeImageUrl: versionWithUser!.qrCodeImageUrl,
           createdBy: {
             name: versionWithUser!.createdBy.name || versionWithUser!.createdBy.email,

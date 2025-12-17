@@ -5,6 +5,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { generateQrCodeSvg } from "@/lib/qrcode"
+import { getPublicUrl } from "@/lib/getPublicUrl"
 
 /**
  * GET /api/app/dpp/[dppId]/versions/[versionNumber]/qr-code-preview
@@ -78,8 +79,18 @@ export async function GET(
       )
     }
 
-    // Generiere QR-Code on-demand (SVG)
-    const qrCodeSvg = await generateQrCodeSvg(version.publicUrl)
+    // Generiere absolute URL zur Laufzeit (unterstützt auch bestehende absolute URLs)
+    const absolutePublicUrl = getPublicUrl(version.publicUrl)
+    
+    if (!absolutePublicUrl) {
+      return NextResponse.json(
+        { error: "Öffentliche URL konnte nicht generiert werden" },
+        { status: 500 }
+      )
+    }
+
+    // Generiere QR-Code on-demand (SVG) mit absoluter URL
+    const qrCodeSvg = await generateQrCodeSvg(absolutePublicUrl)
 
     return new NextResponse(qrCodeSvg, {
       headers: {

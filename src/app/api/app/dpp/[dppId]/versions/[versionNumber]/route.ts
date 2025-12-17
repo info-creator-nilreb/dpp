@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { getPublicUrl } from "@/lib/getPublicUrl"
 
 /**
  * GET /api/app/dpp/[dppId]/versions/[versionNumber]
@@ -81,6 +82,9 @@ export async function GET(
       )
     }
 
+    // Generiere absolute URL zur Laufzeit (unterstützt auch bestehende absolute URLs)
+    const absolutePublicUrl = getPublicUrl(version.publicUrl)
+
     return NextResponse.json({
       version: {
         id: version.id,
@@ -108,7 +112,7 @@ export async function GET(
           name: version.createdBy.name || version.createdBy.email,
           email: version.createdBy.email
         },
-        publicUrl: version.publicUrl,
+        publicUrl: absolutePublicUrl, // Absolute URL für Client
         qrCodeImageUrl: version.qrCodeImageUrl,
         dppName: accessCheck.name
       }
