@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { getBaseUrl } from "@/lib/getBaseUrl"
 
 /**
  * POST /api/app/dpp/[dppId]/publish
@@ -84,11 +85,8 @@ export async function POST(
     const nextVersion = latestVersion ? latestVersion.version + 1 : 1
 
     // Generiere Public URL für diese Version (IMMER erforderlich)
-    // Verwende Request-URL für Base-URL (funktioniert in allen Umgebungen)
-    const requestUrl = new URL(request.url)
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-      process.env.AUTH_URL ||
-      `${requestUrl.protocol}//${requestUrl.host}`
+    // Verwende zentrale getBaseUrl() Helper-Funktion für konsistente Base-URL
+    const baseUrl = getBaseUrl()
     const publicUrl = `${baseUrl}/public/dpp/${params.dppId}/v/${nextVersion}`
     
     console.log("Generated public URL:", publicUrl, "baseUrl:", baseUrl)
