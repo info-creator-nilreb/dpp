@@ -4,7 +4,7 @@ import { useState } from "react"
 
 interface VersionQrCodeSectionProps {
   publicUrl: string | null
-  qrCodeImageUrl: string | null
+  qrCodeImageUrl?: string | null // Optional: Wird nicht mehr verwendet, bleibt für Kompatibilität
   dppId: string
   version: number
 }
@@ -13,13 +13,17 @@ interface VersionQrCodeSectionProps {
  * QR-Code-Sektion für Versionen
  * 
  * Zeigt öffentliche URL und QR-Code mit Download-Option
+ * QR-Codes werden on-demand via API Route generiert (Vercel-compatible)
  */
-export default function VersionQrCodeSection({ publicUrl, qrCodeImageUrl, dppId, version }: VersionQrCodeSectionProps) {
+export default function VersionQrCodeSection({ publicUrl, dppId, version }: VersionQrCodeSectionProps) {
   const [copied, setCopied] = useState(false)
 
   if (!publicUrl) {
     return null
   }
+
+  // QR-Code Preview-URL (generiert on-demand)
+  const qrCodePreviewUrl = `/api/app/dpp/${dppId}/versions/${version}/qr-code-preview`
 
   const handleCopy = async () => {
     try {
@@ -103,7 +107,7 @@ export default function VersionQrCodeSection({ publicUrl, qrCodeImageUrl, dppId,
             </button>
           </div>
         </div>
-        {qrCodeImageUrl && (
+        {publicUrl && (
           <div>
             <label style={{
               display: "block",
@@ -127,7 +131,7 @@ export default function VersionQrCodeSection({ publicUrl, qrCodeImageUrl, dppId,
                 borderRadius: "8px"
               }}>
                 <img
-                  src={qrCodeImageUrl}
+                  src={qrCodePreviewUrl}
                   alt="QR-Code"
                   style={{
                     width: "150px",

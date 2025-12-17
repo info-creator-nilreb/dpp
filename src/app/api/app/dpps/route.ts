@@ -72,7 +72,7 @@ export async function GET() {
           version: dpp.versions[0].version,
           createdAt: dpp.versions[0].createdAt.toISOString(),
           createdBy: dpp.versions[0].createdBy.name || dpp.versions[0].createdBy.email,
-          hasQrCode: !!dpp.versions[0].qrCodeImageUrl
+          hasQrCode: !!dpp.versions[0].publicUrl // QR-Code verfügbar wenn publicUrl vorhanden (on-demand generiert)
         } : null
       }))
     )

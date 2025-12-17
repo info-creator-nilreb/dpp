@@ -1,14 +1,19 @@
 import QRCode from "qrcode"
-import path from "path"
-import fs from "fs"
 
 /**
  * QR-Code-Generierung für DPP-Versionen
  * 
- * Generiert SVG-QR-Code und speichert ihn im Storage
+ * Generiert SVG-QR-Code on-demand (Vercel-compatible, kein Filesystem-Zugriff)
  */
-export async function generateQrCode(publicUrl: string, dppId: string, version: number): Promise<string> {
-  console.log("generateQrCode called with:", { publicUrl, dppId, version })
+
+/**
+ * Generiert QR-Code als SVG-String
+ * 
+ * @param publicUrl - Vollständige öffentliche URL (z.B. https://dpp-kappa.vercel.app/public/dpp/...)
+ * @returns SVG-String des QR-Codes
+ */
+export async function generateQrCodeSvg(publicUrl: string): Promise<string> {
+  console.log("generateQrCodeSvg called with:", { publicUrl })
   
   try {
     // Generiere QR-Code als SVG (bevorzugt, da skalierbar)
@@ -24,35 +29,7 @@ export async function generateQrCode(publicUrl: string, dppId: string, version: 
     })
 
     console.log("QR code SVG generated, length:", qrCodeSvg.length)
-
-    // Dateiname für QR-Code
-    const fileName = `qrcode-${dppId}-v${version}.svg`
-    const filePath = path.join(process.cwd(), "public", "uploads", "qrcodes", fileName)
-
-    console.log("QR code file path:", filePath)
-
-    // Stelle sicher, dass das Verzeichnis existiert
-    const qrCodeDir = path.dirname(filePath)
-    if (!fs.existsSync(qrCodeDir)) {
-      console.log("Creating QR code directory:", qrCodeDir)
-      fs.mkdirSync(qrCodeDir, { recursive: true })
-    }
-
-    // Speichere QR-Code als Datei
-    console.log("Writing QR code file...")
-    fs.writeFileSync(filePath, qrCodeSvg)
-    console.log("QR code file written successfully")
-
-    // Verifiziere, dass die Datei existiert
-    if (!fs.existsSync(filePath)) {
-      throw new Error("QR-Code-Datei wurde nicht erstellt")
-    }
-
-    // URL für den QR-Code (relativ zum public-Verzeichnis)
-    const qrCodeUrl = `/uploads/qrcodes/${fileName}`
-    console.log("QR code URL:", qrCodeUrl)
-
-    return qrCodeUrl
+    return qrCodeSvg
   } catch (error: any) {
     console.error("Error generating QR code:", error)
     console.error("Error stack:", error.stack)
@@ -60,3 +37,10 @@ export async function generateQrCode(publicUrl: string, dppId: string, version: 
   }
 }
 
+/**
+ * @deprecated Verwende generateQrCodeSvg() statt dessen. Diese Funktion wird nur für Kompatibilität beibehalten.
+ */
+export async function generateQrCode(publicUrl: string, dppId: string, version: number): Promise<string> {
+  // Legacy-Funktion: Wird nicht mehr verwendet, QR-Codes werden on-demand generiert
+  throw new Error("generateQrCode is deprecated. QR codes are generated on-demand via API routes.")
+}

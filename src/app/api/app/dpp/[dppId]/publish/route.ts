@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { generateQrCode } from "@/lib/qrcode"
 
 /**
  * POST /api/app/dpp/[dppId]/publish
@@ -85,23 +84,18 @@ export async function POST(
     const nextVersion = latestVersion ? latestVersion.version + 1 : 1
 
     // Generiere Public URL für diese Version (IMMER erforderlich)
+    // Verwende Request-URL für Base-URL (funktioniert in allen Umgebungen)
+    const requestUrl = new URL(request.url)
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+      process.env.AUTH_URL ||
+      `${requestUrl.protocol}//${requestUrl.host}`
     const publicUrl = `${baseUrl}/public/dpp/${params.dppId}/v/${nextVersion}`
     
-    console.log("Generated public URL:", publicUrl)
+    console.log("Generated public URL:", publicUrl, "baseUrl:", baseUrl)
 
-    // Generiere QR-Code (kann fehlschlagen, dann bleibt qrCodeImageUrl null)
-    let qrCodeImageUrl: string | null = null
-    try {
-      console.log("Generating QR code for:", publicUrl)
-      qrCodeImageUrl = await generateQrCode(publicUrl, params.dppId, nextVersion)
-      console.log("QR code generated successfully:", qrCodeImageUrl)
-    } catch (error) {
-      console.error("Error generating QR code:", error)
-      // QR-Code-Generierung ist nicht kritisch, Version wird trotzdem erstellt
-      // qrCodeImageUrl bleibt null
-    }
+    // QR-Codes werden on-demand via API Route generiert (kein Speichern nötig)
+    // qrCodeImageUrl wird nicht mehr verwendet, bleibt null für Kompatibilität
+    const qrCodeImageUrl: string | null = null
 
     // Stelle sicher, dass publicUrl gesetzt ist (sollte immer der Fall sein)
     if (!publicUrl || publicUrl.trim() === "") {
@@ -125,9 +119,7 @@ export async function POST(
         dppId: params.dppId,
         version: nextVersion,
         publicUrl: publicUrl,
-        qrCodeImageUrl: qrCodeImageUrl,
-        hasPublicUrl: !!publicUrl,
-        hasQrCodeUrl: !!qrCodeImageUrl
+        hasPublicUrl: !!publicUrl
       })
       
       const versionData = {
@@ -153,7 +145,7 @@ export async function POST(
         secondLifeInfo: dpp.secondLifeInfo || null,
         createdByUserId: session.user.id,
         publicUrl: publicUrl, // IMMER setzen
-        qrCodeImageUrl: qrCodeImageUrl // Kann null sein, wenn QR-Code-Generierung fehlgeschlagen ist
+        qrCodeImageUrl: null // QR-Codes werden on-demand via API Route generiert (Vercel-compatible)
       }
       
       console.log("Version data to create:", JSON.stringify(versionData, null, 2))
@@ -164,7 +156,6 @@ export async function POST(
 
       console.log("DPP version created successfully:", version.id)
       console.log("Created version has publicUrl:", version.publicUrl)
-      console.log("Created version has qrCodeImageUrl:", version.qrCodeImageUrl)
 
       // Setze Status auf PUBLISHED (falls noch nicht gesetzt)
       if (dpp.status !== "PUBLISHED") {

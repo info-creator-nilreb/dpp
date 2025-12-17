@@ -7,9 +7,10 @@ import { prisma } from "@/lib/prisma"
 import { generateQrCodeSvg } from "@/lib/qrcode"
 
 /**
- * GET /api/app/dpp/[dppId]/versions/[versionNumber]/qr-code
+ * GET /api/app/dpp/[dppId]/versions/[versionNumber]/qr-code-preview
  * 
- * Generiert QR-Code on-demand für Download
+ * Generiert QR-Code on-demand für Anzeige (Preview)
+ * Verwendet für <img src> in VersionQrCodeSection
  * Vercel-compatible: Kein Filesystem-Zugriff nötig
  */
 export async function GET(
@@ -79,16 +80,15 @@ export async function GET(
 
     // Generiere QR-Code on-demand (SVG)
     const qrCodeSvg = await generateQrCodeSvg(version.publicUrl)
-    const fileName = `qrcode-dpp-${params.dppId}-v${versionNumber}.svg`
 
     return new NextResponse(qrCodeSvg, {
       headers: {
         "Content-Type": "image/svg+xml",
-        "Content-Disposition": `attachment; filename="${fileName}"`
+        "Cache-Control": "public, max-age=3600" // Cache für 1 Stunde
       }
     })
   } catch (error: any) {
-    console.error("Error generating QR code:", error)
+    console.error("Error generating QR code preview:", error)
     return NextResponse.json(
       { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }

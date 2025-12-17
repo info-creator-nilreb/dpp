@@ -89,7 +89,7 @@ export async function GET(
           name: v.createdBy.name || v.createdBy.email,
           email: v.createdBy.email
         },
-        hasQrCode: !!v.qrCodeImageUrl
+        hasQrCode: !!v.publicUrl // QR-Code verfügbar wenn publicUrl vorhanden (on-demand generiert)
       }))
     }, { status: 200 })
   } catch (error: any) {
