@@ -87,7 +87,7 @@ export default function DppsContent() {
         fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
         marginBottom: "2rem"
       }}>
-        Verwalten Sie alle Ihre Digital Product Passports an einem Ort.
+        Verwalten Sie alle Ihre Digitalen Produktpässe an einem Ort.
       </p>
 
       {dpps.length > 0 ? (

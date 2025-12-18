@@ -10,13 +10,16 @@ datasource db {
 }
 
 model User {
-  id              String       @id @default(cuid())
-  email           String       @unique
-  password        String       // bcrypt hash
-  name            String?
-  isPlatformAdmin Boolean      @default(false) // Meta-Admin Flag
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                String       @id @default(cuid())
+  email             String       @unique
+  password          String       // bcrypt hash
+  name              String?
+  isPlatformAdmin   Boolean      @default(false) // Meta-Admin Flag
+  emailVerified     Boolean      @default(false) // E-Mail-Verifizierung
+  verificationToken String?      @unique // Token für E-Mail-Verifizierung
+  verificationTokenExpires DateTime? // Ablaufdatum des Tokens
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   // Many-to-Many: User kann Mitglied mehrerer Organisationen sein
   memberships     Membership[]

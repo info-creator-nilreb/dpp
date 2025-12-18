@@ -24,7 +24,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
-        // User aus Datenbank laden (inkl. isPlatformAdmin)
+        // User aus Datenbank laden (inkl. isPlatformAdmin und emailVerified)
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
           select: {
@@ -32,11 +32,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: true,
             password: true,
             name: true,
-            isPlatformAdmin: true
+            isPlatformAdmin: true,
+            emailVerified: true
           }
         })
 
         if (!user) {
+          return null
+        }
+
+        // Prüfen ob E-Mail verifiziert ist
+        if (!user.emailVerified) {
+          // User existiert, aber E-Mail ist nicht verifiziert
+          // NextAuth gibt null zurück, was zu "CredentialsSignin" führt
+          // Wir können den Fehler im Login-Handler abfangen
           return null
         }
 
@@ -104,6 +113,12 @@ export async function createUser(email: string, password: string, name?: string)
   // Passwort mit bcrypt hashen (10 Runden = gute Balance zwischen Sicherheit und Performance)
   const hashedPassword = await bcrypt.hash(password, 10)
   
+  // Verifizierungs-Token generieren
+  const { generateVerificationToken } = await import("@/lib/email")
+  const verificationToken = generateVerificationToken()
+  const verificationTokenExpires = new Date()
+  verificationTokenExpires.setHours(verificationTokenExpires.getHours() + 24) // Token gültig für 24 Stunden
+  
   // Organization-Name: User-Name oder E-Mail-Prefix
   const organizationName = name || email.split("@")[0]
   
@@ -111,12 +126,15 @@ export async function createUser(email: string, password: string, name?: string)
     // User, Organization und Membership in einer Transaction erstellen
     // Falls ein Schritt fehlschlägt, wird alles zurückgerollt
     const result = await prisma.$transaction(async (tx) => {
-      // 1. User erstellen
+      // 1. User erstellen (emailVerified: false, mit Token)
       const user = await tx.user.create({
         data: {
           email,
           password: hashedPassword,
-          name
+          name,
+          emailVerified: false,
+          verificationToken,
+          verificationTokenExpires
         }
       })
       
@@ -143,6 +161,15 @@ export async function createUser(email: string, password: string, name?: string)
       
       return user
     })
+    
+    // E-Mail-Verifizierungs-E-Mail senden
+    try {
+      const { sendVerificationEmail } = await import("@/lib/email")
+      await sendVerificationEmail(result.email, result.name, verificationToken)
+    } catch (emailError) {
+      console.error("Fehler beim Senden der Verifizierungs-E-Mail:", emailError)
+      // Fehler wird nicht weitergeworfen, da User bereits erstellt wurde
+    }
     
     return result
   } catch (error: any) {

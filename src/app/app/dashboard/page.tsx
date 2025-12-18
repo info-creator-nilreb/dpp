@@ -61,7 +61,7 @@ async function DashboardContent() {
               </svg>
             }
             title="Produktpass erstellen"
-            description="Erstellen Sie einen neuen Digital Product Passport für Ihr Produkt."
+            description="Erstellen Sie einen neuen Digitalen Produktpass für Ihr Produkt."
           />
 
           {/* 2. Produktpässe verwalten */}
@@ -84,7 +84,7 @@ async function DashboardContent() {
               </svg>
             }
             title="Produktpässe verwalten"
-            description="Verwalten Sie alle Ihre Digital Product Passports an einem Ort."
+            description="Verwalten Sie alle Ihre Digitalen Produktpässe an einem Ort."
           />
 
           {/* 3. Meine Daten */}

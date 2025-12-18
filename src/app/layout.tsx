@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Digital Product Passport - DPP in unter 3 Minuten | ESPR-ready',
-  description: 'Erstellen Sie Ihren Digital Product Passport für Textil & Möbel. ESPR-konform, einfach und schnell. Jetzt kostenlos testen.',
+  title: 'Digitaler Produktpass - DPP in unter 3 Minuten | ESPR-ready',
+  description: 'Erstellen Sie Ihren Digitalen Produktpass für Textil & Möbel. ESPR-konform, einfach und schnell. Jetzt kostenlos testen.',
 }
 
 export default function RootLayout({

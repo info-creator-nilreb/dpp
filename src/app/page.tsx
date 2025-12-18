@@ -213,7 +213,7 @@ export default function Home() {
               Schnellbefragungen
             </h3>
             <p style={{ color: '#7A7A7A', lineHeight: '1.6', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
-              Erstellen Sie interaktive Befragungen direkt im Digital Product Passport. Sammeln Sie Feedback von Kunden einfach und schnell.
+              Erstellen Sie interaktive Befragungen direkt im Digitalen Produktpass. Sammeln Sie Feedback von Kunden einfach und schnell.
             </p>
           </div>
           <div style={{
@@ -261,7 +261,7 @@ export default function Home() {
             color: '#7A7A7A',
             marginBottom: 'clamp(2rem, 5vw, 3rem)'
           }}>
-            Drei Schritte zu Ihrem Digital Product Passport
+            Drei Schritte zu Ihrem Digitalen Produktpass
           </p>
           <div style={{
             display: 'flex',
@@ -331,7 +331,7 @@ export default function Home() {
                 DPP erhalten
               </h3>
               <p style={{ color: '#7A7A7A', fontSize: 'clamp(0.9rem, 2vw, 0.95rem)', lineHeight: '1.6' }}>
-                Fertig! Ihr Digital Product Passport ist einsatzbereit.
+                Fertig! Ihr Digitaler Produktpass ist einsatzbereit.
               </p>
             </div>
           </div>
@@ -361,7 +361,7 @@ export default function Home() {
             marginBottom: '2.5rem',
             lineHeight: '1.6'
           }}>
-            Starten Sie noch heute mit Ihrem ersten Digital Product Passport. 
+            Starten Sie noch heute mit Ihrem ersten Digitalen Produktpass. 
             Keine Kreditkarte erforderlich.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
