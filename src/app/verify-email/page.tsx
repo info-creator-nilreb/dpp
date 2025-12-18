@@ -2,11 +2,11 @@
 
 export const dynamic = "force-dynamic"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get("token")
@@ -174,6 +174,44 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#F5F5F5",
+        padding: "1rem"
+      }}>
+        <div style={{
+          width: "100%",
+          maxWidth: "400px",
+          padding: "clamp(1.5rem, 4vw, 2rem)",
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          border: "1px solid #CDCDCD",
+          textAlign: "center"
+        }}>
+          <div style={{ marginBottom: "1rem", fontSize: "3rem" }}>⏳</div>
+          <h1 style={{
+            fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
+            fontWeight: "700",
+            color: "#0A0A0A",
+            marginBottom: "0.5rem"
+          }}>
+            Lade...
+          </h1>
+        </div>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }
 

@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
@@ -61,7 +61,7 @@ function calculatePasswordStrength(password: string): {
   return { strength, score, feedback: feedbackText }
 }
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [name, setName] = useState("")
@@ -401,6 +401,25 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#F5F5F5",
+        padding: "1rem"
+      }}>
+        <div style={{ color: "#7A7A7A" }}>Lade...</div>
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
   )
 }
 
