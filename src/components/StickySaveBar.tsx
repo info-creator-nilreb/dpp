@@ -65,7 +65,8 @@ export default function StickySaveBar({
       case "error":
         return "Fehler beim Speichern"
       default:
-        return "Nicht gespeichert"
+        // Wenn lastSaved vorhanden ist, zeige "Zuletzt gespeichert:" statt "Nicht gespeichert"
+        return lastSaved ? "Zuletzt gespeichert:" : "Nicht gespeichert"
     }
   }
 
@@ -79,7 +80,8 @@ export default function StickySaveBar({
       case "publishing":
         return "#7A7A7A"
       default:
-        return "#7A7A7A"
+        // Wenn lastSaved vorhanden ist, zeige grün (wie bei "saved")
+        return lastSaved ? "#00A651" : "#7A7A7A"
     }
   }
 
@@ -123,12 +125,18 @@ export default function StickySaveBar({
             {getStatusText()}
           </span>
         </div>
-        {status === "saved" && lastSaved && timeAgo && (
+        {((status === "saved" || (status === "idle" && lastSaved)) && lastSaved && timeAgo) && (
           <span style={{
             fontSize: "clamp(0.75rem, 1.8vw, 0.85rem)",
             color: "#7A7A7A"
           }}>
-            Zuletzt gespeichert {timeAgo}
+            {lastSaved.toLocaleString("de-DE", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit"
+            })} ({timeAgo})
           </span>
         )}
         {status === "error" && error && (

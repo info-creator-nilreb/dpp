@@ -9,6 +9,12 @@ import { useNotification } from "@/components/NotificationProvider"
 import InputField from "@/components/InputField"
 import StickySaveBar from "@/components/StickySaveBar"
 
+interface PendingFile {
+  id: string
+  file: File
+  preview?: string
+}
+
 interface DppMedia {
   id: string
   fileName: string
@@ -172,9 +178,13 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "publishing" | "error">("idle")
   const [lastSaved, setLastSaved] = useState<Date | null>(isNew ? null : initialDpp.updatedAt)
   const [saveError, setSaveError] = useState<string | null>(null)
+  
+  // Pending Files für neue DPPs (zwischengespeichert bis zum Speichern)
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
 
   // Aktualisiere Medien-Liste nach Upload/Delete
   const refreshMedia = async () => {
+    if (!dpp.id || dpp.id === "new") return
     try {
       const response = await fetch(`/api/app/dpp/${dpp.id}/media`)
       if (response.ok) {
@@ -263,17 +273,45 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
           return
         }
         
-        // Erfolgreich gespeichert
+        // Erfolgreich gespeichert - Update local state mit neuer DPP-ID
+        const newDppId = data.dpp.id
+        setDpp(prev => ({ ...prev, id: newDppId, status: "DRAFT" }))
+        
+        // Lade zwischengespeicherte Dateien hoch
+        if (pendingFiles.length > 0) {
+          try {
+            const uploadPromises = pendingFiles.map(async (pendingFile) => {
+              const formData = new FormData()
+              formData.append("file", pendingFile.file)
+              
+              const uploadResponse = await fetch(`/api/app/dpp/${newDppId}/media`, {
+                method: "POST",
+                body: formData
+              })
+              
+              if (!uploadResponse.ok) {
+                console.error(`Fehler beim Hochladen von ${pendingFile.file.name}`)
+              }
+            })
+            
+            await Promise.all(uploadPromises)
+            // Pending files zurücksetzen, da sie jetzt hochgeladen sind
+            setPendingFiles([])
+            // Medien-Liste aktualisieren
+            await refreshMedia()
+          } catch (uploadError) {
+            console.error("Fehler beim Hochladen der zwischengespeicherten Dateien:", uploadError)
+            // Fehler wird ignoriert, da der DPP bereits gespeichert ist
+          }
+        }
+        
         setLastSaved(new Date())
         setSaveStatus("saved")
         showNotification("Entwurf gespeichert", "success")
         
-        // Update local state mit neuer DPP-ID
-        setDpp(prev => ({ ...prev, id: data.dpp.id, status: "DRAFT" }))
-        
         // Weiterleitung zur Edit-Seite (nicht zur Liste)
         // Verwende replace, damit Browser-History sauber bleibt
-        router.replace(`/app/dpps/${data.dpp.id}`)
+        router.replace(`/app/dpps/${newDppId}`)
       } else {
         // Bestehender DPP: Aktualisieren
         const response = await fetch(`/api/app/dpp/${dpp.id}`, {
@@ -380,6 +418,30 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
 
         const createData = await createResponse.json()
         dppIdToPublish = createData.dpp.id
+        
+        // Lade zwischengespeicherte Dateien hoch
+        if (pendingFiles.length > 0) {
+          try {
+            const uploadPromises = pendingFiles.map(async (pendingFile) => {
+              const formData = new FormData()
+              formData.append("file", pendingFile.file)
+              
+              const uploadResponse = await fetch(`/api/app/dpp/${dppIdToPublish}/media`, {
+                method: "POST",
+                body: formData
+              })
+              
+              if (!uploadResponse.ok) {
+                console.error(`Fehler beim Hochladen von ${pendingFile.file.name}`)
+              }
+            })
+            
+            await Promise.all(uploadPromises)
+            setPendingFiles([])
+          } catch (uploadError) {
+            console.error("Fehler beim Hochladen der zwischengespeicherten Dateien:", uploadError)
+          }
+        }
       } else {
         // Bestehender DPP: Erst speichern
         const saveResponse = await fetch(`/api/app/dpp/${dpp.id}`, {
@@ -708,26 +770,30 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
         />
       </AccordionSection>
 
-      {/* Medien & Dokumente (nur bei bestehenden DPPs) */}
-      {!isNew && (
-        <div style={{
-          backgroundColor: "#FFFFFF",
-          padding: "clamp(1.5rem, 4vw, 2rem)",
-          borderRadius: "12px",
-          border: "1px solid #CDCDCD",
-          marginBottom: "2rem"
+      {/* Medien & Dokumente */}
+      <div style={{
+        backgroundColor: "#FFFFFF",
+        padding: "clamp(1.5rem, 4vw, 2rem)",
+        borderRadius: "12px",
+        border: "1px solid #CDCDCD",
+        marginBottom: "2rem"
+      }}>
+        <h2 style={{
+          fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
+          fontWeight: "700",
+          color: "#0A0A0A",
+          marginBottom: "1rem"
         }}>
-          <h2 style={{
-            fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
-            fontWeight: "700",
-            color: "#0A0A0A",
-            marginBottom: "1rem"
-          }}>
-            Medien & Dokumente
-          </h2>
-          <DppMediaSection dppId={dpp.id} media={dpp.media} onMediaChange={refreshMedia} />
-        </div>
-      )}
+          Medien & Dokumente
+        </h2>
+        <DppMediaSection 
+          dppId={dpp.id && dpp.id !== "new" ? dpp.id : null} 
+          media={dpp.media} 
+          onMediaChange={refreshMedia}
+          pendingFiles={pendingFiles}
+          onPendingFilesChange={setPendingFiles}
+        />
+      </div>
 
       {/* Bottom padding für Sticky Save Bar */}
       <div style={{ height: "100px" }} />

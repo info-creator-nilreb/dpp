@@ -11,10 +11,18 @@ interface DppMedia {
   uploadedAt: Date
 }
 
+interface PendingFile {
+  id: string // temporäre ID
+  file: File
+  preview?: string // Für Bilder: Data URL
+}
+
 interface DppMediaSectionProps {
-  dppId: string
+  dppId: string | null // Kann null sein für neue DPPs
   media: DppMedia[]
   onMediaChange: () => void
+  pendingFiles?: PendingFile[]
+  onPendingFilesChange?: (files: PendingFile[]) => void
 }
 
 /**
@@ -24,8 +32,15 @@ interface DppMediaSectionProps {
  * - Upload von Bildern und PDFs
  * - Anzeige vorhandener Medien
  * - Löschen von Medien
+ * - Zwischenspeicherung von Dateien für neue DPPs (ohne ID)
  */
-export default function DppMediaSection({ dppId, media, onMediaChange }: DppMediaSectionProps) {
+export default function DppMediaSection({ 
+  dppId, 
+  media, 
+  onMediaChange,
+  pendingFiles = [],
+  onPendingFilesChange 
+}: DppMediaSectionProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -35,6 +50,40 @@ export default function DppMediaSection({ dppId, media, onMediaChange }: DppMedi
     if (!file) return
 
     setError("")
+
+    // Wenn keine DPP-ID vorhanden, Datei zwischenspeichern
+    if (!dppId || dppId === "new") {
+      if (onPendingFilesChange) {
+        const reader = new FileReader()
+        
+        if (file.type.startsWith("image/")) {
+          reader.onload = (e) => {
+            const preview = e.target?.result as string
+            const pendingFile: PendingFile = {
+              id: `pending-${Date.now()}-${Math.random()}`,
+              file,
+              preview
+            }
+            onPendingFilesChange([...pendingFiles, pendingFile])
+          }
+          reader.readAsDataURL(file)
+        } else {
+          const pendingFile: PendingFile = {
+            id: `pending-${Date.now()}-${Math.random()}`,
+            file
+          }
+          onPendingFilesChange([...pendingFiles, pendingFile])
+        }
+      }
+      
+      // Input zurücksetzen
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+      return
+    }
+
+    // Wenn DPP-ID vorhanden, sofort hochladen
     setUploading(true)
 
     try {
@@ -67,6 +116,19 @@ export default function DppMediaSection({ dppId, media, onMediaChange }: DppMedi
 
   const handleDelete = async (mediaId: string) => {
     if (!confirm("Möchten Sie dieses Medium wirklich löschen?")) {
+      return
+    }
+
+    // Prüfe, ob es eine pending file ist
+    if (mediaId.startsWith("pending-")) {
+      if (onPendingFilesChange) {
+        onPendingFilesChange(pendingFiles.filter(f => f.id !== mediaId))
+      }
+      return
+    }
+
+    // Löschen von hochgeladenem Medium
+    if (!dppId || dppId === "new") {
       return
     }
 
@@ -183,7 +245,7 @@ export default function DppMediaSection({ dppId, media, onMediaChange }: DppMedi
       </div>
 
       {/* Medien-Liste */}
-      {media.length > 0 ? (
+      {(media.length > 0 || pendingFiles.length > 0) ? (
         <div>
           <h3 style={{
             fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
@@ -191,13 +253,122 @@ export default function DppMediaSection({ dppId, media, onMediaChange }: DppMedi
             color: "#0A0A0A",
             marginBottom: "1rem"
           }}>
-            Hochgeladene Medien ({media.length})
+            Medien ({media.length + pendingFiles.length})
+            {pendingFiles.length > 0 && (
+              <span style={{
+                fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+                fontWeight: "400",
+                color: "#7A7A7A",
+                marginLeft: "0.5rem"
+              }}>
+                ({pendingFiles.length} zum Upload)
+              </span>
+            )}
           </h3>
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
             gap: "1rem"
           }}>
+            {/* Pending Files */}
+            {pendingFiles.map((pendingFile) => (
+              <div
+                key={pendingFile.id}
+                style={{
+                  border: "1px solid #CDCDCD",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  backgroundColor: "#FFFFFF",
+                  opacity: 0.8
+                }}
+              >
+                {isImage(pendingFile.file.type) && pendingFile.preview ? (
+                  <div style={{
+                    width: "100%",
+                    aspectRatio: "16/9",
+                    backgroundColor: "#F5F5F5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden"
+                  }}>
+                    <img
+                      src={pendingFile.preview}
+                      alt={pendingFile.file.name}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover"
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{
+                    width: "100%",
+                    aspectRatio: "16/9",
+                    backgroundColor: "#F5F5F5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "column",
+                    gap: "0.5rem"
+                  }}>
+                    <div style={{
+                      fontSize: "2rem",
+                      color: "#7A7A7A"
+                    }}>
+                      📄
+                    </div>
+                    <div style={{
+                      fontSize: "clamp(0.75rem, 2vw, 0.85rem)",
+                      color: "#7A7A7A",
+                      textAlign: "center",
+                      padding: "0 0.5rem"
+                    }}>
+                      PDF
+                    </div>
+                  </div>
+                )}
+                <div style={{ padding: "0.75rem" }}>
+                  <div style={{
+                    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+                    fontWeight: "500",
+                    color: "#0A0A0A",
+                    marginBottom: "0.25rem",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  }}>
+                    {pendingFile.file.name}
+                  </div>
+                  <div style={{
+                    fontSize: "clamp(0.75rem, 2vw, 0.85rem)",
+                    color: "#7A7A7A",
+                    marginBottom: "0.5rem"
+                  }}>
+                    {formatFileSize(pendingFile.file.size)}
+                  </div>
+                  <button
+                    onClick={() => handleDelete(pendingFile.id)}
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem",
+                      backgroundColor: "transparent",
+                      border: "1px solid #CDCDCD",
+                      borderRadius: "6px",
+                      color: "#E20074",
+                      fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
+                      cursor: "pointer",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Entfernen
+                  </button>
+                </div>
+              </div>
+            ))}
+            
+            {/* Hochgeladene Medien */}
             {media.map((item) => (
               <div
                 key={item.id}
