@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, Fragment } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import DppMediaSection from "@/components/DppMediaSection"
 import CountrySelect from "@/components/CountrySelect"
 import { useNotification } from "@/components/NotificationProvider"
 import InputField from "@/components/InputField"
+import StickySaveBar from "@/components/StickySaveBar"
 
 interface DppMedia {
   id: string
@@ -166,8 +167,11 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   const [section3Open, setSection3Open] = useState(false)
   const [section4Open, setSection4Open] = useState(false)
   const [section5Open, setSection5Open] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [publishing, setPublishing] = useState(false)
+  
+  // Save Status für Sticky Save Bar
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "publishing" | "error">("idle")
+  const [lastSaved, setLastSaved] = useState<Date | null>(isNew ? null : initialDpp.updatedAt)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Aktualisiere Medien-Liste nach Upload/Delete
   const refreshMedia = async () => {
@@ -182,9 +186,11 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
     }
   }
 
-  // Speichere DPP-Daten
+  // Speichere DPP-Daten (Draft Save)
   const handleSave = async () => {
-    setSaving(true)
+    setSaveStatus("saving")
+    setSaveError(null)
+    
     try {
       if (isNew) {
         // Neuer DPP: Erstellen
@@ -210,25 +216,21 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
           organizationId: dpp.organizationId
         }
         
-        console.log("DPP CREATE REQUEST: payload", payload)
-
         const response = await fetch("/api/app/dpp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         })
 
-        console.log("DPP CREATE RESPONSE: status", response.status, "ok:", response.ok)
-
         if (!response.ok) {
-          // Response ist NICHT ok → Fehler anzeigen, KEIN Redirect
           let errorData
           try {
             errorData = await response.json()
           } catch (parseError) {
-            console.error("DPP CREATE: Failed to parse error response", parseError)
-            showNotification(`Fehler beim Erstellen (Status: ${response.status})`, "error")
-            setSaving(false)
+            const errorMsg = `Fehler beim Erstellen (Status: ${response.status})`
+            setSaveError(errorMsg)
+            setSaveStatus("error")
+            showNotification(errorMsg, "error")
             return
           }
 
@@ -236,38 +238,42 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
             ? "Sie benötigen eine Organisation. Bitte erstellen Sie zuerst eine Organisation in Ihren Kontoeinstellungen."
             : errorData.error || "Fehler beim Erstellen"
           
-          console.error("DPP CREATE ERROR:", errorMessage, errorData)
+          setSaveError(errorMessage)
+          setSaveStatus("error")
           showNotification(errorMessage, "error")
-          setSaving(false)
-          return // Wichtig: Kein Redirect bei Fehler
+          return
         }
 
-        // Nur bei erfolgreichem Response → Redirect
         let data
         try {
           data = await response.json()
         } catch (parseError) {
-          console.error("DPP CREATE: Failed to parse response JSON", parseError)
-          showNotification("Fehler beim Verarbeiten der Antwort", "error")
-          setSaving(false)
+          const errorMsg = "Fehler beim Verarbeiten der Antwort"
+          setSaveError(errorMsg)
+          setSaveStatus("error")
+          showNotification(errorMsg, "error")
           return
         }
 
         if (!data?.dpp?.id) {
-          console.error("DPP CREATE: Response missing dpp.id", data)
-          showNotification("Fehler: DPP-ID fehlt in der Antwort", "error")
-          setSaving(false)
+          const errorMsg = "Fehler: DPP-ID fehlt in der Antwort"
+          setSaveError(errorMsg)
+          setSaveStatus("error")
+          showNotification(errorMsg, "error")
           return
         }
-
-        console.log("DPP CREATE SUCCESS: dpp.id", data.dpp.id)
         
-        // Erfolgreich gespeichert - Benachrichtigung anzeigen
-        showNotification("Produktpass erfolgreich erstellt", "success")
+        // Erfolgreich gespeichert
+        setLastSaved(new Date())
+        setSaveStatus("saved")
+        showNotification("Entwurf gespeichert", "success")
         
-        // Weiterleitung zur DPP-Liste
-        // Da DppsContent jetzt eine Client Component ist, wird sie automatisch neu geladen
-        router.replace("/app/dpps")
+        // Update local state mit neuer DPP-ID
+        setDpp(prev => ({ ...prev, id: data.dpp.id, status: "DRAFT" }))
+        
+        // Weiterleitung zur Edit-Seite (nicht zur Liste)
+        // Verwende replace, damit Browser-History sauber bleibt
+        router.replace(`/app/dpps/${data.dpp.id}`)
       } else {
         // Bestehender DPP: Aktualisieren
         const response = await fetch(`/api/app/dpp/${dpp.id}`, {
@@ -297,18 +303,28 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
 
         if (response.ok) {
           // Erfolgreich gespeichert
-          showNotification("Änderungen gespeichert", "success")
-          setSaving(false)
+          setLastSaved(new Date())
+          setSaveStatus("saved")
+          showNotification("Entwurf gespeichert", "success")
+          // Bleibe auf der Seite, kein Redirect
         } else {
-          const data = await response.json()
-          showNotification(data.error || "Fehler beim Speichern", "error")
-          setSaving(false)
+          let errorData
+          try {
+            errorData = await response.json()
+          } catch {
+            errorData = { error: "Fehler beim Speichern" }
+          }
+          const errorMsg = errorData.error || "Fehler beim Speichern"
+          setSaveError(errorMsg)
+          setSaveStatus("error")
+          showNotification(errorMsg, "error")
         }
       }
     } catch (error) {
-      console.error("DPP CREATE ERROR:", error)
-      showNotification("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.", "error")
-      setSaving(false)
+      const errorMsg = "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+      setSaveError(errorMsg)
+      setSaveStatus("error")
+      showNotification(errorMsg, "error")
     }
   }
 
@@ -319,7 +335,9 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
       return
     }
 
-    setPublishing(true)
+    setSaveStatus("publishing")
+    setSaveError(null)
+    
     try {
       let dppIdToPublish = dpp.id
 
@@ -353,8 +371,10 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
 
         if (!createResponse.ok) {
           const errorData = await createResponse.json()
-          showNotification(errorData.error || "Fehler beim Erstellen", "error")
-          setPublishing(false)
+          const errorMsg = errorData.error || "Fehler beim Erstellen"
+          setSaveError(errorMsg)
+          setSaveStatus("error")
+          showNotification(errorMsg, "error")
           return
         }
 
@@ -389,43 +409,43 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
 
         if (!saveResponse.ok) {
           const errorData = await saveResponse.json()
-          showNotification(errorData.error || "Fehler beim Speichern", "error")
-          setPublishing(false)
+          const errorMsg = errorData.error || "Fehler beim Speichern"
+          setSaveError(errorMsg)
+          setSaveStatus("error")
+          showNotification(errorMsg, "error")
           return
         }
       }
 
       // Dann veröffentlichen
-      console.log("Publishing DPP:", dppIdToPublish)
       const publishResponse = await fetch(`/api/app/dpp/${dppIdToPublish}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       })
 
-      console.log("Publish response status:", publishResponse.status)
-
       if (publishResponse.ok) {
         const data = await publishResponse.json()
-        console.log("Publish successful, version data:", data)
         showNotification(`Produktpass erfolgreich als Version ${data.version.version} veröffentlicht!`, "success")
-        // Weiterleitung zum Editor nach kurzer Verzögerung
-        setTimeout(() => {
-          if (isNew) {
-            window.location.href = `/app/dpps/${dppIdToPublish}`
-          } else {
-            window.location.reload()
-          }
-        }, 1000)
+        
+        // Redirect zu Version-Page
+        router.replace(`/app/dpps/${dppIdToPublish}/versions/${data.version.version}`)
       } else {
-        const errorData = await publishResponse.json()
-        console.error("Publish error:", errorData)
+        let errorData
+        try {
+          errorData = await publishResponse.json()
+        } catch {
+          errorData = { error: "Fehler beim Veröffentlichen" }
+        }
         const errorMessage = errorData.error || errorData.details || "Fehler beim Veröffentlichen"
+        setSaveError(errorMessage)
+        setSaveStatus("error")
         showNotification(errorMessage, "error")
-        setPublishing(false)
       }
     } catch (error) {
-      showNotification("Ein Fehler ist aufgetreten", "error")
-      setPublishing(false)
+      const errorMsg = "Ein Fehler ist aufgetreten"
+      setSaveError(errorMsg)
+      setSaveStatus("error")
+      showNotification(errorMsg, "error")
     }
   }
 
@@ -472,6 +492,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   )
 
   return (
+    <Fragment>
     <div>
       <div style={{
         marginBottom: "1rem"
@@ -708,48 +729,20 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
         </div>
       )}
 
-      {/* Save & Publish Buttons */}
-      <div style={{
-        display: "flex",
-        justifyContent: "flex-end",
-        gap: "1rem",
-        marginTop: "2rem",
-        flexWrap: "wrap"
-      }}>
-        <button
-          onClick={handleSave}
-          disabled={saving || publishing}
-          style={{
-            padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
-            backgroundColor: saving || publishing ? "#CDCDCD" : "transparent",
-            color: saving || publishing ? "#FFFFFF" : "#0A0A0A",
-            border: "1px solid #CDCDCD",
-            borderRadius: "8px",
-            fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
-            fontWeight: "600",
-            cursor: saving || publishing ? "not-allowed" : "pointer"
-          }}
-        >
-          {saving ? (isNew ? "Wird erstellt..." : "Wird gespeichert...") : (isNew ? "Als Entwurf speichern" : "Änderungen speichern")}
-        </button>
-        <button
-          onClick={handlePublish}
-          disabled={saving || publishing || !name.trim()}
-          style={{
-            padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
-            backgroundColor: saving || publishing || !name.trim() ? "#CDCDCD" : "#E20074",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
-            fontWeight: "600",
-            cursor: saving || publishing || !name.trim() ? "not-allowed" : "pointer",
-            boxShadow: saving || publishing || !name.trim() ? "none" : "0 4px 12px rgba(226, 0, 116, 0.3)"
-          }}
-        >
-          {publishing ? "Wird veröffentlicht..." : (isNew ? "Veröffentlichen" : "Neue Version veröffentlichen")}
-        </button>
-      </div>
+      {/* Bottom padding für Sticky Save Bar */}
+      <div style={{ height: "100px" }} />
     </div>
+
+    {/* Sticky Save Bar */}
+    <StickySaveBar
+      status={saveStatus}
+      lastSaved={lastSaved}
+      onSave={handleSave}
+      onPublish={handlePublish}
+      isNew={isNew}
+      canPublish={!!name.trim()}
+      error={saveError}
+    />
+    </Fragment>
   )
 }
