@@ -164,3 +164,134 @@ Wenn Sie sich nicht bei ${appName} registriert haben, können Sie diese E-Mail i
   }
 }
 
+/**
+ * Sendet eine Passwort-Reset-E-Mail
+ */
+export async function sendPasswordResetEmail(
+  email: string,
+  name: string | null,
+  resetToken: string
+): Promise<void> {
+  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/reset-password?token=${resetToken}`
+  const appName = process.env.APP_NAME || "T-Pass"
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .container {
+            background-color: #FFFFFF;
+            border: 1px solid #CDCDCD;
+            border-radius: 12px;
+            padding: 2rem;
+          }
+          .button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: #E20074;
+            color: #FFFFFF;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 1rem 0;
+          }
+          .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #CDCDCD;
+            font-size: 0.85rem;
+            color: #7A7A7A;
+          }
+          .warning {
+            background-color: #FFF3CD;
+            border: 1px solid #FFE69C;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+            color: #856404;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1 style="color: #0A0A0A; margin-bottom: 1rem;">Passwort zurücksetzen</h1>
+          <p>Hallo ${name || email},</p>
+          <p>Sie haben die Zurücksetzung Ihres Passworts für ${appName} angefordert.</p>
+          <p>Bitte klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
+          <a href="${resetUrl}" class="button">Passwort zurücksetzen</a>
+          <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
+          <p style="word-break: break-all; color: #7A7A7A; font-size: 0.9rem;">${resetUrl}</p>
+          <div class="warning">
+            <strong>Wichtig:</strong> Dieser Link ist 1 Stunde gültig. Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorieren.
+          </div>
+          <div class="footer">
+            <p>Wenn Sie diese E-Mail nicht angefordert haben, können Sie sie sicher ignorieren. Ihr Passwort bleibt unverändert.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  const textContent = `
+Hallo ${name || email},
+
+Sie haben die Zurücksetzung Ihres Passworts für ${appName} angefordert.
+
+Bitte klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:
+
+${resetUrl}
+
+Wichtig: Dieser Link ist 1 Stunde gültig.
+
+Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorieren. Ihr Passwort bleibt unverändert.
+  `
+
+  try {
+    const transport = createEmailTransport()
+
+    const mailOptions = {
+      from: fromEmail,
+      to: email,
+      subject: `Passwort zurücksetzen - ${appName}`,
+      text: textContent,
+      html: htmlContent,
+    }
+
+    const info = await transport.sendMail(mailOptions)
+
+    if (process.env.SMTP_HOST) {
+      console.log(`Passwort-Reset-E-Mail gesendet an: ${email}`)
+    } else {
+      console.log(`\n=== Passwort-Reset-E-Mail (Development Mode) ===`)
+      console.log(`An: ${email}`)
+      console.log(`Von: ${fromEmail}`)
+      console.log(`Reset-URL: ${resetUrl}`)
+      console.log(`\nFalls ein E-Mail-Service konfiguriert wäre, würde die E-Mail jetzt gesendet werden.`)
+      console.log(`Für Produktion: Bitte SMTP_HOST, SMTP_PORT, SMTP_USER und SMTP_PASSWORD in .env konfigurieren`)
+      console.log(`================================================\n`)
+      if (info && typeof info === 'object' && 'message' in info) {
+        console.log(`E-Mail-Daten:`, JSON.stringify(info, null, 2))
+      }
+    }
+  } catch (error) {
+    console.error("Fehler beim Senden der Passwort-Reset-E-Mail:", error)
+    // Im Development-Mode keinen Fehler werfen, da E-Mail nur geloggt wird
+    if (!process.env.SMTP_HOST) {
+      console.log("⚠️ E-Mail wurde nicht gesendet, aber Reset-Token wurde generiert.")
+      return // Kein Fehler in Development
+    }
+    throw error // In Production Fehler weiterwerfen
+  }
+}
+

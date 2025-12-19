@@ -5,6 +5,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getPublicUrl } from "@/lib/getPublicUrl"
+import { requireEditDPP } from "@/lib/api-permissions"
 
 /**
  * POST /api/app/dpp/[dppId]/publish
@@ -29,28 +30,9 @@ export async function POST(
       )
     }
 
-    // Prüfe Zugriff auf DPP
-    const accessCheck = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
-      include: {
-        organization: {
-          include: {
-            memberships: {
-              where: {
-                userId: session.user.id
-              }
-            }
-          }
-        }
-      }
-    })
-
-    if (!accessCheck || accessCheck.organization.memberships.length === 0) {
-      return NextResponse.json(
-        { error: "Kein Zugriff auf diesen DPP" },
-        { status: 403 }
-      )
-    }
+    // Prüfe Berechtigung zum Bearbeiten (Veröffentlichen erfordert Bearbeitungsrechte)
+    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    if (permissionError) return permissionError
 
     // Hole DPP mit allen Daten
     const dpp = await prisma.dpp.findUnique({

@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { requireViewDPP } from "@/lib/api-permissions"
 
 /**
  * GET /api/app/dpp/[dppId]/versions
@@ -24,28 +25,9 @@ export async function GET(
       )
     }
 
-    // Prüfe Zugriff auf DPP
-    const accessCheck = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
-      include: {
-        organization: {
-          include: {
-            memberships: {
-              where: {
-                userId: session.user.id
-              }
-            }
-          }
-        }
-      }
-    })
-
-    if (!accessCheck || accessCheck.organization.memberships.length === 0) {
-      return NextResponse.json(
-        { error: "Kein Zugriff auf diesen DPP" },
-        { status: 403 }
-      )
-    }
+    // Prüfe Berechtigung zum Ansehen
+    const permissionError = await requireViewDPP(params.dppId, session.user.id)
+    if (permissionError) return permissionError
 
     // Hole alle Versionen (absteigend nach Versionsnummer)
     const versions = await prisma.dppVersion.findMany({

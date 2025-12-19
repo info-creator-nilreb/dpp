@@ -14,15 +14,25 @@ model User {
   email             String       @unique
   password          String       // bcrypt hash
   name              String?
-  isPlatformAdmin   Boolean      @default(false) // Meta-Admin Flag
+  systemRole        String?      // System-Rolle: SUPER_ADMIN, EU_REGISTRY, null
+  isPlatformAdmin   Boolean      @default(false) // DEPRECATED: Verwende systemRole statt dessen
   emailVerified     Boolean      @default(false) // E-Mail-Verifizierung
   verificationToken String?      @unique // Token für E-Mail-Verifizierung
   verificationTokenExpires DateTime? // Ablaufdatum des Tokens
+  // Passwort-Reset
+  passwordResetToken String?     @unique // Token für Passwort-Reset
+  passwordResetTokenExpires DateTime? // Ablaufdatum des Reset-Tokens
+  // Zwei-Faktor-Authentifizierung (2FA)
+  totpSecret        String?      // TOTP-Secret für 2FA (nur für Super Admins)
+  totpEnabled       Boolean      @default(false) // Ist 2FA aktiviert?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
   // Many-to-Many: User kann Mitglied mehrerer Organisationen sein
   memberships     Membership[]
+  
+  // DPP-spezifische Permissions (externe Rollen)
+  dppPermissions  DppPermission[]
   
   // Veröffentlichte DPP-Versionen (für Audit-Trail)
   publishedVersions DppVersion[]
@@ -46,10 +56,12 @@ model Organization {
 }
 
 // Join-Tabelle für User ↔ Organization (Many-to-Many)
+// Enthält die Organisations-Rolle des Users
 model Membership {
   id             String       @id @default(cuid())
   userId         String
   organizationId String
+  role           String       @default("ORG_MEMBER") // ORG_OWNER, ORG_ADMIN, ORG_MEMBER, ORG_VIEWER
   createdAt      DateTime     @default(now())
 
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -101,6 +113,9 @@ model Dpp {
   
   // Versionen (veröffentlichte Versionen sind read-only)
   versions       DppVersion[]
+  
+  // DPP-spezifische Permissions (externe Rollen: SUPPLIER, RECYCLER, REPAIR_SERVICE)
+  permissions    DppPermission[]
 
   @@map("dpps")
 }
@@ -160,5 +175,25 @@ model DppVersion {
   // Eindeutigkeit: Ein DPP kann nur eine Version mit einer bestimmten Versionsnummer haben
   @@unique([dppId, version])
   @@map("dpp_versions")
+}
+
+// DPP-spezifische Permissions für externe Rollen
+// Ermöglicht granulare Berechtigungen pro DPP (z.B. SUPPLIER kann nur Materialien bearbeiten)
+model DppPermission {
+  id        String   @id @default(cuid())
+  dppId     String   // Zugehörigkeit zum DPP
+  userId    String   // User mit dieser Permission
+  role      String   // Externe Rolle: SUPPLIER, RECYCLER, REPAIR_SERVICE
+  sections  String?  // Komma-separierte Liste erlaubter Sektionen (z.B. "materials,materialSource")
+                     // null = alle Sektionen der Rolle
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dpp       Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Ein User kann nur eine Permission-Rolle pro DPP haben
+  @@unique([dppId, userId, role])
+  @@map("dpp_permissions")
 }
 

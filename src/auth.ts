@@ -16,15 +16,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        totpCode: { label: "2FA Code", type: "text", optional: true }
       },
       async authorize(credentials) {
+        // Debug-Logging - sowohl Console als auch Error für Sichtbarkeit
+        const debugInfo = {
+          called: true,
+          email: credentials?.email,
+          hasPassword: !!credentials?.password,
+          totpCode: (credentials as any)?.totpCode,
+          totpCodeLength: (credentials as any)?.totpCode ? String((credentials as any)?.totpCode).length : 0,
+          allKeys: credentials ? Object.keys(credentials) : []
+        }
+        console.error("[AUTH DEBUG]", JSON.stringify(debugInfo, null, 2))
+        
         // Validierung: E-Mail und Passwort müssen vorhanden sein
         if (!credentials?.email || !credentials?.password) {
+          console.error("[AUTH] Fehlende E-Mail oder Passwort")
           return null
         }
 
-        // User aus Datenbank laden (inkl. isPlatformAdmin und emailVerified)
+        // User aus Datenbank laden (inkl. systemRole, isPlatformAdmin, emailVerified und 2FA)
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
           select: {
@@ -32,20 +45,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: true,
             password: true,
             name: true,
+            systemRole: true,
             isPlatformAdmin: true,
-            emailVerified: true
+            emailVerified: true,
+            totpEnabled: true,
+            totpSecret: true
           }
         })
 
         if (!user) {
+          console.error("[AUTH] User nicht gefunden")
           return null
         }
 
-        // Prüfen ob E-Mail verifiziert ist
-        if (!user.emailVerified) {
-          // User existiert, aber E-Mail ist nicht verifiziert
-          // NextAuth gibt null zurück, was zu "CredentialsSignin" führt
-          // Wir können den Fehler im Login-Handler abfangen
+        console.error("[AUTH] User gefunden:", user.email, "totpEnabled:", user.totpEnabled)
+
+        // Prüfen ob E-Mail verifiziert ist (Super Admins können immer einloggen)
+        const isSuperAdmin = user.systemRole === "SUPER_ADMIN" || user.isPlatformAdmin === true
+        if (!user.emailVerified && !isSuperAdmin) {
+          console.error("[AUTH] E-Mail nicht verifiziert")
           return null
         }
 
@@ -56,7 +74,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         )
 
         if (!isPasswordValid) {
+          console.error("[AUTH] Passwort ungültig")
           return null
+        }
+
+        console.error("[AUTH] Passwort gültig, isSuperAdmin:", isSuperAdmin)
+
+        // Prüfe 2FA für Super Admins
+        if (isSuperAdmin && user.totpEnabled && user.totpSecret) {
+          const totpCode = (credentials as any).totpCode
+          
+          // Wenn kein Code vorhanden ist, Login verweigern
+          // Die Login-Seite wird dann prüfen, ob 2FA erforderlich ist
+          if (!totpCode || String(totpCode).trim().length === 0) {
+            console.error("[AUTH] 2FA erforderlich, aber kein Code vorhanden")
+            return null
+          }
+
+          // Code verifizieren (ohne Vor-Normalisierung, da verifyTotpCode das bereits macht)
+          const { verifyTotpCode } = await import("@/lib/totp")
+          console.error("[AUTH] 2FA-Verifizierung - Code (roh):", totpCode, "Secret vorhanden:", !!user.totpSecret, "Secret (first 4):", user.totpSecret?.substring(0, 4))
+          const isTotpValid = verifyTotpCode(String(totpCode), user.totpSecret)
+          console.error("[AUTH] 2FA-Verifizierung Ergebnis:", isTotpValid)
+          
+          if (!isTotpValid) {
+            console.error("[AUTH] 2FA-Code ungültig - Login verweigert")
+            return null // Ungültiger 2FA-Code
+          }
+          console.error("[AUTH] 2FA-Code gültig - Login erlaubt")
         }
 
         // User-Daten für Session zurückgeben (inkl. Platform-Admin-Flag)
@@ -149,11 +194,12 @@ export async function createUser(email: string, password: string, name?: string)
       
       console.log("Organization created:", organization.id)
       
-      // 3. Membership erstellen (User wird Mitglied der neuen Organization)
+      // 3. Membership erstellen (User wird OWNER der neuen Organization)
       const membership = await tx.membership.create({
         data: {
           userId: user.id,
-          organizationId: organization.id
+          organizationId: organization.id,
+          role: "ORG_OWNER" // Neuer User wird automatisch OWNER seiner Organisation
         }
       })
       

@@ -5,6 +5,8 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { saveFile, isAllowedFileType, MAX_FILE_SIZE } from "@/lib/storage"
+import { requireEditDPP, requireViewDPP } from "@/lib/api-permissions"
+import { DPP_SECTIONS } from "@/lib/permissions"
 
 /**
  * POST /api/app/dpp/[dppId]/media
@@ -31,30 +33,9 @@ export async function POST(
 
     const { dppId } = params
 
-    // Prüfe ob DPP existiert und User Zugriff hat
-    const dpp = await prisma.dpp.findUnique({
-      where: { id: dppId },
-      include: { organization: { include: { memberships: true } } }
-    })
-
-    if (!dpp) {
-      return NextResponse.json(
-        { error: "DPP nicht gefunden" },
-        { status: 404 }
-      )
-    }
-
-    // Prüfe ob User Mitglied der Organization ist
-    const hasAccess = dpp.organization.memberships.some(
-      m => m.userId === session.user.id
-    )
-
-    if (!hasAccess) {
-      return NextResponse.json(
-        { error: "Kein Zugriff auf diesen DPP" },
-        { status: 403 }
-      )
-    }
+    // Prüfe Berechtigung zum Bearbeiten (inkl. Medien-Upload)
+    const permissionError = await requireEditDPP(dppId, session.user.id)
+    if (permissionError) return permissionError
 
     // Parse FormData
     const formData = await request.formData()
@@ -145,30 +126,9 @@ export async function GET(
 
     const { dppId } = params
 
-    // Prüfe ob DPP existiert und User Zugriff hat
-    const dpp = await prisma.dpp.findUnique({
-      where: { id: dppId },
-      include: { organization: { include: { memberships: true } } }
-    })
-
-    if (!dpp) {
-      return NextResponse.json(
-        { error: "DPP nicht gefunden" },
-        { status: 404 }
-      )
-    }
-
-    // Prüfe ob User Mitglied der Organization ist
-    const hasAccess = dpp.organization.memberships.some(
-      m => m.userId === session.user.id
-    )
-
-    if (!hasAccess) {
-      return NextResponse.json(
-        { error: "Kein Zugriff auf diesen DPP" },
-        { status: 403 }
-      )
-    }
+    // Prüfe Berechtigung zum Ansehen
+    const permissionError = await requireViewDPP(dppId, session.user.id)
+    if (permissionError) return permissionError
 
     // Hole alle Medien des DPPs
     const media = await prisma.dppMedia.findMany({

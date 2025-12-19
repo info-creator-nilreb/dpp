@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { requireViewDPP, requireEditDPP } from "@/lib/api-permissions"
 
 /**
  * GET /api/app/dpp/[dppId]
@@ -24,28 +25,9 @@ export async function GET(
       )
     }
 
-    // Prüfe Zugriff
-    const dpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
-      include: {
-        organization: {
-          include: {
-            memberships: {
-              where: {
-                userId: session.user.id
-              }
-            }
-          }
-        }
-      }
-    })
-
-    if (!dpp || dpp.organization.memberships.length === 0) {
-      return NextResponse.json(
-        { error: "DPP nicht gefunden oder kein Zugriff" },
-        { status: 404 }
-      )
-    }
+    // Prüfe Berechtigung mit neuem Permission-System
+    const permissionError = await requireViewDPP(params.dppId, session.user.id)
+    if (permissionError) return permissionError
 
     // Lade DPP mit Medien
     const dppWithMedia = await prisma.dpp.findUnique({
@@ -87,28 +69,9 @@ export async function PUT(
       )
     }
 
-    // Prüfe Zugriff
-    const accessCheck = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
-      include: {
-        organization: {
-          include: {
-            memberships: {
-              where: {
-                userId: session.user.id
-              }
-            }
-          }
-        }
-      }
-    })
-
-    if (!accessCheck || accessCheck.organization.memberships.length === 0) {
-      return NextResponse.json(
-        { error: "Kein Zugriff auf diesen DPP" },
-        { status: 403 }
-      )
-    }
+    // Prüfe Berechtigung mit neuem Permission-System
+    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    if (permissionError) return permissionError
 
     const {
       name, description, category,

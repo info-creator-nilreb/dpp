@@ -5,6 +5,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getPublicUrl } from "@/lib/getPublicUrl"
+import { requireViewDPP } from "@/lib/api-permissions"
 
 /**
  * GET /api/app/dpp/[dppId]/versions/[versionNumber]
@@ -25,28 +26,9 @@ export async function GET(
       )
     }
 
-    // Prüfe Zugriff auf DPP
-    const accessCheck = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
-      include: {
-        organization: {
-          include: {
-            memberships: {
-              where: {
-                userId: session.user.id
-              }
-            }
-          }
-        }
-      }
-    })
-
-    if (!accessCheck || accessCheck.organization.memberships.length === 0) {
-      return NextResponse.json(
-        { error: "Kein Zugriff auf diesen DPP" },
-        { status: 403 }
-      )
-    }
+    // Prüfe Berechtigung zum Ansehen
+    const permissionError = await requireViewDPP(params.dppId, session.user.id)
+    if (permissionError) return permissionError
 
     const versionNumber = parseInt(params.versionNumber, 10)
     if (isNaN(versionNumber)) {
@@ -70,6 +52,11 @@ export async function GET(
             id: true,
             name: true,
             email: true
+          }
+        },
+        dpp: {
+          select: {
+            name: true
           }
         }
       }
@@ -114,7 +101,7 @@ export async function GET(
         },
         publicUrl: absolutePublicUrl, // Absolute URL für Client
         qrCodeImageUrl: version.qrCodeImageUrl,
-        dppName: accessCheck.name
+        dppName: version.dpp.name
       }
     }, { status: 200 })
   } catch (error: any) {

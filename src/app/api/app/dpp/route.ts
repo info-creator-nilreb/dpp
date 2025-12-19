@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { ORGANIZATION_ROLES } from "@/lib/permissions"
 
 /**
  * POST /api/app/dpp
@@ -39,6 +40,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "NO_ORGANIZATION" },
         { status: 400 }
+      )
+    }
+
+    // Prüfe ob User DPPs erstellen darf (ORG_VIEWER darf keine erstellen)
+    const role = membership.role as string
+    if (role === ORGANIZATION_ROLES.ORG_VIEWER) {
+      return NextResponse.json(
+        { error: "Keine Berechtigung zum Erstellen von DPPs" },
+        { status: 403 }
       )
     }
 
@@ -159,7 +169,37 @@ export async function GET(request: Request) {
       )
     }
 
-    // Hole alle Organizations des Users
+    // Prüfe ob Super Admin (kann alle DPPs sehen)
+    const { isSuperAdmin } = await import("@/lib/permissions")
+    const isAdmin = await isSuperAdmin(session.user.id)
+
+    if (isAdmin) {
+      // Super Admin sieht alle DPPs
+      const allDpps = await prisma.dpp.findMany({
+        include: {
+          organization: true,
+          media: {
+            select: { id: true }
+          }
+        },
+        orderBy: { updatedAt: "desc" }
+      })
+
+      const dpps = allDpps.map(dpp => ({
+        id: dpp.id,
+        name: dpp.name,
+        description: dpp.description,
+        organizationId: dpp.organizationId,
+        organizationName: dpp.organization.name,
+        mediaCount: dpp.media.length,
+        createdAt: dpp.createdAt,
+        updatedAt: dpp.updatedAt
+      }))
+
+      return NextResponse.json({ dpps }, { status: 200 })
+    }
+
+    // Normale User: Hole alle Organizations des Users
     const memberships = await prisma.membership.findMany({
       where: {
         userId: session.user.id
@@ -184,8 +224,8 @@ export async function GET(request: Request) {
       }
     })
 
-    // Sammle alle DPPs
-    const dpps = memberships.flatMap(m => 
+    // Sammle alle DPPs aus Organizations
+    const orgDpps = memberships.flatMap(m => 
       m.organization.dpps.map(dpp => ({
         id: dpp.id,
         name: dpp.name,
@@ -197,6 +237,47 @@ export async function GET(request: Request) {
         updatedAt: dpp.updatedAt
       }))
     )
+
+    // Hole auch DPPs, auf die User externe Permissions hat (die nicht bereits in orgDpps sind)
+    const orgDppIds = new Set(orgDpps.map(d => d.id))
+    
+    const externalPermissions = await prisma.dppPermission.findMany({
+      where: { userId: session.user.id },
+      include: {
+        dpp: {
+          include: {
+            organization: true,
+            media: { select: { id: true } }
+          }
+        }
+      }
+    })
+
+    // Filtere DPPs mit externen Permissions (die nicht bereits in orgDpps sind)
+    const { canViewDPP } = await import("@/lib/permissions")
+    const externalDpps = await Promise.all(
+      externalPermissions
+        .filter(perm => !orgDppIds.has(perm.dppId))
+        .map(async perm => {
+          const canView = await canViewDPP(session.user.id, perm.dpp.id)
+          if (!canView) return null
+          return {
+            id: perm.dpp.id,
+            name: perm.dpp.name,
+            description: perm.dpp.description,
+            organizationId: perm.dpp.organizationId,
+            organizationName: perm.dpp.organization.name,
+            mediaCount: perm.dpp.media.length,
+            createdAt: perm.dpp.createdAt,
+            updatedAt: perm.dpp.updatedAt
+          }
+        })
+    )
+
+    const externalDppsFiltered = externalDpps.filter((dpp): dpp is NonNullable<typeof dpp> => dpp !== null)
+
+    // Kombiniere beide Listen
+    const dpps = [...orgDpps, ...externalDppsFiltered]
 
     return NextResponse.json({ dpps }, { status: 200 })
   } catch (error: any) {

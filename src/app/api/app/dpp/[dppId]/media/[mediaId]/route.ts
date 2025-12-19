@@ -5,6 +5,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { deleteFile } from "@/lib/storage"
+import { requireEditDPP } from "@/lib/api-permissions"
 
 /**
  * DELETE /api/app/dpp/[dppId]/media/[mediaId]
@@ -30,30 +31,9 @@ export async function DELETE(
 
     const { dppId, mediaId } = params
 
-    // Prüfe ob DPP existiert und User Zugriff hat
-    const dpp = await prisma.dpp.findUnique({
-      where: { id: dppId },
-      include: { organization: { include: { memberships: true } } }
-    })
-
-    if (!dpp) {
-      return NextResponse.json(
-        { error: "DPP nicht gefunden" },
-        { status: 404 }
-      )
-    }
-
-    // Prüfe ob User Mitglied der Organization ist
-    const hasAccess = dpp.organization.memberships.some(
-      m => m.userId === session.user.id
-    )
-
-    if (!hasAccess) {
-      return NextResponse.json(
-        { error: "Kein Zugriff auf diesen DPP" },
-        { status: 403 }
-      )
-    }
+    // Prüfe Berechtigung zum Bearbeiten
+    const permissionError = await requireEditDPP(dppId, session.user.id)
+    if (permissionError) return permissionError
 
     // Hole Medium
     const media = await prisma.dppMedia.findUnique({

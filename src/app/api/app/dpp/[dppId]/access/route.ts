@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+import { canViewDPP } from "@/lib/permissions"
 
 /**
  * GET /api/app/dpp/[dppId]/access
@@ -21,26 +21,7 @@ export async function GET(
       return NextResponse.json({ hasAccess: false }, { status: 200 })
     }
 
-    const dpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
-      include: {
-        organization: {
-          include: {
-            memberships: {
-              where: {
-                userId: session.user.id
-              }
-            }
-          }
-        }
-      }
-    })
-
-    if (!dpp) {
-      return NextResponse.json({ hasAccess: false }, { status: 200 })
-    }
-
-    const hasAccess = dpp.organization.memberships.length > 0
+    const hasAccess = await canViewDPP(session.user.id, params.dppId)
     return NextResponse.json({ hasAccess }, { status: 200 })
   } catch (error) {
     console.error("Error checking DPP access:", error)
