@@ -126,7 +126,7 @@ export default function DppsContent() {
             Noch keine Produktpässe erstellt.
           </p>
           <a
-            href="/app/dpps/new"
+            href="/app/dpps/create"
             style={{
               display: "inline-block",
               backgroundColor: "#E20074",
