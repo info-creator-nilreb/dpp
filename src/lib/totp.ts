@@ -46,9 +46,14 @@ export function verifyTotpCode(token: string, secret: string): boolean {
 
     // TOTP-Verifizierung mit Window von 2 (±60 Sekunden Toleranz)
     // Das berücksichtigt größere Zeitabweichungen zwischen Server und Client
-    return authenticator.check(normalizedToken, normalizedSecret, {
-      window: 2 // Erlaubt Codes von vorherigem und nächstem Zeitfenster
-    })
+    // Temporär Window setzen, dann zurücksetzen
+    const originalWindow = authenticator.options.window || 1
+    authenticator.options.window = 2
+    try {
+      return authenticator.check(normalizedToken, normalizedSecret)
+    } finally {
+      authenticator.options.window = originalWindow
+    }
   } catch (error) {
     // Bei jedem Fehler: Code als ungültig zurückgeben
     return false
