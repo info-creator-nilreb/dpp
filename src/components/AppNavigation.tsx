@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
 
@@ -22,7 +21,6 @@ interface OrganizationData {
  * Fetches user and organization data via API calls.
  */
 export default function AppNavigation() {
-  const router = useRouter()
   const [user, setUser] = useState<UserData | null>(null)
   const [organization, setOrganization] = useState<OrganizationData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,12 +58,14 @@ export default function AppNavigation() {
   async function handleLogout() {
     setLoggingOut(true)
     try {
+      // SignOut OHNE redirect, dann manuelle Weiterleitung mit aktueller Origin
       await signOut({ redirect: false })
-      router.replace("/login")
-      router.refresh()
+      // Verwende window.location für zuverlässige Navigation mit korrektem Port
+      window.location.href = "/login"
     } catch (error) {
       console.error("Error during logout:", error)
-      setLoggingOut(false)
+      // Fallback: Manuelle Weiterleitung bei Fehler
+      window.location.href = "/login"
     }
   }
 

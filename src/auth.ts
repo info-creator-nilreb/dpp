@@ -12,6 +12,7 @@ import bcrypt from "bcryptjs"
  * - Login-Seite: /login
  */
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true, // Erlaubt NextAuth, die Base-URL aus der Request zu verwenden (wichtig für verschiedene Ports)
   providers: [
     Credentials({
       credentials: {
@@ -20,24 +21,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         totpCode: { label: "2FA Code", type: "text", optional: true }
       },
       async authorize(credentials) {
-        // Debug-Logging - sowohl Console als auch Error für Sichtbarkeit
-        const debugInfo = {
-          called: true,
+        console.error("=".repeat(50))
+        console.error("[AUTH] authorize() aufgerufen")
+        console.error("[AUTH] Credentials:", {
           email: credentials?.email,
           hasPassword: !!credentials?.password,
-          totpCode: (credentials as any)?.totpCode,
-          totpCodeLength: (credentials as any)?.totpCode ? String((credentials as any)?.totpCode).length : 0,
-          allKeys: credentials ? Object.keys(credentials) : []
-        }
-        console.error("[AUTH DEBUG]", JSON.stringify(debugInfo, null, 2))
+          hasTotpCode: !!(credentials as any)?.totpCode,
+          totpCode: (credentials as any)?.totpCode
+        })
         
-        // Validierung: E-Mail und Passwort müssen vorhanden sein
+        // STEP 1: Validierung - E-Mail und Passwort müssen vorhanden sein
         if (!credentials?.email || !credentials?.password) {
           console.error("[AUTH] Fehlende E-Mail oder Passwort")
           return null
         }
 
-        // User aus Datenbank laden (inkl. systemRole, isPlatformAdmin, emailVerified und 2FA)
+        // STEP 2: User aus Datenbank laden
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
           select: {
@@ -58,53 +57,91 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
-        console.error("[AUTH] User gefunden:", user.email, "totpEnabled:", user.totpEnabled)
-
-        // Prüfen ob E-Mail verifiziert ist (Super Admins können immer einloggen)
+        // STEP 3: Prüfen ob E-Mail verifiziert ist (Super Admins können immer einloggen)
         const isSuperAdmin = user.systemRole === "SUPER_ADMIN" || user.isPlatformAdmin === true
         if (!user.emailVerified && !isSuperAdmin) {
           console.error("[AUTH] E-Mail nicht verifiziert")
           return null
         }
 
-        // Passwort mit bcrypt vergleichen
+        // STEP 4: PASSWORT IMMER ZUERST PRÜFEN (vor 2FA)
         const isPasswordValid = await bcrypt.compare(
           credentials.password as string,
           user.password
         )
 
+        // Falls Passwort falsch → SOFORT abbrechen, KEINE 2FA-Challenge starten
         if (!isPasswordValid) {
-          console.error("[AUTH] Passwort ungültig")
+          console.error("[AUTH] Passwort ungültig - Login verweigert (keine 2FA-Prüfung)")
           return null
         }
 
-        console.error("[AUTH] Passwort gültig, isSuperAdmin:", isSuperAdmin)
+        console.log("[AUTH] Passwort gültig - weiter mit 2FA-Prüfung (falls erforderlich)")
 
-        // Prüfe 2FA für Super Admins
+        // STEP 5: Nur wenn Passwort korrekt ist, prüfe 2FA (nur für Super Admins)
+        console.error("[AUTH] 2FA-Check:", {
+          isSuperAdmin,
+          totpEnabled: user.totpEnabled,
+          hasSecret: !!user.totpSecret,
+          totpCode: (credentials as any)?.totpCode
+        })
+        
         if (isSuperAdmin && user.totpEnabled && user.totpSecret) {
           const totpCode = (credentials as any).totpCode
           
-          // Wenn kein Code vorhanden ist, Login verweigern
-          // Die Login-Seite wird dann prüfen, ob 2FA erforderlich ist
+          console.error("[AUTH] 2FA ist aktiviert, Code vorhanden:", !!totpCode, "Code:", totpCode)
+          
+          // Wenn kein Code vorhanden ist → Login verweigern
+          // Die Login-Seite wird dann prüfen, ob 2FA erforderlich ist und das Feld anzeigen
           if (!totpCode || String(totpCode).trim().length === 0) {
             console.error("[AUTH] 2FA erforderlich, aber kein Code vorhanden")
             return null
           }
 
-          // Code verifizieren (ohne Vor-Normalisierung, da verifyTotpCode das bereits macht)
+          // OTP-Verifikation: Code mit Secret prüfen
           const { verifyTotpCode } = await import("@/lib/totp")
-          console.error("[AUTH] 2FA-Verifizierung - Code (roh):", totpCode, "Secret vorhanden:", !!user.totpSecret, "Secret (first 4):", user.totpSecret?.substring(0, 4))
-          const isTotpValid = verifyTotpCode(String(totpCode), user.totpSecret)
-          console.error("[AUTH] 2FA-Verifizierung Ergebnis:", isTotpValid)
+          const { authenticator } = await import("otplib")
+          
+          // Code normalisieren
+          const normalizedCode = String(totpCode || "").trim().replace(/\D/g, "")
+          const normalizedSecret = String(user.totpSecret || "").trim()
+          
+          // Generiere aktuellen Code für Vergleich
+          const currentGeneratedCode = authenticator.generate(normalizedSecret)
+          
+          // Debug-Logging (sowohl console.log als auch console.error für Sichtbarkeit)
+          const debugInfo = {
+            rawCode: totpCode,
+            normalizedCode,
+            normalizedCodeLength: normalizedCode.length,
+            currentGeneratedCode,
+            secretExists: !!user.totpSecret,
+            secretLength: normalizedSecret.length,
+            secretPrefix: normalizedSecret.substring(0, 10) + "...",
+            secretEndsWith: "..." + normalizedSecret.substring(normalizedSecret.length - 4)
+          }
+          console.error("[AUTH] 2FA-Verifizierung:", JSON.stringify(debugInfo, null, 2))
+          
+          // Verifiziere Code
+          const isTotpValid = verifyTotpCode(normalizedCode, normalizedSecret)
+          
+          const resultInfo = {
+            isValid: isTotpValid,
+            providedCode: normalizedCode,
+            currentGeneratedCode,
+            codesMatch: normalizedCode === currentGeneratedCode
+          }
+          console.error("[AUTH] 2FA-Verifizierung Ergebnis:", JSON.stringify(resultInfo, null, 2))
           
           if (!isTotpValid) {
             console.error("[AUTH] 2FA-Code ungültig - Login verweigert")
-            return null // Ungültiger 2FA-Code
+            return null
           }
-          console.error("[AUTH] 2FA-Code gültig - Login erlaubt")
+          
+          console.log("[AUTH] 2FA-Code gültig - Login erlaubt")
         }
 
-        // User-Daten für Session zurückgeben (inkl. Platform-Admin-Flag)
+        // STEP 6: Alle Prüfungen erfolgreich → Session erstellen
         return {
           id: user.id,
           email: user.email,
@@ -137,7 +174,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }
   },
   session: {
-    strategy: "jwt" // JWT-basierte Sessions (keine DB-Sessions)
+    strategy: "jwt", // JWT-basierte Sessions (keine DB-Sessions)
+    maxAge: 60 * 60 // 60 Minuten (3600 Sekunden)
+  },
+  jwt: {
+    maxAge: 60 * 60 // 60 Minuten (3600 Sekunden)
   }
 })
 

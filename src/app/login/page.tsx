@@ -26,25 +26,43 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Prüfe zuerst, ob 2FA erforderlich ist (wenn noch nicht bekannt)
+      // STEP 1: Wenn noch kein 2FA-Code eingegeben wurde, prüfe zuerst das Passwort
       if (!requires2FA && !totpCode) {
         try {
-          const checkResponse = await fetch(`/api/auth/check-2fa?email=${encodeURIComponent(email)}`)
-          if (checkResponse.ok) {
-            const checkData = await checkResponse.json()
-            if (checkData.requires2FA) {
-              // 2FA ist erforderlich
-              setRequires2FA(true)
-              setLoading(false)
-              return
-            }
+          // Passwort zuerst prüfen - gibt zurück, ob 2FA erforderlich ist
+          const verifyResponse = await fetch("/api/auth/verify-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+          })
+
+          const verifyData = await verifyResponse.json()
+
+          if (!verifyResponse.ok) {
+            // Passwort falsch oder anderer Fehler
+            setError(verifyData.error || "Ungültige E-Mail oder Passwort")
+            setLoading(false)
+            return
           }
-        } catch (checkError) {
-          // Fehler beim Prüfen ignorieren, weiter mit Login
+
+          // Passwort ist korrekt - prüfe ob 2FA erforderlich ist
+          if (verifyData.requires2FA) {
+            setRequires2FA(true)
+            setLoading(false)
+            return // Zeige 2FA-Feld an
+          }
+
+          // Passwort korrekt, kein 2FA erforderlich - direkt einloggen
+          // Fall durch zum normalen Login-Flow weiter unten
+        } catch (verifyError) {
+          console.error("Error verifying password:", verifyError)
+          setError("Ein Fehler ist aufgetreten")
+          setLoading(false)
+          return
         }
       }
 
-      // Login durchführen - NextAuth erwartet die Credentials direkt
+      // STEP 2: Login durchführen (entweder ohne 2FA oder mit 2FA-Code)
       const signInOptions: any = {
         email,
         password,
@@ -57,16 +75,10 @@ export default function LoginPage() {
         signInOptions.totpCode = totpCode.trim()
       }
       
-      console.log("Login credentials vor signIn:", { email, requires2FA, hasTotpCode: !!(requires2FA && totpCode), totpCodeLength: totpCode?.length })
-      
       const result: any = await signIn("credentials", signInOptions)
 
-      console.log("Login result:", result)
-
-      // Prüfe auf Fehler - CredentialsSignin bedeutet fehlgeschlagene Authentifizierung
+      // Prüfe auf Fehler
       if (result?.error) {
-        console.log("Login error:", result?.error || "Unknown error", "ok:", result?.ok)
-        
         // Prüfe ob User existiert aber nicht verifiziert ist
         if (result?.error === "CredentialsSignin") {
           try {
@@ -86,14 +98,13 @@ export default function LoginPage() {
         
         // Fehlermeldung anzeigen
         if (requires2FA && totpCode) {
-          setError("Ungültiger 2FA-Code. Bitte prüfen Sie die Server-Logs für Details.")
+          setError("Ungültiger 2FA-Code. Bitte versuchen Sie es erneut.")
         } else {
           setError("Ungültige E-Mail oder Passwort")
         }
         setLoading(false)
       } else {
         // Login erfolgreich - verwende window.location für zuverlässige Navigation
-        console.log("Login erfolgreich - leite um...")
         window.location.href = "/app/dashboard"
       }
     } catch (err: any) {
