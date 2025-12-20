@@ -123,10 +123,13 @@ export default function DppCard({ id, name, description, organizationName, media
       style={{
         display: "flex",
         flexDirection: "column",
+        height: "100%",
+        width: "100%",
         padding: "1rem",
         border: "1px solid #CDCDCD",
         borderRadius: "8px",
         backgroundColor: "#FFFFFF",
+        boxSizing: "border-box",
         transition: "border-color 0.2s, box-shadow 0.2s"
       }}
       onMouseEnter={(e) => {
@@ -221,6 +224,9 @@ export default function DppCard({ id, name, description, organizationName, media
         <span>{organizationName}</span>
         <span>{mediaCount} Medien</span>
       </div>
+
+      {/* Flex Spacer - drückt Aktions-Icons nach unten */}
+      <div style={{ flex: 1 }} />
 
       {/* Aktions-Icons */}
       <div style={{

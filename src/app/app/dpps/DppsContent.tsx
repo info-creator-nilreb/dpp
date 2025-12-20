@@ -112,6 +112,7 @@ export default function DppsContent({
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gridAutoRows: "1fr",
             gap: "1rem",
             marginBottom: "2rem"
           }}>
@@ -121,7 +122,9 @@ export default function DppsContent({
                 href={`/app/dpps/${dpp.id}`}
                 style={{
                   textDecoration: "none",
-                  display: "block"
+                  display: "flex",
+                  height: "100%",
+                  minHeight: 0
                 }}
               >
                 <DppCard
