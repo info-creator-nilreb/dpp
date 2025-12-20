@@ -5,6 +5,7 @@ import Link from "next/link"
 
 export default function Header() {
   const [isVisible, setIsVisible] = useState(false)
+  const [isLoginHovered, setIsLoginHovered] = useState(false)
   const lastScrollY = useRef(0)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -63,75 +64,99 @@ export default function Header() {
         opacity: isVisible ? 1 : 0
       }}
     >
-      <div
-        style={{
-          maxWidth: "1400px",
-          margin: "0 auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem"
-        }}
-      >
-        <Link
-          href="/"
+      <nav aria-label="Hauptnavigation">
+        <div
           style={{
-            fontSize: "clamp(1rem, 3vw, 1.25rem)",
-            fontWeight: "700",
-            color: "#0A0A0A",
-            textDecoration: "none",
+            maxWidth: "1400px",
+            margin: "0 auto",
             display: "flex",
             alignItems: "center",
-            gap: "0.5rem"
+            justifyContent: "space-between",
+            gap: "1rem"
           }}
         >
-          <div
+          <Link
+            href="/"
             style={{
-              width: "24px",
-              height: "24px",
+              fontSize: "clamp(1rem, 3vw, 1.25rem)",
+              fontWeight: "700",
+              color: "#0A0A0A",
+              textDecoration: "none",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0
+              gap: "0.5rem"
             }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="none"
-              stroke="#E20074"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              viewBox="0 0 24 24"
-              style={{ width: "100%", height: "100%" }}
+            <div
+              style={{
+                width: "24px",
+                height: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0
+              }}
             >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9 12l2 2 4-4" />
-            </svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="#E20074"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+                style={{ width: "100%", height: "100%" }}
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+            </div>
+            T-Pass
+          </Link>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "1.5rem"
+            }}
+          >
+            <Link
+              href="/login"
+              style={{
+                color: isLoginHovered ? "#0A0A0A" : "#525252",
+                textDecoration: isLoginHovered ? "underline" : "none",
+                fontSize: "0.9rem",
+                fontWeight: "400",
+                transition: "color 0.2s ease, text-decoration 0.2s ease"
+              }}
+              onMouseEnter={() => setIsLoginHovered(true)}
+              onMouseLeave={() => setIsLoginHovered(false)}
+            >
+              Login
+            </Link>
+            <Link
+              href="/signup"
+              style={{
+                backgroundColor: "#E20074",
+                color: "#FFFFFF",
+                padding: "0.625rem 1.25rem",
+                borderRadius: "6px",
+                textDecoration: "none",
+                fontWeight: "600",
+                fontSize: "0.9rem",
+                border: "2px solid #E20074",
+                boxSizing: "border-box",
+                display: "inline-block",
+                whiteSpace: "nowrap"
+              }}
+            >
+              Jetzt registrieren
+            </Link>
           </div>
-          T-Pass
-        </Link>
-        <Link
-          href="/signup"
-          style={{
-            backgroundColor: "#E20074",
-            color: "#FFFFFF",
-            padding: "0.625rem 1.25rem",
-            borderRadius: "6px",
-            textDecoration: "none",
-            fontWeight: "600",
-            fontSize: "0.9rem",
-            border: "2px solid #E20074",
-            boxSizing: "border-box",
-            display: "inline-block",
-            whiteSpace: "nowrap"
-          }}
-        >
-          Jetzt registrieren
-        </Link>
-      </div>
+        </div>
+      </nav>
     </header>
   )
 }

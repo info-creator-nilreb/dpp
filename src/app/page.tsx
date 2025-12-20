@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 import HeroLogo from '@/components/HeroLogo'
 
 export default function Home() {
@@ -390,16 +391,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer style={{
-        padding: 'clamp(1.5rem, 4vw, 2rem)',
-        textAlign: 'center',
-        backgroundColor: '#121212',
-        color: '#FFFFFF'
-      }}>
-        <p style={{ margin: 0, opacity: 0.8, color: '#CDCDCD', fontSize: 'clamp(0.85rem, 2vw, 0.95rem)' }}>
-          © 2025 T-Pass. Alle Rechte vorbehalten.
-        </p>
-      </footer>
+      <Footer />
     </div>
   )
 }
