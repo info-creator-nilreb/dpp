@@ -1,13 +1,186 @@
 export const dynamic = "force-dynamic"
 
-import DppsContent from "./DppsContent"
+import { Suspense } from "react"
+import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
+import { redirect } from "next/navigation"
 import AuthGate from "../_auth/AuthGate"
+import DppsContent from "./DppsContent"
 
-export default function DppsPage() {
+interface DppsPageProps {
+  searchParams: Promise<{
+    q?: string
+    status?: string
+    category?: string
+    page?: string
+  }>
+}
+
+async function DppsPageContent({ searchParams }: DppsPageProps) {
+  const session = await auth()
+
+  if (!session?.user?.id) {
+    redirect("/login")
+  }
+
+  // Parse searchParams - URL ist Source of Truth
+  const params = await searchParams
+  const searchQuery = params.q?.trim() || ""
+  const statusFilter = params.status?.trim() || ""
+  const categoryFilter = params.category?.trim() || ""
+  const pageParam = params.page
+  const page = Math.max(1, parseInt(pageParam || "1", 10))
+
+  const pageSize = 10
+
+  // Get user's organization IDs
+  const memberships = await prisma.membership.findMany({
+    where: {
+      userId: session.user.id
+    },
+    select: {
+      organizationId: true
+    }
+  })
+
+  const organizationIds = memberships.map(m => m.organizationId)
+
+  if (organizationIds.length === 0) {
+    return (
+      <DppsContent
+        dpps={[]}
+        currentPage={1}
+        totalPages={0}
+        totalCount={0}
+        searchQuery={searchQuery}
+        statusFilter={statusFilter}
+        categoryFilter={categoryFilter}
+      />
+    )
+  }
+
+  // Build WHERE clause - direkt aus searchParams
+  const where: any = {
+    organizationId: {
+      in: organizationIds
+    }
+  }
+
+  // Add search filter (searches in name, description, SKU)
+  if (searchQuery) {
+    where.OR = [
+      {
+        name: {
+          contains: searchQuery,
+          mode: "insensitive"
+        }
+      },
+      {
+        description: {
+          contains: searchQuery,
+          mode: "insensitive"
+        }
+      },
+      {
+        sku: {
+          contains: searchQuery,
+          mode: "insensitive"
+        }
+      }
+    ]
+  }
+
+  // Add status filter (normalize to uppercase)
+  if (statusFilter) {
+    const normalizedStatus = statusFilter.toUpperCase()
+    if (normalizedStatus === "DRAFT" || normalizedStatus === "PUBLISHED") {
+      where.status = normalizedStatus
+    }
+  }
+
+  // Add category filter
+  if (categoryFilter) {
+    const normalizedCategory = categoryFilter.toUpperCase()
+    if (normalizedCategory === "TEXTILE" || normalizedCategory === "FURNITURE" || normalizedCategory === "OTHER") {
+      where.category = normalizedCategory
+    }
+  }
+
+  // Get total count for pagination
+  const totalCount = await prisma.dpp.count({ where })
+  const totalPages = Math.ceil(totalCount / pageSize)
+
+  // Get paginated DPPs with select (performance-optimiert)
+  const dpps = await prisma.dpp.findMany({
+    where,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    orderBy: {
+      updatedAt: "desc"
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      category: true,
+      status: true,
+      updatedAt: true,
+      organization: {
+        select: {
+          name: true
+        }
+      },
+      _count: {
+        select: {
+          media: true
+        }
+      }
+    }
+  })
+
+  // Transform to display format
+  const transformedDpps = dpps.map(dpp => ({
+    id: dpp.id,
+    name: dpp.name,
+    description: dpp.description,
+    category: dpp.category,
+    status: dpp.status || "DRAFT",
+    updatedAt: dpp.updatedAt,
+    organizationName: dpp.organization.name,
+    mediaCount: dpp._count.media
+  }))
+
   return (
-    <AuthGate>
-      <DppsContent />
-    </AuthGate>
+    <DppsContent
+      dpps={transformedDpps}
+      currentPage={page}
+      totalPages={totalPages}
+      totalCount={totalCount}
+      searchQuery={searchQuery}
+      statusFilter={statusFilter}
+      categoryFilter={categoryFilter}
+    />
   )
 }
 
+export default async function DppsPage(props: DppsPageProps) {
+  return (
+    <AuthGate>
+      <Suspense fallback={
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          border: "1px solid #CDCDCD"
+        }}>
+          <p style={{ color: "#7A7A7A" }}>Lade Daten...</p>
+        </div>
+      }>
+        <DppsPageContent {...props} />
+      </Suspense>
+    </AuthGate>
+  )
+}
