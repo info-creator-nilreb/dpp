@@ -537,13 +537,21 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
         required={required}
         style={{
           width: "100%",
-          padding: "clamp(0.75rem, 2vw, 1rem)",
+          padding: "0.6875rem 2.5rem 0.6875rem clamp(0.75rem, 2vw, 1rem)",
           fontSize: "clamp(0.9rem, 2vw, 1rem)",
           border: "1px solid #CDCDCD",
           borderRadius: "8px",
           backgroundColor: "#FFFFFF",
           color: "#0A0A0A",
-          boxSizing: "border-box"
+          boxSizing: "border-box",
+          minHeight: "42px",
+          lineHeight: "1.5",
+          appearance: "none",
+          WebkitAppearance: "none",
+          MozAppearance: "none",
+          backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right clamp(0.75rem, 2vw, 1rem) center"
         }}
       >
         {options.map(opt => (

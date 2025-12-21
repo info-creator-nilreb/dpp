@@ -34,7 +34,7 @@ export default function Home() {
             color: '#0A0A0A',
             padding: '0 clamp(0.5rem, 2vw, 1rem)'
           }}>
-            In unter 3 Minuten zum Digitalen Produktpass.
+            In <span style={{ color: '#E20074' }}>3</span> Minuten zum Digitalen Produktpass.
           </h1>
           <p style={{
             fontSize: 'clamp(1.25rem, 4vw, 3.5rem)',

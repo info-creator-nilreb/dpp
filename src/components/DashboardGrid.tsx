@@ -18,12 +18,17 @@ export default function DashboardGrid({ children }: DashboardGridProps) {
       display: "grid",
       gridTemplateColumns: "repeat(1, 1fr)",
       gap: "1.5rem",
-      marginBottom: "2rem"
+      marginBottom: "2rem",
+      width: "100%",
+      boxSizing: "border-box"
     }}
     className="dashboard-grid-responsive"
     >
       <style dangerouslySetInnerHTML={{
         __html: `
+          .dashboard-grid-responsive {
+            grid-auto-rows: min-content;
+          }
           @media (min-width: 768px) {
             .dashboard-grid-responsive {
               grid-template-columns: repeat(3, 1fr) !important;

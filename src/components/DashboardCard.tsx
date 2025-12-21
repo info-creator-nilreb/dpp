@@ -24,7 +24,7 @@ export default function DashboardCard({ href, icon, title, description, children
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100%",
+        minHeight: "100%",
         backgroundColor: "#FFFFFF",
         padding: "clamp(1.5rem, 4vw, 2rem)",
         borderRadius: "12px",
@@ -32,7 +32,10 @@ export default function DashboardCard({ href, icon, title, description, children
         textDecoration: "none",
         color: "inherit",
         transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
-        cursor: isClickable ? "pointer" : "default"
+        cursor: isClickable ? "pointer" : "default",
+        boxSizing: "border-box",
+        width: "100%",
+        overflow: "hidden"
       }}
       onMouseEnter={(e) => {
         if (isClickable) {
