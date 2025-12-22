@@ -27,8 +27,12 @@ export async function GET(
 
     // Prüfe Berechtigung zum Ansehen
     const permissionError = await requireViewDPP(params.dppId, session.user.id)
-    if (permissionError) return permissionError
+    if (permissionError) {
+      console.error("Permission check failed for versions:", params.dppId, session.user.id)
+      return permissionError
+    }
 
+    console.log("Loading versions for DPP:", params.dppId)
     // Hole alle Versionen (absteigend nach Versionsnummer)
     const versions = await prisma.dppVersion.findMany({
       where: { dppId: params.dppId },
@@ -45,6 +49,7 @@ export async function GET(
         version: "desc"
       }
     })
+    console.log("Versions loaded:", versions.length)
 
     // Also get DPP info for context
     const dpp = await prisma.dpp.findUnique({
@@ -55,6 +60,7 @@ export async function GET(
         status: true
       }
     })
+    console.log("DPP loaded:", dpp ? "found" : "not found")
 
     return NextResponse.json({
       dpp: dpp ? {
@@ -76,8 +82,9 @@ export async function GET(
     }, { status: 200 })
   } catch (error: any) {
     console.error("Error fetching versions:", error)
+    const errorMessage = error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"
     return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
+      { error: errorMessage },
       { status: 500 }
     )
   }

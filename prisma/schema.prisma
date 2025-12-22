@@ -337,23 +337,73 @@ model OrganizationFeature {
 }
 
 // Template-Management (für DPP-Templates)
+// WICHTIG: Templates sind immutable nach Aktivierung (ESPR-Konformität)
 model Template {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   name            String
-  category        String?  // z.B. "TEXTILE", "FURNITURE", "OTHER"
-  industry        String?  // z.B. "textile", "furniture", "electronics"
-  version         Int      @default(1)
-  schemaJson      String   // JSON Schema für das Template
-  description     String?  // Beschreibung des Templates
-  isActive        Boolean  @default(true)
+  category        String    // z.B. "TEXTILE", "FURNITURE", "OTHER" (NOT NULL für Versionierung)
+  industry        String?   // z.B. "textile", "furniture", "electronics"
+  version         Int       @default(1)
+  status          String    @default("draft") // draft | active | archived
+  description     String?   // Beschreibung des Templates
+  effectiveFrom   DateTime? // Ab wann das Template gültig ist (für aktive Templates)
+  supersedesVersion Int?    // Version, die durch diese Version ersetzt wird
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?   // Super Admin ID (optional für Audit)
+
+  // Relations
+  blocks          TemplateBlock[]
+
+  @@unique([category, version]) // Category + Version sind eindeutig (Status kann sich ändern)
+  @@index([category])
+  @@index([status])
+  @@index([category, status]) // Für "nur ein aktives Template pro Kategorie"
+  @@index([industry])
+  @@map("templates")
+}
+
+// Template Blocks (Gruppierung von Fields)
+model TemplateBlock {
+  id              String   @id @default(cuid())
+  templateId      String
+  name            String   // Block-Name (z.B. "Produktinformationen", "Materialien")
+  order           Int      @default(0) // Sortier-Reihenfolge
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  createdBy       String?  // Super Admin ID (optional für Audit)
 
-  @@unique([name, version])
-  @@index([category])
-  @@index([industry])
-  @@index([isActive])
-  @@map("templates")
+  template        Template       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fields          TemplateField[]
+
+  @@index([templateId])
+  @@index([templateId, order])
+  @@map("template_blocks")
+}
+
+// Template Fields (einzelne Felder innerhalb eines Blocks)
+// WICHTIG: Fields haben Versionierung für ESPR-Konformität
+model TemplateField {
+  id                  String   @id @default(cuid())
+  blockId             String
+  templateId          String   // Denormalisiert für schnelleren Zugriff
+  label               String   // Anzeige-Name (z.B. "Produktname")
+  key                 String   // Eindeutiger Schlüssel innerhalb des Templates (z.B. "productName")
+  type                String   // text | textarea | number | select | multi-select | boolean | date | url | file | reference
+  required            Boolean  @default(false)
+  regulatoryRequired  Boolean  @default(false) // Rechtlich erforderlich (ESPR)
+  config              String?  // JSON für type-spezifische Konfiguration (z.B. Options für select)
+  order               Int      @default(0) // Sortier-Reihenfolge innerhalb des Blocks
+  introducedInVersion Int      @default(1) // In welcher Template-Version wurde dieses Field eingeführt
+  deprecatedInVersion Int?     @default(null) // In welcher Template-Version wurde dieses Field deprecated (null = aktiv)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  block               TemplateBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, key]) // Key muss eindeutig sein pro Template
+  @@index([blockId])
+  @@index([templateId])
+  @@index([blockId, order])
+  @@map("template_fields")
 }
 

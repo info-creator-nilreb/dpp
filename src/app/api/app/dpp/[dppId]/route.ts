@@ -27,9 +27,13 @@ export async function GET(
 
     // Prüfe Berechtigung mit neuem Permission-System
     const permissionError = await requireViewDPP(params.dppId, session.user.id)
-    if (permissionError) return permissionError
+    if (permissionError) {
+      console.error("Permission check failed:", params.dppId, session.user.id)
+      return permissionError
+    }
 
     // Lade DPP mit Medien
+    console.log("Loading DPP:", params.dppId)
     const dppWithMedia = await prisma.dpp.findUnique({
       where: { id: params.dppId },
       include: {
@@ -39,12 +43,21 @@ export async function GET(
         }
       }
     })
+    console.log("DPP loaded:", dppWithMedia ? "found" : "not found")
+
+    if (!dppWithMedia) {
+      return NextResponse.json(
+        { error: "DPP nicht gefunden" },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json({ dpp: dppWithMedia }, { status: 200 })
   } catch (error: any) {
     console.error("Error fetching DPP:", error)
+    const errorMessage = error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"
     return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
+      { error: errorMessage },
       { status: 500 }
     )
   }

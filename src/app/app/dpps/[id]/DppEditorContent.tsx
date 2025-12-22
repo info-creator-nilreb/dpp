@@ -31,9 +31,16 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
             router.replace("/app/dpps")
             return
           }
-          const errorData = await dppResponse.json()
-          console.error("DPP EDIT: Error loading DPP:", errorData)
-          setError(errorData.error || "Fehler beim Laden des Produktpasses")
+          let errorMessage = "Fehler beim Laden des Produktpasses"
+          try {
+            const errorData = await dppResponse.json()
+            console.error("DPP EDIT: Error loading DPP:", errorData)
+            errorMessage = errorData.error || errorMessage
+          } catch (parseError) {
+            console.error("DPP EDIT: Could not parse error response:", parseError)
+            errorMessage = `HTTP ${dppResponse.status}: ${dppResponse.statusText}`
+          }
+          setError(errorMessage)
           setLoading(false)
           return
         }

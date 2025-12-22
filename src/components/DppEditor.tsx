@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Fragment } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import DppMediaSection from "@/components/DppMediaSection"
 import CountrySelect from "@/components/CountrySelect"
 import { useNotification } from "@/components/NotificationProvider"
@@ -564,20 +563,6 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   return (
     <Fragment>
     <div>
-      <div style={{
-        marginBottom: "1rem"
-      }}>
-        <Link
-          href="/app/dashboard"
-          style={{
-            color: "#7A7A7A",
-            textDecoration: "none",
-            fontSize: "clamp(0.9rem, 2vw, 1rem)"
-          }}
-        >
-          ← Zum Dashboard
-        </Link>
-      </div>
       <h1 style={{
         fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
         fontWeight: "700",

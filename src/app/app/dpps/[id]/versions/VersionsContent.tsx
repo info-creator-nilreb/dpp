@@ -42,9 +42,16 @@ export default function VersionsContent({ id }: VersionsContentProps) {
             router.replace("/app/dpps")
             return
           }
-          const errorData = await versionsResponse.json()
-          console.error("VERSIONS: Error loading versions:", errorData)
-          setError(errorData.error || "Fehler beim Laden der Versionen")
+          let errorMessage = "Fehler beim Laden der Versionen"
+          try {
+            const errorData = await versionsResponse.json()
+            console.error("VERSIONS: Error loading versions:", errorData)
+            errorMessage = errorData.error || errorMessage
+          } catch (parseError) {
+            console.error("VERSIONS: Could not parse error response:", parseError)
+            errorMessage = `HTTP ${versionsResponse.status}: ${versionsResponse.statusText}`
+          }
+          setError(errorMessage)
           setLoading(false)
           return
         }
