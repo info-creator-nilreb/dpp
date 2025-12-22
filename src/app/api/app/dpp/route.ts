@@ -177,7 +177,12 @@ export async function GET(request: Request) {
       // Super Admin sieht alle DPPs
       const allDpps = await prisma.dpp.findMany({
         include: {
-          organization: true,
+          organization: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
           media: {
             select: { id: true }
           }

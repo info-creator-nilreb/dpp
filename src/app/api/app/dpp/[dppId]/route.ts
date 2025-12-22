@@ -37,7 +37,12 @@ export async function GET(
     const dppWithMedia = await prisma.dpp.findUnique({
       where: { id: params.dppId },
       include: {
-        organization: true,
+        organization: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         media: {
           orderBy: { uploadedAt: "desc" }
         }
