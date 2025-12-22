@@ -31,7 +31,12 @@ export async function POST(request: Request) {
         userId: session.user.id
       },
       include: {
-        organization: true
+        organization: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     })
 
