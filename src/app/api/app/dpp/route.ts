@@ -128,7 +128,12 @@ export async function POST(request: Request) {
         organizationId: resolvedOrganizationId // Explizit gesetzt
       },
       include: {
-        organization: true
+        organization: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     })
 
@@ -251,7 +256,12 @@ export async function GET(request: Request) {
       include: {
         dpp: {
           include: {
-            organization: true,
+            organization: {
+              select: {
+                id: true,
+                name: true
+              }
+            },
             media: { select: { id: true } }
           }
         }
