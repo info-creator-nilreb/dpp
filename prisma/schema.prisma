@@ -394,7 +394,7 @@ model TemplateField {
   config              String?  // JSON für type-spezifische Konfiguration (z.B. Options für select)
   order               Int      @default(0) // Sortier-Reihenfolge innerhalb des Blocks
   introducedInVersion Int      @default(1) // In welcher Template-Version wurde dieses Field eingeführt
-  deprecatedInVersion Int?     @default(null) // In welcher Template-Version wurde dieses Field deprecated (null = aktiv)
+  deprecatedInVersion Int?     // In welcher Template-Version wurde dieses Field deprecated (null = aktiv)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
