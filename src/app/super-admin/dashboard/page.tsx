@@ -1,14 +1,24 @@
 /**
  * SUPER ADMIN DASHBOARD
  * 
- * Overview page for Super Admins
+ * Modern B2B SaaS Dashboard with 3 clear sections:
+ * 1. Arbeitsbereiche - Work areas (large, clickable cards)
+ * 2. Systemüberblick - System overview (KPI stats)
+ * 3. Ihre Rolle & Zugriff - Role & permissions info
  */
 
 import { getSuperAdminSession } from "@/lib/super-admin-auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import Link from "next/link"
-import DashboardCard from "./DashboardCard"
+import WorkAreaCard from "./components/WorkAreaCard"
+import StatCard from "./components/StatCard"
+import { 
+  OrganizationsIconLarge, 
+  DppsIconLarge, 
+  TemplatesIconLarge, 
+  UsersIconLarge, 
+  AuditLogsIconLarge
+} from "../components/Icons"
 
 export const dynamic = "force-dynamic"
 
@@ -26,119 +36,171 @@ export default async function SuperAdminDashboardPage() {
     prisma.dpp.count()
   ])
 
+  // Role descriptions
+  const roleDescriptions: Record<string, string> = {
+    super_admin: "Vollständiger Zugriff auf alle Funktionen",
+    support_admin: "Lese-/Schreibzugriff auf Organisationen und Benutzer",
+    read_only_admin: "Nur Lesezugriff",
+  }
+
+  const permissionLevels: Record<string, string> = {
+    super_admin: "Vollzugriff",
+    support_admin: "Eingeschränkt",
+    read_only_admin: "Nur-Lesen",
+  }
+
   return (
-    <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "2rem"
-      }}>
-        <div>
-          <h1 style={{
-            fontSize: "2rem",
-            fontWeight: "700",
-            color: "#0A0A0A",
-            marginBottom: "0.5rem"
-          }}>
-            Super Admin Dashboard
-          </h1>
-          <p style={{ color: "#7A7A7A" }}>
-            Willkommen, {session.name || session.email}
-          </p>
-        </div>
-        <form action="/api/super-admin/auth/logout" method="POST">
-          <button
-            type="submit"
-            style={{
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#7A7A7A",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "0.9rem",
-              fontWeight: "500"
-            }}
-          >
-            Abmelden
-          </button>
-        </form>
-      </div>
-
-      {/* Navigation */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-        gap: "1rem",
-        marginBottom: "2rem"
-      }}>
-        <DashboardCard
-          href="/super-admin/organizations"
-          title="Organisationen"
-          description={`${orgCount} Organisationen verwalten`}
-        />
-        <DashboardCard
-          href="/super-admin/dpps"
-          title="DPPs"
-          description={`${dppCount} Produktpässe (Read-Only)`}
-        />
-        <DashboardCard
-          href="/super-admin/templates"
-          title="Templates"
-          description="DPP-Templates verwalten"
-        />
-        <DashboardCard
-          href="/super-admin/audit-logs"
-          title="Audit Logs"
-          description="Alle Admin-Aktionen einsehen"
-        />
-
-        <div style={{
-          backgroundColor: "#FFFFFF",
-          border: "1px solid #CDCDCD",
-          borderRadius: "8px",
-          padding: "1.5rem"
+    <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "3rem" }}>
+        <h1 style={{
+          fontSize: "2rem",
+          fontWeight: "700",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
         }}>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-            Benutzer
-          </h2>
-          <p style={{ color: "#7A7A7A", fontSize: "0.9rem" }}>
-            {userCount} Benutzer insgesamt
-          </p>
-        </div>
-
-        <div style={{
-          backgroundColor: "#FFFFFF",
-          border: "1px solid #CDCDCD",
-          borderRadius: "8px",
-          padding: "1.5rem"
-        }}>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-            Produktpässe
-          </h2>
-          <p style={{ color: "#7A7A7A", fontSize: "0.9rem" }}>
-            {dppCount} DPPs insgesamt
-          </p>
-        </div>
-      </div>
-
-      {/* Role Info */}
-      <div style={{
-        backgroundColor: "#FFFFFF",
-        border: "1px solid #CDCDCD",
-        borderRadius: "8px",
-        padding: "1.5rem"
-      }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-          Ihre Rolle
-        </h2>
-        <p style={{ color: "#7A7A7A" }}>
-          {session.role === "super_admin" && "Sie haben vollständigen Zugriff auf alle Funktionen."}
-          {session.role === "support_admin" && "Sie haben Lese-/Schreibzugriff auf Organisationen und Benutzer."}
-          {session.role === "read_only_admin" && "Sie haben nur Lesezugriff."}
+          Dashboard
+        </h1>
+        <p style={{ color: "#7A7A7A", fontSize: "1rem" }}>
+          Willkommen, {session.name || session.email}
         </p>
       </div>
+
+      {/* SECTION 1: Arbeitsbereiche */}
+      <section style={{ marginBottom: "4rem" }}>
+        <h2 style={{
+          fontSize: "1.25rem",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "1.5rem"
+        }}>
+          Arbeitsbereiche
+        </h2>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: "1.5rem",
+        }}>
+          <WorkAreaCard
+            href="/super-admin/organizations"
+            icon={<OrganizationsIconLarge />}
+            title="Organisationen"
+            description="Organisationen verwalten, Mitglieder zuweisen und Status ändern"
+          />
+          <WorkAreaCard
+            href="/super-admin/dpps"
+            icon={<DppsIconLarge />}
+            title="DPPs"
+            description="Alle Digital Product Passports durchsuchen und einsehen (Read-Only)"
+          />
+          <WorkAreaCard
+            href="/super-admin/templates"
+            icon={<TemplatesIconLarge />}
+            title="Templates"
+            description="DPP-Templates erstellen, bearbeiten und verwalten"
+          />
+          <WorkAreaCard
+            href="/super-admin/users"
+            icon={<UsersIconLarge />}
+            title="Benutzer"
+            description="Benutzer verwalten und Zugriffe konfigurieren"
+          />
+          <WorkAreaCard
+            href="/super-admin/audit-logs"
+            icon={<AuditLogsIconLarge />}
+            title="Audit Logs"
+            description="Alle Admin-Aktionen und Änderungen einsehen"
+          />
+        </div>
+      </section>
+
+      {/* SECTION 2: Systemüberblick */}
+      <section style={{ marginBottom: "4rem" }}>
+        <h2 style={{
+          fontSize: "1.25rem",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "1.5rem"
+        }}>
+          Systemüberblick
+        </h2>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: "1rem",
+        }}>
+          <StatCard label="Organisationen" value={orgCount} />
+          <StatCard label="Benutzer" value={userCount} />
+          <StatCard label="Produktpässe" value={dppCount} />
+        </div>
+      </section>
+
+      {/* SECTION 3: Ihre Rolle & Zugriff */}
+      <section>
+        <div style={{
+          paddingTop: "2rem",
+          borderTop: "1px solid #E5E5E5",
+        }}>
+          <h2 style={{
+            fontSize: "0.75rem",
+            fontWeight: "600",
+            color: "#7A7A7A",
+            marginBottom: "1rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}>
+            Ihre Rolle & Zugriff
+          </h2>
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <span style={{
+                fontSize: "0.875rem",
+                color: "#7A7A7A",
+                fontWeight: "500",
+                minWidth: "120px",
+              }}>
+                Rolle:
+              </span>
+              <span style={{
+                fontSize: "0.875rem",
+                color: "#0A0A0A",
+                fontWeight: "600",
+                textTransform: "capitalize",
+              }}>
+                {session.role?.replace("_", " ") || "Unbekannt"}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <span style={{
+                fontSize: "0.875rem",
+                color: "#7A7A7A",
+                fontWeight: "500",
+                minWidth: "120px",
+              }}>
+                Zugriff:
+              </span>
+              <span style={{
+                fontSize: "0.875rem",
+                color: "#7A7A7A",
+              }}>
+                {permissionLevels[session.role || ""] || "Unbekannt"}
+              </span>
+            </div>
+            <div style={{
+              marginTop: "0.5rem",
+              fontSize: "0.875rem",
+              color: "#9A9A9A",
+              fontStyle: "italic",
+            }}>
+              {roleDescriptions[session.role || ""] || "Rolle nicht gefunden"}
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

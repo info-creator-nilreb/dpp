@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import TPassLogo from "../components/TPassLogo"
 
 /**
  * SUPER ADMIN FORGOT PASSWORD PAGE
@@ -60,6 +61,15 @@ export default function SuperAdminForgotPasswordPage() {
         borderRadius: "12px",
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)"
       }}>
+        {/* Logo */}
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: "2rem"
+        }}>
+          <TPassLogo size={64} color="#E20074" />
+        </div>
+        
         <h1 style={{
           fontSize: "1.75rem",
           fontWeight: "700",
