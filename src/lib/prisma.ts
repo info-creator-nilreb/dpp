@@ -37,6 +37,18 @@ export const prisma = new Proxy({} as PrismaClient, {
       return value.bind(prismaInstance)
     }
     return value
+  },
+  has(_target, prop) {
+    const prismaInstance = getPrisma()
+    return prop in prismaInstance
+  },
+  ownKeys(_target) {
+    const prismaInstance = getPrisma()
+    return Reflect.ownKeys(prismaInstance)
+  },
+  getOwnPropertyDescriptor(_target, prop) {
+    const prismaInstance = getPrisma()
+    return Reflect.getOwnPropertyDescriptor(prismaInstance, prop)
   }
 }) as PrismaClient
 

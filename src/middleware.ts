@@ -1,8 +1,20 @@
 import { auth } from "@/auth"
 import { NextResponse } from "next/server"
+import { superAdminMiddleware } from "./middleware-super-admin"
 
 export default auth(async (req) => {
   const { pathname } = req.nextUrl
+
+  // 🔴 FIX: Super Admin UI UND API Routen abfangen
+  if (
+    pathname.startsWith("/super-admin") ||
+    pathname.startsWith("/api/super-admin")
+  ) {
+    const superAdminResponse = await superAdminMiddleware(req)
+    return superAdminResponse
+  }
+
+  // Continue with tenant/user auth (existing logic)
   const session = req.auth
   const isLoggedIn = !!session
 
@@ -43,12 +55,10 @@ export default auth(async (req) => {
 
   // App-Routen: Zugriff erlauben (Membership-Prüfung erfolgt im Layout)
   // WICHTIG: Prisma kann nicht im Edge Runtime (Middleware) verwendet werden
-  // Die eigentliche Membership-Prüfung erfolgt in den Server Components (Layout)
   if (isLoggedIn && isAppRoute) {
     if (!session.user?.id) {
       return NextResponse.redirect(new URL("/login", baseUrl))
     }
-    // Zugriff erlauben - Membership-Prüfung erfolgt im App-Layout
     return NextResponse.next()
   }
 
@@ -56,5 +66,9 @@ export default auth(async (req) => {
 })
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"]
+  matcher: [
+    "/super-admin/:path*",
+    "/api/super-admin/:path*",
+    "/((?!_next/static|_next/image|favicon.ico).*)"
+  ]
 }

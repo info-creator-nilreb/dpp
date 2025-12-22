@@ -41,10 +41,12 @@ model User {
 }
 
 model Organization {
-  id        String       @id @default(cuid())
-  name      String
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id          String       @id @default(cuid())
+  name        String
+  licenseTier String       @default("free") // free | basic | premium | pro
+  status      String       @default("active") // active | suspended | archived
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   // Many-to-Many: Organization hat mehrere Mitglieder
   memberships Membership[]
@@ -195,5 +197,163 @@ model DppPermission {
   // Ein User kann nur eine Permission-Rolle pro DPP haben
   @@unique([dppId, userId, role])
   @@map("dpp_permissions")
+}
+
+// ============================================================================
+// SUPER ADMIN TABLES - COMPLETELY SEPARATE FROM TENANT SYSTEM
+// ============================================================================
+// WICHTIG: Diese Tabellen sind VOLLSTÄNDIG isoliert von User/Organization
+// - Keine Foreign Keys zu User/Organization
+// - Eigene Authentifizierung
+// - Eigene Sessions
+// - Eigene RLS Policies
+
+// Super Admin Benutzer (isoliert von User-Tabelle)
+model SuperAdmin {
+  id                        String   @id @default(cuid())
+  email                     String   @unique
+  passwordHash              String   // bcrypt hash (KEIN "password" Feld, nur Hash)
+  name                      String?
+  role                      String   @default("support_admin") // super_admin | support_admin | read_only_admin
+  isActive                  Boolean  @default(true)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  lastLoginAt               DateTime?
+  // Passwort-Reset
+  passwordResetToken        String?  @unique // Token für Passwort-Reset
+  passwordResetTokenExpires DateTime? // Ablaufdatum des Reset-Tokens
+
+  // Relations
+  twoFactorAuth  SuperAdmin2FA?
+  auditLogs      AuditLog[]
+  sessions       SuperAdminSession[]
+
+  @@map("super_admins")
+}
+
+// 2FA für Super Admins (TOTP)
+model SuperAdmin2FA {
+  id              String   @id @default(cuid())
+  superAdminId    String   @unique
+  secret          String   // Verschlüsseltes TOTP Secret
+  enabled         Boolean  @default(false)
+  backupCodes     String?  // JSON Array von Backup-Codes (verschlüsselt)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  superAdmin      SuperAdmin @relation(fields: [superAdminId], references: [id], onDelete: Cascade)
+
+  @@map("super_admin_2fa")
+}
+
+// Super Admin Sessions (separate Session-Verwaltung)
+model SuperAdminSession {
+  id              String   @id @default(cuid())
+  superAdminId    String
+  token           String   @unique // JWT Token ID oder Session Token
+  expiresAt       DateTime
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  superAdmin      SuperAdmin @relation(fields: [superAdminId], references: [id], onDelete: Cascade)
+
+  @@index([superAdminId])
+  @@index([token])
+  @@map("super_admin_sessions")
+}
+
+// Audit Log für alle Super Admin Aktionen
+model AuditLog {
+  id              String   @id @default(cuid())
+  superAdminId    String
+  action          String   // z.B. "organization.suspend", "subscription.create", "template.update"
+  entityType      String   // z.B. "organization", "subscription", "template"
+  entityId        String   // ID der betroffenen Entity
+  before          String?  // JSON: Zustand vor der Änderung
+  after           String?  // JSON: Zustand nach der Änderung
+  ipAddress       String?
+  userAgent       String?
+  timestamp       DateTime @default(now())
+
+  superAdmin      SuperAdmin @relation(fields: [superAdminId], references: [id], onDelete: SetNull)
+
+  @@index([superAdminId])
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+// Abonnements (Subscription-Management)
+model Subscription {
+  id                    String   @id @default(cuid())
+  organizationId        String   @unique // Referenz zu Organization (keine FK - Isolation)
+  plan                  String   // free | starter | professional | enterprise
+  status                String   @default("active") // active | canceled | past_due | trialing
+  stripeSubscriptionId  String?  @unique // Stripe Subscription ID
+  stripeCustomerId      String?  // Stripe Customer ID
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean  @default(false)
+  canceledAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+// Feature Flags (System-weite Features)
+model Feature {
+  id              String   @id @default(cuid())
+  key             String   @unique // z.B. "advanced_analytics", "api_access", "custom_templates"
+  name            String
+  description     String?
+  defaultEnabled  Boolean  @default(false) // Standard für neue Organizations
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organizationFeatures OrganizationFeature[]
+
+  @@map("features")
+}
+
+// Feature-Toggles pro Organization
+model OrganizationFeature {
+  id              String   @id @default(cuid())
+  organizationId  String   // Referenz zu Organization (keine FK - Isolation)
+  featureId       String
+  enabled         Boolean  @default(false)
+  enabledAt       DateTime?
+  disabledAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  feature         Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  // Eine Organization kann ein Feature nur einmal haben
+  @@unique([organizationId, featureId])
+  @@index([organizationId])
+  @@map("organization_features")
+}
+
+// Template-Management (für DPP-Templates)
+model Template {
+  id              String   @id @default(cuid())
+  name            String
+  category        String?  // z.B. "TEXTILE", "FURNITURE", "OTHER"
+  industry        String?  // z.B. "textile", "furniture", "electronics"
+  version         Int      @default(1)
+  schemaJson      String   // JSON Schema für das Template
+  description     String?  // Beschreibung des Templates
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?  // Super Admin ID (optional für Audit)
+
+  @@unique([name, version])
+  @@index([category])
+  @@index([industry])
+  @@index([isActive])
+  @@map("templates")
 }
 
