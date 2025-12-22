@@ -85,20 +85,61 @@ export default function VersionViewContent({ id, versionNumber }: VersionViewCon
 
   if (error || !version) {
     return (
-      <div style={{
-        backgroundColor: "#FFFFFF",
-        padding: "clamp(2rem, 5vw, 4rem)",
-        borderRadius: "12px",
-        border: "1px solid #CDCDCD",
-        textAlign: "center"
-      }}>
-        <p style={{
-          color: "#7A7A7A",
-          fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
-          marginBottom: "1rem"
+      <>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "1rem",
+          marginBottom: "1rem",
+          flexWrap: "wrap"
         }}>
-          {error || "Version nicht gefunden"}
-        </p>
+          <Link
+            href="/app/dashboard"
+            style={{
+              color: "#7A7A7A",
+              textDecoration: "none",
+              fontSize: "clamp(0.9rem, 2vw, 1rem)"
+            }}
+          >
+            ← Zum Dashboard
+          </Link>
+          <span style={{ color: "#CDCDCD" }}>|</span>
+          <Link
+            href="/app/dpps"
+            style={{
+              color: "#7A7A7A",
+              textDecoration: "none",
+              fontSize: "clamp(0.9rem, 2vw, 1rem)"
+            }}
+          >
+            Zur Übersicht
+          </Link>
+          <span style={{ color: "#CDCDCD" }}>|</span>
+          <Link
+            href={`/app/dpps/${id}/versions`}
+            style={{
+              color: "#7A7A7A",
+              textDecoration: "none",
+              fontSize: "clamp(0.9rem, 2vw, 1rem)"
+            }}
+          >
+            Versionen
+          </Link>
+        </div>
+        <div style={{
+          backgroundColor: "#FFFFFF",
+          padding: "clamp(2rem, 5vw, 4rem)",
+          borderRadius: "12px",
+          border: "1px solid #CDCDCD",
+          textAlign: "center"
+        }}>
+          <p style={{
+            color: "#7A7A7A",
+            fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
+            marginBottom: "1rem"
+          }}>
+            {error || "Version nicht gefunden"}
+          </p>
         <a
           href={`/app/dpps/${id}/versions`}
           style={{
@@ -115,6 +156,7 @@ export default function VersionViewContent({ id, versionNumber }: VersionViewCon
           Zurück zu Versionen
         </a>
       </div>
+      </>
     )
   }
 

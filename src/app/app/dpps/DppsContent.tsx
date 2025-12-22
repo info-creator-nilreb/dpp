@@ -117,27 +117,17 @@ export default function DppsContent({
             marginBottom: "2rem"
           }}>
             {dpps.map((dpp) => (
-              <Link
+              <DppCard
                 key={dpp.id}
-                href={`/app/dpps/${dpp.id}`}
-                style={{
-                  textDecoration: "none",
-                  display: "flex",
-                  height: "100%",
-                  minHeight: 0
-                }}
-              >
-                <DppCard
-                  id={dpp.id}
-                  name={dpp.name}
-                  description={dpp.description}
-                  organizationName={dpp.organizationName}
-                  mediaCount={dpp.mediaCount}
-                  status={dpp.status}
-                  updatedAt={dpp.updatedAt}
-                  latestVersion={null}
-                />
-              </Link>
+                id={dpp.id}
+                name={dpp.name}
+                description={dpp.description}
+                organizationName={dpp.organizationName}
+                mediaCount={dpp.mediaCount}
+                status={dpp.status}
+                updatedAt={dpp.updatedAt}
+                latestVersion={null}
+              />
             ))}
           </div>
 

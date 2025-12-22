@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useNotification } from "@/components/NotificationProvider"
+import ConfirmDialog from "@/components/ConfirmDialog"
 
 interface DppCardProps {
   id: string
@@ -30,6 +31,7 @@ export default function DppCard({ id, name, description, organizationName, media
   const router = useRouter()
   const { showNotification } = useNotification()
   const [publishing, setPublishing] = useState(false)
+  const [showPublishDialog, setShowPublishDialog] = useState(false)
 
   const formatDate = (date: Date | undefined) => {
     if (!date) return ""
@@ -43,14 +45,14 @@ export default function DppCard({ id, name, description, organizationName, media
   const statusLabel = status === "PUBLISHED" ? "Veröffentlicht" : "Entwurf"
   const statusColor = status === "PUBLISHED" ? "#00A651" : "#7A7A7A"
 
-  const handlePublish = async (e: React.MouseEvent) => {
+  const handlePublishClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
-    if (!confirm("Möchten Sie diesen Produktpass als neue Version veröffentlichen?")) {
-      return
-    }
+    setShowPublishDialog(true)
+  }
 
+  const handlePublishConfirm = async () => {
+    setShowPublishDialog(false)
     setPublishing(true)
     try {
       const response = await fetch(`/api/app/dpp/${id}/publish`, {
@@ -74,37 +76,63 @@ export default function DppCard({ id, name, description, organizationName, media
     }
   }
 
-  // Icon SVG-Komponenten
+  const handlePublishCancel = () => {
+    setShowPublishDialog(false)
+  }
+
+  // Icon SVG-Komponenten - alle exakt einheitlich 18x18px mit identischen Attributen
+  // Wichtig: width/height als Zahlen für bessere Browser-Kompatibilität
+  const iconStyle: React.CSSProperties = { 
+    width: "18px", 
+    height: "18px",
+    flexShrink: 0,
+    display: "block",
+    verticalAlign: "middle",
+    boxSizing: "border-box"
+  }
+  
+  const iconProps = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none" as const,
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    style: iconStyle
+  }
+
   const EyeIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg {...iconProps}>
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
       <circle cx="12" cy="12" r="3"/>
     </svg>
   )
 
   const EditIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg {...iconProps}>
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
     </svg>
   )
 
   const PublishIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg {...iconProps}>
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
       <polyline points="22 4 12 14.01 9 11.01"/>
     </svg>
   )
 
   const VersionsIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg {...iconProps}>
       <polyline points="16 18 22 12 16 6"/>
       <polyline points="8 6 2 12 8 18"/>
     </svg>
   )
 
   const QrCodeIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg {...iconProps}>
       <rect x="3" y="3" width="5" height="5"/>
       <rect x="16" y="3" width="5" height="5"/>
       <rect x="3" y="16" width="5" height="5"/>
@@ -118,6 +146,31 @@ export default function DppCard({ id, name, description, organizationName, media
     </svg>
   )
 
+  // Gemeinsamer Style für alle Icon-Container (alle sind jetzt Links)
+  const iconContainerStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "32px",
+    height: "32px",
+    minWidth: "32px",
+    minHeight: "32px",
+    maxWidth: "32px",
+    maxHeight: "32px",
+    borderRadius: "6px",
+    color: "#7A7A7A",
+    backgroundColor: "transparent",
+    border: "1px solid #CDCDCD",
+    cursor: "pointer",
+    textDecoration: "none",
+    transition: "all 0.2s",
+    boxSizing: "border-box",
+    padding: 0,
+    margin: 0,
+    flexShrink: 0,
+    position: "relative"
+  }
+
   return (
     <div
       style={{
@@ -130,7 +183,8 @@ export default function DppCard({ id, name, description, organizationName, media
         borderRadius: "8px",
         backgroundColor: "#FFFFFF",
         boxSizing: "border-box",
-        transition: "border-color 0.2s, box-shadow 0.2s"
+        transition: "border-color 0.2s, box-shadow 0.2s",
+        minHeight: 0
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = "#E20074"
@@ -242,20 +296,7 @@ export default function DppCard({ id, name, description, organizationName, media
             href={`/app/dpps/${id}/versions/${latestVersion.version}`}
             title="Vorschau (letzte Version)"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "32px",
-              height: "32px",
-              borderRadius: "6px",
-              color: "#7A7A7A",
-              backgroundColor: "transparent",
-              border: "1px solid #CDCDCD",
-              cursor: "pointer",
-              textDecoration: "none",
-              transition: "all 0.2s"
-            }}
+            style={iconContainerStyle}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "#E20074"
               e.currentTarget.style.color = "#E20074"
@@ -276,20 +317,7 @@ export default function DppCard({ id, name, description, organizationName, media
           href={`/app/dpps/${id}`}
           title="Bearbeiten (Draft)"
           onClick={(e) => e.stopPropagation()}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "6px",
-            color: "#7A7A7A",
-            backgroundColor: "transparent",
-            border: "1px solid #CDCDCD",
-            cursor: "pointer",
-            textDecoration: "none",
-            transition: "all 0.2s"
-          }}
+          style={iconContainerStyle}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "#E20074"
             e.currentTarget.style.color = "#E20074"
@@ -305,22 +333,15 @@ export default function DppCard({ id, name, description, organizationName, media
         </Link>
 
         {/* Veröffentlichen */}
-        <button
-          onClick={handlePublish}
-          disabled={publishing}
+        <a
+          href="#"
+          onClick={handlePublishClick}
           title="Neue Version veröffentlichen"
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "6px",
+            ...iconContainerStyle,
             color: publishing ? "#CDCDCD" : "#7A7A7A",
-            backgroundColor: "transparent",
-            border: "1px solid #CDCDCD",
             cursor: publishing ? "not-allowed" : "pointer",
-            transition: "all 0.2s"
+            pointerEvents: publishing ? "none" : "auto"
           }}
           onMouseEnter={(e) => {
             if (!publishing) {
@@ -331,32 +352,19 @@ export default function DppCard({ id, name, description, organizationName, media
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = "#CDCDCD"
-            e.currentTarget.style.color = "#7A7A7A"
+            e.currentTarget.style.color = publishing ? "#CDCDCD" : "#7A7A7A"
             e.currentTarget.style.backgroundColor = "transparent"
           }}
         >
           <PublishIcon />
-        </button>
+        </a>
 
         {/* Versionen anzeigen */}
         <Link
           href={`/app/dpps/${id}/versions`}
           title="Versionen anzeigen"
           onClick={(e) => e.stopPropagation()}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "6px",
-            color: "#7A7A7A",
-            backgroundColor: "transparent",
-            border: "1px solid #CDCDCD",
-            cursor: "pointer",
-            textDecoration: "none",
-            transition: "all 0.2s"
-          }}
+          style={iconContainerStyle}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "#E20074"
             e.currentTarget.style.color = "#E20074"
@@ -371,6 +379,17 @@ export default function DppCard({ id, name, description, organizationName, media
           <VersionsIcon />
         </Link>
       </div>
+
+      {/* Publish Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showPublishDialog}
+        title="Version veröffentlichen"
+        message="Möchten Sie diesen Produktpass als neue Version veröffentlichen? Diese Aktion kann nicht rückgängig gemacht werden."
+        confirmLabel="Veröffentlichen"
+        cancelLabel="Abbrechen"
+        onConfirm={handlePublishConfirm}
+        onCancel={handlePublishCancel}
+      />
     </div>
   )
 }

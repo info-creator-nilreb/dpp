@@ -25,23 +25,17 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
     })
   }
 
-  const QrCodeIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="5" height="5"/>
-      <rect x="16" y="3" width="5" height="5"/>
-      <rect x="3" y="16" width="5" height="5"/>
-      <line x1="8" y1="8" x2="8" y2="8"/>
-      <line x1="16" y1="8" x2="16" y2="8"/>
-      <line x1="8" y1="16" x2="8" y2="16"/>
-      <line x1="12" y1="11" x2="12" y2="11"/>
-      <line x1="12" y1="13" x2="12" y2="13"/>
-      <line x1="16" y1="11" x2="16" y2="11"/>
-      <line x1="16" y1="13" x2="16" y2="13"/>
+  const DownloadIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
     </svg>
   )
 
   return (
     <div
+      className="version-card-wrapper"
       style={{
         display: "block",
         backgroundColor: "#FFFFFF",
@@ -54,6 +48,15 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
         position: "relative"
       }}
     >
+      <style>{`
+        .version-card-wrapper a:hover {
+          text-decoration: none;
+        }
+        .version-card-wrapper:hover {
+          border-color: #E20074 !important;
+          box-shadow: 0 2px 8px rgba(226, 0, 116, 0.1);
+        }
+      `}</style>
       <Link
         href={href}
         style={{
@@ -61,72 +64,44 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
           color: "inherit",
           display: "block"
         }}
-        onMouseEnter={(e) => {
-          const card = e.currentTarget.closest("div")
-          if (card) {
-            card.style.borderColor = "#E20074"
-            card.style.boxShadow = "0 2px 8px rgba(226, 0, 116, 0.1)"
-          }
-        }}
-        onMouseLeave={(e) => {
-          const card = e.currentTarget.closest("div")
-          if (card) {
-            card.style.borderColor = "#CDCDCD"
-            card.style.boxShadow = "none"
-          }
-        }}
       >
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "1rem",
-          flexWrap: "wrap"
-        }}>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              marginBottom: "0.5rem"
+        <div>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            marginBottom: "0.5rem"
+          }}>
+            <span style={{
+              fontSize: "clamp(1.1rem, 2.5vw, 1.25rem)",
+              fontWeight: "700",
+              color: "#0A0A0A"
             }}>
-              <span style={{
-                fontSize: "clamp(1.1rem, 2.5vw, 1.25rem)",
-                fontWeight: "700",
-                color: "#0A0A0A"
-              }}>
-                Version {version}
-              </span>
-              <span style={{
-                padding: "0.25rem 0.5rem",
-                backgroundColor: "#E8F5E9",
-                color: "#00A651",
-                borderRadius: "4px",
-                fontSize: "clamp(0.75rem, 1.8vw, 0.85rem)",
-                fontWeight: "600"
-              }}>
-                Veröffentlicht
-              </span>
-            </div>
-            <div style={{
-              fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
-              color: "#7A7A7A",
-              marginBottom: "0.25rem"
+              Version {version}
+            </span>
+            <span style={{
+              padding: "0.25rem 0.5rem",
+              backgroundColor: "#E8F5E9",
+              color: "#00A651",
+              borderRadius: "4px",
+              fontSize: "clamp(0.75rem, 1.8vw, 0.85rem)",
+              fontWeight: "600"
             }}>
-              Veröffentlicht am: {formatDate(createdAt)}
-            </div>
-            <div style={{
-              fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
-              color: "#7A7A7A"
-            }}>
-              Bearbeiter: {createdBy}
-            </div>
+              Veröffentlicht
+            </span>
           </div>
           <div style={{
-            fontSize: "clamp(0.9rem, 2vw, 1rem)",
-            color: "#E20074"
+            fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+            color: "#7A7A7A",
+            marginBottom: "0.25rem"
           }}>
-            Anzeigen →
+            Veröffentlicht am: {formatDate(createdAt)}
+          </div>
+          <div style={{
+            fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+            color: "#7A7A7A"
+          }}>
+            Bearbeiter: {createdBy}
           </div>
         </div>
       </Link>
@@ -134,13 +109,25 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
         <div style={{
           position: "absolute",
           top: "1rem",
-          right: "1rem"
+          right: "1rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10
         }}>
-          <a
-            href={`/api/app/dpp/${dppId}/versions/${version}/qr-code`}
-            download
+          <button
+            type="button"
             title="QR-Code herunterladen"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              const link = document.createElement('a')
+              link.href = `/api/app/dpp/${dppId}/versions/${version}/qr-code`
+              link.download = ''
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+            }}
             style={{
               display: "flex",
               alignItems: "center",
@@ -149,10 +136,11 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
               height: "32px",
               borderRadius: "6px",
               color: "#7A7A7A",
-              backgroundColor: "transparent",
+              backgroundColor: "#FFFFFF",
               border: "1px solid #CDCDCD",
               cursor: "pointer",
-              textDecoration: "none",
+              padding: 0,
+              margin: 0,
               transition: "all 0.2s"
             }}
             onMouseEnter={(e) => {
@@ -163,11 +151,11 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = "#CDCDCD"
               e.currentTarget.style.color = "#7A7A7A"
-              e.currentTarget.style.backgroundColor = "transparent"
+              e.currentTarget.style.backgroundColor = "#FFFFFF"
             }}
           >
-            <QrCodeIcon />
-          </a>
+            <DownloadIcon />
+          </button>
         </div>
       )}
     </div>

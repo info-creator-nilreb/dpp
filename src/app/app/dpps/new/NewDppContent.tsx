@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import DppEditor from "@/components/DppEditor"
 
 export default function NewDppContent() {
@@ -116,6 +117,39 @@ export default function NewDppContent() {
     media: []
   }
 
-  return <DppEditor dpp={emptyDpp} isNew={true} />
+  return (
+    <>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "1rem",
+        marginBottom: "1rem",
+        flexWrap: "wrap"
+      }}>
+        <Link
+          href="/app/dashboard"
+          style={{
+            color: "#7A7A7A",
+            textDecoration: "none",
+            fontSize: "clamp(0.9rem, 2vw, 1rem)"
+          }}
+        >
+          ← Zum Dashboard
+        </Link>
+        <span style={{ color: "#CDCDCD" }}>|</span>
+        <Link
+          href="/app/dpps"
+          style={{
+            color: "#7A7A7A",
+            textDecoration: "none",
+            fontSize: "clamp(0.9rem, 2vw, 1rem)"
+          }}
+        >
+          Zur Übersicht
+        </Link>
+      </div>
+      <DppEditor dpp={emptyDpp} isNew={true} />
+    </>
+  )
 }
 
