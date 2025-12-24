@@ -19,9 +19,9 @@ function getPrisma(): PrismaClient {
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   })
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = prisma
-  }
+  // Always cache in global scope (works in both development and Vercel serverless)
+  // Vercel serverless functions share the global scope between invocations
+  globalForPrisma.prisma = prisma
 
   return prisma
 }
