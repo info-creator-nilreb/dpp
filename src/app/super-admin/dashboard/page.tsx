@@ -24,17 +24,36 @@ export const dynamic = "force-dynamic"
 
 export default async function SuperAdminDashboardPage() {
   // Check auth (middleware already protected route, but double-check for safety)
-  const session = await getSuperAdminSession()
+  let session
+  try {
+    session = await getSuperAdminSession()
+  } catch (error) {
+    console.error("Error getting super admin session:", error)
+    redirect("/super-admin/login")
+  }
+  
   if (!session) {
     redirect("/super-admin/login")
   }
 
-  // Get statistics
-  const [orgCount, userCount, dppCount] = await Promise.all([
-    prisma.organization.count(),
-    prisma.user.count(),
-    prisma.dpp.count()
-  ])
+  // Get statistics with error handling
+  let orgCount = 0
+  let userCount = 0
+  let dppCount = 0
+  
+  try {
+    const counts = await Promise.all([
+      prisma.organization.count(),
+      prisma.user.count(),
+      prisma.dpp.count()
+    ])
+    orgCount = counts[0]
+    userCount = counts[1]
+    dppCount = counts[2]
+  } catch (error) {
+    console.error("Error loading dashboard statistics:", error)
+    // Continue with zero counts instead of crashing
+  }
 
   // Role descriptions
   const roleDescriptions: Record<string, string> = {
