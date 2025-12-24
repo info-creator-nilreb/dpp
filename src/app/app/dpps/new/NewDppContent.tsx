@@ -94,7 +94,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
     id: "new", // Temporäre ID
     name: "",
     description: null,
-    category: (availableCategories[0]?.categoryKey || "OTHER") as const,
+    category: (availableCategories[0]?.categoryKey || "OTHER") as "TEXTILE" | "FURNITURE" | "OTHER",
     sku: null,
     gtin: null,
     brand: null,
