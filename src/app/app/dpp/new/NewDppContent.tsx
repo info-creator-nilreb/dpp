@@ -10,7 +10,7 @@ interface CategoryInfo {
 }
 
 interface NewDppContentProps {
-  availableCategories: string[]
+  availableCategories: Array<{ categoryKey: string; label: string }>
 }
 
 /**
@@ -22,7 +22,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
   const router = useRouter()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [category, setCategory] = useState<string>(availableCategories[0] || "")
+  const [category, setCategory] = useState<string>(availableCategories[0]?.categoryKey || "")
   const [organizationId, setOrganizationId] = useState("")
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([])
   const [categoriesWithLabels, setCategoriesWithLabels] = useState<Map<string, CategoryInfo>>(new Map())
@@ -79,7 +79,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
       return
     }
 
-    if (!availableCategories.includes(category)) {
+    if (!availableCategories.some(cat => cat.categoryKey === category)) {
       setError("Die ausgewählte Kategorie ist nicht verfügbar.")
       return
     }
@@ -239,14 +239,11 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
             {availableCategories.length === 0 ? (
               <option value="">Keine Kategorien verfügbar</option>
             ) : (
-              availableCategories.map((cat) => {
-                const categoryInfo = categoriesWithLabels.get(cat)
-                return (
-                  <option key={cat} value={cat}>
-                    {categoryInfo ? categoryInfo.label : cat}
-                  </option>
-                )
-              })
+              availableCategories.map((cat) => (
+                <option key={cat.categoryKey} value={cat.categoryKey}>
+                  {cat.label}
+                </option>
+              ))
             )}
           </select>
         </div>
