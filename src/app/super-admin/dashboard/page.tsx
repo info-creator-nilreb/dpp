@@ -110,7 +110,7 @@ export default async function SuperAdminDashboardPage() {
             href="/super-admin/dpps"
             icon={<DppsIconLarge />}
             title="DPPs"
-            description="Alle Digital Product Passports durchsuchen und einsehen (Read-Only)"
+            description="Alle Digitalen Produktpässe durchsuchen und einsehen (Read-Only)"
           />
           <WorkAreaCard
             href="/super-admin/templates"

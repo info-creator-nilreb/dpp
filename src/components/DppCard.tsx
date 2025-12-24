@@ -290,6 +290,30 @@ export default function DppCard({ id, name, description, organizationName, media
         paddingTop: "0.75rem",
         borderTop: "1px solid #F5F5F5"
       }}>
+        {/* Editorial-Ansicht (nur für veröffentlichte DPPs) */}
+        {status === "PUBLISHED" && (
+          <Link
+            href={`/public/dpp/${id}`}
+            title="Öffentliche Ansicht öffnen"
+            onClick={(e) => e.stopPropagation()}
+            style={iconContainerStyle}
+            target="_blank"
+            rel="noopener noreferrer"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#E20074"
+              e.currentTarget.style.color = "#E20074"
+              e.currentTarget.style.backgroundColor = "#FFF5F9"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#CDCDCD"
+              e.currentTarget.style.color = "#7A7A7A"
+              e.currentTarget.style.backgroundColor = "transparent"
+            }}
+          >
+            <EyeIcon />
+          </Link>
+        )}
+
         {/* Vorschau (letzte Version) */}
         {latestVersion && (
           <Link
