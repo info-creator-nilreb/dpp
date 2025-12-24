@@ -22,7 +22,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await req.json()
-    const { name, description, status, blocks } = body
+    const { name, description, status, category, categoryLabel, blocks } = body
 
     // Get existing template
     const existing = await prisma.template.findUnique({
@@ -51,6 +51,14 @@ export async function PUT(
       )
     }
 
+    // GUARDRAIL: Kategorie-Key ist IMMUTABLE (immutable nach Erstellung)
+    if (category && category !== existing.category) {
+      return NextResponse.json(
+        { error: "Die Kategorie eines Templates kann nach der Erstellung nicht geändert werden. Bitte erstellen Sie ein neues Template für die gewünschte Kategorie." },
+        { status: 400 }
+      )
+    }
+
     // If status is being changed to active, check if another active template exists for this category
     if (status === "active" && existing.status !== "active") {
       const existingActive = await prisma.template.findFirst({
@@ -73,6 +81,8 @@ export async function PUT(
     const updateData: any = {}
     if (name) updateData.name = name
     if (description !== undefined) updateData.description = description
+    // categoryLabel kann bearbeitet werden (sprachlich, nicht regulatorisch)
+    if (categoryLabel !== undefined) updateData.categoryLabel = categoryLabel
     if (status) {
       updateData.status = status
       if (status === "active") {
@@ -163,17 +173,54 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Archive template (soft delete)
-    const template = await prisma.template.update({
+    // Get existing template to check status
+    const existing = await prisma.template.findUnique({
       where: { id },
-      data: { status: "archived" }
+      include: {
+        blocks: {
+          include: {
+            fields: true
+          }
+        }
+      }
     })
 
-    return NextResponse.json({ template })
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Template nicht gefunden" },
+        { status: 404 }
+      )
+    }
+
+    // CRITICAL: Only draft templates can be deleted
+    if (existing.status !== "draft") {
+      return NextResponse.json(
+        { error: "Nur Templates im Status 'Entwurf' können gelöscht werden. Veröffentlichte Templates müssen archiviert werden." },
+        { status: 400 }
+      )
+    }
+
+    // Hard delete: Delete blocks, fields, and then template
+    // Delete fields first (due to foreign key constraints)
+    await prisma.templateField.deleteMany({
+      where: { templateId: id }
+    })
+
+    // Delete blocks
+    await prisma.templateBlock.deleteMany({
+      where: { templateId: id }
+    })
+
+    // Delete template
+    await prisma.template.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error("Template archive error:", error)
+    console.error("Template delete error:", error)
     return NextResponse.json(
-      { error: error.message || "Fehler beim Archivieren des Templates" },
+      { error: error.message || "Fehler beim Löschen des Templates" },
       { status: 500 }
     )
   }

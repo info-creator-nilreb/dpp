@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { latestPublishedTemplate } from "@/lib/template-helpers"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -7,64 +8,72 @@ export const dynamic = "force-dynamic"
  * GET /api/app/dpps/csv-template?category=TEXTILE
  * 
  * Gibt ein CSV-Template für den DPP-Import zurück
- * - Pflichtfelder: name, category, sku, brand, countryOfOrigin
- * - Optionale Felder: description
+ * - Verwendet das aktuelle veröffentlichte Template der Kategorie
+ * - Generiert CSV-Header basierend auf Template-Feldern
  * - 1 Beispiel-Datensatz
  */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const category = searchParams.get("category") || "TEXTILE"
+    const category = searchParams.get("category")
 
-    // Validiere Kategorie
-    if (!["TEXTILE", "FURNITURE", "OTHER"].includes(category)) {
+    if (!category) {
       return NextResponse.json(
-        { error: "Ungültige Kategorie. Erlaubt: TEXTILE, FURNITURE, OTHER" },
+        { error: "Kategorie-Parameter ist erforderlich" },
         { status: 400 }
       )
     }
 
-    // Beispiel-Datensätze je nach Kategorie
-    const exampleData: Record<string, { name: string; description: string; sku: string; brand: string; countryOfOrigin: string }> = {
-      TEXTILE: {
-        name: "Bio-Baumwoll T-Shirt",
-        description: "Nachhaltiges T-Shirt aus 100% Bio-Baumwolle",
-        sku: "TSH-001",
-        brand: "EcoWear",
-        countryOfOrigin: "Deutschland"
-      },
-      FURNITURE: {
-        name: "Eichentisch",
-        description: "Massivholztisch aus nachhaltiger Forstwirtschaft",
-        sku: "TAB-001",
-        brand: "WoodCraft",
-        countryOfOrigin: "Österreich"
-      },
-      OTHER: {
-        name: "Nachhaltiges Produkt",
-        description: "Beispielprodukt",
-        sku: "PRD-001",
-        brand: "EcoBrand",
-        countryOfOrigin: "Deutschland"
+    // Lade aktuelles veröffentlichtes Template für die Kategorie
+    const template = await latestPublishedTemplate(category)
+
+    if (!template) {
+      return NextResponse.json(
+        { error: `Kein veröffentlichtes Template für die Kategorie "${category}" gefunden.` },
+        { status: 404 }
+      )
+    }
+
+    // Sammle alle Felder aus allen Blöcken (sortiert nach Block-Order und Feld-Order)
+    const fields: Array<{ label: string; key: string; required: boolean }> = []
+    for (const block of template.blocks) {
+      for (const field of block.fields) {
+        fields.push({
+          label: field.label,
+          key: field.key,
+          required: field.required
+        })
       }
     }
 
-    const example = exampleData[category]
+    if (fields.length === 0) {
+      return NextResponse.json(
+        { error: "Template enthält keine Felder" },
+        { status: 400 }
+      )
+    }
 
-    // CSV-Header
-    const headers = ["name", "description", "category", "sku", "brand", "countryOfOrigin"]
-    
+    // CSV-Header: Verwende Label für bessere Lesbarkeit, aber Key für Maschinen
+    // Format: "Label (key)"
+    const headers = fields.map(f => {
+      // Escape Kommas in Labels
+      const escapedLabel = f.label.replace(/"/g, '""')
+      return `"${escapedLabel} (${f.key})"`
+    })
+
+    // Beispiel-Datensatz mit leeren Werten (User füllt aus)
+    const exampleRow = fields.map(f => {
+      // Für required Felder einen Beispielwert, sonst leer
+      if (f.required) {
+        return `"Beispielwert für ${f.label}"`
+      }
+      return `""`
+    })
+
     // CSV-Zeilen erstellen
     const csvRows = [
       headers.join(","),
-      [
-        `"${example.name}"`,
-        `"${example.description}"`,
-        category,
-        `"${example.sku}"`,
-        `"${example.brand}"`,
-        `"${example.countryOfOrigin}"`
-      ].join(",")
+      exampleRow.join(",")
     ]
 
     const csvContent = csvRows.join("\n")
@@ -73,13 +82,13 @@ export async function GET(request: Request) {
     return new NextResponse(csvContent, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="dpp-template-${category.toLowerCase()}.csv"`
+        "Content-Disposition": `attachment; filename="dpp-template-${category.toLowerCase()}-v${template.version}.csv"`
       }
     })
   } catch (error: any) {
     console.error("Error generating CSV template:", error)
     return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
+      { error: error.message || "Ein Fehler ist aufgetreten" },
       { status: 500 }
     )
   }

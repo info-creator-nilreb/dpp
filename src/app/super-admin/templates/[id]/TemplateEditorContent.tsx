@@ -7,8 +7,11 @@
  * Receives template data as props (no client-side fetching)
  */
 
-import { useState } from "react"
+import { useState, useEffect, Fragment } from "react"
 import { useRouter } from "next/navigation"
+import { createNewTemplateVersion } from "./actions"
+import ConfirmDialog from "@/components/ConfirmDialog"
+import { useNotification } from "@/components/NotificationProvider"
 
 interface TemplateBlock {
   id: string
@@ -31,6 +34,7 @@ interface Template {
   id: string
   name: string
   category: string | null
+  categoryLabel: string | null
   industry: string | null
   version: number
   status: string
@@ -38,6 +42,7 @@ interface Template {
   effectiveFrom: Date | null
   supersedesVersion: number | null
   blocks: TemplateBlock[]
+  updatedAt: Date
 }
 
 interface TemplateEditorContentProps {
@@ -55,6 +60,7 @@ const fieldTypes = [
   { value: "date", label: "Datum" },
   { value: "url", label: "URL" },
   { value: "file", label: "Datei" },
+  { value: "country", label: "Land (ISO-3166)" },
   { value: "reference", label: "Referenz" }
 ]
 
@@ -66,10 +72,13 @@ const statusOptions = [
 
 export default function TemplateEditorContent({ template, canEdit }: TemplateEditorContentProps) {
   const router = useRouter()
+  const { showNotification } = useNotification()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [creatingNewVersion, setCreatingNewVersion] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showPublishDialog, setShowPublishDialog] = useState(false)
 
   // CRITICAL: Only drafts can be edited
   const isEditable = template.status === "draft" && canEdit
@@ -79,7 +88,37 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   const [name, setName] = useState(template.name)
   const [description, setDescription] = useState(template.description || "")
   const [status, setStatus] = useState(template.status)
-  const [blocks, setBlocks] = useState<TemplateBlock[]>(template.blocks)
+  
+  // CRITICAL: Filter out category fields (ESPR: category is not a field, it's a template property)
+  const filteredBlocks = template.blocks.map(block => ({
+    ...block,
+    fields: block.fields.filter(field => {
+      const keyLower = field.key?.toLowerCase() || ""
+      const labelLower = field.label?.toLowerCase() || ""
+      return !keyLower.includes("category") && 
+             !keyLower.includes("kategorie") &&
+             !labelLower.includes("kategorie") &&
+             !labelLower.includes("category")
+    })
+  }))
+  
+  const [blocks, setBlocks] = useState<TemplateBlock[]>(filteredBlocks)
+  const [editingFieldOptions, setEditingFieldOptions] = useState<string | null>(null) // fieldId that is currently editing options
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  
+  // Listen for sidebar collapse state changes
+  useEffect(() => {
+    const checkSidebar = () => {
+      const mainContent = document.querySelector('.super-admin-main-content') as HTMLElement
+      if (mainContent) {
+        const marginLeft = window.getComputedStyle(mainContent).marginLeft
+        setIsSidebarCollapsed(marginLeft === "64px")
+      }
+    }
+    checkSidebar()
+    const interval = setInterval(checkSidebar, 100)
+    return () => clearInterval(interval)
+  }, [])
 
   const addBlock = () => {
     setBlocks([...blocks, {
@@ -123,6 +162,18 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         : block
     ))
   }
+  
+  // Validate field key to prevent category fields
+  const validateFieldKey = (key: string): boolean => {
+    const keyLower = key.toLowerCase()
+    return !keyLower.includes("category") && !keyLower.includes("kategorie")
+  }
+  
+  // Validate field label to prevent category fields
+  const validateFieldLabel = (label: string): boolean => {
+    const labelLower = label.toLowerCase()
+    return !labelLower.includes("kategorie") && !labelLower.includes("category")
+  }
 
   const updateField = (blockId: string, fieldId: string, updates: Partial<TemplateField>) => {
     setBlocks(blocks.map(block =>
@@ -146,6 +197,50 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           }
         : block
     ))
+  }
+
+  // Helper: Parse select options from config JSON
+  const getSelectOptions = (config: string | null): Array<{ value: string; label: string; esprReference?: string }> => {
+    if (!config) return []
+    try {
+      const parsed = JSON.parse(config)
+      return parsed.options || []
+    } catch {
+      return []
+    }
+  }
+
+  // Helper: Update select options in config
+  const updateSelectOptions = (blockId: string, fieldId: string, options: Array<{ value: string; label: string; esprReference?: string }>) => {
+    const config = JSON.stringify({ options })
+    updateField(blockId, fieldId, { config })
+  }
+
+  // Block reordering functions
+  const moveBlockUp = (blockIndex: number) => {
+    if (blockIndex === 0 || blockIndex >= blocks.length) return // Block 1 is fixed
+    const newBlocks = [...blocks]
+    const temp = newBlocks[blockIndex]
+    newBlocks[blockIndex] = newBlocks[blockIndex - 1]
+    newBlocks[blockIndex - 1] = temp
+    // Update order values
+    newBlocks.forEach((block, idx) => {
+      block.order = idx
+    })
+    setBlocks(newBlocks)
+  }
+
+  const moveBlockDown = (blockIndex: number) => {
+    if (blockIndex === 0 || blockIndex >= blocks.length - 1) return // Block 1 is fixed
+    const newBlocks = [...blocks]
+    const temp = newBlocks[blockIndex]
+    newBlocks[blockIndex] = newBlocks[blockIndex + 1]
+    newBlocks[blockIndex + 1] = temp
+    // Update order values
+    newBlocks.forEach((block, idx) => {
+      block.order = idx
+    })
+    setBlocks(newBlocks)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,20 +277,29 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         }
       }
 
-      // Prepare data
+      // Prepare data - Filter out any category fields (safety check)
       const templateData = {
         name,
         description: description || null,
         status,
         blocks: blocks.map((block, blockIndex) => ({
           name: block.name,
-          fields: block.fields.map((field, fieldIndex) => ({
-            label: field.label,
-            key: field.key,
-            type: field.type,
-            required: field.required,
-            config: field.config ? JSON.parse(field.config) : null
-          }))
+          fields: block.fields
+            .filter(field => {
+              const keyLower = field.key?.toLowerCase() || ""
+              const labelLower = field.label?.toLowerCase() || ""
+              return !keyLower.includes("category") && 
+                     !keyLower.includes("kategorie") &&
+                     !labelLower.includes("kategorie") &&
+                     !labelLower.includes("category")
+            })
+            .map((field, fieldIndex) => ({
+              label: field.label,
+              key: field.key,
+              type: field.type,
+              required: field.required,
+              config: field.config ? JSON.parse(field.config) : null
+            }))
         }))
       }
 
@@ -215,6 +319,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
       setSaved(true)
       setLoading(false)
+      showNotification("Erfolgreich gespeichert", "success")
       
       // Refresh page to show updated data
       setTimeout(() => {
@@ -236,30 +341,10 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
     setError(null)
 
     try {
-      console.log("Creating new version for template:", template.id)
-      const response = await fetch(`/api/super-admin/templates/${template.id}/new-version`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unbekannter Fehler" }))
-        console.error("API error:", errorData)
-        setError(errorData.error || `Fehler beim Erstellen der neuen Version (${response.status})`)
-        setCreatingNewVersion(false)
-        return
-      }
-
-      const data = await response.json()
-      console.log("New version created:", data.template?.id)
-
+      const result = await createNewTemplateVersion(template.id)
       // Redirect to new template editor
-      if (data.template?.id) {
-        router.push(`/super-admin/templates/${data.template.id}`)
-      } else {
-        setError("Ungültige Antwort vom Server")
-        setCreatingNewVersion(false)
-      }
+      router.push(`/super-admin/templates/${result.templateId}`)
+      router.refresh() // Ensure fresh data
     } catch (err: any) {
       console.error("Error creating new version:", err)
       setError(err.message || "Ein Fehler ist aufgetreten")
@@ -339,34 +424,56 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           padding: "1.5rem",
           marginBottom: "2rem"
         }}>
-          <h2 style={{
-            fontSize: "1.5rem",
-            fontWeight: "600",
-            color: "#0A0A0A",
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
             marginBottom: "0.5rem"
           }}>
-            {template.name}
-          </h2>
-          {template.description && (
-            <p style={{
-              fontSize: "0.95rem",
-              color: "#7A7A7A",
-              marginBottom: "0.5rem"
+            <div style={{ flex: 1 }}>
+              <h2 style={{
+                fontSize: "1.5rem",
+                fontWeight: "600",
+                color: "#0A0A0A",
+                marginBottom: "0.5rem"
+              }}>
+                {template.name}
+              </h2>
+              {template.description && (
+                <p style={{
+                  fontSize: "0.95rem",
+                  color: "#7A7A7A",
+                  marginBottom: "0.5rem"
+                }}>
+                  {template.description}
+                </p>
+              )}
+            </div>
+            <div style={{
+              padding: "0.5rem 1rem",
+              backgroundColor: "#F5F5F5",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+              color: "#0A0A0A",
+              whiteSpace: "nowrap",
+              marginLeft: "1rem"
             }}>
-              {template.description}
-            </p>
-          )}
+              Version {template.version}
+            </div>
+          </div>
           <div style={{
             display: "flex",
             flexWrap: "wrap",
             gap: "1rem",
             fontSize: "0.875rem",
             color: "#7A7A7A",
-            marginBottom: "0.5rem"
+            marginBottom: isEditable ? "1rem" : "0"
           }}>
-            <span>Kategorie: {template.category || "Keine"}</span>
-            <span>•</span>
-            <span>Version {template.version}</span>
+            <span>
+              Kategorie: {template.category || "Keine"}
+              {template.categoryLabel && ` – ${template.categoryLabel}`}
+            </span>
             {template.effectiveFrom && (
               <>
                 <span>•</span>
@@ -380,6 +487,19 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               </>
             )}
           </div>
+          {isEditable && (
+            <div style={{
+              marginTop: "1rem",
+              padding: "0.75rem",
+              backgroundColor: "#FFF5F9",
+              border: "1px solid #E20074",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              color: "#E20074"
+            }}>
+              ⚠️ Änderungen gelten nur für zukünftige Produktpässe.
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
@@ -477,7 +597,73 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <div>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @media (max-width: 768px) {
+          .template-editor-footer {
+            left: 0 !important;
+            padding: 0.75rem 1rem !important;
+          }
+          .template-editor-field-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.75rem !important;
+          }
+          .template-editor-field-grid > * {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          .template-editor-field-grid input,
+          .template-editor-field-grid select,
+          .template-editor-field-grid label,
+          .template-editor-field-grid button {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          /* ✅ Checkboxen explizit ausnehmen */
+          .template-editor-field-grid input[type="checkbox"] {
+            width: auto !important;
+            max-width: none !important;
+          }
+          .template-editor-required {
+            justify-content: flex-start !important;
+            align-self: flex-start !important;
+            width: 100% !important;
+          }
+          
+          .block-actions {
+            gap: 1rem !important;
+            width: 100%;
+          }
+          .block-delete {
+            margin-top: 0.25rem;
+            margin-left: auto;
+          }
+        }
+        @media (min-width: 769px) and (max-width: 1200px) {
+          .template-editor-field-grid {
+            grid-template-columns: 1.5fr 1.5fr 1fr auto auto !important;
+            gap: 0.5rem !important;
+          }
+          .template-editor-field-grid input,
+          .template-editor-field-grid select {
+            min-width: 0 !important;
+            font-size: 0.875rem !important;
+          }
+          .template-editor-field-grid button {
+            padding: 0.375rem 0.5rem !important;
+            font-size: 0.75rem !important;
+            white-space: nowrap !important;
+          }
+        }
+        @media (min-width: 1400px) {
+          .template-editor-field-grid {
+            grid-template-columns: 2fr 2fr 1.5fr auto auto !important;
+          }
+        }
+      `
+      }} />
+      <form onSubmit={handleSubmit}>
       {error && (
         <div style={{
           backgroundColor: "#FFF5F9",
@@ -505,6 +691,99 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           Template erfolgreich gespeichert!
         </div>
       )}
+
+      {/* Template-Kontext (Kategorie) - Oberhalb der Basisinformationen */}
+      <div style={{
+        backgroundColor: "#F8F9FA",
+        border: "1px solid #E5E5E5",
+        borderRadius: "12px",
+        padding: "1rem",
+        marginBottom: "2rem"
+      }}>
+        <style>{`
+          @media (min-width: 768px) {
+            .template-category-container {
+              padding: 1.5rem !important;
+            }
+            .template-category-row {
+              flex-direction: row !important;
+              align-items: center !important;
+            }
+          }
+        `}</style>
+        <div 
+          className="template-category-row"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem"
+          }}
+        >
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem",
+            flex: 1
+          }}>
+            <div style={{
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              color: "#7A7A7A",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em"
+            }}>
+              Kategorie
+            </div>
+            <div style={{
+              fontSize: "1rem",
+              fontWeight: "600",
+              color: "#0A0A0A"
+            }}>
+              {template.category || "Keine"}
+              {template.categoryLabel && (
+                <span style={{
+                  marginLeft: "0.5rem",
+                  fontWeight: "400",
+                  color: "#7A7A7A"
+                }}>
+                  – {template.categoryLabel}
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem"
+          }}>
+            <div style={{
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              color: "#7A7A7A",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em"
+            }}>
+              Version
+            </div>
+            <div style={{
+              fontSize: "1rem",
+              fontWeight: "600",
+              color: "#0A0A0A"
+            }}>
+              {template.version}
+            </div>
+          </div>
+        </div>
+        <p style={{
+          marginTop: "0.75rem",
+          fontSize: "0.75rem",
+          color: "#7A7A7A",
+          fontStyle: "italic",
+          lineHeight: "1.4"
+        }}>
+          Die Kategorie ist Teil der regulatorischen Template-Identität und kann nach Erstellung nicht mehr geändert werden.
+        </p>
+      </div>
 
       {/* Basic Info */}
       <div style={{
@@ -613,13 +892,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             </select>
           </div>
 
-          <div style={{
-            fontSize: "0.875rem",
-            color: "#7A7A7A"
-          }}>
-            <div>Kategorie: {template.category || "Keine"}</div>
-            <div>Version: {template.version}</div>
-          </div>
         </div>
       </div>
 
@@ -637,47 +909,127 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           >
             <div style={{
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              flexDirection: "column",
+              gap: "1rem",
               marginBottom: "1.5rem"
             }}>
-              <input
-                type="text"
-                value={block.name}
-                onChange={(e) => updateBlockName(block.id, e.target.value)}
-                placeholder={`Block ${blockIndex + 1} Name`}
-                disabled={loading || !isEditable}
-                style={{
-                  fontSize: "1.25rem",
-                  fontWeight: "600",
-                  color: "#0A0A0A",
-                  border: "none",
-                  borderBottom: "2px solid #E20074",
-                  padding: "0.5rem 0",
-                  outline: "none",
-                  width: "100%",
-                  maxWidth: "500px"
-                }}
-              />
-              {blocks.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => deleteBlock(block.id)}
-                    disabled={loading || !isEditable}
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: "0.75rem",
+                flexWrap: "wrap"
+              }}>
+                <input
+                  type="text"
+                  value={block.name}
+                  onChange={(e) => updateBlockName(block.id, e.target.value)}
+                  placeholder={`Block ${blockIndex + 1} Name`}
+                  disabled={loading || !isEditable}
                   style={{
-                    padding: "0.5rem 1rem",
-                    backgroundColor: "#DC2626",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
+                    fontSize: "1rem",
                     fontWeight: "600",
-                    cursor: loading ? "not-allowed" : "pointer"
+                    color: "#0A0A0A",
+                    border: "none",
+                    borderBottom: "2px solid #E20074",
+                    padding: "0.5rem 0",
+                    outline: "none",
+                    flex: 1,
+                    minWidth: "200px",
+                    wordWrap: "break-word",
+                    overflowWrap: "break-word"
                   }}
-                >
-                  Block löschen
-                </button>
-              )}
+                />
+                {blockIndex === 0 && (
+                  <span style={{
+                    padding: "0.5rem",
+                    fontSize: "0.75rem",
+                    color: "#7A7A7A",
+                    fontStyle: "italic",
+                    flexShrink: 0
+                  }}>
+                    (Fix)
+                  </span>
+                )}
+                {blocks.length > 1 && blockIndex > 0 && (
+                  <div className="block-actions" style={{ 
+                    display: "flex", 
+                    alignItems: "center",
+                    gap: "0.75rem"
+                  }}>
+                    <div className="block-order-controls" style={{ 
+                      display: "flex", 
+                      gap: "0.5rem",
+                      flexShrink: 0
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => moveBlockUp(blockIndex)}
+                        disabled={loading}
+                        title="Block nach oben verschieben"
+                        style={{
+                          padding: "0.5rem",
+                          backgroundColor: "#F5F5F5",
+                          color: "#0A0A0A",
+                          border: "1px solid #CDCDCD",
+                          borderRadius: "6px",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          fontSize: "1rem",
+                          width: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveBlockDown(blockIndex)}
+                        disabled={loading || blockIndex === blocks.length - 1}
+                        title="Block nach unten verschieben"
+                        style={{
+                          padding: "0.5rem",
+                          backgroundColor: "#F5F5F5",
+                          color: "#0A0A0A",
+                          border: "1px solid #CDCDCD",
+                          borderRadius: "6px",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          fontSize: "1rem",
+                          width: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        ↓
+                      </button>
+                    </div>
+                    <div className="block-delete">
+                      <button
+                        type="button"
+                        onClick={() => deleteBlock(block.id)}
+                        disabled={loading || !isEditable}
+                        title="Block löschen"
+                        style={{
+                          padding: "0.5rem 1rem",
+                          backgroundColor: "#DC2626",
+                          color: "#FFFFFF",
+                          border: "none",
+                          borderRadius: "6px",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          whiteSpace: "nowrap"
+                        }}
+                      >
+                        Block löschen
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Fields */}
@@ -692,16 +1044,31 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                       borderRadius: "8px"
                     }}
                   >
-                    <div style={{
-                      display: "grid",
-                      gridTemplateColumns: "2fr 2fr 1fr auto auto",
-                      gap: "1rem",
-                      alignItems: "center"
-                    }}>
+                    <div 
+                      className="template-editor-field-grid"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(120px, 2fr) minmax(100px, 2fr) minmax(120px, 1fr) auto auto",
+                        gap: "0.75rem",
+                        alignItems: "center",
+                        width: "100%",
+                        boxSizing: "border-box",
+                        minWidth: 0,
+                        overflow: "hidden"
+                      }}
+                    >
                       <input
                         type="text"
                         value={field.label}
-                        onChange={(e) => updateField(block.id, field.id, { label: e.target.value })}
+                        onChange={(e) => {
+                          const newLabel = e.target.value
+                          if (validateFieldLabel(newLabel)) {
+                            updateField(block.id, field.id, { label: newLabel })
+                          } else {
+                            setError("Das Label 'Kategorie' oder 'Category' ist nicht erlaubt. Die Kategorie ist ein Template-Merkmal und kein Feld.")
+                            setTimeout(() => setError(null), 5000)
+                          }
+                        }}
                         placeholder="Label"
                         disabled={loading || !isEditable}
                         style={{
@@ -715,7 +1082,15 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                       <input
                         type="text"
                         value={field.key}
-                        onChange={(e) => updateField(block.id, field.id, { key: e.target.value })}
+                        onChange={(e) => {
+                          const newKey = e.target.value
+                          if (validateFieldKey(newKey)) {
+                            updateField(block.id, field.id, { key: newKey })
+                          } else {
+                            setError("Der Schlüssel 'category' oder 'kategorie' ist nicht erlaubt. Die Kategorie ist ein Template-Merkmal und kein Feld.")
+                            setTimeout(() => setError(null), 5000)
+                          }
+                        }}
                         placeholder="Key (z.B. productName)"
                         disabled={loading || !isEditable}
                         style={{
@@ -746,7 +1121,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                           </option>
                         ))}
                       </select>
-                      <label style={{
+                      <label className="template-editor-required" style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "0.5rem",
@@ -781,6 +1156,195 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                         Löschen
                       </button>
                     </div>
+                    {/* Auswahl-Optionen UI für select/multi-select Felder */}
+                    {(field.type === "select" || field.type === "multi-select") && (
+                      <div style={{
+                        marginTop: "1rem",
+                        padding: "1rem",
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #E5E5E5",
+                        borderRadius: "8px"
+                      }}>
+                        <div style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: editingFieldOptions === field.id ? "0.75rem" : "0"
+                        }}>
+                          <label style={{
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            color: "#0A0A0A"
+                          }}>
+                            Auswahloptionen:
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingFieldOptions(editingFieldOptions === field.id ? null : field.id)
+                            }}
+                            style={{
+                              padding: "0.375rem 0.75rem",
+                              backgroundColor: editingFieldOptions === field.id ? "#7A7A7A" : "#E20074",
+                              color: "#FFFFFF",
+                              border: "none",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                              cursor: "pointer"
+                            }}
+                          >
+                            {editingFieldOptions === field.id ? "▼ Ausblenden" : "▶ Optionen"}
+                          </button>
+                        </div>
+                        {editingFieldOptions === field.id && (
+                        <>
+                          <p style={{
+                            fontSize: "0.75rem",
+                            color: "#7A7A7A",
+                            marginBottom: "0.75rem",
+                            fontStyle: "italic"
+                          }}>
+                            Diese Optionen werden bei DPP-Erstellung und CSV-Import validiert.
+                          </p>
+                          <div style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            marginBottom: "0.75rem"
+                          }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const options = getSelectOptions(field.config)
+                                updateSelectOptions(block.id, field.id, [...options, { value: "", label: "", esprReference: "" }])
+                              }}
+                              disabled={loading || !isEditable}
+                              style={{
+                                padding: "0.375rem 0.75rem",
+                                backgroundColor: "#E20074",
+                                color: "#FFFFFF",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                                cursor: loading ? "not-allowed" : "pointer"
+                              }}
+                            >
+                              + Option hinzufügen
+                            </button>
+                          </div>
+                        </>
+                        )}
+                        {editingFieldOptions === field.id && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          {getSelectOptions(field.config).map((option, optIndex) => (
+                            <div key={optIndex} style={{
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr 1fr auto",
+                              gap: "0.5rem",
+                              alignItems: "center"
+                            }}>
+                              <input
+                                type="text"
+                                value={option.value}
+                                placeholder="Value (technisch)"
+                                onChange={(e) => {
+                                  const options = getSelectOptions(field.config)
+                                  options[optIndex] = { ...option, value: e.target.value }
+                                  updateSelectOptions(block.id, field.id, options)
+                                }}
+                                disabled={loading || !isEditable}
+                                style={{
+                                  padding: "0.5rem",
+                                  border: "1px solid #CDCDCD",
+                                  borderRadius: "6px",
+                                  fontSize: "0.875rem",
+                                  fontFamily: "monospace"
+                                }}
+                              />
+                              <input
+                                type="text"
+                                value={option.label}
+                                placeholder="Label (Anzeige)"
+                                onChange={(e) => {
+                                  const options = getSelectOptions(field.config)
+                                  options[optIndex] = { ...option, label: e.target.value }
+                                  updateSelectOptions(block.id, field.id, options)
+                                }}
+                                disabled={loading || !isEditable}
+                                style={{
+                                  padding: "0.5rem",
+                                  border: "1px solid #CDCDCD",
+                                  borderRadius: "6px",
+                                  fontSize: "0.875rem"
+                                }}
+                              />
+                              <input
+                                type="text"
+                                value={option.esprReference || ""}
+                                placeholder="ESPR-Referenz (optional)"
+                                onChange={(e) => {
+                                  const options = getSelectOptions(field.config)
+                                  options[optIndex] = { ...option, esprReference: e.target.value || undefined }
+                                  updateSelectOptions(block.id, field.id, options)
+                                }}
+                                disabled={loading || !isEditable}
+                                style={{
+                                  padding: "0.5rem",
+                                  border: "1px solid #CDCDCD",
+                                  borderRadius: "6px",
+                                  fontSize: "0.875rem"
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const options = getSelectOptions(field.config)
+                                  options.splice(optIndex, 1)
+                                  updateSelectOptions(block.id, field.id, options)
+                                }}
+                                disabled={loading || !isEditable}
+                                style={{
+                                  padding: "0.5rem",
+                                  backgroundColor: "transparent",
+                                  color: "#DC2626",
+                                  border: "1px solid #DC2626",
+                                  borderRadius: "6px",
+                                  fontSize: "0.875rem",
+                                  cursor: loading ? "not-allowed" : "pointer"
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                          {getSelectOptions(field.config).length === 0 && (
+                            <p style={{
+                              fontSize: "0.75rem",
+                              color: "#7A7A7A",
+                              fontStyle: "italic",
+                              padding: "0.5rem"
+                            }}>
+                              Noch keine Optionen definiert. Klicken Sie auf "+ Option hinzufügen".
+                            </p>
+                          )}
+                        </div>
+                        )}
+                      </div>
+                    )}
+                    {field.type === "country" && (
+                      <div style={{
+                        marginTop: "0.75rem",
+                        padding: "0.75rem",
+                        backgroundColor: "#F0F9FF",
+                        border: "1px solid #B3E5FC",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        color: "#0277BD"
+                      }}>
+                        ℹ️ Eine vollständige Liste aller Länder (ISO-3166-1 Alpha-2, ~249 Länder) steht den Nutzern bei der DPP-Erstellung zur Auswahl. Länder werden als ISO-Codes (z. B. DE, FR) gespeichert. Das Land wird basierend auf der IP-Adresse des Nutzers an erster Stelle vorgeschlagen.
+                      </div>
+                    )}
                   </div>
               ))}
 
@@ -825,29 +1389,202 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         </button>
       </div>
 
-      {/* Submit */}
-      <div style={{
+      {/* Bottom padding für Sticky Footer */}
+      <div style={{ height: "120px" }} />
+    </form>
+
+    {/* Sticky Footer */}
+    <div 
+      className="template-editor-footer"
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: isSidebarCollapsed ? "64px" : "280px",
+        right: 0,
+        backgroundColor: "#FFFFFF",
+        borderTop: "2px solid #E5E5E5",
+        padding: "1rem",
+        boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.05)",
         display: "flex",
-        justifyContent: "flex-end",
-        gap: "1rem"
-      }}>
-        <button
-          type="submit"
-          disabled={loading}
+        flexDirection: "column",
+        gap: "1rem",
+        zIndex: 1000,
+        transition: "left 0.3s ease"
+      }}
+    >
+        <style>{`
+          @media (min-width: 768px) {
+            .template-editor-footer {
+              padding: 1rem 1.5rem !important;
+              flex-direction: row !important;
+              justify-content: space-between !important;
+              align-items: center !important;
+            }
+            .template-footer-info {
+              flex-direction: row !important;
+              gap: 1.5rem !important;
+            }
+            .template-footer-actions {
+              flex-direction: row !important;
+              justify-content: flex-end !important;
+            }
+          }
+        `}</style>
+        {/* Status Info - Mobile-first, Desktop horizontal */}
+        <div 
+          className="template-footer-info"
           style={{
-            padding: "0.75rem 1.5rem",
-            backgroundColor: loading ? "#CDCDCD" : "#E20074",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "0.95rem",
-            fontWeight: "600",
-            cursor: loading ? "not-allowed" : "pointer"
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem",
+            fontSize: "0.875rem",
+            color: "#7A7A7A"
           }}
         >
-          {loading ? "Wird gespeichert..." : "Änderungen speichern"}
-        </button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+            <span>
+              Status: <strong style={{ color: "#0A0A0A" }}>{statusOptions.find(s => s.value === status)?.label || status}</strong>
+            </span>
+            <span>
+              Version: <strong style={{ color: "#0A0A0A" }}>v{template.version}</strong>
+            </span>
+          </div>
+          {template.updatedAt && (
+            <span style={{ fontSize: "0.75rem" }}>
+              Zuletzt gespeichert: {new Date(template.updatedAt).toLocaleString("de-DE", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+              })}
+            </span>
+          )}
+          <div style={{
+            fontSize: "0.75rem",
+            color: "#7A7A7A",
+            fontStyle: "italic",
+            marginTop: "0.25rem"
+          }}>
+            ⚠️ Änderungen gelten nur für zukünftige Produktpässe.
+          </div>
+        </div>
+        
+        {/* Actions Row - Mobile-first, Desktop horizontal */}
+        <div 
+          className="template-footer-actions"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem",
+            width: "100%"
+          }}
+        >
+            {status === "draft" && isEditable && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={loading}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  backgroundColor: loading ? "#CDCDCD" : "transparent",
+                  color: loading ? "#FFFFFF" : "#DC2626",
+                  border: `1px solid ${loading ? "#CDCDCD" : "#DC2626"}`,
+                  borderRadius: "8px",
+                  fontSize: "0.95rem",
+                  fontWeight: "600",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  width: "100%",
+                  boxSizing: "border-box"
+                }}
+              >
+                Template löschen
+              </button>
+            )}
+            {status === "draft" && (
+              <button
+                type="button"
+                onClick={() => setShowPublishDialog(true)}
+                disabled={loading || !isEditable}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  backgroundColor: loading ? "#CDCDCD" : "#00A651",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.95rem",
+                  fontWeight: "600",
+                  cursor: loading || !isEditable ? "not-allowed" : "pointer",
+                  width: "100%",
+                  boxSizing: "border-box"
+                }}
+              >
+                {loading ? "Wird veröffentlicht..." : "Veröffentlichen"}
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={loading || !isEditable}
+              style={{
+                padding: "0.75rem 1.5rem",
+                backgroundColor: loading || !isEditable ? "#CDCDCD" : "#E20074",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                cursor: loading || !isEditable ? "not-allowed" : "pointer",
+                width: "100%",
+                boxSizing: "border-box"
+              }}
+            >
+              {loading ? "Wird gespeichert..." : "Speichern"}
+            </button>
+        </div>
       </div>
-    </form>
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        title="Template löschen"
+        message="Möchten Sie dieses Template wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="danger"
+        onConfirm={async () => {
+          setShowDeleteDialog(false)
+          setLoading(true)
+          try {
+            const response = await fetch(`/api/super-admin/templates/${template.id}`, {
+              method: "DELETE"
+            })
+            if (!response.ok) {
+              const data = await response.json()
+              throw new Error(data.error || "Fehler beim Löschen")
+            }
+            router.push("/super-admin/templates")
+          } catch (err: any) {
+            setError(err.message || "Fehler beim Löschen des Templates")
+            setLoading(false)
+          }
+        }}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
+      
+      {/* Publish Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showPublishDialog}
+        title="Template veröffentlichen"
+        message="Möchten Sie dieses Template wirklich veröffentlichen? Nur ein aktives Template pro Kategorie ist erlaubt."
+        confirmLabel="Veröffentlichen"
+        cancelLabel="Abbrechen"
+        onConfirm={() => {
+          setShowPublishDialog(false)
+          setStatus("active")
+          handleSubmit(new Event("submit") as any)
+        }}
+        onCancel={() => setShowPublishDialog(false)}
+      />
+    </div>
   )
 }

@@ -4,7 +4,11 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import DppEditor from "@/components/DppEditor"
 
-export default function NewDppContent() {
+interface NewDppContentProps {
+  availableCategories: Array<{ categoryKey: string; label: string }>
+}
+
+export default function NewDppContent({ availableCategories }: NewDppContentProps) {
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
 
@@ -90,7 +94,7 @@ export default function NewDppContent() {
     id: "new", // Temporäre ID
     name: "",
     description: null,
-    category: "OTHER" as const,
+    category: (availableCategories[0]?.categoryKey || "OTHER") as const,
     sku: null,
     gtin: null,
     brand: null,

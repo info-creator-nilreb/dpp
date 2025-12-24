@@ -44,22 +44,55 @@ const categories = [
   { value: "OTHER", label: "Sonstige" }
 ]
 
-export default function NewTemplateContent() {
+interface ExistingTemplate {
+  id: string
+  name: string
+  category: string | null
+  version: number
+  blocks: Array<{
+    id: string
+    name: string
+    order: number
+    fields: Array<{
+      id: string
+      label: string
+      key: string
+      type: string
+      required: boolean
+      regulatoryRequired: boolean
+      config: string | null
+      order: number
+    }>
+  }>
+}
+
+interface NewTemplateContentProps {
+  existingTemplates: ExistingTemplate[]
+}
+
+// Canonical block names (must match DPP structure)
+const CANONICAL_BLOCKS = [
+  "Basis- & Produktdaten",
+  "Materialien & Zusammensetzung",
+  "Nutzung, Pflege & Lebensdauer",
+  "Rechtliches & Konformität",
+  "Rücknahme & Second Life"
+]
+
+export default function NewTemplateContent({ existingTemplates }: NewTemplateContentProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showDialog, setShowDialog] = useState(true) // Show dialog on mount
+  const [creationMode, setCreationMode] = useState<"from-existing" | "empty" | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
+  const [categoryLocked, setCategoryLocked] = useState(false) // Lock category after selection
   
   const [name, setName] = useState("")
   const [category, setCategory] = useState("")
   const [industry, setIndustry] = useState("")
   const [description, setDescription] = useState("")
-  const [blocks, setBlocks] = useState<Block[]>([
-    {
-      id: "1",
-      name: "Produktinformationen",
-      fields: []
-    }
-  ])
+  const [blocks, setBlocks] = useState<Block[]>([])
 
   const addBlock = () => {
     setBlocks([...blocks, {
@@ -126,6 +159,43 @@ export default function NewTemplateContent() {
     ))
   }
 
+  // Initialize blocks based on creation mode
+  const initializeFromTemplate = (template: ExistingTemplate) => {
+    setName(`${template.name} (Kopie)`)
+    setCategory(template.category || "")
+    setCategoryLocked(true) // Lock category after selection
+    setDescription("") // Don't copy description, let user set new one
+    
+    // Clone blocks and fields
+    const clonedBlocks: Block[] = template.blocks.map(block => ({
+      id: `block-${Date.now()}-${Math.random()}`,
+      name: block.name,
+      fields: block.fields.map(field => ({
+        id: `field-${Date.now()}-${Math.random()}`,
+        label: field.label,
+        key: field.key,
+        type: field.type,
+        required: field.required,
+        config: field.config ? JSON.parse(field.config) : null
+      }))
+    }))
+    setBlocks(clonedBlocks)
+    setShowDialog(false)
+  }
+
+  const initializeEmpty = () => {
+    // Category must be set before creating empty template
+    // This function is called after category is selected in dialog
+    // Create 5 canonical blocks
+    const canonicalBlocks: Block[] = CANONICAL_BLOCKS.map((blockName, index) => ({
+      id: `block-${Date.now()}-${index}`,
+      name: blockName,
+      fields: []
+    }))
+    setBlocks(canonicalBlocks)
+    setShowDialog(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -139,9 +209,16 @@ export default function NewTemplateContent() {
         return
       }
 
+      // Validate blocks (must have at least one)
+      if (blocks.length === 0) {
+        setError("Mindestens ein Block ist erforderlich")
+        setLoading(false)
+        return
+      }
+
       // Validate blocks
       for (const block of blocks) {
-        if (!block.name) {
+        if (!block.name || block.name.trim() === "") {
           setError("Alle Blöcke benötigen einen Namen")
           setLoading(false)
           return
@@ -197,6 +274,210 @@ export default function NewTemplateContent() {
       setError(err.message || "Ein Fehler ist aufgetreten")
       setLoading(false)
     }
+  }
+
+  // Show dialog until user chooses a mode
+  if (showDialog) {
+    return (
+      <div style={{
+        backgroundColor: "#FFFFFF",
+        border: "1px solid #E5E5E5",
+        borderRadius: "12px",
+        padding: "2rem",
+        maxWidth: "600px",
+        margin: "0 auto"
+      }}>
+        <h2 style={{
+          fontSize: "1.5rem",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "1rem"
+        }}>
+          Template-Erstellung
+        </h2>
+        <p style={{
+          fontSize: "0.95rem",
+          color: "#7A7A7A",
+          marginBottom: "2rem"
+        }}>
+          Wählen Sie, wie Sie das neue Template erstellen möchten:
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "2rem" }}>
+          {/* Option A: From Existing */}
+          <div style={{
+            border: creationMode === "from-existing" ? "2px solid #E20074" : "2px solid #E5E5E5",
+            borderRadius: "8px",
+            padding: "1.5rem",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            backgroundColor: creationMode === "from-existing" ? "#FFF5F9" : "#FFFFFF"
+          }}
+          onClick={() => setCreationMode("from-existing")}
+          onMouseEnter={(e) => {
+            if (creationMode !== "from-existing") {
+              e.currentTarget.style.borderColor = "#E20074"
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (creationMode !== "from-existing") {
+              e.currentTarget.style.borderColor = "#E5E5E5"
+            }
+          }}>
+            <h3 style={{
+              fontSize: "1.1rem",
+              fontWeight: "600",
+              color: "#0A0A0A",
+              marginBottom: "0.5rem"
+            }}>
+              Von bestehender Vorlage erstellen
+            </h3>
+            <p style={{
+              fontSize: "0.9rem",
+              color: "#7A7A7A",
+              marginBottom: creationMode === "from-existing" ? "1rem" : "0"
+            }}>
+              Klont die Block-Struktur eines vorhandenen aktiven Templates
+            </p>
+            {creationMode === "from-existing" && (
+              <div>
+                <label htmlFor="template-select" style={{
+                  display: "block",
+                  fontSize: "0.95rem",
+                  fontWeight: "500",
+                  color: "#0A0A0A",
+                  marginBottom: "0.5rem"
+                }}>
+                  Vorlage auswählen *
+                </label>
+                <select
+                  id="template-select"
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "8px",
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                    backgroundColor: "#FFFFFF"
+                  }}
+                >
+                  <option value="">Bitte wählen...</option>
+                  {existingTemplates.map(template => (
+                    <option key={template.id} value={template.id}>
+                      {template.name} ({template.category}) - Version {template.version}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Option B: Empty */}
+          <div style={{
+            border: creationMode === "empty" ? "2px solid #E20074" : "2px solid #E5E5E5",
+            borderRadius: "8px",
+            padding: "1.5rem",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            backgroundColor: creationMode === "empty" ? "#FFF5F9" : "#FFFFFF"
+          }}
+          onClick={() => setCreationMode("empty")}
+          onMouseEnter={(e) => {
+            if (creationMode !== "empty") {
+              e.currentTarget.style.borderColor = "#E20074"
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (creationMode !== "empty") {
+              e.currentTarget.style.borderColor = "#E5E5E5"
+            }
+          }}>
+            <h3 style={{
+              fontSize: "1.1rem",
+              fontWeight: "600",
+              color: "#0A0A0A",
+              marginBottom: "0.5rem"
+            }}>
+              Leeres Template erstellen
+            </h3>
+            <p style={{
+              fontSize: "0.9rem",
+              color: "#7A7A7A"
+            }}>
+              Erstellt ein neues Template mit den 5 kanonischen Blöcken (ohne Felder)
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+          <Link
+            href="/super-admin/templates"
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: "#FFFFFF",
+              color: "#0A0A0A",
+              border: "1px solid #CDCDCD",
+              borderRadius: "8px",
+              textDecoration: "none",
+              fontSize: "0.95rem",
+              fontWeight: "600",
+              display: "inline-block"
+            }}
+          >
+            Abbrechen
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              if (creationMode === "from-existing") {
+                if (!selectedTemplateId) {
+                  setError("Bitte wählen Sie eine Vorlage aus")
+                  return
+                }
+                const selectedTemplate = existingTemplates.find(t => t.id === selectedTemplateId)
+                if (selectedTemplate) {
+                  initializeFromTemplate(selectedTemplate)
+                }
+              } else if (creationMode === "empty") {
+                initializeEmpty()
+              } else {
+                setError("Bitte wählen Sie eine Option aus")
+              }
+            }}
+            disabled={!creationMode || (creationMode === "from-existing" && !selectedTemplateId)}
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: creationMode && (creationMode === "empty" || selectedTemplateId) ? "#E20074" : "#CDCDCD",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "0.95rem",
+              fontWeight: "600",
+              cursor: creationMode && (creationMode === "empty" || selectedTemplateId) ? "pointer" : "not-allowed"
+            }}
+          >
+            Weiter
+          </button>
+        </div>
+
+        {error && (
+          <div style={{
+            backgroundColor: "#FFF5F9",
+            border: "1px solid #E20074",
+            borderRadius: "8px",
+            padding: "1rem",
+            marginTop: "1rem",
+            color: "#E20074",
+            fontSize: "0.95rem"
+          }}>
+            {error}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -269,14 +550,16 @@ export default function NewTemplateContent() {
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Kategorie *
+              Kategorie * (Pflichteingabefeld, nicht änderbar nach Erstellung)
             </label>
-            <select
+            <input
               id="category"
+              type="text"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => setCategory(e.target.value.toUpperCase())}
               required
-              disabled={loading}
+              disabled={loading || categoryLocked}
+              placeholder="z.B. FURNITURE, TEXTILE, OTHER"
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -284,16 +567,18 @@ export default function NewTemplateContent() {
                 borderRadius: "8px",
                 fontSize: "1rem",
                 boxSizing: "border-box",
-                backgroundColor: "#FFFFFF"
+                backgroundColor: categoryLocked ? "#F5F5F5" : "#FFFFFF",
+                textTransform: "uppercase",
+                cursor: categoryLocked ? "not-allowed" : "text"
               }}
-            >
-              <option value="">Bitte wählen...</option>
-              {categories.map(cat => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+            />
+            <p style={{
+              fontSize: "0.75rem",
+              color: "#7A7A7A",
+              marginTop: "0.25rem"
+            }}>
+              {categoryLocked ? "Kategorie ist nach Erstellung nicht änderbar." : "Gültige Kategorien: FURNITURE, TEXTILE, OTHER"}
+            </p>
           </div>
 
           <div>

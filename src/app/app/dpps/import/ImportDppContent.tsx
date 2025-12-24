@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Papa from "papaparse"
@@ -20,16 +20,41 @@ interface ValidationError {
   message: string
 }
 
-export default function ImportDppContent() {
+interface ImportDppContentProps {
+  availableCategories: Array<{ categoryKey: string; label: string }>
+}
+
+export default function ImportDppContent({ availableCategories }: ImportDppContentProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [category, setCategory] = useState<"TEXTILE" | "FURNITURE" | "OTHER">("TEXTILE")
+  const [category, setCategory] = useState<string>(availableCategories[0]?.categoryKey || "")
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [parsedData, setParsedData] = useState<CsvRow[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
   const [isImporting, setIsImporting] = useState(false)
   const [error, setError] = useState("")
   const [isDragging, setIsDragging] = useState(false)
+  const [categoriesWithLabels, setCategoriesWithLabels] = useState<Map<string, { label: string; categoryKey: string }>>(new Map())
+
+  // Lade Kategorie-Labels beim Mount
+  useEffect(() => {
+    async function loadCategoryLabels() {
+      try {
+        const response = await fetch("/api/app/categories")
+        if (response.ok) {
+          const data = await response.json()
+          const labelsMap = new Map<string, { label: string; categoryKey: string }>()
+          for (const cat of data.categories || []) {
+            labelsMap.set(cat.categoryKey, cat)
+          }
+          setCategoriesWithLabels(labelsMap)
+        }
+      } catch (err) {
+        console.error("Error loading category labels:", err)
+      }
+    }
+    loadCategoryLabels()
+  }, [])
 
   // CSV Template herunterladen
   const handleDownloadTemplate = () => {
@@ -74,13 +99,13 @@ export default function ImportDppContent() {
             })
           }
 
-          // Validierung: category (Pflichtfeld und gültige Werte)
+          // Validierung: category (Pflichtfeld und gültige Werte - nur verfügbare Kategorien)
           const categoryValue = (normalizedRow.category || category).toUpperCase()
-          if (!["TEXTILE", "FURNITURE", "OTHER"].includes(categoryValue)) {
+          if (!availableCategories.map(c => c.categoryKey.toUpperCase()).includes(categoryValue)) {
             rowErrors.push({
               row: index + 2,
               field: "category",
-              message: "Kategorie muss TEXTILE, FURNITURE oder OTHER sein"
+              message: `Kategorie muss eine der verfügbaren Kategorien sein: ${availableCategories.map(c => c.label).join(", ")}`
             })
           }
 
@@ -313,9 +338,15 @@ export default function ImportDppContent() {
             backgroundPosition: "right 0.75rem center"
           }}
         >
-          <option value="TEXTILE">Textile</option>
-          <option value="FURNITURE">Furniture</option>
-          <option value="OTHER">Other</option>
+          {availableCategories.length === 0 ? (
+            <option value="">Keine Kategorien verfügbar</option>
+          ) : (
+            availableCategories.map((cat) => (
+              <option key={cat.categoryKey} value={cat.categoryKey}>
+                {cat.label}
+              </option>
+            ))
+          )}
         </select>
       </div>
 

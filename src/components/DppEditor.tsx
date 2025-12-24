@@ -150,7 +150,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   const [dpp, setDpp] = useState(initialDpp)
   const [name, setName] = useState(initialDpp.name)
   const [description, setDescription] = useState(initialDpp.description || "")
-  const [category, setCategory] = useState<"TEXTILE" | "FURNITURE" | "OTHER">(initialDpp.category || "OTHER")
+  const [category, setCategory] = useState<string>(initialDpp.category || "")
   const [sku, setSku] = useState(initialDpp.sku || "")
   const [gtin, setGtin] = useState(initialDpp.gtin || "")
   const [brand, setBrand] = useState(initialDpp.brand || "")
@@ -166,6 +166,10 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   const [takebackOffered, setTakebackOffered] = useState(initialDpp.takebackOffered || "")
   const [takebackContact, setTakebackContact] = useState(initialDpp.takebackContact || "")
   const [secondLifeInfo, setSecondLifeInfo] = useState(initialDpp.secondLifeInfo || "")
+  const [availableCategories, setAvailableCategories] = useState<Array<{ value: string; label: string }>>([])
+  const [previousCategory, setPreviousCategory] = useState<string>(initialDpp.category || "")
+  const [showCategoryChangeWarning, setShowCategoryChangeWarning] = useState(false)
+  const [pendingCategoryChange, setPendingCategoryChange] = useState<string | null>(null)
 
   // Accordion State (Sektion 1 immer offen)
   const [section2Open, setSection2Open] = useState(false)
@@ -180,6 +184,54 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   
   // Pending Files für neue DPPs (zwischengespeichert bis zum Speichern)
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
+
+  // Handler für Kategorienwechsel (mit Reset-Logik)
+  const handleCategoryChange = (newCategory: string) => {
+    setPreviousCategory(category)
+    setCategory(newCategory)
+    
+    // Reset-Logik: Zurücksetzen aller Template-abhängigen Felder
+    // (Die Felder werden beim nächsten Template-Laden neu validiert)
+    // Für jetzt: Nur die Kategorie setzen, Validierung erfolgt beim Speichern
+  }
+
+  // Lade verfügbare Kategorien beim Mount
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const response = await fetch("/api/app/categories")
+        if (response.ok) {
+          const data = await response.json()
+          const categoryOptions = (data.categories || []).map((cat: { categoryKey: string; label: string }) => ({
+            value: cat.categoryKey,
+            label: cat.label
+          }))
+          setAvailableCategories(categoryOptions)
+          // Setze erste verfügbare Kategorie als Standard für neue DPPs, wenn noch keine gesetzt ist
+          if (isNew && (!category || category === "") && categoryOptions.length > 0) {
+            setCategory(categoryOptions[0].value)
+            setPreviousCategory(categoryOptions[0].value)
+          }
+        }
+      } catch (error) {
+        console.error("Error loading categories:", error)
+        // Fallback-Kategorien bei Fehler
+        setAvailableCategories([
+          { value: "TEXTILE", label: "Textil" },
+          { value: "FURNITURE", label: "Möbel" },
+          { value: "OTHER", label: "Sonstiges" }
+        ])
+      }
+    }
+    loadCategories()
+  }, [isNew])
+  
+  // Initialisiere previousCategory beim Mount
+  useEffect(() => {
+    if (!isNew && initialDpp.category) {
+      setPreviousCategory(initialDpp.category)
+    }
+  }, [isNew, initialDpp.category])
 
   // Aktualisiere Medien-Liste nach Upload/Delete
   const refreshMedia = async () => {
@@ -511,13 +563,14 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   }
 
   // Select-Feld Komponente
-  const SelectField = ({ id, label, value, onChange, options, required = false }: {
+  const SelectField = ({ id, label, value, onChange, options, required = false, disabled = false }: {
     id: string
     label: string
     value: string
     onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
     options: Array<{ value: string; label: string }>
     required?: boolean
+    disabled?: boolean
   }) => (
     <div style={{ marginBottom: "1.5rem" }}>
       <label htmlFor={id} style={{
@@ -534,19 +587,21 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
         value={value}
         onChange={onChange}
         required={required}
+        disabled={disabled}
         style={{
           width: "100%",
           padding: "0.6875rem 2.5rem 0.6875rem clamp(0.75rem, 2vw, 1rem)",
           fontSize: "clamp(0.9rem, 2vw, 1rem)",
           border: "1px solid #CDCDCD",
           borderRadius: "8px",
-          backgroundColor: "#FFFFFF",
-          color: "#0A0A0A",
+          backgroundColor: disabled ? "#F5F5F5" : "#FFFFFF",
+          color: disabled ? "#7A7A7A" : "#0A0A0A",
           boxSizing: "border-box",
           minHeight: "42px",
           lineHeight: "1.5",
           appearance: "none",
           WebkitAppearance: "none",
+          cursor: disabled ? "not-allowed" : "pointer",
           MozAppearance: "none",
           backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
           backgroundRepeat: "no-repeat",
@@ -579,18 +634,126 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
         onToggle={() => {}}
         alwaysOpen={true}
       >
-        <SelectField
-          id="dpp-category"
-          label="Produktkategorie"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as "TEXTILE" | "FURNITURE" | "OTHER")}
-          required
-          options={[
-            { value: "TEXTILE", label: "Textil" },
-            { value: "FURNITURE", label: "Möbel" },
-            { value: "OTHER", label: "Sonstiges" }
-          ]}
-        />
+        <div>
+          <SelectField
+            id="dpp-category"
+            label="Produktkategorie"
+            value={category}
+            onChange={(e) => {
+              const newCategory = e.target.value
+              
+              // ESPR: Kategorie ist unveränderbar ab Veröffentlichung
+              if (dpp.status === "PUBLISHED") {
+                return // Ignoriere Änderungsversuch
+              }
+              
+              // Im Draft: Warnung beim Kategorienwechsel
+              if (!isNew && previousCategory && newCategory !== previousCategory) {
+                setPendingCategoryChange(newCategory)
+                setShowCategoryChangeWarning(true)
+              } else {
+                handleCategoryChange(newCategory)
+              }
+            }}
+            required
+            disabled={
+              dpp.status === "PUBLISHED" || // ESPR: Unveränderbar nach Veröffentlichung
+              (!isNew && availableCategories.length === 0)
+            }
+            options={
+              availableCategories.length > 0
+                ? availableCategories
+                : [
+                    // Fallback (sollte nicht passieren, da Kategorien immer geladen werden)
+                    { value: "TEXTILE", label: "Textil" },
+                    { value: "FURNITURE", label: "Möbel" },
+                    { value: "OTHER", label: "Sonstiges" }
+                  ]
+            }
+          />
+          {dpp.status === "PUBLISHED" && (
+            <p style={{
+              fontSize: "0.75rem",
+              color: "#7A7A7A",
+              marginTop: "0.25rem",
+              fontStyle: "italic"
+            }}>
+              Die Kategorie kann nach Veröffentlichung nicht mehr geändert werden (ESPR-konform).
+            </p>
+          )}
+        </div>
+        
+        {/* Warnung beim Kategorienwechsel */}
+        {showCategoryChangeWarning && (
+          <div style={{
+            marginTop: "1rem",
+            padding: "1rem",
+            backgroundColor: "#FFF5F5",
+            border: "1px solid #E20074",
+            borderRadius: "8px"
+          }}>
+            <p style={{
+              fontSize: "0.95rem",
+              color: "#0A0A0A",
+              marginBottom: "1rem",
+              fontWeight: "600"
+            }}>
+              ⚠️ Kategorienwechsel bestätigen
+            </p>
+            <p style={{
+              fontSize: "0.875rem",
+              color: "#7A7A7A",
+              marginBottom: "1rem"
+            }}>
+              Beim Wechsel der Kategorie können bestehende Eingaben verloren gehen, da ein anderes Template angewendet wird.
+            </p>
+            <div style={{
+              display: "flex",
+              gap: "0.75rem"
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  handleCategoryChange(pendingCategoryChange!)
+                  setShowCategoryChangeWarning(false)
+                  setPendingCategoryChange(null)
+                }}
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "#E20074",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                Kategorienwechsel bestätigen
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCategory(previousCategory) // Zurücksetzen
+                  setShowCategoryChangeWarning(false)
+                  setPendingCategoryChange(null)
+                }}
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "#F5F5F5",
+                  color: "#0A0A0A",
+                  border: "1px solid #CDCDCD",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
         <InputField
           id="dpp-name"
           label="Produktname"

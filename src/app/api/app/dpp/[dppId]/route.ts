@@ -91,6 +91,19 @@ export async function PUT(
     const permissionError = await requireEditDPP(params.dppId, session.user.id)
     if (permissionError) return permissionError
 
+    // Lade existierenden DPP, um Status zu prüfen
+    const existingDpp = await prisma.dpp.findUnique({
+      where: { id: params.dppId },
+      select: { status: true, category: true }
+    })
+
+    if (!existingDpp) {
+      return NextResponse.json(
+        { error: "DPP nicht gefunden" },
+        { status: 404 }
+      )
+    }
+
     const {
       name, description, category,
       sku, gtin, brand, countryOfOrigin,
@@ -99,6 +112,17 @@ export async function PUT(
       conformityDeclaration, disposalInfo,
       takebackOffered, takebackContact, secondLifeInfo
     } = await request.json()
+
+    // ESPR Guardrail: Kategorie ist unveränderbar ab Veröffentlichung
+    if (existingDpp.status === "PUBLISHED" && category && category !== existingDpp.category) {
+      return NextResponse.json(
+        { 
+          error: "Die Kategorie eines veröffentlichten DPPs kann nicht geändert werden. Bitte erstellen Sie einen neuen DPP mit der korrekten Kategorie und setzen Sie diesen DPP auf 'deprecated'.",
+          code: "CATEGORY_IMMUTABLE_AFTER_PUBLISH"
+        },
+        { status: 403 }
+      )
+    }
 
     // Validierung (Pflichtfelder)
     if (!name || typeof name !== "string" || name.trim().length === 0) {

@@ -51,6 +51,12 @@ export default async function SuperAdminTemplateEditorPage({ params }: SuperAdmi
     }
   })
 
+  // Ensure categoryLabel is set (fallback to default if null)
+  if (template && !template.categoryLabel && template.category) {
+    const { getCategoryLabel } = await import("@/lib/template-helpers")
+    template.categoryLabel = getCategoryLabel(template.category, null)
+  }
+
   if (!template) {
     redirect("/super-admin/templates")
   }

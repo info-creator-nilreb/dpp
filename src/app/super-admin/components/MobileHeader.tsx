@@ -44,13 +44,23 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
           onClick={onMenuClick}
           style={{
             backgroundColor: "transparent",
-            border: "1px solid #E5E5E5",
+            border: "1px solid #E20074",
             borderRadius: "6px",
             padding: "0.5rem",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            color: "#E20074",
+            transition: "all 0.2s ease"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#E20074"
+            e.currentTarget.style.color = "#FFFFFF"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent"
+            e.currentTarget.style.color = "#E20074"
           }}
           aria-label="Menu öffnen"
         >

@@ -9,6 +9,7 @@ import { getSuperAdminSession } from "@/lib/super-admin-auth"
 import { requirePermission } from "@/lib/super-admin-rbac"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import { prisma } from "@/lib/prisma"
 import NewTemplateContent from "./NewTemplateContent"
 
 export const dynamic = "force-dynamic"
@@ -23,6 +24,27 @@ export default async function SuperAdminNewTemplatePage() {
   if (!requirePermission(session, "template", "update")) {
     redirect("/super-admin/dashboard")
   }
+
+  // Load all active templates for the "create from existing" option
+  const existingTemplates = await prisma.template.findMany({
+    where: {
+      status: "active"
+    },
+    orderBy: [
+      { category: "asc" },
+      { version: "desc" }
+    ],
+    include: {
+      blocks: {
+        orderBy: { order: "asc" },
+        include: {
+          fields: {
+            orderBy: { order: "asc" }
+          }
+        }
+      }
+    }
+  })
 
   return (
     <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
@@ -55,7 +77,7 @@ export default async function SuperAdminNewTemplatePage() {
         </div>
       </div>
 
-      <NewTemplateContent />
+      <NewTemplateContent existingTemplates={existingTemplates} />
     </div>
   )
 }

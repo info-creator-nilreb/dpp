@@ -8,6 +8,7 @@
 import { redirect } from "next/navigation"
 import { getSuperAdminSession } from "@/lib/super-admin-auth"
 import SuperAdminLayoutClient from "./components/LayoutClient"
+import { NotificationProvider } from "@/components/NotificationProvider"
 
 export default async function SuperAdminLayout({
   children,
@@ -25,13 +26,15 @@ export default async function SuperAdminLayout({
   }
 
   return (
-    <SuperAdminLayoutClient 
-      userEmail={session?.email || undefined}
-      userRole={session?.role || undefined}
-      userName={session?.name || undefined}
-    >
-      {children}
-    </SuperAdminLayoutClient>
+    <NotificationProvider>
+      <SuperAdminLayoutClient 
+        userEmail={session?.email || undefined}
+        userRole={session?.role || undefined}
+        userName={session?.name || undefined}
+      >
+        {children}
+      </SuperAdminLayoutClient>
+    </NotificationProvider>
   )
 }
 
