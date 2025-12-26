@@ -6,6 +6,7 @@ import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { LoginSplitLayout } from "@/components/LoginSplitLayout"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -121,15 +122,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#F5F5F5",
-      padding: "1rem"
-    }}>
+    <LoginSplitLayout
+      title="Hallo!"
+      subtitle="Willkommen zurück."
+      quote={{
+        text: "Produktivität ist weniger das, was du tust, sondern mehr das, was du vollendest.",
+        author: "David Allen"
+      }}
+    >
       {/* Logo über der Card */}
       <Link href="/" style={{ textDecoration: "none", marginBottom: "2rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem" }}>
         <div style={{ width: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -160,7 +160,6 @@ export default function LoginPage() {
 
       <div style={{
         width: "100%",
-        maxWidth: "400px",
         padding: "clamp(1.5rem, 4vw, 2rem)",
         backgroundColor: "#FFFFFF",
         borderRadius: "12px",
@@ -379,7 +378,7 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </LoginSplitLayout>
   )
 }
 

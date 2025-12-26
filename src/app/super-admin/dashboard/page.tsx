@@ -9,15 +9,15 @@
 
 import { getSuperAdminSession } from "@/lib/super-admin-auth"
 import { redirect } from "next/navigation"
-import { prisma } from "@/lib/prisma"
 import WorkAreaCard from "./components/WorkAreaCard"
-import StatCard from "./components/StatCard"
+import SystemOverview from "./components/SystemOverview"
 import { 
   OrganizationsIconLarge, 
   DppsIconLarge, 
   TemplatesIconLarge, 
   UsersIconLarge, 
-  AuditLogsIconLarge
+  AuditLogsIconLarge,
+  FeatureRegistryIconLarge
 } from "../components/Icons"
 
 export const dynamic = "force-dynamic"
@@ -34,25 +34,6 @@ export default async function SuperAdminDashboardPage() {
   
   if (!session) {
     redirect("/super-admin/login")
-  }
-
-  // Get statistics with error handling
-  let orgCount = 0
-  let userCount = 0
-  let dppCount = 0
-  
-  try {
-    const counts = await Promise.all([
-      prisma.organization.count(),
-      prisma.user.count(),
-      prisma.dpp.count()
-    ])
-    orgCount = counts[0]
-    userCount = counts[1]
-    dppCount = counts[2]
-  } catch (error) {
-    console.error("Error loading dashboard statistics:", error)
-    // Continue with zero counts instead of crashing
   }
 
   // Role descriptions
@@ -85,7 +66,17 @@ export default async function SuperAdminDashboardPage() {
         </p>
       </div>
 
-      {/* SECTION 1: Arbeitsbereiche */}
+      {/* SECTION 1: Systemüberblick (PRIMARY ENTRY POINT) */}
+      <SystemOverview />
+
+      {/* Visual Separator */}
+      <div style={{
+        height: "1px",
+        backgroundColor: "#E5E5E5",
+        marginBottom: "4rem"
+      }} />
+
+      {/* SECTION 2: Arbeitsbereiche */}
       <section style={{ marginBottom: "4rem" }}>
         <h2 style={{
           fontSize: "1.25rem",
@@ -130,27 +121,12 @@ export default async function SuperAdminDashboardPage() {
             title="Audit Logs"
             description="Alle Admin-Aktionen und Änderungen einsehen"
           />
-        </div>
-      </section>
-
-      {/* SECTION 2: Systemüberblick */}
-      <section style={{ marginBottom: "4rem" }}>
-        <h2 style={{
-          fontSize: "1.25rem",
-          fontWeight: "600",
-          color: "#0A0A0A",
-          marginBottom: "1.5rem"
-        }}>
-          Systemüberblick
-        </h2>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-          gap: "1rem",
-        }}>
-          <StatCard label="Organisationen" value={orgCount} />
-          <StatCard label="Benutzer" value={userCount} />
-          <StatCard label="Produktpässe" value={dppCount} />
+          <WorkAreaCard
+            href="/super-admin/feature-registry"
+            icon={<FeatureRegistryIconLarge />}
+            title="Funktionen"
+            description="Systemweite Funktionen und Tarifzuordnung"
+          />
         </div>
       </section>
 

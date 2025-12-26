@@ -25,6 +25,9 @@ const COOKIE_NAME = "super_admin_session"
  * 
  * Note: This is a simplified version for middleware.
  * Full session validation happens in server components/API routes.
+ * 
+ * IMPORTANT: jwtVerify automatically rejects expired tokens,
+ * so we don't need to check exp manually here.
  */
 async function getSuperAdminSessionFromCookie(request: NextRequest): Promise<{ id: string; role: string } | null> {
   const token = request.cookies.get(COOKIE_NAME)?.value
@@ -35,11 +38,18 @@ async function getSuperAdminSessionFromCookie(request: NextRequest): Promise<{ i
 
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET)
+    
+    // jwtVerify already checks expiration, but let's be explicit
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return null // Token expired
+    }
+    
     return {
       id: payload.id as string,
       role: payload.role as string
     }
-  } catch {
+  } catch (error) {
+    // Token invalid or expired - jwtVerify throws on expired tokens
     return null
   }
 }

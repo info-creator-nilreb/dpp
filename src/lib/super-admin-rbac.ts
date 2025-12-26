@@ -35,6 +35,10 @@ const PERMISSIONS: Record<SuperAdminRole, Permission[]> = {
     // Features
     { resource: "feature", action: "read" },
     { resource: "feature", action: "update" },
+    { resource: "feature_registry", action: "read" },
+    { resource: "feature_registry", action: "create" },
+    { resource: "feature_registry", action: "update" },
+    { resource: "feature_registry", action: "delete" },
     // Templates
     { resource: "template", action: "read" },
     { resource: "template", action: "update" },
@@ -48,6 +52,7 @@ const PERMISSIONS: Record<SuperAdminRole, Permission[]> = {
     { resource: "user", action: "read" },
     { resource: "subscription", action: "read" },
     { resource: "feature", action: "read" },
+    { resource: "feature_registry", action: "read" },
     { resource: "template", action: "read" },
     { resource: "audit", action: "read" }
   ]

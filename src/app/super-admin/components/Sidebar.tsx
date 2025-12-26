@@ -11,15 +11,18 @@ import {
   UsersIcon, 
   AuditLogsIcon,
   SettingsIcon,
-  LogoutIcon
+  LogoutIcon,
+  FeatureRegistryIcon
 } from "./Icons"
 import TPassLogo from "./TPassLogo"
+import { apiFetch } from "@/lib/api-client"
 
 const navigationItems = [
   { href: "/super-admin/dashboard", label: "Dashboard", icon: DashboardIcon },
   { href: "/super-admin/organizations", label: "Organisationen", icon: OrganizationsIcon },
   { href: "/super-admin/dpps", label: "DPPs", icon: DppsIcon },
   { href: "/super-admin/templates", label: "Templates", icon: TemplatesIcon },
+  { href: "/super-admin/feature-registry", label: "Funktionen", icon: FeatureRegistryIcon },
   { href: "/super-admin/users", label: "Benutzer", icon: UsersIcon },
   { href: "/super-admin/audit-logs", label: "Audit Logs", icon: AuditLogsIcon },
 ]
@@ -353,46 +356,70 @@ function SidebarContent({
           </div>
         )}
 
-        {/* Logout Form */}
+        {/* Logout Button */}
         {!isCollapsed && (
-          <form action="/api/super-admin/auth/logout" method="POST" style={{ marginTop: "0.5rem" }}>
-            <button
-              type="submit"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-                padding: "0.75rem 0",
-                backgroundColor: "transparent",
-                border: "none",
-                color: "rgba(255, 255, 255, 0.7)",
-                fontSize: "0.95rem",
-                cursor: "pointer",
-                width: "100%",
-                textAlign: "left",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#FFFFFF"
-                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)"
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)"
-                e.currentTarget.style.backgroundColor = "transparent"
-              }}
-            >
-              <span style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center",
-                width: "20px",
-                height: "20px",
-                flexShrink: 0,
-              }}>
-                <LogoutIcon />
-              </span>
-              <span style={{ color: "inherit" }}>Abmelden</span>
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                // DEBUG: Log logout execution (remove in production)
+                console.log("[Logout] Logout button clicked");
+                
+                // Clear cookie immediately on client side
+                document.cookie = "super_admin_session=; path=/; max-age=0; domain=" + window.location.hostname;
+                
+                // Call logout API (best effort)
+                try {
+                  const response = await apiFetch("/api/super-admin/auth/logout", {
+                    method: "POST",
+                  });
+                  console.log("[Logout] Response status:", response.status);
+                } catch (error) {
+                  console.error("[Logout] API call failed:", error);
+                }
+                
+                // Always redirect to login immediately
+                window.location.href = "/super-admin/login";
+              } catch (error) {
+                console.error("[Logout] Error:", error);
+                // Even on error, redirect to login
+                window.location.href = "/super-admin/login";
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              padding: "0.75rem 0",
+              backgroundColor: "transparent",
+              border: "none",
+              color: "rgba(255, 255, 255, 0.7)",
+              fontSize: "0.95rem",
+              cursor: "pointer",
+              width: "100%",
+              textAlign: "left",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#FFFFFF"
+              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)"
+              e.currentTarget.style.backgroundColor = "transparent"
+            }}
+          >
+            <span style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center",
+              width: "20px",
+              height: "20px",
+              flexShrink: 0,
+            }}>
+              <LogoutIcon />
+            </span>
+            <span style={{ color: "inherit" }}>Abmelden</span>
+          </button>
         )}
 
         {/* Toggle Button (ganz unten) */}

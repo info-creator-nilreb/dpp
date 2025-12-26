@@ -7,6 +7,8 @@ import CountrySelect from "@/components/CountrySelect"
 import { useNotification } from "@/components/NotificationProvider"
 import InputField from "@/components/InputField"
 import StickySaveBar from "@/components/StickySaveBar"
+import { TrialBanner } from "@/components/TrialBanner"
+import { useCapabilities } from "@/hooks/useCapabilities"
 
 interface PendingFile {
   id: string
@@ -615,6 +617,11 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
     </div>
   )
 
+  // Get capabilities for trial banner
+  const { isTrial, trialDaysRemaining, subscription } = useCapabilities(
+    dpp.id && dpp.id !== "new" ? dpp.id : ""
+  );
+
   return (
     <Fragment>
     <div>
@@ -626,6 +633,14 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
       }}>
         {isNew ? "Neuer Produktpass" : "Produktpass Editor"}
       </h1>
+
+      {/* Trial Banner */}
+      {!isNew && isTrial && trialDaysRemaining !== null && (
+        <TrialBanner
+          daysRemaining={trialDaysRemaining}
+          plan={subscription?.plan}
+        />
+      )}
 
       {/* 1. Basis- & Produktdaten (immer offen, Pflichtfelder) */}
       <AccordionSection

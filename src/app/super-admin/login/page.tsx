@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import TPassLogo from "../components/TPassLogo"
+import { LoginSplitLayout } from "@/components/LoginSplitLayout"
 
 /**
  * SUPER ADMIN LOGIN PAGE
@@ -50,21 +51,20 @@ export default function SuperAdminLoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#F5F5F5",
-      padding: "1rem"
-    }}>
+    <LoginSplitLayout
+      title="Super Admin"
+      subtitle="Willkommen im Admin-Bereich."
+      quote={{
+        text: "Exzellenz ist keine Fähigkeit, es ist eine Haltung.",
+        author: "Ralph Marston"
+      }}
+    >
       <div style={{
         backgroundColor: "#FFFFFF",
         borderRadius: "12px",
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
         padding: "2rem",
-        width: "100%",
-        maxWidth: "400px"
+        width: "100%"
       }}>
         <h1 style={{
           fontSize: "1.75rem",
@@ -241,6 +241,6 @@ export default function SuperAdminLoginPage() {
           </button>
         </form>
       </div>
-    </div>
+    </LoginSplitLayout>
   )
 }

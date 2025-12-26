@@ -84,6 +84,21 @@ export const SettingsIcon = () => (
   </svg>
 )
 
+export const FeatureRegistryIcon = () => (
+  <svg {...iconProps}>
+    {/* Slider/Equalizer Icon - drei horizontale Linien mit Slider-Knöpfen */}
+    {/* Obere Linie mit Slider links */}
+    <line x1="4" y1="8" x2="20" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="7" cy="8" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+    {/* Mittlere Linie mit Slider rechts */}
+    <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="17" cy="12" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+    {/* Untere Linie mit Slider mitte */}
+    <line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="12" cy="16" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+  </svg>
+)
+
 export const LogoutIcon = () => (
   <svg {...iconProps}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -130,6 +145,21 @@ export const TemplatesIconLarge = () => (
     <line x1="16" y1="13" x2="8" y2="13"/>
     <line x1="16" y1="17" x2="8" y2="17"/>
     <polyline points="10 9 9 9 8 9"/>
+  </svg>
+)
+
+export const FeatureRegistryIconLarge = () => (
+  <svg {...iconPropsLarge}>
+    {/* Slider/Equalizer Icon - Large Version - drei horizontale Linien mit Slider-Knöpfen */}
+    {/* Obere Linie mit Slider links */}
+    <line x1="4" y1="8" x2="20" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="7" cy="8" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+    {/* Mittlere Linie mit Slider rechts */}
+    <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="17" cy="12" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+    {/* Untere Linie mit Slider mitte */}
+    <line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="12" cy="16" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
   </svg>
 )
 

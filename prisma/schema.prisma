@@ -39,6 +39,7 @@ model Organization {
   status      String       @default("active")
   dpps        Dpp[]
   memberships Membership[]
+  subscription Subscription?
 
   @@map("organizations")
 }
@@ -84,6 +85,7 @@ model Dpp {
   media                 DppMedia[]
   permissions           DppPermission[]
   versions              DppVersion[]
+  content               DppContent[]
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("dpps")
@@ -217,18 +219,21 @@ model AuditLog {
 }
 
 model Subscription {
-  id                   String    @id @default(cuid())
-  organizationId       String    @unique
-  plan                 String
-  status               String    @default("active")
-  stripeSubscriptionId String?   @unique
+  id                   String       @id @default(cuid())
+  organizationId       String       @unique
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                 String       @default("basic") // basic | pro | premium
+  status               String       @default("trial_active") // trial_active | active | past_due | canceled | expired
+  trialExpiresAt       DateTime?    // Nullable, nur gesetzt wenn status = trial_active
+  trialStartedAt       DateTime?
+  stripeSubscriptionId String?      @unique
   stripeCustomerId     String?
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean   @default(false)
+  cancelAtPeriodEnd    Boolean      @default(false)
   canceledAt           DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
 
   @@map("subscriptions")
 }
@@ -325,4 +330,64 @@ model TemplateField {
   @@index([templateId])
   @@index([blockId, order])
   @@map("template_fields")
+}
+
+model FeatureRegistry {
+  id                        String      @id @default(cuid())
+  key                       String      @unique
+  name                      String
+  description               String?
+  category                  String      // core | content | interaction | styling | publishing
+  capabilityKey             String?     // Optional: Maps to capability (for compatibility)
+  minimumPlan               String      // basic | pro | premium
+  requiresActiveSubscription Boolean    @default(true)
+  requiresPublishingCapability Boolean  @default(false)
+  visibleInTrial            Boolean     @default(true)
+  usableInTrial             Boolean     @default(true)
+  configSchema              String?     // JSON Schema als String
+  enabled                   Boolean     @default(true)
+  defaultForNewDpps         Boolean     @default(false)
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
+  blockTypes                BlockType[]
+
+  @@index([category])
+  @@index([minimumPlan])
+  @@map("feature_registry")
+}
+
+model BlockType {
+  id                String          @id @default(cuid())
+  featureRegistryId String?
+  featureRegistry   FeatureRegistry? @relation(fields: [featureRegistryId], references: [id], onDelete: SetNull)
+  key               String          @unique
+  name              String
+  description       String?
+  category          String          // content | interaction | styling
+  configSchema      String          // JSON Schema für Block Config
+  defaultConfig     String?         // Default JSON Config
+  supportsStyling   Boolean         @default(false)
+  requiresPublishing Boolean        @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([category])
+  @@map("block_types")
+}
+
+model DppContent {
+  id            String   @id @default(cuid())
+  dppId         String
+  dpp           Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  versionId     String?  // Optional: Link zu published version
+  isPublished   Boolean  @default(false)
+  blocks        Json     // Array von Block Objects
+  styling       Json?    // Global styling config (nur wenn capability vorhanden)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String?
+
+  @@index([dppId])
+  @@index([dppId, isPublished])
+  @@map("dpp_content")
 }
