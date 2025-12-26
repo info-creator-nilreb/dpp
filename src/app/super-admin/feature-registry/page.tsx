@@ -56,13 +56,31 @@ export default async function SuperAdminFeatureRegistryPage({
     where.enabled = false;
   }
 
-  // Get all features (filtered)
+  // Get all features (filtered) with all required fields
   const features = await prisma.featureRegistry.findMany({
     where,
     orderBy: [
       { category: "asc" },
       { name: "asc" },
     ],
+    select: {
+      id: true,
+      key: true,
+      name: true,
+      description: true,
+      category: true,
+      capabilityKey: true,
+      minimumPlan: true,
+      requiresActiveSubscription: true,
+      requiresPublishingCapability: true,
+      visibleInTrial: true,
+      usableInTrial: true,
+      configSchema: true,
+      enabled: true,
+      defaultForNewDpps: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
 
   // Extract unique categories from all features (not just filtered) for filter options

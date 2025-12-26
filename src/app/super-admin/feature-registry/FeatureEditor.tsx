@@ -3,23 +3,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api-client";
 import { Tooltip, TooltipIcon } from "@/components/Tooltip";
-
-interface Feature {
-  id?: string;
-  key: string;
-  name: string;
-  description: string | null;
-  category: string;
-  capabilityKey: string | null;
-  minimumPlan: string;
-  requiresActiveSubscription: boolean;
-  requiresPublishingCapability: boolean;
-  visibleInTrial: boolean;
-  usableInTrial: boolean;
-  configSchema: string | null;
-  enabled: boolean;
-  defaultForNewDpps: boolean;
-}
+import { Feature } from "./types";
 
 interface FeatureEditorProps {
   feature: Feature | null;

@@ -3,16 +3,7 @@
 import { useState } from "react";
 import { FeatureEditor } from "./FeatureEditor";
 import FeatureFilterBar from "./FeatureFilterBar";
-
-interface Feature {
-  id: string;
-  key: string;
-  name: string;
-  description: string | null;
-  category: string;
-  minimumPlan: string;
-  enabled: boolean;
-}
+import { Feature } from "./types";
 
 interface FeatureRegistryContentProps {
   features: Feature[];
