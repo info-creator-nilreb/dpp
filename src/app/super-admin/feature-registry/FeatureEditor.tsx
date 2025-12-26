@@ -61,7 +61,6 @@ export function FeatureEditor({ feature, onSave, onCancel }: FeatureEditorProps)
   useEffect(() => {
     if (feature) {
       setFormData({
-        id: feature.id,
         ...feature,
         description: feature.description || "",
         capabilityKey: feature.capabilityKey || "",
