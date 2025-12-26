@@ -26,7 +26,7 @@ export interface Feature {
 /**
  * Feature for Editor (id is optional for new features)
  */
-export interface FeatureEditorData {
+export interface FeatureFormData {
   id?: string;
   key: string;
   name: string;

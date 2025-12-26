@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api-client";
 import { Tooltip, TooltipIcon } from "@/components/Tooltip";
-import { Feature } from "./types";
+import { Feature, FeatureFormData } from "./types";
 
 interface FeatureEditorProps {
   feature: Feature | null;
@@ -39,7 +39,7 @@ const tooltips = {
 };
 
 export function FeatureEditor({ feature, onSave, onCancel }: FeatureEditorProps) {
-  const [formData, setFormData] = useState<Feature>({
+  const [formData, setFormData] = useState<FeatureFormData>({
     key: "",
     name: "",
     description: "",
@@ -61,6 +61,7 @@ export function FeatureEditor({ feature, onSave, onCancel }: FeatureEditorProps)
   useEffect(() => {
     if (feature) {
       setFormData({
+        id: feature.id,
         ...feature,
         description: feature.description || "",
         capabilityKey: feature.capabilityKey || "",
