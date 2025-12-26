@@ -57,7 +57,7 @@ export default async function SuperAdminFeatureRegistryPage({
   }
 
   // Get all features (filtered) with all required fields
-  const features = await prisma.featureRegistry.findMany({
+  const featuresRaw = await prisma.featureRegistry.findMany({
     where,
     orderBy: [
       { category: "asc" },
@@ -82,6 +82,13 @@ export default async function SuperAdminFeatureRegistryPage({
       updatedAt: true,
     },
   });
+
+  // Convert Date objects to ISO strings for client component
+  const features = featuresRaw.map((feature) => ({
+    ...feature,
+    createdAt: feature.createdAt.toISOString(),
+    updatedAt: feature.updatedAt.toISOString(),
+  }));
 
   // Extract unique categories from all features (not just filtered) for filter options
   const allFeatures = await prisma.featureRegistry.findMany({
