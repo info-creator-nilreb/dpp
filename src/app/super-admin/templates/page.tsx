@@ -11,6 +11,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import TemplateCard from "./TemplateCard"
+import TemplatesHeader from "./TemplatesHeader"
 
 export const dynamic = "force-dynamic"
 
@@ -65,50 +66,13 @@ export default async function SuperAdminTemplatesPage() {
   }
 
   return (
-    <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "2rem"
-      }}>
-        <div>
-          <Link
-            href="/super-admin/dashboard"
-            style={{
-              color: "#7A7A7A",
-              textDecoration: "none",
-              fontSize: "0.9rem",
-              marginBottom: "0.5rem",
-              display: "block"
-            }}
-          >
-            ← Zum Dashboard
-          </Link>
-          <h1 style={{
-            fontSize: "2rem",
-            fontWeight: "700",
-            color: "#0A0A0A"
-          }}>
-            Templates
-          </h1>
-        </div>
-        <Link
-          href="/super-admin/templates/new"
-          style={{
-            backgroundColor: "#E20074",
-            color: "#FFFFFF",
-            padding: "0.75rem 1.5rem",
-            borderRadius: "8px",
-            textDecoration: "none",
-            fontSize: "0.95rem",
-            fontWeight: "600",
-            display: "inline-block"
-          }}
-        >
-          + Neues Template
-        </Link>
-      </div>
+    <div style={{ 
+      maxWidth: "1400px", 
+      margin: "0 auto", 
+      padding: "clamp(1rem, 3vw, 2rem)",
+      boxSizing: "border-box"
+    }}>
+      <TemplatesHeader />
 
       {Object.keys(templatesByCategory).length === 0 ? (
         <div style={{
@@ -126,12 +90,14 @@ export default async function SuperAdminTemplatesPage() {
             style={{
               backgroundColor: "#E20074",
               color: "#FFFFFF",
-              padding: "0.75rem 1.5rem",
+              padding: "clamp(0.625rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem)",
               borderRadius: "8px",
               textDecoration: "none",
-              fontSize: "0.95rem",
+              fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
               fontWeight: "600",
-              display: "inline-block"
+              display: "inline-block",
+              whiteSpace: "nowrap",
+              transition: "background-color 0.2s"
             }}
           >
             Erstes Template erstellen
