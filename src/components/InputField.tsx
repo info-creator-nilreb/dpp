@@ -10,12 +10,13 @@ interface InputFieldProps {
   required?: boolean
   type?: string
   rows?: number
+  helperText?: string
 }
 
 /**
  * Input-Feld Komponente (separat, um Re-Rendering zu vermeiden)
  */
-export default function InputField({ id, label, value, onChange, required = false, type = "text", rows = 1 }: InputFieldProps) {
+export default function InputField({ id, label, value, onChange, required = false, type = "text", rows = 1, helperText }: InputFieldProps) {
   return (
     <div style={{ marginBottom: "1.5rem" }}>
       <label htmlFor={id} style={{
@@ -65,6 +66,16 @@ export default function InputField({ id, label, value, onChange, required = fals
             boxSizing: "border-box"
           }}
         />
+      )}
+      {helperText && (
+        <p style={{
+          fontSize: "clamp(0.8rem, 1.6vw, 0.85rem)",
+          color: "#7A7A7A",
+          marginTop: "0.5rem",
+          marginBottom: 0
+        }}>
+          {helperText}
+        </p>
       )}
     </div>
   )

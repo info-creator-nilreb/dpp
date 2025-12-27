@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import Papa from "papaparse"
 
 interface CsvRow {
@@ -35,6 +34,9 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
   const [error, setError] = useState("")
   const [isDragging, setIsDragging] = useState(false)
   const [categoriesWithLabels, setCategoriesWithLabels] = useState<Map<string, { label: string; categoryKey: string }>>(new Map())
+  const [showLeaveWarning, setShowLeaveWarning] = useState(false)
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+  const [dataImported, setDataImported] = useState(false) // Track if data was imported
 
   // Lade Kategorie-Labels beim Mount
   useEffect(() => {
@@ -233,6 +235,9 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
       }
 
       const result = await response.json()
+      
+      // Mark data as imported (so warning won't trigger)
+      setDataImported(true)
 
       // Navigation basierend auf Anzahl der erstellten DPPs
       if (result.createdIds.length === 1) {
@@ -248,20 +253,53 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
 
   const hasErrors = validationErrors.length > 0
   const canImport = parsedData.length > 0 && !hasErrors && !isImporting
+  
+  // Prüft ob ungespeicherte Änderungen vorliegen
+  const hasUnsavedChanges = (): boolean => {
+    if (dataImported) return false // Daten wurden bereits importiert
+    
+    // Ungespeichert wenn: CSV-Datei hochgeladen/geparst
+    return !!csvFile || parsedData.length > 0
+  }
+  
+  // Browser beforeunload Event
+  useEffect(() => {
+    if (!hasUnsavedChanges()) return
+    
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ""
+      return ""
+    }
+    
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [csvFile, parsedData, dataImported])
+  
+  // Navigation-Handler für Back-Link
+  const handleBackClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (hasUnsavedChanges()) {
+      e.preventDefault()
+      setPendingNavigation("/app/create")
+      setShowLeaveWarning(true)
+    }
+  }
 
   return (
     <div>
       <div style={{ marginBottom: "1rem" }}>
-        <Link
+        <a
           href="/app/create"
+          onClick={handleBackClick}
           style={{
             color: "#7A7A7A",
             textDecoration: "none",
-            fontSize: "clamp(0.9rem, 2vw, 1rem)"
+            fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            cursor: "pointer"
           }}
         >
           ← Zurück
-        </Link>
+        </a>
       </div>
       <h1 style={{
         fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
@@ -574,6 +612,97 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
             >
               {isImporting ? "Importiere..." : `${parsedData.length} Produkte importieren`}
             </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Warnung beim Verlassen */}
+      {showLeaveWarning && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10000,
+          padding: "1rem"
+        }}>
+          <div style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: "12px",
+            padding: "clamp(1.5rem, 4vw, 2rem)",
+            maxWidth: "500px",
+            width: "100%",
+            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)"
+          }}>
+            <h3 style={{
+              fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
+              fontWeight: "700",
+              color: "#0A0A0A",
+              marginBottom: "1rem"
+            }}>
+              Seite verlassen?
+            </h3>
+            <p style={{
+              fontSize: "clamp(0.9rem, 2vw, 1rem)",
+              color: "#7A7A7A",
+              marginBottom: "1.5rem",
+              lineHeight: "1.6"
+            }}>
+              Sie haben die Daten noch nicht gespeichert. Beim Verlassen der Seite gehen diese verloren.
+            </p>
+            <div style={{
+              display: "flex",
+              gap: "1rem",
+              justifyContent: "flex-end"
+            }}>
+              <button
+                onClick={() => {
+                  setShowLeaveWarning(false)
+                  setPendingNavigation(null)
+                }}
+                style={{
+                  padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
+                  backgroundColor: "#FFFFFF",
+                  color: "#0A0A0A",
+                  border: "1px solid #CDCDCD",
+                  borderRadius: "8px",
+                  fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={() => {
+                  setShowLeaveWarning(false)
+                  if (pendingNavigation) {
+                    router.push(pendingNavigation)
+                  } else {
+                    router.back()
+                  }
+                  setPendingNavigation(null)
+                }}
+                style={{
+                  padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
+                  backgroundColor: "#E20074",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)"
+                }}
+              >
+                Trotzdem verlassen
+              </button>
+            </div>
           </div>
         </div>
       )}

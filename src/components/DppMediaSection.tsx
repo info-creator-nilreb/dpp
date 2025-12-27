@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useRef } from "react"
+import FileUploadArea from "@/components/FileUploadArea"
+import { useNotification } from "@/components/NotificationProvider"
 
 interface DppMedia {
   id: string
@@ -43,12 +45,9 @@ export default function DppMediaSection({
 }: DppMediaSectionProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showNotification } = useNotification()
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  const handleFileSelect = async (file: File) => {
     setError("")
 
     // Wenn keine DPP-ID vorhanden, Datei zwischenspeichern
@@ -76,10 +75,6 @@ export default function DppMediaSection({
         }
       }
       
-      // Input zurücksetzen
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
       return
     }
 
@@ -102,10 +97,6 @@ export default function DppMediaSection({
       } else {
         // Erfolgreich hochgeladen
         onMediaChange()
-        // Input zurücksetzen
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ""
-        }
       }
     } catch (err) {
       setError("Ein Fehler ist aufgetreten")
@@ -115,14 +106,11 @@ export default function DppMediaSection({
   }
 
   const handleDelete = async (mediaId: string) => {
-    if (!confirm("Möchten Sie dieses Medium wirklich löschen?")) {
-      return
-    }
-
     // Prüfe, ob es eine pending file ist
     if (mediaId.startsWith("pending-")) {
       if (onPendingFilesChange) {
         onPendingFilesChange(pendingFiles.filter(f => f.id !== mediaId))
+        showNotification("Datei entfernt", "success")
       }
       return
     }
@@ -139,12 +127,13 @@ export default function DppMediaSection({
 
       if (response.ok) {
         onMediaChange()
+        showNotification("Datei erfolgreich entfernt", "success")
       } else {
         const data = await response.json()
-        alert(data.error || "Fehler beim Löschen")
+        showNotification(data.error || "Fehler beim Löschen", "error")
       }
     } catch (err) {
-      alert("Ein Fehler ist aufgetreten")
+      showNotification("Ein Fehler ist aufgetreten", "error")
     }
   }
 
@@ -176,63 +165,14 @@ export default function DppMediaSection({
 
       {/* Upload-Feld */}
       <div style={{ marginBottom: "2rem" }}>
-        <label htmlFor="media-upload" style={{
-          display: "block",
-          fontSize: "clamp(0.9rem, 2vw, 1rem)",
-          fontWeight: "600",
-          color: "#0A0A0A",
-          marginBottom: "0.5rem"
-        }}>
-          Datei hochladen
-        </label>
-        <div style={{
-          border: "2px dashed #CDCDCD",
-          borderRadius: "8px",
-          padding: "clamp(1.5rem, 4vw, 2rem)",
-          textAlign: "center",
-          backgroundColor: "#F5F5F5",
-          cursor: uploading ? "not-allowed" : "pointer",
-          transition: "border-color 0.2s"
-        }}
-        onClick={() => !uploading && fileInputRef.current?.click()}
-        onMouseEnter={(e) => {
-          if (!uploading) {
-            e.currentTarget.style.borderColor = "#E20074"
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = "#CDCDCD"
-        }}
-        >
-          <input
-            ref={fileInputRef}
-            id="media-upload"
-            type="file"
-            accept="image/*,application/pdf,.doc,.docx"
-            onChange={handleFileSelect}
-            disabled={uploading}
-            style={{ display: "none" }}
-          />
-          {uploading ? (
-            <div style={{ color: "#7A7A7A" }}>Wird hochgeladen...</div>
-          ) : (
-            <>
-              <div style={{
-                fontSize: "clamp(0.9rem, 2vw, 1rem)",
-                color: "#7A7A7A",
-                marginBottom: "0.5rem"
-              }}>
-                Klicken Sie hier oder ziehen Sie eine Datei hierher
-              </div>
-              <div style={{
-                fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
-                color: "#7A7A7A"
-              }}>
-                Erlaubt: Bilder (JPEG, PNG, GIF, WebP) und PDFs (max. 10 MB)
-              </div>
-            </>
-          )}
-        </div>
+        <FileUploadArea
+          accept="image/*,application/pdf,.doc,.docx"
+          maxSize={10 * 1024 * 1024} // 10 MB
+          onFileSelect={handleFileSelect}
+          disabled={uploading}
+          label="Datei hochladen"
+          description="Bilder, PDFs oder Dokumente. Maximale Dateigröße: 10 MB"
+        />
         {error && (
           <p style={{
             color: "#E20074",
@@ -313,12 +253,20 @@ export default function DppMediaSection({
                     flexDirection: "column",
                     gap: "0.5rem"
                   }}>
-                    <div style={{
-                      fontSize: "2rem",
-                      color: "#7A7A7A"
-                    }}>
-                      📄
-                    </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="40"
+                      height="40"
+                      fill="none"
+                      stroke="#7A7A7A"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
                     <div style={{
                       fontSize: "clamp(0.75rem, 2vw, 0.85rem)",
                       color: "#7A7A7A",
@@ -410,12 +358,20 @@ export default function DppMediaSection({
                     flexDirection: "column",
                     gap: "0.5rem"
                   }}>
-                    <div style={{
-                      fontSize: "2rem",
-                      color: "#7A7A7A"
-                    }}>
-                      📄
-                    </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="40"
+                      height="40"
+                      fill="none"
+                      stroke="#7A7A7A"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
                     <div style={{
                       fontSize: "clamp(0.75rem, 2vw, 0.85rem)",
                       color: "#7A7A7A",

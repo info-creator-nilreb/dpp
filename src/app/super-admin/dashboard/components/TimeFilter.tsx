@@ -79,114 +79,179 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
     <div
       style={{
         display: "flex",
-        alignItems: "center",
+        flexDirection: "column",
         gap: "1rem",
         marginBottom: "1.5rem",
       }}
     >
-      <span
+      <div
         style={{
-          fontSize: "0.875rem",
-          fontWeight: "500",
-          color: "#7A7A7A",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: "0.75rem",
         }}
       >
-        Zeitraum:
-      </span>
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-        <button
-          type="button"
-          onClick={() => handleRangeChange("today")}
+        <span
           style={{
-            padding: "0.5rem 1rem",
-            border: "1px solid #D1D5DB",
-            borderRadius: "6px",
-            backgroundColor: selectedRange === "today" ? "#E20074" : "#FFFFFF",
-            color: selectedRange === "today" ? "#FFFFFF" : "#374151",
-            cursor: "pointer",
-            fontSize: "0.875rem",
-            fontWeight: selectedRange === "today" ? "600" : "400",
-            transition: "all 0.2s",
+            fontSize: "clamp(0.875rem, 2vw, 0.875rem)",
+            fontWeight: "500",
+            color: "#7A7A7A",
+            whiteSpace: "nowrap",
           }}
         >
-          Heute
-        </button>
-        <button
-          type="button"
-          onClick={() => handleRangeChange("30days")}
-          style={{
-            padding: "0.5rem 1rem",
-            border: "1px solid #D1D5DB",
-            borderRadius: "6px",
-            backgroundColor: selectedRange === "30days" ? "#E20074" : "#FFFFFF",
-            color: selectedRange === "30days" ? "#FFFFFF" : "#374151",
-            cursor: "pointer",
-            fontSize: "0.875rem",
-            fontWeight: selectedRange === "30days" ? "600" : "400",
-            transition: "all 0.2s",
-          }}
-        >
-          Letzte 30 Tage
-        </button>
-        <button
-          type="button"
-          onClick={() => handleRangeChange("1year")}
-          style={{
-            padding: "0.5rem 1rem",
-            border: "1px solid #D1D5DB",
-            borderRadius: "6px",
-            backgroundColor: selectedRange === "1year" ? "#E20074" : "#FFFFFF",
-            color: selectedRange === "1year" ? "#FFFFFF" : "#374151",
-            cursor: "pointer",
-            fontSize: "0.875rem",
-            fontWeight: selectedRange === "1year" ? "600" : "400",
-            transition: "all 0.2s",
-          }}
-        >
-          Letztes Jahr
-        </button>
-        <button
-          type="button"
-          onClick={() => handleRangeChange("custom")}
-          style={{
-            padding: "0.5rem 1rem",
-            border: "1px solid #D1D5DB",
-            borderRadius: "6px",
-            backgroundColor: selectedRange === "custom" ? "#E20074" : "#FFFFFF",
-            color: selectedRange === "custom" ? "#FFFFFF" : "#374151",
-            cursor: "pointer",
-            fontSize: "0.875rem",
-            fontWeight: selectedRange === "custom" ? "600" : "400",
-            transition: "all 0.2s",
-          }}
-        >
-          Benutzerdefiniert
-        </button>
+          Zeitraum:
+        </span>
+        <div style={{ 
+          display: "flex", 
+          flexWrap: "wrap",
+          gap: "0.5rem", 
+          alignItems: "center",
+          flex: 1,
+          minWidth: 0,
+        }}>
+          <button
+            type="button"
+            onClick={() => handleRangeChange("today")}
+            style={{
+              padding: "clamp(0.5rem, 1.5vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
+              border: "1px solid #D1D5DB",
+              borderRadius: "6px",
+              backgroundColor: selectedRange === "today" ? "#E20074" : "#FFFFFF",
+              color: selectedRange === "today" ? "#FFFFFF" : "#374151",
+              cursor: "pointer",
+              fontSize: "clamp(0.8rem, 2vw, 0.875rem)",
+              fontWeight: selectedRange === "today" ? "600" : "400",
+              transition: "all 0.2s",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Heute
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRangeChange("30days")}
+            style={{
+              padding: "clamp(0.5rem, 1.5vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
+              border: "1px solid #D1D5DB",
+              borderRadius: "6px",
+              backgroundColor: selectedRange === "30days" ? "#E20074" : "#FFFFFF",
+              color: selectedRange === "30days" ? "#FFFFFF" : "#374151",
+              cursor: "pointer",
+              fontSize: "clamp(0.8rem, 2vw, 0.875rem)",
+              fontWeight: selectedRange === "30days" ? "600" : "400",
+              transition: "all 0.2s",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Letzte 30 Tage
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRangeChange("1year")}
+            style={{
+              padding: "clamp(0.5rem, 1.5vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
+              border: "1px solid #D1D5DB",
+              borderRadius: "6px",
+              backgroundColor: selectedRange === "1year" ? "#E20074" : "#FFFFFF",
+              color: selectedRange === "1year" ? "#FFFFFF" : "#374151",
+              cursor: "pointer",
+              fontSize: "clamp(0.8rem, 2vw, 0.875rem)",
+              fontWeight: selectedRange === "1year" ? "600" : "400",
+              transition: "all 0.2s",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Letztes Jahr
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRangeChange("custom")}
+            style={{
+              padding: "clamp(0.5rem, 1.5vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
+              border: "1px solid #D1D5DB",
+              borderRadius: "6px",
+              backgroundColor: selectedRange === "custom" ? "#E20074" : "#FFFFFF",
+              color: selectedRange === "custom" ? "#FFFFFF" : "#374151",
+              cursor: "pointer",
+              fontSize: "clamp(0.8rem, 2vw, 0.875rem)",
+              fontWeight: selectedRange === "custom" ? "600" : "400",
+              transition: "all 0.2s",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.375rem",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              style={{ flexShrink: 0 }}
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span className="time-filter-custom-text">
+              Benutzerdefiniert
+            </span>
+            <style jsx>{`
+              @media (max-width: 640px) {
+                .time-filter-custom-text {
+                  display: none;
+                }
+              }
+            `}</style>
+          </button>
+        </div>
       </div>
 
       {showCustomPicker && (
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div style={{ 
+          display: "flex", 
+          flexWrap: "wrap",
+          gap: "0.5rem", 
+          alignItems: "center",
+          padding: "0.75rem",
+          backgroundColor: "#F9FAFB",
+          borderRadius: "8px",
+          border: "1px solid #E5E7EB",
+        }}>
           <input
             type="date"
             value={customStart}
             onChange={(e) => setCustomStart(e.target.value)}
             style={{
-              padding: "0.5rem",
+              padding: "clamp(0.5rem, 1.5vw, 0.5rem)",
               border: "1px solid #D1D5DB",
               borderRadius: "6px",
-              fontSize: "0.875rem",
+              fontSize: "clamp(0.8rem, 2vw, 0.875rem)",
+              flex: 1,
+              minWidth: "140px",
+              boxSizing: "border-box",
             }}
           />
-          <span style={{ color: "#7A7A7A" }}>bis</span>
+          <span style={{ color: "#7A7A7A", fontSize: "clamp(0.8rem, 2vw, 0.875rem)" }}>bis</span>
           <input
             type="date"
             value={customEnd}
             onChange={(e) => setCustomEnd(e.target.value)}
             style={{
-              padding: "0.5rem",
+              padding: "clamp(0.5rem, 1.5vw, 0.5rem)",
               border: "1px solid #D1D5DB",
               borderRadius: "6px",
-              fontSize: "0.875rem",
+              fontSize: "clamp(0.8rem, 2vw, 0.875rem)",
+              flex: 1,
+              minWidth: "140px",
+              boxSizing: "border-box",
             }}
           />
         </div>

@@ -91,7 +91,7 @@ export default function DashboardCard({ href, icon, title, description, children
 
   if (isClickable) {
     return (
-      <Link href={href} style={{ textDecoration: "none", color: "inherit" }}>
+      <Link href={href} style={{ textDecoration: "none", color: "inherit", height: "100%", display: "flex", flexDirection: "column" }}>
         {content}
       </Link>
     )

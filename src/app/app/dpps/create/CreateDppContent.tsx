@@ -9,14 +9,14 @@ export default function CreateDppContent() {
     <div>
       <div style={{ marginBottom: "1rem" }}>
         <Link
-          href="/app/dpps"
+          href="/app/dashboard"
           style={{
             color: "#7A7A7A",
             textDecoration: "none",
             fontSize: "clamp(0.9rem, 2vw, 1rem)"
           }}
         >
-          ← Zurück zu Produktpässen
+          ← Zum Dashboard
         </Link>
       </div>
       <h1 style={{
@@ -37,7 +37,7 @@ export default function CreateDppContent() {
 
       <DashboardGrid>
         <DashboardCard
-          href="/app/dpps/new"
+          href="/app/create/new"
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -59,7 +59,7 @@ export default function CreateDppContent() {
         />
 
         <DashboardCard
-          href="/app/dpps/import"
+          href="/app/create/import"
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -79,6 +79,30 @@ export default function CreateDppContent() {
           }
           title="CSV importieren"
           description="Importieren Sie mehrere Produkte auf einmal über eine CSV-Datei."
+        />
+
+        <DashboardCard
+          href="/app/create/ai-start"
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              fill="none"
+              stroke="#E20074"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <circle cx="11" cy="13" r="2" />
+              <path d="M16 16l-2-2" />
+            </svg>
+          }
+          title="KI-unterstützt starten"
+          description="Vorhandene Produktdaten analysieren und Pflichtfelder automatisch vorprüfen."
         />
       </DashboardGrid>
     </div>

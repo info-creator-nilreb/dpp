@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { saveFile, isAllowedFileType, MAX_FILE_SIZE } from "@/lib/storage"
 import { requireEditDPP, requireViewDPP } from "@/lib/api-permissions"
 import { DPP_SECTIONS } from "@/lib/permissions"
+import { scanFile } from "@/lib/virus-scanner"
 
 /**
  * POST /api/app/dpp/[dppId]/media
@@ -67,6 +68,17 @@ export async function POST(
     // Datei in Buffer konvertieren
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
+
+    // Virus Scan (nur in Production, überspringbar in Development)
+    try {
+      await scanFile(buffer, file.name)
+    } catch (scanError) {
+      console.error("[Media Upload] Virus scan failed:", scanError)
+      return NextResponse.json(
+        { error: "Datei konnte nicht auf Viren geprüft werden. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support." },
+        { status: 400 }
+      )
+    }
 
     // Datei im Storage speichern
     const storageUrl = await saveFile(buffer, file.name)

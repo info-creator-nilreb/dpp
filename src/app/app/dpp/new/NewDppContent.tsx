@@ -53,12 +53,38 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
           }
           setCategoriesWithLabels(labelsMap)
         }
+
+        // Load prefilled data from preflight analysis (if available)
+        try {
+          const prefillDataStr = sessionStorage.getItem("preflightPrefillData")
+          if (prefillDataStr) {
+            const prefillData = JSON.parse(prefillDataStr)
+            
+            // Prefill category if available (check against availableCategories prop)
+            if (prefillData.category && availableCategories.length > 0 && availableCategories.some(cat => cat.categoryKey === prefillData.category)) {
+              setCategory(prefillData.category)
+            }
+            
+            // Prefill name if available
+            if (prefillData.name && typeof prefillData.name === "string" && prefillData.name.trim().length > 0) {
+              setName(prefillData.name.trim())
+            }
+            
+            // Clear sessionStorage after reading (one-time use)
+            sessionStorage.removeItem("preflightPrefillData")
+          }
+        } catch (prefillError) {
+          console.error("Error loading prefill data:", prefillError)
+          // Clear invalid data
+          sessionStorage.removeItem("preflightPrefillData")
+        }
       } catch (err) {
         console.error("Error loading data:", err)
       }
     }
     loadData()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableCategories])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

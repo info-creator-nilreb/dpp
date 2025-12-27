@@ -161,8 +161,12 @@ export function LoginSplitLayout({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "2rem",
+          padding: "clamp(1rem, 3vw, 2rem)",
           backgroundColor: "#F5F5F5",
+          overflowX: "hidden",
+          overflowY: "auto",
+          minHeight: "100vh",
+          boxSizing: "border-box",
         }}
         className="login-split-right"
       >
@@ -170,6 +174,7 @@ export function LoginSplitLayout({
           style={{
             width: "100%",
             maxWidth: "400px",
+            boxSizing: "border-box",
           }}
         >
           {children}

@@ -80,7 +80,7 @@ export default function DppsContent({
             Verwalten Sie alle Ihre Digitalen Produktpässe an einem Ort.
           </p>
           <Link
-            href="/app/dpps/create"
+            href="/app/create"
             style={{
               backgroundColor: "#E20074",
               color: "#FFFFFF",
@@ -169,7 +169,7 @@ export default function DppsContent({
           </p>
           {!hasActiveFilters && (
             <Link
-              href="/app/dpps/create"
+              href="/app/create"
               style={{
                 display: "inline-block",
                 backgroundColor: "#E20074",

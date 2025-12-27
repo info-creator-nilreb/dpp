@@ -1,22 +1,10 @@
-export const dynamic = "force-dynamic"
-
-import NewDppContent from "./NewDppContent"
-import { getCategoriesWithPublishedTemplates } from "@/lib/template-helpers"
-import AuthGate from "../../_auth/AuthGate"
+import { redirect } from "next/navigation"
 
 /**
- * Neue DPP erstellen (Server Component)
+ * Legacy Route: Redirect to new route
  * 
- * Lädt verfügbare Kategorien mit veröffentlichten Templates
+ * This route is deprecated. All new DPP creation should use /app/create/new
  */
-export default async function NewDppPage() {
-  // Nur Kategorien mit veröffentlichten Templates laden
-  const availableCategories = await getCategoriesWithPublishedTemplates()
-
-  return (
-    <AuthGate>
-      <NewDppContent availableCategories={availableCategories} />
-    </AuthGate>
-  )
+export default function LegacyNewDppPage() {
+  redirect("/app/create/new")
 }
-

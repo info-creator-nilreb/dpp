@@ -59,6 +59,7 @@ interface Dpp {
 interface DppEditorProps {
   dpp: Dpp
   isNew?: boolean
+  onUnsavedChangesChange?: (hasChanges: boolean) => void
 }
 
 /**
@@ -144,7 +145,7 @@ function AccordionSection({
  * 4. Rechtliches & Konformität (einklappbar)
  * 5. Rücknahme & Second Life (einklappbar)
  */
-export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorProps) {
+export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedChangesChange }: DppEditorProps) {
   const router = useRouter()
   const { showNotification } = useNotification()
   
@@ -184,8 +185,65 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
   const [lastSaved, setLastSaved] = useState<Date | null>(isNew ? null : initialDpp.updatedAt)
   const [saveError, setSaveError] = useState<string | null>(null)
   
+  // Warnung beim Verlassen (nur für neue DPPs ohne Speicherung)
+  const [showLeaveWarning, setShowLeaveWarning] = useState(false)
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+  
   // Pending Files für neue DPPs (zwischengespeichert bis zum Speichern)
+  // MUST be declared before hasUnsavedChanges and useEffect hooks that use it
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
+  
+  // Prüft ob ungespeicherte Änderungen vorliegen (nur für neue DPPs)
+  const hasUnsavedChanges = (): boolean => {
+    if (!isNew || lastSaved !== null) return false // Nur für neue DPPs, die noch nicht gespeichert wurden
+    
+    // Prüfe ob mindestens ein Feld befüllt wurde (außer leere Strings)
+    const hasName = name.trim().length > 0
+    const hasSku = sku.trim().length > 0
+    const hasBrand = brand.trim().length > 0
+    const hasCountry = countryOfOrigin.trim().length > 0
+    const hasDescription = description && description.trim().length > 0
+    const hasMaterials = materials && materials.trim().length > 0
+    const hasFiles = pendingFiles.length > 0
+    
+    return hasName || hasSku || hasBrand || hasCountry || hasDescription || hasMaterials || hasFiles
+  }
+  
+  // Informiere Parent-Komponente über ungespeicherte Änderungen
+  useEffect(() => {
+    if (isNew && onUnsavedChangesChange) {
+      onUnsavedChangesChange(hasUnsavedChanges())
+    }
+  }, [isNew, name, sku, brand, countryOfOrigin, description, materials, pendingFiles, lastSaved, onUnsavedChangesChange])
+  
+  // Browser beforeunload Event (für Browser-Navigation)
+  useEffect(() => {
+    if (!isNew || !hasUnsavedChanges()) return
+    
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = "" // Chrome benötigt returnValue
+      return "" // Safari
+    }
+    
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isNew, name, sku, brand, countryOfOrigin, description, materials, pendingFiles, lastSaved])
+  
+  // Navigation-Handler: Zeigt Warnung bevor navigiert wird
+  const handleNavigationAttempt = (targetUrl: string): void => {
+    if (hasUnsavedChanges()) {
+      setPendingNavigation(targetUrl)
+      setShowLeaveWarning(true)
+    } else {
+      router.push(targetUrl)
+    }
+  }
+  
+  // Prefill-Hints: Welche Felder wurden aus KI-Vorprüfung übernommen
+  const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set())
+  // Welche Felder wurden vom Benutzer bearbeitet (Hints verschwinden dann)
+  const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
 
   // Handler für Kategorienwechsel (mit Reset-Logik)
   const handleCategoryChange = (newCategory: string) => {
@@ -234,6 +292,59 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
       setPreviousCategory(initialDpp.category)
     }
   }, [isNew, initialDpp.category])
+  
+  // Lade Prefill-Flags aus sessionStorage (nur für neue DPPs)
+  useEffect(() => {
+    if (isNew) {
+      try {
+        const prefilledFieldsStr = sessionStorage.getItem("preflightPrefilledFields")
+        if (prefilledFieldsStr) {
+          const fields = JSON.parse(prefilledFieldsStr)
+          setPrefilledFields(new Set(fields))
+          // Clear after reading
+          sessionStorage.removeItem("preflightPrefilledFields")
+        }
+      } catch (error) {
+        console.error("Error loading prefilled fields:", error)
+        sessionStorage.removeItem("preflightPrefilledFields")
+      }
+    }
+  }, [isNew])
+  
+  // Helper: Prüft ob Feld Prefill-Hint zeigen soll
+  const shouldShowPrefillHint = (fieldName: string): boolean => {
+    if (!isNew || !prefilledFields.has(fieldName) || editedFields.has(fieldName)) {
+      return false
+    }
+    
+    // Check current value
+    let currentValue: string | null = null
+    switch (fieldName) {
+      case "name": currentValue = name; break
+      case "description": currentValue = description; break
+      case "sku": currentValue = sku; break
+      case "gtin": currentValue = gtin; break
+      case "brand": currentValue = brand; break
+      case "countryOfOrigin": currentValue = countryOfOrigin; break
+      case "materials": currentValue = materials; break
+      case "materialSource": currentValue = materialSource; break
+      case "careInstructions": currentValue = careInstructions; break
+      case "lifespan": currentValue = lifespan; break
+      case "conformityDeclaration": currentValue = conformityDeclaration; break
+      case "disposalInfo": currentValue = disposalInfo; break
+      case "takebackContact": currentValue = takebackContact; break
+      case "secondLifeInfo": currentValue = secondLifeInfo; break
+    }
+    
+    return currentValue !== null && currentValue.trim().length > 0
+  }
+  
+  // Helper: Markiert Feld als bearbeitet
+  const markFieldAsEdited = (fieldName: string) => {
+    if (prefilledFields.has(fieldName) && !editedFields.has(fieldName)) {
+      setEditedFields(prev => new Set(prev).add(fieldName))
+    }
+  }
 
   // Aktualisiere Medien-Liste nach Upload/Delete
   const refreshMedia = async () => {
@@ -773,42 +884,66 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
           id="dpp-name"
           label="Produktname"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value)
+            markFieldAsEdited("name")
+          }}
           required
+          helperText={shouldShowPrefillHint("name") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <InputField
           id="dpp-description"
           label="Beschreibung"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => {
+            setDescription(e.target.value)
+            markFieldAsEdited("description")
+          }}
           rows={4}
+          helperText={shouldShowPrefillHint("description") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <InputField
           id="dpp-sku"
           label="SKU / Interne ID"
           value={sku}
-          onChange={(e) => setSku(e.target.value)}
+          onChange={(e) => {
+            setSku(e.target.value)
+            markFieldAsEdited("sku")
+          }}
           required
+          helperText={shouldShowPrefillHint("sku") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <InputField
           id="dpp-gtin"
           label="GTIN / EAN"
           value={gtin}
-          onChange={(e) => setGtin(e.target.value)}
+          onChange={(e) => {
+            setGtin(e.target.value)
+            markFieldAsEdited("gtin")
+          }}
+          helperText={shouldShowPrefillHint("gtin") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <InputField
           id="dpp-brand"
           label="Marke / Hersteller"
           value={brand}
-          onChange={(e) => setBrand(e.target.value)}
+          onChange={(e) => {
+            setBrand(e.target.value)
+            markFieldAsEdited("brand")
+          }}
           required
+          helperText={shouldShowPrefillHint("brand") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <CountrySelect
           id="dpp-country-of-origin"
           label="Herstellungsland"
           value={countryOfOrigin}
-          onChange={setCountryOfOrigin}
+          onChange={(value) => {
+            setCountryOfOrigin(value)
+            markFieldAsEdited("countryOfOrigin")
+          }}
           required
+          helperText={shouldShowPrefillHint("countryOfOrigin") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
       </AccordionSection>
 
@@ -822,14 +957,22 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
           id="dpp-materials"
           label="Materialliste"
           value={materials}
-          onChange={(e) => setMaterials(e.target.value)}
+          onChange={(e) => {
+            setMaterials(e.target.value)
+            markFieldAsEdited("materials")
+          }}
           rows={4}
+          helperText={shouldShowPrefillHint("materials") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <InputField
           id="dpp-material-source"
           label="Datenquelle (z. B. Lieferant)"
           value={materialSource}
-          onChange={(e) => setMaterialSource(e.target.value)}
+          onChange={(e) => {
+            setMaterialSource(e.target.value)
+            markFieldAsEdited("materialSource")
+          }}
+          helperText={shouldShowPrefillHint("materialSource") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
       </AccordionSection>
 
@@ -843,8 +986,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
           id="dpp-care-instructions"
           label="Pflegehinweise"
           value={careInstructions}
-          onChange={(e) => setCareInstructions(e.target.value)}
+          onChange={(e) => {
+            setCareInstructions(e.target.value)
+            markFieldAsEdited("careInstructions")
+          }}
           rows={3}
+          helperText={shouldShowPrefillHint("careInstructions") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <SelectField
           id="dpp-is-repairable"
@@ -872,7 +1019,11 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
           id="dpp-lifespan"
           label="Lebensdauer"
           value={lifespan}
-          onChange={(e) => setLifespan(e.target.value)}
+          onChange={(e) => {
+            setLifespan(e.target.value)
+            markFieldAsEdited("lifespan")
+          }}
+          helperText={shouldShowPrefillHint("lifespan") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
       </AccordionSection>
 
@@ -886,15 +1037,23 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
           id="dpp-conformity"
           label="Konformitätserklärung"
           value={conformityDeclaration}
-          onChange={(e) => setConformityDeclaration(e.target.value)}
+          onChange={(e) => {
+            setConformityDeclaration(e.target.value)
+            markFieldAsEdited("conformityDeclaration")
+          }}
           rows={4}
+          helperText={shouldShowPrefillHint("conformityDeclaration") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <InputField
           id="dpp-disposal"
           label="Hinweise zu Entsorgung / Recycling"
           value={disposalInfo}
-          onChange={(e) => setDisposalInfo(e.target.value)}
+          onChange={(e) => {
+            setDisposalInfo(e.target.value)
+            markFieldAsEdited("disposalInfo")
+          }}
           rows={3}
+          helperText={shouldShowPrefillHint("disposalInfo") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
         <div style={{ marginTop: "1.5rem" }}>
           <p style={{
@@ -929,15 +1088,23 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
             id="dpp-takeback-contact"
             label="Kontakt / URL"
             value={takebackContact}
-            onChange={(e) => setTakebackContact(e.target.value)}
+            onChange={(e) => {
+              setTakebackContact(e.target.value)
+              markFieldAsEdited("takebackContact")
+            }}
+            helperText={shouldShowPrefillHint("takebackContact") ? "Aus KI-Vorprüfung übernommen" : undefined}
           />
         )}
         <InputField
           id="dpp-second-life"
           label="Second-Life-Informationen"
           value={secondLifeInfo}
-          onChange={(e) => setSecondLifeInfo(e.target.value)}
+          onChange={(e) => {
+            setSecondLifeInfo(e.target.value)
+            markFieldAsEdited("secondLifeInfo")
+          }}
           rows={3}
+          helperText={shouldShowPrefillHint("secondLifeInfo") ? "Aus KI-Vorprüfung übernommen" : undefined}
         />
       </AccordionSection>
 
@@ -980,6 +1147,97 @@ export default function DppEditor({ dpp: initialDpp, isNew = false }: DppEditorP
       canPublish={!!name.trim()}
       error={saveError}
     />
+    
+    {/* Warnung beim Verlassen (nur für neue DPPs) */}
+    {isNew && showLeaveWarning && (
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10000,
+        padding: "1rem"
+      }}>
+        <div style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          padding: "clamp(1.5rem, 4vw, 2rem)",
+          maxWidth: "500px",
+          width: "100%",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)"
+        }}>
+          <h3 style={{
+            fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
+            fontWeight: "700",
+            color: "#0A0A0A",
+            marginBottom: "1rem"
+          }}>
+            Seite verlassen?
+          </h3>
+          <p style={{
+            fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            color: "#7A7A7A",
+            marginBottom: "1.5rem",
+            lineHeight: "1.6"
+          }}>
+            Sie haben die Daten noch nicht gespeichert. Beim Verlassen der Seite gehen diese verloren.
+          </p>
+          <div style={{
+            display: "flex",
+            gap: "1rem",
+            justifyContent: "flex-end"
+          }}>
+            <button
+              onClick={() => {
+                setShowLeaveWarning(false)
+                setPendingNavigation(null)
+              }}
+              style={{
+                padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
+                backgroundColor: "#FFFFFF",
+                color: "#0A0A0A",
+                border: "1px solid #CDCDCD",
+                borderRadius: "8px",
+                fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
+                fontWeight: "600",
+                cursor: "pointer"
+              }}
+            >
+              Abbrechen
+            </button>
+            <button
+              onClick={() => {
+                setShowLeaveWarning(false)
+                if (pendingNavigation) {
+                  router.push(pendingNavigation)
+                } else {
+                  router.back()
+                }
+                setPendingNavigation(null)
+              }}
+              style={{
+                padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
+                backgroundColor: "#E20074",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
+                fontWeight: "600",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)"
+              }}
+            >
+              Trotzdem verlassen
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </Fragment>
   )
 }

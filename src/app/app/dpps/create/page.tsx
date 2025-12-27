@@ -1,13 +1,10 @@
-export const dynamic = "force-dynamic"
+import { redirect } from "next/navigation"
 
-import CreateDppContent from "./CreateDppContent"
-import AuthGate from "../../_auth/AuthGate"
-
-export default function CreateDppPage() {
-  return (
-    <AuthGate>
-      <CreateDppContent />
-    </AuthGate>
-  )
+/**
+ * Legacy Route: Redirect to new route
+ * 
+ * This route is deprecated. All DPP creation should use /app/create
+ */
+export default function LegacyCreateDppPage() {
+  redirect("/app/create")
 }
-

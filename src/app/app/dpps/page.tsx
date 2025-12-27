@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import AuthGate from "../_auth/AuthGate"
 import DppsContent from "./DppsContent"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface DppsPageProps {
   searchParams: Promise<{
@@ -168,15 +169,12 @@ export default async function DppsPage(props: DppsPageProps) {
     <AuthGate>
       <Suspense fallback={
         <div style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "400px",
           backgroundColor: "#FFFFFF",
           borderRadius: "12px",
-          border: "1px solid #CDCDCD"
+          border: "1px solid #CDCDCD",
+          padding: "2rem"
         }}>
-          <p style={{ color: "#7A7A7A" }}>Lade Daten...</p>
+          <LoadingSpinner message="Produktpässe werden geladen..." />
         </div>
       }>
         <DppsPageContent {...props} />

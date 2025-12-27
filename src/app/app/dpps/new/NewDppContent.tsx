@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import DppEditor from "@/components/DppEditor"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface NewDppContentProps {
   availableCategories: Array<{ categoryKey: string; label: string }>
@@ -36,12 +37,12 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
   if (loading) {
     return (
       <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "400px"
+        backgroundColor: "#FFFFFF",
+        borderRadius: "12px",
+        border: "1px solid #CDCDCD",
+        padding: "2rem"
       }}>
-        <p style={{ color: "#7A7A7A" }}>Lade Daten...</p>
+        <LoadingSpinner message="Daten werden geladen..." />
       </div>
     )
   }
@@ -89,34 +90,76 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
     )
   }
 
-  // Erstelle leeres DPP-Objekt für Neuanlage
+  // Lade Prefill-Daten von KI-Assist (falls vorhanden)
+  interface PrefillData {
+    name?: string
+    description?: string
+    category?: string
+    sku?: string
+    gtin?: string
+    brand?: string
+    countryOfOrigin?: string
+    materials?: string
+    materialSource?: string
+    careInstructions?: string
+    isRepairable?: boolean | null
+    sparePartsAvailable?: boolean | null
+    lifespan?: string
+    conformityDeclaration?: string
+    disposalInfo?: string
+    takebackOffered?: boolean | null
+    takebackContact?: string
+    secondLifeInfo?: string
+  }
+  const [prefillData, setPrefillData] = useState<PrefillData | null>(null)
+  
+  useEffect(() => {
+    // Load prefilled data from preflight analysis (if available)
+    try {
+      const prefillDataStr = sessionStorage.getItem("preflightPrefillData")
+      if (prefillDataStr) {
+        const data = JSON.parse(prefillDataStr)
+        setPrefillData(data)
+        // Clear sessionStorage after reading (one-time use)
+        sessionStorage.removeItem("preflightPrefillData")
+      }
+    } catch (prefillError) {
+      console.error("Error loading prefill data:", prefillError)
+      // Clear invalid data
+      sessionStorage.removeItem("preflightPrefillData")
+    }
+  }, [])
+
+  // Erstelle DPP-Objekt für Neuanlage (mit Prefill-Daten falls vorhanden)
   const emptyDpp = {
     id: "new", // Temporäre ID
-    name: "",
-    description: null,
-    category: (availableCategories[0]?.categoryKey || "OTHER") as "TEXTILE" | "FURNITURE" | "OTHER",
-    sku: null,
-    gtin: null,
-    brand: null,
-    countryOfOrigin: null,
-    materials: null,
-    materialSource: null,
-    careInstructions: null,
-    isRepairable: null,
-    sparePartsAvailable: null,
-    lifespan: null,
-    conformityDeclaration: null,
-    disposalInfo: null,
-    takebackOffered: null,
-    takebackContact: null,
-    secondLifeInfo: null,
+    name: prefillData?.name || "",
+    description: prefillData?.description || null,
+    category: (prefillData?.category && availableCategories.some(cat => cat.categoryKey === prefillData.category))
+      ? prefillData.category
+      : (availableCategories[0]?.categoryKey || "OTHER") as "TEXTILE" | "FURNITURE" | "OTHER",
+    sku: prefillData?.sku || null,
+    gtin: prefillData?.gtin || null,
+    brand: prefillData?.brand || null,
+    countryOfOrigin: prefillData?.countryOfOrigin || null,
+    materials: prefillData?.materials || null,
+    materialSource: prefillData?.materialSource || null,
+    careInstructions: prefillData?.careInstructions || null,
+    isRepairable: prefillData?.isRepairable || null,
+    sparePartsAvailable: prefillData?.sparePartsAvailable || null,
+    lifespan: prefillData?.lifespan || null,
+    conformityDeclaration: prefillData?.conformityDeclaration || null,
+    disposalInfo: prefillData?.disposalInfo || null,
+    takebackOffered: prefillData?.takebackOffered || null,
+    takebackContact: prefillData?.takebackContact || null,
+    secondLifeInfo: prefillData?.secondLifeInfo || null,
     status: "DRAFT",
-    organizationId: organizations[0].id,
+    organizationId: organizations[0]?.id || "",
     createdAt: new Date(),
     updatedAt: new Date(),
     organization: {
-      id: organizations[0].id,
-      name: organizations[0].name
+      id: organizations[0]?.id || "",
+      name: organizations[0]?.name || ""
     },
     media: []
   }
@@ -124,23 +167,8 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
   return (
     <>
       <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "1rem",
-        marginBottom: "1rem",
-        flexWrap: "wrap"
+        marginBottom: "1rem"
       }}>
-        <Link
-          href="/app/dashboard"
-          style={{
-            color: "#7A7A7A",
-            textDecoration: "none",
-            fontSize: "clamp(0.9rem, 2vw, 1rem)"
-          }}
-        >
-          ← Zum Dashboard
-        </Link>
-        <span style={{ color: "#CDCDCD" }}>|</span>
         <Link
           href="/app/dpps"
           style={{
@@ -149,7 +177,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
             fontSize: "clamp(0.9rem, 2vw, 1rem)"
           }}
         >
-          Zur Übersicht
+          ← Zurück zur Übersicht
         </Link>
       </div>
       <DppEditor dpp={emptyDpp} isNew={true} />

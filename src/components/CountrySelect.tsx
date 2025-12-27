@@ -225,6 +225,7 @@ interface CountrySelectProps {
   value: string // Erwartet ISO-Code (z.B. "DE", "FR")
   onChange: (value: string) => void // Übergibt ISO-Code
   required?: boolean
+  helperText?: string
 }
 
 /**
@@ -235,7 +236,7 @@ interface CountrySelectProps {
  * - Speichert ISO-3166-1 Alpha-2 Codes (z.B. "DE", "FR")
  * - Zeigt Länder Namen im UI an
  */
-export default function CountrySelect({ id, label, value, onChange, required = false }: CountrySelectProps) {
+export default function CountrySelect({ id, label, value, onChange, required = false, helperText }: CountrySelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [detectedCountry, setDetectedCountry] = useState<string | null>(null)
@@ -453,6 +454,16 @@ export default function CountrySelect({ id, label, value, onChange, required = f
           </div>
         )}
       </div>
+      {helperText && (
+        <p style={{
+          fontSize: "clamp(0.8rem, 1.6vw, 0.85rem)",
+          color: "#7A7A7A",
+          marginTop: "0.5rem",
+          marginBottom: 0
+        }}>
+          {helperText}
+        </p>
+      )}
     </div>
   )
 }
