@@ -172,12 +172,18 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
     materials: prefillData?.materials || null,
     materialSource: prefillData?.materialSource || null,
     careInstructions: prefillData?.careInstructions || null,
-    isRepairable: prefillData?.isRepairable || null,
-    sparePartsAvailable: prefillData?.sparePartsAvailable || null,
+    isRepairable: prefillData?.isRepairable !== undefined && prefillData?.isRepairable !== null 
+      ? String(prefillData.isRepairable) 
+      : null,
+    sparePartsAvailable: prefillData?.sparePartsAvailable !== undefined && prefillData?.sparePartsAvailable !== null
+      ? String(prefillData.sparePartsAvailable)
+      : null,
     lifespan: prefillData?.lifespan || null,
     conformityDeclaration: prefillData?.conformityDeclaration || null,
     disposalInfo: prefillData?.disposalInfo || null,
-    takebackOffered: prefillData?.takebackOffered || null,
+    takebackOffered: prefillData?.takebackOffered !== undefined && prefillData?.takebackOffered !== null
+      ? String(prefillData.takebackOffered)
+      : null,
     takebackContact: prefillData?.takebackContact || null,
     secondLifeInfo: prefillData?.secondLifeInfo || null,
     status: "DRAFT",
