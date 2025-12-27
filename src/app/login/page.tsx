@@ -163,7 +163,8 @@ export default function LoginPage() {
         padding: "clamp(1.5rem, 4vw, 2rem)",
         backgroundColor: "#FFFFFF",
         borderRadius: "12px",
-        border: "1px solid #CDCDCD"
+        border: "1px solid #CDCDCD",
+        boxSizing: "border-box",
       }}>
         <div style={{ marginBottom: "1.5rem" }}>
           <h1 style={{

@@ -87,28 +87,43 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
       <div
         style={{
           display: "flex",
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
           alignItems: "center",
-          gap: "0.75rem",
+          gap: "0.5rem",
+          width: "100%",
+          boxSizing: "border-box",
+          overflowX: "auto",
+          overflowY: "hidden",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "thin",
         }}
+        className="time-filter-container"
       >
-        <span
-          style={{
-            fontSize: "clamp(0.875rem, 2vw, 0.875rem)",
-            fontWeight: "500",
-            color: "#7A7A7A",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Zeitraum:
-        </span>
+        <style jsx>{`
+          .time-filter-container::-webkit-scrollbar {
+            height: 4px;
+          }
+          .time-filter-container::-webkit-scrollbar-track {
+            background: #F5F5F5;
+          }
+          .time-filter-container::-webkit-scrollbar-thumb {
+            background: #CDCDCD;
+            border-radius: 2px;
+          }
+          @media (max-width: 640px) {
+            .time-filter-container {
+              flexWrap: wrap !important;
+            }
+          }
+        `}</style>
         <div style={{ 
           display: "flex", 
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
           gap: "0.5rem", 
           alignItems: "center",
           flex: 1,
           minWidth: 0,
+          width: "100%",
         }}>
           <button
             type="button"
@@ -124,6 +139,7 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
               fontWeight: selectedRange === "today" ? "600" : "400",
               transition: "all 0.2s",
               whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             Heute
@@ -142,6 +158,7 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
               fontWeight: selectedRange === "30days" ? "600" : "400",
               transition: "all 0.2s",
               whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             Letzte 30 Tage
@@ -160,6 +177,7 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
               fontWeight: selectedRange === "1year" ? "600" : "400",
               transition: "all 0.2s",
               whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             Letztes Jahr
@@ -181,6 +199,7 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
               alignItems: "center",
               gap: "0.375rem",
               whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             <svg

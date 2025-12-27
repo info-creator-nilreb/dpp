@@ -88,11 +88,11 @@ export const FeatureRegistryIcon = () => (
   <svg {...iconProps}>
     {/* Slider/Equalizer Icon - zwei horizontale Linien mit Slider-Knöpfen */}
     {/* Obere Linie mit Slider links */}
-    <line x1="4" y1="10" x2="20" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="7" cy="10" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+    <line x1="4" y1="8" x2="20" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="7" cy="8" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
     {/* Untere Linie mit Slider rechts */}
-    <line x1="4" y1="14" x2="20" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="17" cy="14" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+    <line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="17" cy="16" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
   </svg>
 )
 
@@ -147,13 +147,13 @@ export const TemplatesIconLarge = () => (
 
 export const FeatureRegistryIconLarge = () => (
   <svg {...iconPropsLarge}>
-    {/* Slider/Equalizer Icon - Large Version - zwei horizontale Linien mit Slider-Knöpfen */}
+    {/* Slider/Equalizer Icon - Large Version - zwei horizontale Linien mit Slider-Knöpfen - mehr Abstand */}
     {/* Obere Linie mit Slider links */}
-    <line x1="4" y1="10" x2="20" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="7" cy="10" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+    <line x1="4" y1="8" x2="20" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="7" cy="8" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
     {/* Untere Linie mit Slider rechts */}
-    <line x1="4" y1="14" x2="20" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="17" cy="14" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
+    <line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="17" cy="16" r="1" fill="none" stroke="currentColor" strokeWidth="2"/>
   </svg>
 )
 

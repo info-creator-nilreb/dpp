@@ -175,6 +175,7 @@ export function LoginSplitLayout({
             width: "100%",
             maxWidth: "400px",
             boxSizing: "border-box",
+            padding: "0 clamp(0.5rem, 2vw, 0)",
           }}
         >
           {children}

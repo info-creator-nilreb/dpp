@@ -86,11 +86,19 @@ export default function FeatureFilterBar({
         onSubmit={(e) => e.preventDefault()}
         style={{
           display: "grid",
-          gridTemplateColumns: "auto auto auto auto",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
           gap: "1rem",
           alignItems: "end",
         }}
+        className="feature-filter-form"
       >
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .feature-filter-form {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
         {/* Category Filter */}
         <div style={{ minWidth: "150px" }}>
           <label

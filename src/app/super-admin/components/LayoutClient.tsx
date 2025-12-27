@@ -73,6 +73,9 @@ export default function LayoutClient({
             paddingLeft: "0",
             minHeight: "100vh",
             transition: "margin-left 0.3s ease",
+            boxSizing: "border-box",
+            width: "100%",
+            overflowX: "hidden",
           }}
         >
           {children}

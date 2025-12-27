@@ -63,8 +63,9 @@ export default function SuperAdminLoginPage() {
         backgroundColor: "#FFFFFF",
         borderRadius: "12px",
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-        padding: "2rem",
-        width: "100%"
+        padding: "clamp(1.5rem, 4vw, 2rem)",
+        width: "100%",
+        boxSizing: "border-box",
       }}>
         <h1 style={{
           fontSize: "1.75rem",

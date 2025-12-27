@@ -50,18 +50,25 @@ export default async function SuperAdminDashboardPage() {
   }
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
+    <div style={{ 
+      padding: "clamp(1rem, 3vw, 2rem)", 
+      maxWidth: "1400px", 
+      margin: "0 auto",
+      boxSizing: "border-box",
+      width: "100%",
+      overflowX: "hidden",
+    }}>
       {/* Header */}
-      <div style={{ marginBottom: "3rem" }}>
+      <div style={{ marginBottom: "clamp(2rem, 5vw, 3rem)" }}>
         <h1 style={{
-          fontSize: "2rem",
+          fontSize: "clamp(1.5rem, 4vw, 2rem)",
           fontWeight: "700",
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
           Dashboard
         </h1>
-        <p style={{ color: "#7A7A7A", fontSize: "1rem" }}>
+        <p style={{ color: "#7A7A7A", fontSize: "clamp(0.9rem, 2vw, 1rem)" }}>
           Willkommen, {session.name || session.email}
         </p>
       </div>
@@ -90,6 +97,8 @@ export default async function SuperAdminDashboardPage() {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
           gap: "1.5rem",
+          width: "100%",
+          boxSizing: "border-box",
         }}>
           <WorkAreaCard
             href="/super-admin/organizations"
@@ -133,11 +142,11 @@ export default async function SuperAdminDashboardPage() {
       {/* SECTION 3: Ihre Rolle & Zugriff */}
       <section>
         <div style={{
-          paddingTop: "2rem",
+          paddingTop: "clamp(1.5rem, 4vw, 2rem)",
           borderTop: "1px solid #E5E5E5",
         }}>
           <h2 style={{
-            fontSize: "0.75rem",
+            fontSize: "clamp(0.7rem, 2vw, 0.75rem)",
             fontWeight: "600",
             color: "#7A7A7A",
             marginBottom: "1rem",

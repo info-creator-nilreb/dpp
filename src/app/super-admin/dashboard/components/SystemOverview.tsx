@@ -144,6 +144,8 @@ export default function SystemOverview() {
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "1rem",
           marginBottom: "1.5rem",
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <KPICard

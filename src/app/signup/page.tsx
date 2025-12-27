@@ -121,7 +121,9 @@ function SignupContent() {
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "#F5F5F5",
-      padding: "1rem"
+      padding: "1rem",
+      boxSizing: "border-box",
+      overflowX: "hidden",
     }}>
       {/* Logo über der Card */}
       <Link href="/" style={{ textDecoration: "none", marginBottom: "2rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem" }}>
@@ -157,7 +159,8 @@ function SignupContent() {
         padding: "clamp(1.5rem, 4vw, 2rem)",
         backgroundColor: "#FFFFFF",
         borderRadius: "12px",
-        border: "1px solid #CDCDCD"
+        border: "1px solid #CDCDCD",
+        boxSizing: "border-box",
       }}>
         <div style={{ marginBottom: "1.5rem" }}>
           <h1 style={{
