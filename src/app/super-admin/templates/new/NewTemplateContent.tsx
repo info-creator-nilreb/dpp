@@ -845,20 +845,27 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
       <div style={{
         display: "flex",
         justifyContent: "flex-end",
-        gap: "1rem"
-      }}>
+        gap: "clamp(0.75rem, 2vw, 1rem)",
+        flexWrap: "wrap",
+        marginTop: "clamp(1.5rem, 4vw, 2rem)",
+        paddingTop: "clamp(1rem, 3vw, 1.5rem)"
+      }}
+      className="template-submit-container"
+      >
         <Link
           href="/super-admin/templates"
           style={{
-            padding: "0.75rem 1.5rem",
+            padding: "clamp(0.625rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem)",
             backgroundColor: "#FFFFFF",
             color: "#0A0A0A",
             border: "1px solid #CDCDCD",
             borderRadius: "8px",
             textDecoration: "none",
-            fontSize: "0.95rem",
+            fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
             fontWeight: "600",
-            display: "inline-block"
+            display: "inline-block",
+            whiteSpace: "nowrap",
+            flexShrink: 0
           }}
         >
           Abbrechen
@@ -867,18 +874,33 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
           type="submit"
           disabled={loading}
           style={{
-            padding: "0.75rem 1.5rem",
+            padding: "clamp(0.625rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem)",
             backgroundColor: loading ? "#CDCDCD" : "#E20074",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "8px",
-            fontSize: "0.95rem",
+            fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
             fontWeight: "600",
-            cursor: loading ? "not-allowed" : "pointer"
+            cursor: loading ? "not-allowed" : "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            transition: "background-color 0.2s"
           }}
         >
           {loading ? "Wird erstellt..." : "Template erstellen"}
         </button>
+        <style jsx>{`
+          @media (max-width: 640px) {
+            .template-submit-container {
+              flex-direction: column-reverse !important;
+              width: 100% !important;
+            }
+            .template-submit-container > * {
+              width: 100% !important;
+              text-align: center !important;
+            }
+          }
+        `}</style>
       </div>
     </form>
   )
