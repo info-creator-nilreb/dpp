@@ -99,23 +99,6 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
         }}
         className="time-filter-container"
       >
-        <style jsx>{`
-          .time-filter-container::-webkit-scrollbar {
-            height: 4px;
-          }
-          .time-filter-container::-webkit-scrollbar-track {
-            background: #F5F5F5;
-          }
-          .time-filter-container::-webkit-scrollbar-thumb {
-            background: #CDCDCD;
-            border-radius: 2px;
-          }
-          @media (max-width: 640px) {
-            .time-filter-container {
-              flexWrap: wrap !important;
-            }
-          }
-        `}</style>
         <div style={{ 
           display: "flex", 
           flexWrap: "nowrap",
@@ -222,13 +205,6 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
             <span className="time-filter-custom-text">
               Benutzerdefiniert
             </span>
-            <style jsx>{`
-              @media (max-width: 640px) {
-                .time-filter-custom-text {
-                  display: none;
-                }
-              }
-            `}</style>
           </button>
         </div>
       </div>
@@ -275,6 +251,26 @@ export default function TimeFilter({ onRangeChange }: TimeFilterProps) {
           />
         </div>
       )}
+      <style jsx>{`
+        .time-filter-container::-webkit-scrollbar {
+          height: 4px;
+        }
+        .time-filter-container::-webkit-scrollbar-track {
+          background: #F5F5F5;
+        }
+        .time-filter-container::-webkit-scrollbar-thumb {
+          background: #CDCDCD;
+          border-radius: 2px;
+        }
+        @media (max-width: 640px) {
+          .time-filter-container {
+            flex-wrap: wrap !important;
+          }
+          .time-filter-custom-text {
+            display: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }
