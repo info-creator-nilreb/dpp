@@ -136,7 +136,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
     name: prefillData?.name || "",
     description: prefillData?.description || null,
     category: (prefillData?.category && availableCategories.some(cat => cat.categoryKey === prefillData.category))
-      ? prefillData.category
+      ? (prefillData.category as "TEXTILE" | "FURNITURE" | "OTHER")
       : (availableCategories[0]?.categoryKey || "OTHER") as "TEXTILE" | "FURNITURE" | "OTHER",
     sku: prefillData?.sku || null,
     gtin: prefillData?.gtin || null,
@@ -145,12 +145,18 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
     materials: prefillData?.materials || null,
     materialSource: prefillData?.materialSource || null,
     careInstructions: prefillData?.careInstructions || null,
-    isRepairable: prefillData?.isRepairable || null,
-    sparePartsAvailable: prefillData?.sparePartsAvailable || null,
+    isRepairable: prefillData?.isRepairable !== undefined && prefillData?.isRepairable !== null 
+      ? String(prefillData.isRepairable) 
+      : null,
+    sparePartsAvailable: prefillData?.sparePartsAvailable !== undefined && prefillData?.sparePartsAvailable !== null
+      ? String(prefillData.sparePartsAvailable)
+      : null,
     lifespan: prefillData?.lifespan || null,
     conformityDeclaration: prefillData?.conformityDeclaration || null,
     disposalInfo: prefillData?.disposalInfo || null,
-    takebackOffered: prefillData?.takebackOffered || null,
+    takebackOffered: prefillData?.takebackOffered !== undefined && prefillData?.takebackOffered !== null
+      ? String(prefillData.takebackOffered)
+      : null,
     takebackContact: prefillData?.takebackContact || null,
     secondLifeInfo: prefillData?.secondLifeInfo || null,
     status: "DRAFT",
