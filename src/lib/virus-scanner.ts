@@ -34,7 +34,9 @@ function createFormData(fileBuffer: Buffer, fileName: string): FormData {
   const formData = new FormData()
   
   // Erstelle Blob aus Buffer (Node.js 18+ unterstützt Blob)
-  const blob = new Blob([fileBuffer], { type: "application/octet-stream" })
+  // Konvertiere Buffer zu Uint8Array für Blob-Kompatibilität
+  const uint8Array = new Uint8Array(fileBuffer)
+  const blob = new Blob([uint8Array], { type: "application/octet-stream" })
   formData.append("file", blob, fileName)
   
   return formData
