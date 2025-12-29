@@ -54,7 +54,7 @@ export async function GET() {
         id: plan.id,
         name: plan.name,
         slug: plan.slug,
-        description: plan.description,
+        description: plan.descriptionMarketing || null,
         subscriptionModels: plan.subscriptionModels.map(model => ({
           id: model.id,
           billingInterval: model.billingInterval,
