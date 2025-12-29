@@ -200,7 +200,7 @@ export default function AuditLogDetailDrawer({
               <div>
                 <strong style={{ color: "#7A7A7A" }}>Ausführende Person:</strong>{" "}
                 <span style={{ color: "#0A0A0A" }}>
-                  {log.actor?.name || log.actor?.email || log.actorId || "System"}
+                  {log.actor?.name || log.actor?.email || log.actor?.id || "System"}
                 </span>
               </div>
               {log.actorRole && (
