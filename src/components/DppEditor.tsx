@@ -763,10 +763,10 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
       </h1>
 
       {/* Trial Banner */}
-      {!isNew && isTrial && trialDaysRemaining !== null && (
+      {!isNew && isTrial && subscription?.trialExpiresAt && (
         <TrialBanner
-          daysRemaining={trialDaysRemaining}
-          plan={subscription?.plan}
+          organizationId={dpp.organizationId}
+          trialEndDate={subscription.trialExpiresAt}
         />
       )}
 
