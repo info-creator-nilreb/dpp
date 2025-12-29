@@ -66,7 +66,7 @@ export default function NewPricingPlanContent({
         .filter(([_, value]) => value !== undefined)
         .map(([key, value]) => ({
           entitlementKey: key,
-          value: value === null || value === "" ? null : parseInt(String(value))
+          value: value === null ? null : Number(value)
         }))
 
       const response = await apiFetch("/api/super-admin/pricing/plans", {
