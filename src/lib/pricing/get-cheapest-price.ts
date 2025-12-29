@@ -72,7 +72,7 @@ export async function getCheapestPrice(): Promise<CheapestPriceResult | null> {
               amount: monthlyAmountInEur,
               currency: price.currency,
               planName: plan.name,
-              originalBillingInterval: model.billingInterval,
+              originalBillingInterval: model.billingInterval as "monthly" | "yearly",
               originalAmount: priceInEur
             }
           }
