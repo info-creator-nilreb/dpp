@@ -192,7 +192,7 @@ export async function createAuditLog(
         complianceRelevant: entry.complianceRelevant ?? false,
         versionId: entry.versionId || null,
         ipAddress: ipAddress || null,
-        metadata: entry.metadata || null,
+        metadata: entry.metadata || undefined,
         
         // AI-specific fields
         aiModel: entry.aiMetadata?.aiModel || null,
