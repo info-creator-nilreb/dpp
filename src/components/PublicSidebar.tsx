@@ -33,7 +33,7 @@ function SidebarContent({
   isCollapsed?: boolean
   onToggleCollapse?: () => void
   onMobileClose?: () => void
-})
+}): JSX.Element
 
 export default function PublicSidebar({ 
   isMobileOpen = false,
