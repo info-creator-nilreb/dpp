@@ -147,7 +147,7 @@ export default function AuditLogTable({
                   {formatTimestamp(log.timestamp)}
                 </td>
                 <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A" }}>
-                  {log.actor?.name || log.actor?.email || log.actorId || "SYSTEM"}
+                  {log.actor?.name || log.actor?.email || log.actor?.id || "SYSTEM"}
                 </td>
                 <td style={{ padding: "0.75rem" }}>
                   <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
