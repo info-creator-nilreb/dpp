@@ -75,7 +75,7 @@ export async function hasFeature(
       },
     })
 
-    if (subscription?.subscriptionModel?.trialFeatureOverrides.length > 0) {
+    if (subscription?.subscriptionModel?.trialFeatureOverrides && subscription.subscriptionModel.trialFeatureOverrides.length > 0) {
       const override = subscription.subscriptionModel.trialFeatureOverrides[0]
       return override.enabled
     }
