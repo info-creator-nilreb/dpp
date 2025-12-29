@@ -22,19 +22,6 @@ interface PublicSidebarProps {
   onToggleCollapse?: () => void
 }
 
-// Add onMobileClose to SidebarContent props
-function SidebarContent({ 
-  pathname, 
-  isCollapsed = false,
-  onToggleCollapse,
-  onMobileClose
-}: { 
-  pathname: string
-  isCollapsed?: boolean
-  onToggleCollapse?: () => void
-  onMobileClose?: () => void
-}): JSX.Element
-
 export default function PublicSidebar({ 
   isMobileOpen = false,
   onMobileClose,
