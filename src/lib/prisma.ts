@@ -26,7 +26,9 @@ function getPrisma(): PrismaClient {
         // This is a heuristic check - if the schema was updated, we should re-init
         if (!hasSystemDefined) {
           console.log('[PRISMA] Detected schema changes, re-initializing client...')
-          globalForPrisma.prisma.$disconnect().catch(() => {})
+          if (globalForPrisma.prisma) {
+            globalForPrisma.prisma.$disconnect().catch(() => {})
+          }
           globalForPrisma.prisma = undefined as any
         }
       }
@@ -34,7 +36,9 @@ function getPrisma(): PrismaClient {
       // If check fails, force re-initialization to be safe
       console.log('[PRISMA] Error checking client, re-initializing...')
       try {
-        globalForPrisma.prisma.$disconnect().catch(() => {})
+        if (globalForPrisma.prisma) {
+          globalForPrisma.prisma.$disconnect().catch(() => {})
+        }
       } catch {}
       globalForPrisma.prisma = undefined as any
     }
