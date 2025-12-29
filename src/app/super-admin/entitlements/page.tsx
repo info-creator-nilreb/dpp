@@ -89,11 +89,7 @@ export default async function SuperAdminLimitDefinitionsPage() {
       </div>
 
       <LimitDefinitionsContent
-        entitlements={entitlements.map(e => ({
-          ...e,
-          createdAt: e.createdAt.toISOString(),
-          updatedAt: e.updatedAt.toISOString()
-        }))}
+        entitlements={entitlements}
       />
     </div>
   )

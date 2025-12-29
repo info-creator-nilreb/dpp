@@ -9,8 +9,6 @@ interface Entitlement {
   key: string
   type: string
   unit: string | null
-  createdAt: string
-  updatedAt: string
 }
 
 interface LimitDefinitionsContentProps {
