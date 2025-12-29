@@ -8,6 +8,9 @@ import { createAuditLog, ACTION_TYPES, ENTITY_TYPES, SOURCES } from "./audit-ser
 import { getOrganizationRole } from "@/lib/permissions"
 import type { ActionType, EntityType, Source } from "./audit-service"
 
+// Re-export ACTION_TYPES and SOURCES for convenience
+export { ACTION_TYPES, SOURCES } from "./audit-service"
+
 /**
  * Log Template operations
  */

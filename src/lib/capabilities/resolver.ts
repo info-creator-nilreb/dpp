@@ -204,3 +204,9 @@ export async function hasActiveSubscription(
   return subscription?.status === "active" || subscription?.status === "trial_active"
 }
 
+/**
+ * Alias for hasFeature - for backward compatibility
+ * @deprecated Use hasFeature instead
+ */
+export const checkFeature = hasFeature
+

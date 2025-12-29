@@ -7,7 +7,7 @@ interface TrialBannerProps {
   trialEndDate: string
 }
 
-export default function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
+function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
   // Calculate days remaining
   const now = new Date()
   const expiresAt = new Date(trialEndDate)
@@ -78,3 +78,6 @@ export default function TrialBanner({ organizationId, trialEndDate }: TrialBanne
     </div>
   )
 }
+
+export default TrialBanner
+export { TrialBanner }
