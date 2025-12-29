@@ -306,7 +306,7 @@ export default function TrialOverridesSection({
           {entitlements.map((entitlement) => {
             const override = getEntitlementOverride(entitlement.key)
             const definition = getEntitlementDefinition(entitlement.key)
-            const Icon = getEntitlementIcon(entitlement.key)
+            const icon = getEntitlementIcon(definition.icon, 24, "#E20074")
 
             return (
               <div
@@ -330,7 +330,7 @@ export default function TrialOverridesSection({
                   gap: "0.5rem",
                   marginBottom: "0.5rem"
                 }}>
-                  {Icon && (
+                  {icon && (
                     <div style={{
                       width: "24px",
                       height: "24px",
@@ -339,7 +339,7 @@ export default function TrialOverridesSection({
                       justifyContent: "center",
                       color: "#E20074"
                     }}>
-                      <Icon />
+                      {icon}
                     </div>
                   )}
                   <div style={{ flex: 1 }}>
