@@ -237,7 +237,7 @@ export default function AuditLogMobileDetailSheet({
               <div>
                 <strong style={{ color: "#7A7A7A", fontSize: "0.875rem" }}>Person:</strong>{" "}
                 <span style={{ color: "#0A0A0A", fontSize: "0.875rem" }}>
-                  {log.actor?.name || log.actor?.email || log.actorId || "System"}
+                  {log.actor?.name || log.actor?.email || log.actor?.id || "System"}
                 </span>
               </div>
               {log.actorRole && (
