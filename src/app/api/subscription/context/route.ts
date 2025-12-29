@@ -81,7 +81,7 @@ export async function GET() {
       // Check if subscription has a Subscription Model with trial_days
       const hasTrialDays = subscription.subscriptionModel?.trialDays && subscription.subscriptionModel.trialDays > 0
       
-      if (hasTrialDays && subscription.trialStartedAt) {
+      if (hasTrialDays && subscription.trialStartedAt && subscription.subscriptionModel) {
         // Calculate trial end date from trialStartedAt + trialDays
         const trialEnd = new Date(subscription.trialStartedAt)
         trialEnd.setDate(trialEnd.getDate() + (subscription.subscriptionModel.trialDays || 0))
