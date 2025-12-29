@@ -17,7 +17,7 @@ import AuditLogMobileView from "./AuditLogMobileView"
 import AuditLogMobileFilters from "./AuditLogMobileFilters"
 import AuditLogMobileDetailSheet from "./AuditLogMobileDetailSheet"
 
-interface AuditLog {
+export interface AuditLog {
   id: string
   timestamp: string
   actor?: {
