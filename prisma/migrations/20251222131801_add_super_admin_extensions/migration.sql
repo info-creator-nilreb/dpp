@@ -12,6 +12,3 @@ CREATE INDEX IF NOT EXISTS "templates_category_idx" ON "templates"("category");
 
 -- CreateIndex
 CREATE INDEX IF NOT EXISTS "templates_industry_idx" ON "templates"("industry");
-
--- CreateIndex
-CREATE INDEX IF NOT EXISTS "templates_isActive_idx" ON "templates"("isActive");

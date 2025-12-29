@@ -4,7 +4,9 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { ORGANIZATION_ROLES } from "@/lib/permissions"
+import { ORGANIZATION_ROLES, getOrganizationRole } from "@/lib/permissions"
+import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
+import { getClientIp } from "@/lib/audit/get-client-ip"
 
 /**
  * POST /api/app/dpp
@@ -143,6 +145,19 @@ export async function POST(request: Request) {
     })
 
     console.log("DPP CREATED", dpp.id)
+
+    // Audit Log: DPP erstellt
+    const ipAddress = getClientIp(request)
+    const role = await getOrganizationRole(session.user.id, resolvedOrganizationId)
+    
+    await logDppAction(ACTION_TYPES.CREATE, dpp.id, {
+      actorId: session.user.id,
+      actorRole: role || undefined,
+      organizationId: resolvedOrganizationId,
+      source: SOURCES.UI,
+      complianceRelevant: true, // DPP-Erstellung ist compliance-relevant
+      ipAddress,
+    })
 
     return NextResponse.json(
       {

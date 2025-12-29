@@ -4,6 +4,8 @@ import { useState } from "react";
 import { FeatureEditor } from "./FeatureEditor";
 import FeatureFilterBar from "./FeatureFilterBar";
 import { Feature } from "./types";
+import { useNotification } from "@/components/NotificationProvider";
+import { isValidFeatureKey } from "@/features/feature-manifest";
 
 interface FeatureRegistryContentProps {
   features: Feature[];
@@ -13,6 +15,7 @@ interface FeatureRegistryContentProps {
     minimumPlan: string;
     status: string;
   };
+  pricingPlansByFeature?: Record<string, Array<{ id: string; name: string; slug: string; isActive: boolean }>>;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -33,9 +36,14 @@ export default function FeatureRegistryContent({
   features,
   availableCategories,
   currentFilters,
+  pricingPlansByFeature = {},
 }: FeatureRegistryContentProps) {
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const { showNotification } = useNotification();
+
+  // Filter: Nur Features anzeigen, die im Manifest existieren (keine Artefakte)
+  const validFeatures = features.filter(f => isValidFeatureKey(f.key));
 
   const handleToggleEnabled = async (feature: Feature) => {
     try {
@@ -64,7 +72,7 @@ export default function FeatureRegistryContent({
         currentFilters={currentFilters}
       />
 
-      {/* Header with Create Button */}
+      {/* Header with Sync Button */}
       <div
         style={{
           marginBottom: "1.5rem",
@@ -75,11 +83,33 @@ export default function FeatureRegistryContent({
       >
         <div>
           <p style={{ color: "#7A7A7A", fontSize: "0.875rem" }}>
-            {features.length} {features.length === 1 ? "Funktion" : "Funktionen"}
+            {validFeatures.length} {validFeatures.length === 1 ? "Funktion" : "Funktionen"}
+          </p>
+          <p style={{ color: "#9A9A9A", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+            Features werden aus dem Code-Manifest synchronisiert. Manuelle Erstellung ist nicht möglich.
           </p>
         </div>
         <button
-          onClick={() => setShowCreateForm(true)}
+          onClick={async () => {
+            try {
+              const response = await fetch("/api/super-admin/features/sync", {
+                method: "POST",
+                credentials: "include",
+              })
+              const data = await response.json()
+              if (response.ok) {
+                const message = `Sync erfolgreich: ${data.sync.created} erstellt, ${data.sync.updated} aktualisiert${data.sync.skipped > 0 ? `, ${data.sync.skipped} übersprungen` : ""}`
+                showNotification(message, "success")
+                setTimeout(() => {
+                  window.location.reload()
+                }, 1500)
+              } else {
+                showNotification(`Fehler: ${data.error}`, "error")
+              }
+            } catch (error) {
+              showNotification("Fehler beim Synchronisieren", "error")
+            }
+          }}
           style={{
             backgroundColor: "#E20074",
             color: "white",
@@ -91,13 +121,13 @@ export default function FeatureRegistryContent({
             fontSize: "0.875rem",
           }}
         >
-          Neues Feature
+          Features synchronisieren
         </button>
       </div>
 
       {/* Feature List */}
       <div style={{ display: "grid", gap: "1rem" }}>
-        {features.map((feature) => (
+        {validFeatures.map((feature) => (
           <div
             key={feature.id}
             style={{
@@ -138,21 +168,22 @@ export default function FeatureRegistryContent({
 
               {/* Actions */}
               <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-                <button
-                  onClick={() => setEditingFeature(feature)}
-                  style={{
-                    backgroundColor: "transparent",
-                    border: "1px solid #CDCDCD",
-                    padding: "0.5rem",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#0A0A0A",
-                  }}
-                  title="Bearbeiten"
-                >
+                {!feature.systemDefined && (
+                  <button
+                    onClick={() => setEditingFeature(feature)}
+                    style={{
+                      backgroundColor: "transparent",
+                      border: "1px solid #CDCDCD",
+                      padding: "0.5rem",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#0A0A0A",
+                    }}
+                    title="Bearbeiten"
+                  >
                   <svg
                     width="16"
                     height="16"
@@ -166,21 +197,24 @@ export default function FeatureRegistryContent({
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
-                </button>
+                  </button>
+                )}
                 <button
                   onClick={() => handleToggleEnabled(feature)}
+                  disabled={feature.category === "core"}
                   style={{
                     backgroundColor: "transparent",
                     border: "1px solid #DC3545",
                     padding: "0.5rem",
                     borderRadius: "4px",
-                    cursor: "pointer",
+                    cursor: feature.category === "core" ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "#DC3545",
+                    color: feature.category === "core" ? "#9A9A9A" : "#DC3545",
+                    opacity: feature.category === "core" ? 0.5 : 1,
                   }}
-                  title={feature.enabled ? "Deaktivieren" : "Aktivieren"}
+                  title={feature.category === "core" ? "Core-Features können nicht deaktiviert werden" : (feature.enabled ? "Deaktivieren" : "Aktivieren")}
                 >
                   {feature.enabled ? (
                     <svg
@@ -216,6 +250,38 @@ export default function FeatureRegistryContent({
 
             {/* Meta Info: Badges */}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+              {/* System-defined badge */}
+              {feature.systemDefined && (
+                <span
+                  style={{
+                    backgroundColor: "#8B5CF6",
+                    color: "white",
+                    padding: "0.25rem 0.625rem",
+                    borderRadius: "4px",
+                    fontSize: "0.75rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  System
+                </span>
+              )}
+
+              {/* Core badge */}
+              {feature.category === "core" && (
+                <span
+                  style={{
+                    backgroundColor: "#F59E0B",
+                    color: "white",
+                    padding: "0.25rem 0.625rem",
+                    borderRadius: "4px",
+                    fontSize: "0.75rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  Core
+                </span>
+              )}
+
               {/* Category - Neutral grey */}
               <span
                 style={{
@@ -231,43 +297,47 @@ export default function FeatureRegistryContent({
               </span>
 
               {/* Plan - Distinct colors */}
-              <span
-                style={{
-                  backgroundColor:
-                    feature.minimumPlan === "basic"
-                      ? "#64748B"
-                      : feature.minimumPlan === "pro"
-                        ? "#3B82F6"
-                        : "#E20074",
-                  color: "white",
-                  padding: "0.25rem 0.625rem",
-                  borderRadius: "4px",
-                  fontSize: "0.75rem",
-                  fontWeight: "500",
-                }}
-              >
-                {planLabels[feature.minimumPlan] || feature.minimumPlan}
-              </span>
+              {feature.category !== "core" && (
+                <span
+                  style={{
+                    backgroundColor:
+                      feature.minimumPlan === "basic"
+                        ? "#64748B"
+                        : feature.minimumPlan === "pro"
+                          ? "#3B82F6"
+                          : "#E20074",
+                    color: "white",
+                    padding: "0.25rem 0.625rem",
+                    borderRadius: "4px",
+                    fontSize: "0.75rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  {planLabels[feature.minimumPlan] || feature.minimumPlan}
+                </span>
+              )}
 
               {/* Status - Green for active, grey for inactive */}
-              <span
-                style={{
-                  backgroundColor: feature.enabled ? "#10B981" : "#94A3B8",
-                  color: "white",
-                  padding: "0.25rem 0.625rem",
-                  borderRadius: "4px",
-                  fontSize: "0.75rem",
-                  fontWeight: "500",
-                }}
-              >
-                {feature.enabled ? "Aktiv" : "Inaktiv"}
-              </span>
+              {feature.category !== "core" && (
+                <span
+                  style={{
+                    backgroundColor: feature.enabled ? "#10B981" : "#94A3B8",
+                    color: "white",
+                    padding: "0.25rem 0.625rem",
+                    borderRadius: "4px",
+                    fontSize: "0.75rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  {feature.enabled ? "Aktiv" : "Inaktiv"}
+                </span>
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      {features.length === 0 && (
+      {validFeatures.length === 0 && (
         <div style={{ textAlign: "center", padding: "3rem", color: "#7A7A7A" }}>
           Keine Funktionen gefunden
         </div>

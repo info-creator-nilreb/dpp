@@ -17,7 +17,8 @@ import {
   TemplatesIconLarge, 
   UsersIconLarge, 
   AuditLogsIconLarge,
-  FeatureRegistryIconLarge
+  FeatureRegistryIconLarge,
+  PricingIconLarge
 } from "../components/Icons"
 
 export const dynamic = "force-dynamic"
@@ -135,6 +136,12 @@ export default async function SuperAdminDashboardPage() {
             icon={<FeatureRegistryIconLarge />}
             title="Funktionen"
             description="Systemweite Funktionen und Tarifzuordnung"
+          />
+          <WorkAreaCard
+            href="/super-admin/pricing"
+            icon={<PricingIconLarge />}
+            title="Preise & Abos"
+            description="Pricing Plans, Features, Limits und Subscription Models verwalten"
           />
         </div>
       </section>

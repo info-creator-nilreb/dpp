@@ -19,6 +19,7 @@ export interface Feature {
   configSchema: string | null;
   enabled: boolean;
   defaultForNewDpps: boolean;
+  systemDefined: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

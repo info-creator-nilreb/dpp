@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 interface LoginSplitLayoutProps {
   children: React.ReactNode;
   imageUrl?: string;
@@ -45,6 +47,26 @@ export function LoginSplitLayout({
   subtitle = defaultSubtitle,
   quote = defaultQuote,
 }: LoginSplitLayoutProps) {
+  // Preload das Bild für schnelleres Laden
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = imageUrl;
+    document.head.appendChild(link);
+
+    // Preload auch mit einem Image-Objekt für Browser-Kompatibilität
+    const img = new Image();
+    img.src = imageUrl;
+
+    return () => {
+      // Cleanup: Entferne das Link-Element beim Unmount
+      if (document.head.contains(link)) {
+        document.head.removeChild(link);
+      }
+    };
+  }, [imageUrl]);
+
   return (
     <div style={{
       minHeight: "100vh",

@@ -60,7 +60,9 @@ export default function LayoutClient({
               @media (min-width: 768px) {
                 .super-admin-main-content {
                   margin-left: ${isSidebarCollapsed ? "64px" : "280px"} !important;
-                  transition: margin-left 0.3s ease;
+                  width: calc(100vw - ${isSidebarCollapsed ? "64px" : "280px"}) !important;
+                  max-width: calc(100vw - ${isSidebarCollapsed ? "64px" : "280px"}) !important;
+                  transition: margin-left 0.3s ease, width 0.3s ease, max-width 0.3s ease;
                 }
               }
             `
@@ -72,10 +74,12 @@ export default function LayoutClient({
             marginLeft: isLoginPage ? "0" : "0",
             paddingLeft: "0",
             minHeight: "100vh",
-            transition: "margin-left 0.3s ease",
+            transition: "margin-left 0.3s ease, width 0.3s ease, max-width 0.3s ease",
             boxSizing: "border-box",
-            width: "100%",
+            width: isLoginPage ? "100%" : "100%",
+            maxWidth: isLoginPage ? "100vw" : "100vw",
             overflowX: "hidden",
+            position: "relative"
           }}
         >
           {children}

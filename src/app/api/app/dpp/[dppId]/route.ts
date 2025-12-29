@@ -5,6 +5,9 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { requireViewDPP, requireEditDPP } from "@/lib/api-permissions"
+import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
+import { getClientIp } from "@/lib/audit/get-client-ip"
+import { getOrganizationRole } from "@/lib/permissions"
 
 /**
  * GET /api/app/dpp/[dppId]
@@ -160,6 +163,39 @@ export async function PUT(
       )
     }
 
+    // Lade DPP für Audit-Log (alte Werte)
+    const oldDpp = await prisma.dpp.findUnique({
+      where: { id: params.dppId },
+      select: {
+        organizationId: true,
+        name: true,
+        description: true,
+        category: true,
+        sku: true,
+        gtin: true,
+        brand: true,
+        countryOfOrigin: true,
+        materials: true,
+        materialSource: true,
+        careInstructions: true,
+        isRepairable: true,
+        sparePartsAvailable: true,
+        lifespan: true,
+        conformityDeclaration: true,
+        disposalInfo: true,
+        takebackOffered: true,
+        takebackContact: true,
+        secondLifeInfo: true
+      }
+    })
+
+    if (!oldDpp) {
+      return NextResponse.json(
+        { error: "DPP nicht gefunden" },
+        { status: 404 }
+      )
+    }
+
     // DPP aktualisieren
     const dpp = await prisma.dpp.update({
       where: { id: params.dppId },
@@ -184,6 +220,49 @@ export async function PUT(
         secondLifeInfo: secondLifeInfo?.trim() || null
       }
     })
+
+    // Audit Log: DPP aktualisiert
+    // Logge nur geänderte Felder
+    const ipAddress = getClientIp(request)
+    const role = await getOrganizationRole(session.user.id, oldDpp.organizationId)
+    
+    // Compliance-relevante Felder
+    const complianceRelevantFields = [
+      "materials",
+      "materialSource",
+      "conformityDeclaration",
+      "disposalInfo",
+      "countryOfOrigin"
+    ]
+
+    // Logge alle geänderten Felder
+    const fieldsToCheck = [
+      "name", "description", "category", "sku", "gtin", "brand",
+      "countryOfOrigin", "materials", "materialSource", "careInstructions",
+      "isRepairable", "sparePartsAvailable", "lifespan",
+      "conformityDeclaration", "disposalInfo", "takebackOffered",
+      "takebackContact", "secondLifeInfo"
+    ]
+
+    for (const field of fieldsToCheck) {
+      const oldValue = (oldDpp as any)[field]
+      const newValue = (dpp as any)[field]
+      
+      // Nur loggen wenn sich der Wert geändert hat
+      if (oldValue !== newValue) {
+        await logDppAction(ACTION_TYPES.UPDATE, params.dppId, {
+          actorId: session.user.id,
+          actorRole: role || undefined,
+          organizationId: oldDpp.organizationId,
+          fieldName: field,
+          oldValue,
+          newValue,
+          source: SOURCES.UI,
+          complianceRelevant: complianceRelevantFields.includes(field),
+          ipAddress,
+        })
+      }
+    }
 
     return NextResponse.json(
       {

@@ -163,8 +163,8 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
     name: prefillData?.name || "",
     description: prefillData?.description || null,
     category: (prefillData?.category && availableCategories.some(cat => cat.categoryKey === prefillData.category))
-      ? (prefillData.category as "TEXTILE" | "FURNITURE" | "OTHER")
-      : (availableCategories[0]?.categoryKey || "OTHER") as "TEXTILE" | "FURNITURE" | "OTHER",
+      ? prefillData.category
+      : (availableCategories[0]?.categoryKey || ""),
     sku: prefillData?.sku || null,
     gtin: prefillData?.gtin || null,
     brand: prefillData?.brand || null,
@@ -230,6 +230,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
         dpp={emptyDpp} 
         isNew={true}
         onUnsavedChangesChange={setHasUnsavedChanges}
+        availableCategories={availableCategories}
       />
       
       {/* Warnung beim Verlassen */}

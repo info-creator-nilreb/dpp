@@ -242,21 +242,15 @@ export async function getCapabilitiesForOrganization(
   });
   
   if (!subscription) {
-    // No subscription = trial_active with premium plan (default for new orgs)
-    const defaultSubscription: Subscription = {
-      id: "",
-      organizationId,
-      plan: "premium",
-      status: "trial_active",
-      trialExpiresAt: null,
-      trialStartedAt: null,
-      currentPeriodStart: null,
-      currentPeriodEnd: null,
-      cancelAtPeriodEnd: false,
-      canceledAt: null,
+    // No subscription = no capabilities (explicit, no implicit defaults)
+    return {
+      cms_access: false,
+      block_editor: false,
+      publishing: false,
+      storytelling_blocks: false,
+      interaction_blocks: false,
+      styling_controls: false,
     };
-    
-    return resolveCapabilitiesWithRegistry(defaultSubscription);
   }
   
   const subscriptionTyped: Subscription = {

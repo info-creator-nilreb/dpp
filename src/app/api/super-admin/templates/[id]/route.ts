@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireSuperAdminPermissionApiThrow } from "@/lib/super-admin-guards"
+import { logTemplateAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-helpers"
+import { getClientIp } from "@/lib/audit/get-client-ip"
 
 export async function PUT(
   req: NextRequest,
@@ -151,6 +153,22 @@ export async function PUT(
       }
     })
 
+    // Audit Log: Template aktualisiert
+    const ipAddress = getClientIp(req)
+    const session = await requireSuperAdminPermissionApiThrow("template", "update")
+    if (!(session instanceof NextResponse) && session) {
+      await logTemplateAction(ACTION_TYPES.UPDATE, id, {
+        actorId: session.id,
+        actorRole: "super_admin",
+        fieldName: "template",
+        oldValue: existing,
+        newValue: updatedTemplate,
+        source: SOURCES.UI,
+        complianceRelevant: true, // Template-Änderungen sind compliance-relevant
+        ipAddress,
+      })
+    }
+
     return NextResponse.json({ template: updatedTemplate })
   } catch (error: any) {
     console.error("Template update error:", error)
@@ -210,6 +228,20 @@ export async function DELETE(
     await prisma.templateBlock.deleteMany({
       where: { templateId: id }
     })
+
+    // Audit Log: Template gelöscht (vor dem Löschen)
+    const ipAddress = getClientIp(req)
+    const session = await requireSuperAdminPermissionApiThrow("template", "update")
+    if (!(session instanceof NextResponse) && session) {
+      await logTemplateAction(ACTION_TYPES.DELETE, id, {
+        actorId: session.id,
+        actorRole: "super_admin",
+        oldValue: existing,
+        source: SOURCES.UI,
+        complianceRelevant: true,
+        ipAddress,
+      })
+    }
 
     // Delete template
     await prisma.template.delete({

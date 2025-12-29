@@ -235,21 +235,9 @@ export async function createUser(email: string, password: string, name?: string)
       
       console.log("Organization created:", organization.id)
       
-      // 3. Trial Subscription erstellen (Premium Plan, 30 Tage Trial)
-      const trialExpiresAt = new Date()
-      trialExpiresAt.setDate(trialExpiresAt.getDate() + 30) // 30 days trial
-      
-      const subscription = await tx.subscription.create({
-        data: {
-          organizationId: organization.id,
-          plan: "premium",
-          status: "trial_active",
-          trialStartedAt: new Date(),
-          trialExpiresAt: trialExpiresAt,
-        }
-      })
-      
-      console.log("Trial subscription created:", subscription.id)
+      // 3. NO implicit subscription creation
+      // Subscriptions (including trials) must be explicitly assigned via Subscription Models
+      // Organizations start with no_subscription state
       
       // 4. Membership erstellen (User wird OWNER der neuen Organization)
       const membership = await tx.membership.create({

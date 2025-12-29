@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireSuperAdminPermissionApiThrow } from "@/lib/super-admin-guards"
+import { logTemplateAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-helpers"
+import { getClientIp } from "@/lib/audit/get-client-ip"
 
 export async function POST(req: NextRequest) {
   try {
@@ -103,6 +105,17 @@ export async function POST(req: NextRequest) {
           }
         }
       }
+    })
+
+    // Audit Log: Template erstellt
+    const ipAddress = getClientIp(req)
+    await logTemplateAction(ACTION_TYPES.CREATE, template.id, {
+      actorId: session.id,
+      actorRole: "super_admin",
+      newValue: completeTemplate,
+      source: SOURCES.UI,
+      complianceRelevant: true, // Template-Erstellung ist compliance-relevant
+      ipAddress,
     })
 
     return NextResponse.json({ template: completeTemplate })

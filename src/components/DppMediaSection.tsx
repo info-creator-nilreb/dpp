@@ -166,7 +166,7 @@ export default function DppMediaSection({
       {/* Upload-Feld */}
       <div style={{ marginBottom: "2rem" }}>
         <FileUploadArea
-          accept="image/*,application/pdf,.doc,.docx"
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           maxSize={10 * 1024 * 1024} // 10 MB
           onFileSelect={handleFileSelect}
           disabled={uploading}

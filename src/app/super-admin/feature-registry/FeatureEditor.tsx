@@ -197,18 +197,23 @@ export function FeatureEditor({ feature, onSave, onCancel }: FeatureEditorProps)
                     value={formData.key}
                     onChange={(e) => setFormData({ ...formData, key: e.target.value })}
                     required
-                    disabled={!!feature?.id}
+                    disabled={!!feature?.id || feature?.systemDefined}
                     style={{
                       width: "100%",
                       padding: "0.625rem",
                       border: "1px solid #CDCDCD",
                       borderRadius: "4px",
                       fontSize: "0.875rem",
-                      backgroundColor: feature?.id ? "#F5F5F5" : "#FFFFFF",
-                      color: feature?.id ? "#7A7A7A" : "#0A0A0A",
+                      backgroundColor: (feature?.id || feature?.systemDefined) ? "#F5F5F5" : "#FFFFFF",
+                      color: (feature?.id || feature?.systemDefined) ? "#7A7A7A" : "#0A0A0A",
                     }}
                     placeholder="z.B. cms_access"
                   />
+                  {feature?.systemDefined && (
+                    <p style={{ fontSize: "0.75rem", color: "#7A7A7A", marginTop: "0.25rem" }}>
+                      System-definiert: Key kann nicht geändert werden
+                    </p>
+                  )}
                 </div>
 
                 <div>

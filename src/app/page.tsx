@@ -1,13 +1,15 @@
 import Link from 'next/link'
-import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import HeroLogo from '@/components/HeroLogo'
+import { getCheapestPrice } from '@/lib/pricing/get-cheapest-price'
 
-export default function Home() {
+export const dynamic = "force-dynamic"
+
+export default async function Home() {
+  // Get cheapest price for teaser
+  const cheapestPrice = await getCheapestPrice()
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF', overflowX: 'hidden' }}>
-      {/* Sticky Header */}
-      <Header />
 
       {/* Hero Section */}
       <section style={{
@@ -338,6 +340,136 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Pricing Teaser Section */}
+      {cheapestPrice && (
+        <section style={{
+          padding: 'clamp(3rem, 8vw, 5rem) clamp(1rem, 4vw, 2rem)',
+          backgroundColor: '#F5F5F5',
+          width: '100%',
+          boxSizing: 'border-box',
+          borderTop: '1px solid #E0E0E0',
+          borderBottom: '1px solid #E0E0E0'
+        }}>
+          <div style={{ 
+            maxWidth: '1000px', 
+            margin: '0 auto', 
+            width: '100%', 
+            boxSizing: 'border-box'
+          }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1.5rem',
+              backgroundColor: '#FFFFFF',
+              padding: 'clamp(2rem, 5vw, 3rem)',
+              borderRadius: '16px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              border: '1px solid #E0E0E0'
+            }}>
+              {/* Price Display - Very Prominent */}
+              <div style={{
+                textAlign: 'center',
+                marginBottom: '0.5rem'
+              }}>
+                <div style={{
+                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                  color: '#7A7A7A',
+                  marginBottom: '0.5rem',
+                  fontWeight: '500',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Ab
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  justifyContent: 'center',
+                  gap: '0.25rem',
+                  marginBottom: '0.5rem'
+                }}>
+                  <span style={{
+                    fontSize: 'clamp(2.5rem, 7vw, 4rem)',
+                    fontWeight: '700',
+                    color: '#E20074',
+                    lineHeight: '1'
+                  }}>
+                    {Math.round(cheapestPrice.amount).toLocaleString('de-DE')}
+                  </span>
+                  <span style={{
+                    fontSize: 'clamp(1.25rem, 3vw, 1.75rem)',
+                    fontWeight: '600',
+                    color: '#7A7A7A',
+                    marginLeft: '0.25rem'
+                  }}>
+                    {cheapestPrice.currency}
+                  </span>
+                </div>
+                <div style={{
+                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                  color: '#7A7A7A',
+                  fontWeight: '400'
+                }}>
+                  pro Monat
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{
+                width: '60px',
+                height: '2px',
+                backgroundColor: '#E20074',
+                borderRadius: '1px'
+              }} />
+
+              {/* Text Content */}
+              <div style={{
+                textAlign: 'center',
+                maxWidth: '500px'
+              }}>
+                <p style={{
+                  fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
+                  color: '#0A0A0A',
+                  marginBottom: '1rem',
+                  lineHeight: '1.6',
+                  fontWeight: '500'
+                }}>
+                  Starten Sie mit dem {cheapestPrice.planName} Plan
+                </p>
+                <p style={{
+                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                  color: '#7A7A7A',
+                  lineHeight: '1.6',
+                  marginBottom: '1.5rem'
+                }}>
+                  Alle Features, transparente Preise, keine versteckten Kosten
+                </p>
+              </div>
+
+              {/* CTA - Text Link Style */}
+              <Link href="/pricing" style={{
+                color: '#E20074',
+                textDecoration: 'none',
+                fontWeight: '600',
+                fontSize: 'clamp(0.95rem, 2vw, 1.1rem)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                borderBottom: '2px solid #E20074',
+                paddingBottom: '0.25rem',
+                transition: 'opacity 0.2s'
+              }}>
+                Alle Preise und Pläne ansehen
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Trust & CTA Section */}
       <section style={{

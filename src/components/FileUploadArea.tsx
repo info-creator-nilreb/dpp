@@ -177,41 +177,63 @@ export default function FileUploadArea({
         >
           {isDragging ? "Datei hier ablegen" : "Klicken zum Auswählen oder Datei hier ablegen"}
         </p>
-        {accept && (
-          <p
-            style={{
-              color: "#7A7A7A",
-              fontSize: "clamp(0.85rem, 1.8vw, 0.95rem)",
-              marginTop: "0.5rem",
-              margin: 0,
-            }}
-          >
-            Erlaubte Formate: {Array.from(new Set(
-              accept
-                .split(",")
-                .map(f => {
-                  const trimmed = f.trim()
-                  // Extract file extension: remove leading dots and MIME types
-                  if (trimmed.startsWith(".")) {
-                    return trimmed.substring(1)
-                  }
-                  if (trimmed.includes("/")) {
-                    // MIME type: extract extension from common types
-                    if (trimmed === "application/pdf") return "pdf"
-                    if (trimmed.startsWith("image/")) {
-                      const ext = trimmed.split("/")[1]
-                      return ext === "jpeg" ? "jpg" : ext
-                    }
-                    if (trimmed.includes("wordprocessingml")) return "docx"
-                    if (trimmed === "application/msword") return "doc"
-                    return null
-                  }
-                  return trimmed
-                })
-                .filter((f): f is string => f !== null && f.length > 0)
-            )).join(", ")}
-          </p>
-        )}
+        {accept && (() => {
+          // Liste der erlaubten Formate basierend auf accept-String
+          const formatList: string[] = []
+          const acceptParts = accept.split(",").map(p => p.trim())
+          
+          for (const part of acceptParts) {
+            // Handle image/* wildcard - expandiere zu spezifischen Bildformaten
+            if (part === "image/*") {
+              formatList.push("jpg", "jpeg", "png", "gif", "webp")
+              continue
+            }
+            
+            // Handle spezifische MIME types
+            if (part === "application/pdf") {
+              formatList.push("pdf")
+            } else if (part === "application/msword") {
+              formatList.push("doc")
+            } else if (part.includes("wordprocessingml") || part === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+              formatList.push("docx")
+            } else if (part.startsWith("image/")) {
+              // Spezifische Bildformate
+              const ext = part.split("/")[1]
+              if (ext === "jpeg") {
+                formatList.push("jpg")
+              } else {
+                formatList.push(ext)
+              }
+            } else if (part.startsWith(".")) {
+              // Dateiendung ohne Punkt
+              formatList.push(part.substring(1))
+            } else if (!part.includes("/") && !part.includes("*")) {
+              // Direkte Dateiendung
+              formatList.push(part)
+            }
+            // Ignoriere andere Wildcards oder unbekannte Formate
+          }
+          
+          // Entferne Duplikate und sortiere
+          const uniqueFormats = Array.from(new Set(formatList))
+            .filter(f => f.length > 0)
+            .sort()
+          
+          if (uniqueFormats.length === 0) return null
+          
+          return (
+            <p
+              style={{
+                color: "#7A7A7A",
+                fontSize: "clamp(0.85rem, 1.8vw, 0.95rem)",
+                marginTop: "0.5rem",
+                margin: 0,
+              }}
+            >
+              Erlaubte Formate: {uniqueFormats.join(", ")}
+            </p>
+          )
+        })()}
       </div>
     </div>
   )

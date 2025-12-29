@@ -6,6 +6,12 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getPublicUrl } from "@/lib/getPublicUrl"
 import { requireEditDPP } from "@/lib/api-permissions"
+import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
+import { getClientIp } from "@/lib/audit/get-client-ip"
+import { getOrganizationRole } from "@/lib/permissions"
+import { canPublishDpp } from "@/lib/pricing/entitlements"
+import { hasFeature } from "@/lib/capabilities/resolver"
+import { isInTrial } from "@/lib/pricing/features"
 
 /**
  * POST /api/app/dpp/[dppId]/publish
@@ -55,6 +61,40 @@ export async function POST(
         { error: "Produktname ist erforderlich für die Veröffentlichung" },
         { status: 400 }
       )
+    }
+
+    // Prüfe ob Organization im Trial ist und ob Publishing erlaubt ist
+    const inTrial = await isInTrial(dpp.organizationId)
+    const canPublishFeature = await hasFeature("publish_dpp", {
+      organizationId: dpp.organizationId,
+      userId: session.user.id,
+    })
+    
+    if (inTrial && !canPublishFeature) {
+      return NextResponse.json(
+        { 
+          error: "Veröffentlichung während der Testphase nicht verfügbar. Bitte upgraden Sie Ihr Abonnement, um DPPs zu veröffentlichen.",
+          trialBlocked: true,
+          upgradeRequired: true
+        },
+        { status: 403 }
+      )
+    }
+
+    // Prüfe Limit für veröffentlichte DPPs (nur wenn Status noch nicht PUBLISHED ist)
+    if (dpp.status !== "PUBLISHED") {
+      const limitCheck = await canPublishDpp(dpp.organizationId)
+      if (!limitCheck.allowed) {
+        return NextResponse.json(
+          { 
+            error: limitCheck.reason || "Limit für veröffentlichte DPPs erreicht",
+            limit: limitCheck.limit,
+            current: limitCheck.current,
+            remaining: limitCheck.remaining
+          },
+          { status: 403 }
+        )
+      }
     }
 
     // Finde höchste bestehende Versionsnummer
@@ -152,6 +192,20 @@ export async function POST(
     console.log("Transaction completed successfully. Version ID:", result.id)
     console.log("Saved publicUrl:", result.publicUrl)
     console.log("Saved qrCodeImageUrl:", result.qrCodeImageUrl)
+
+    // Audit Log: DPP veröffentlicht
+    const ipAddress = getClientIp(request)
+    const role = await getOrganizationRole(session.user.id, dpp.organizationId)
+    
+    await logDppAction(ACTION_TYPES.PUBLISH, params.dppId, {
+      actorId: session.user.id,
+      actorRole: role || undefined,
+      organizationId: dpp.organizationId,
+      source: SOURCES.UI,
+      complianceRelevant: true, // Veröffentlichung ist immer compliance-relevant
+      versionId: result.id,
+      ipAddress,
+    })
 
     // Hole Version mit User-Informationen (zur Verifizierung)
     const versionWithUser = await prisma.dppVersion.findUnique({

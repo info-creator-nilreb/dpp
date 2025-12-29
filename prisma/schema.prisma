@@ -8,38 +8,40 @@ datasource db {
 }
 
 model User {
-  id                        String          @id @default(cuid())
-  email                     String          @unique
+  id                        String             @id @default(cuid())
+  email                     String             @unique
   password                  String
   name                      String?
   systemRole                String?
-  isPlatformAdmin           Boolean         @default(false)
-  emailVerified             Boolean         @default(false)
-  verificationToken         String?         @unique
+  isPlatformAdmin           Boolean            @default(false)
+  emailVerified             Boolean            @default(false)
+  verificationToken         String?            @unique
   verificationTokenExpires  DateTime?
-  passwordResetToken        String?         @unique
+  passwordResetToken        String?            @unique
   passwordResetTokenExpires DateTime?
   totpSecret                String?
-  totpEnabled               Boolean         @default(false)
-  createdAt                 DateTime        @default(now())
-  updatedAt                 DateTime        @updatedAt
+  totpEnabled               Boolean            @default(false)
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
   dppPermissions            DppPermission[]
   publishedVersions         DppVersion[]
   memberships               Membership[]
+  auditLogs                 PlatformAuditLog[]
 
   @@map("users")
 }
 
 model Organization {
-  id          String       @id @default(cuid())
-  name        String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  licenseTier String       @default("free")
-  status      String       @default("active")
-  dpps        Dpp[]
-  memberships Membership[]
+  id           String             @id @default(cuid())
+  name         String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  licenseTier  String             @default("free")
+  status       String             @default("active")
+  dpps         Dpp[]
+  memberships  Membership[]
   subscription Subscription?
+  auditLogs    PlatformAuditLog[]
 
   @@map("organizations")
 }
@@ -78,7 +80,7 @@ model Dpp {
   takebackContact       String?
   secondLifeInfo        String?
   status                String          @default("DRAFT") // DRAFT | PUBLISHED | DEPRECATED
-  supersedesDppId       String?         // ID des DPPs, der durch diesen DPP ersetzt wurde (für Fehlklassifikationen)
+  supersedesDppId       String? // ID des DPPs, der durch diesen DPP ersetzt wurde (für Fehlklassifikationen)
   organizationId        String
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
@@ -199,6 +201,7 @@ model SuperAdminSession {
   @@map("super_admin_sessions")
 }
 
+// Legacy SuperAdmin-only Audit Log (kept for backward compatibility)
 model AuditLog {
   id           String     @id @default(cuid())
   superAdminId String
@@ -218,13 +221,59 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// Comprehensive Platform Audit Log (ESPR-aligned, immutable, AI-aware)
+model PlatformAuditLog {
+  id                 String   @id @default(cuid())
+  timestamp          DateTime @default(now())
+  actorId            String? // User ID or "SYSTEM" for system actions
+  actorRole          String? // SUPER_ADMIN | ORG_OWNER | ORG_ADMIN | ORG_MEMBER | ORG_VIEWER | SUPPLIER | SYSTEM | AI
+  organizationId     String?
+  actionType         String // CREATE | UPDATE | DELETE | PUBLISH | ARCHIVE | EXPORT | ROLE_CHANGE | USER_ADDED | USER_REMOVED | PERMISSION_CHANGED | AI_SUGGESTION_GENERATED | AI_SUGGESTION_ACCEPTED | AI_SUGGESTION_MODIFIED | AI_SUGGESTION_REJECTED | AI_AUTO_FILL_APPLIED | AI_ANALYSIS_RUN | AI_CONFIDENCE_SCORE_UPDATED
+  entityType         String // DPP | DPP_VERSION | DPP_CONTENT | DPP_MEDIA | USER | ORGANIZATION | MEMBERSHIP | DPP_PERMISSION | TEMPLATE | PRICING_PLAN | SUBSCRIPTION_MODEL | PRICE | ENTITLEMENT | PRICING_PLAN_FEATURE | PRICING_PLAN_ENTITLEMENT
+  entityId           String?
+  fieldName          String? // Specific field that was changed (nullable for non-field-specific actions)
+  oldValue           String? // JSON string of old value (nullable)
+  newValue           String? // JSON string of new value (nullable)
+  source             String // UI | API | IMPORT | AI | SYSTEM
+  complianceRelevant Boolean  @default(false)
+  versionId          String? // Link to DPP version if applicable
+  ipAddress          String? // Masked for non-admins
+  metadata           Json? // Extensible JSON metadata
+
+  // AI-specific metadata (only populated when source = AI)
+  aiModel              String?
+  aiModelVersion       String?
+  aiPromptId           String? // Reference ID only, never raw prompt text
+  aiInputSources       String? // JSON array of strings
+  aiConfidenceScore    Float? // 0-1
+  aiExplainabilityNote String?
+  humanInTheLoop       Boolean? @default(false)
+  finalDecisionBy      String? // user_id or "SYSTEM"
+  regulatoryImpact     String? // low | medium | high
+
+  // Relations
+  actor        User?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([timestamp])
+  @@index([actorId])
+  @@index([organizationId])
+  @@index([actionType])
+  @@index([entityType, entityId])
+  @@index([source])
+  @@index([complianceRelevant])
+  @@index([organizationId, timestamp])
+  @@index([entityType, entityId, timestamp])
+  @@map("platform_audit_logs")
+}
+
 model Subscription {
   id                   String       @id @default(cuid())
   organizationId       String       @unique
   organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  plan                 String       @default("basic") // basic | pro | premium
+  plan                 String       @default("basic") // basic | pro | premium (legacy, deprecated)
   status               String       @default("trial_active") // trial_active | active | past_due | canceled | expired
-  trialExpiresAt       DateTime?    // Nullable, nur gesetzt wenn status = trial_active
+  trialExpiresAt       DateTime? // Nullable, nur gesetzt wenn status = trial_active
   trialStartedAt       DateTime?
   stripeSubscriptionId String?      @unique
   stripeCustomerId     String?
@@ -234,6 +283,14 @@ model Subscription {
   canceledAt           DateTime?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
+
+  // New subscription model reference
+  subscriptionModelId  String?
+  subscriptionModel    SubscriptionModel?    @relation(fields: [subscriptionModelId], references: [id], onDelete: SetNull)
+  priceSnapshotId      String?
+  priceSnapshot        PriceSnapshot?        @relation(fields: [priceSnapshotId], references: [id], onDelete: SetNull)
+  startedAt            DateTime? // When subscription actually started (after trial)
+  entitlementSnapshots EntitlementSnapshot[]
 
   @@map("subscriptions")
 }
@@ -333,61 +390,227 @@ model TemplateField {
 }
 
 model FeatureRegistry {
-  id                        String      @id @default(cuid())
-  key                       String      @unique
-  name                      String
-  description               String?
-  category                  String      // core | content | interaction | styling | publishing
-  capabilityKey             String?     // Optional: Maps to capability (for compatibility)
-  minimumPlan               String      // basic | pro | premium
-  requiresActiveSubscription Boolean    @default(true)
-  requiresPublishingCapability Boolean  @default(false)
-  visibleInTrial            Boolean     @default(true)
-  usableInTrial             Boolean     @default(true)
-  configSchema              String?     // JSON Schema als String
-  enabled                   Boolean     @default(true)
-  defaultForNewDpps         Boolean     @default(false)
-  createdAt                 DateTime    @default(now())
-  updatedAt                 DateTime    @updatedAt
-  blockTypes                BlockType[]
+  id                           String      @id @default(cuid())
+  key                          String      @unique
+  name                         String
+  description                  String?
+  category                     String // core | content | interaction | styling | publishing | system
+  capabilityKey                String? // Optional: Maps to capability (for compatibility)
+  minimumPlan                  String // basic | pro | premium
+  requiresActiveSubscription   Boolean     @default(true)
+  requiresPublishingCapability Boolean     @default(false)
+  visibleInTrial               Boolean     @default(true)
+  usableInTrial                Boolean     @default(true)
+  configSchema                 String? // JSON Schema als String
+  enabled                      Boolean     @default(true)
+  defaultForNewDpps            Boolean     @default(false)
+  systemDefined                Boolean     @default(false) // True if defined in feature manifest
+  createdAt                    DateTime    @default(now())
+  updatedAt                    DateTime    @updatedAt
+  blockTypes                   BlockType[]
 
   @@index([category])
   @@index([minimumPlan])
+  @@index([systemDefined])
   @@map("feature_registry")
 }
 
 model BlockType {
-  id                String          @id @default(cuid())
-  featureRegistryId String?
-  featureRegistry   FeatureRegistry? @relation(fields: [featureRegistryId], references: [id], onDelete: SetNull)
-  key               String          @unique
-  name              String
-  description       String?
-  category          String          // content | interaction | styling
-  configSchema      String          // JSON Schema für Block Config
-  defaultConfig     String?         // Default JSON Config
-  supportsStyling   Boolean         @default(false)
-  requiresPublishing Boolean        @default(false)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id                 String           @id @default(cuid())
+  featureRegistryId  String?
+  featureRegistry    FeatureRegistry? @relation(fields: [featureRegistryId], references: [id], onDelete: SetNull)
+  key                String           @unique
+  name               String
+  description        String?
+  category           String // content | interaction | styling
+  configSchema       String // JSON Schema für Block Config
+  defaultConfig      String? // Default JSON Config
+  supportsStyling    Boolean          @default(false)
+  requiresPublishing Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([category])
   @@map("block_types")
 }
 
 model DppContent {
-  id            String   @id @default(cuid())
-  dppId         String
-  dpp           Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
-  versionId     String?  // Optional: Link zu published version
-  isPublished   Boolean  @default(false)
-  blocks        Json     // Array von Block Objects
-  styling       Json?    // Global styling config (nur wenn capability vorhanden)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  createdBy     String?
+  id          String   @id @default(cuid())
+  dppId       String
+  dpp         Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  versionId   String? // Optional: Link zu published version
+  isPublished Boolean  @default(false)
+  blocks      Json // Array von Block Objects
+  styling     Json? // Global styling config (nur wenn capability vorhanden)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
 
   @@index([dppId])
   @@index([dppId, isPublished])
   @@map("dpp_content")
+}
+
+// ============================================
+// PRICING & SUBSCRIPTION SYSTEM
+// ============================================
+
+// Pricing Plan: Business configuration layer
+model PricingPlan {
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  descriptionMarketing String? // Marketing description for public page
+  isPublic             Boolean  @default(true)
+  isActive             Boolean  @default(true)
+  displayOrder         Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  features           PricingPlanFeature[]
+  entitlements       PricingPlanEntitlement[]
+  subscriptionModels SubscriptionModel[]
+
+  @@index([isActive, isPublic])
+  @@index([displayOrder])
+  @@map("pricing_plans")
+}
+
+// Links Pricing Plan to Feature Registry (read-only reference)
+model PricingPlanFeature {
+  id            String      @id @default(cuid())
+  pricingPlanId String
+  pricingPlan   PricingPlan @relation(fields: [pricingPlanId], references: [id], onDelete: Cascade)
+  featureKey    String // References FeatureRegistry.key (not a foreign key - read-only registry)
+  included      Boolean     @default(true)
+  note          String? // Optional note (e.g. "Coming soon")
+
+  @@unique([pricingPlanId, featureKey])
+  @@index([pricingPlanId])
+  @@index([featureKey])
+  @@map("pricing_plan_features")
+}
+
+// Entitlements: System-wide limit definitions
+model Entitlement {
+  id   String  @id @default(cuid())
+  key  String  @unique // e.g. "max_dpp", "max_storage_gb"
+  type String // "limit" | "boolean"
+  unit String? // e.g. "count", "gb", "mb"
+
+  @@map("entitlements")
+}
+
+// Links Pricing Plan to Entitlements with values
+model PricingPlanEntitlement {
+  id             String      @id @default(cuid())
+  pricingPlanId  String
+  pricingPlan    PricingPlan @relation(fields: [pricingPlanId], references: [id], onDelete: Cascade)
+  entitlementKey String // References Entitlement.key
+  value          Int? // null = unlimited
+
+  @@unique([pricingPlanId, entitlementKey])
+  @@index([pricingPlanId])
+  @@index([entitlementKey])
+  @@map("pricing_plan_entitlements")
+}
+
+// Subscription Model: Billing configuration (monthly/yearly, trial, etc.)
+model SubscriptionModel {
+  id                  String      @id @default(cuid())
+  pricingPlanId       String
+  pricingPlan         PricingPlan @relation(fields: [pricingPlanId], references: [id], onDelete: Cascade)
+  billingInterval     String // "monthly" | "yearly"
+  minCommitmentMonths Int? // Optional minimum commitment
+  trialDays           Int         @default(0)
+  isActive            Boolean     @default(true)
+  stripePriceId       String?     @unique // Stripe Price ID
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  prices                    Price[]
+  subscriptions             Subscription[]
+  trialFeatureOverrides     TrialFeatureOverride[]
+  trialEntitlementOverrides TrialEntitlementOverride[]
+
+  @@index([pricingPlanId])
+  @@index([isActive])
+  @@map("subscription_models")
+}
+
+// Price: Versioned pricing (allows price changes over time)
+model Price {
+  id                  String            @id @default(cuid())
+  subscriptionModelId String
+  subscriptionModel   SubscriptionModel @relation(fields: [subscriptionModelId], references: [id], onDelete: Cascade)
+  amount              Int // Price in smallest currency unit (cents)
+  currency            String            @default("EUR")
+  validFrom           DateTime          @default(now())
+  validTo             DateTime? // null = currently valid
+  isActive            Boolean           @default(true)
+  createdAt           DateTime          @default(now())
+
+  @@index([subscriptionModelId])
+  @@index([isActive, validFrom, validTo])
+  @@map("prices")
+}
+
+// Price Snapshot: Immutable snapshot created at checkout
+model PriceSnapshot {
+  id              String   @id @default(cuid())
+  amount          Int // Price in smallest currency unit (cents)
+  currency        String   @default("EUR")
+  billingInterval String // "monthly" | "yearly"
+  createdAt       DateTime @default(now())
+
+  subscriptions Subscription[]
+
+  @@map("price_snapshots")
+}
+
+// Entitlement Snapshot: Immutable snapshot created at checkout
+model EntitlementSnapshot {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  key            String // Entitlement key (e.g. "max_dpp")
+  value          Int? // null = unlimited
+  createdAt      DateTime     @default(now())
+
+  @@unique([subscriptionId, key])
+  @@index([subscriptionId])
+  @@index([key])
+  @@map("entitlement_snapshots")
+}
+
+// Trial Feature Override: Configure which features are enabled/disabled during trial
+model TrialFeatureOverride {
+  id                  String            @id @default(cuid())
+  subscriptionModelId String
+  subscriptionModel   SubscriptionModel @relation(fields: [subscriptionModelId], references: [id], onDelete: Cascade)
+  featureKey          String // References Feature Registry key
+  enabled             Boolean           @default(false) // Feature enabled during trial
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@unique([subscriptionModelId, featureKey])
+  @@index([subscriptionModelId])
+  @@index([featureKey])
+  @@map("trial_feature_overrides")
+}
+
+// Trial Entitlement Override: Configure limits during trial
+model TrialEntitlementOverride {
+  id                  String            @id @default(cuid())
+  subscriptionModelId String
+  subscriptionModel   SubscriptionModel @relation(fields: [subscriptionModelId], references: [id], onDelete: Cascade)
+  entitlementKey      String // e.g. "max_published_dpp", "max_storage_gb", "max_users"
+  value               Int? // null = unlimited during trial
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@unique([subscriptionModelId, entitlementKey])
+  @@index([subscriptionModelId])
+  @@index([entitlementKey])
+  @@map("trial_entitlement_overrides")
 }

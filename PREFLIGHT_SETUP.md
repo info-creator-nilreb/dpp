@@ -58,3 +58,4 @@ Falls Sie ein anderes Modell verwenden möchten, ändern Sie die `model`-Propert
 - AI max_tokens: 900
 - AI temperature: 0 (deterministic)
 
+

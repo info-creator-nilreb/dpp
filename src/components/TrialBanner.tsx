@@ -1,94 +1,80 @@
-"use client";
+"use client"
 
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "next/link"
 
 interface TrialBannerProps {
-  daysRemaining: number | null;
-  plan?: string;
-  onUpgrade?: () => void;
+  organizationId: string
+  trialEndDate: string
 }
 
-export function TrialBanner({
-  daysRemaining,
-  plan = "premium",
-  onUpgrade,
-}: TrialBannerProps) {
-  const router = useRouter();
-
-  if (daysRemaining === null) {
-    return null;
-  }
-
-  const handleUpgrade = () => {
-    if (onUpgrade) {
-      onUpgrade();
-    } else {
-      router.push("/app/account/subscription");
-    }
-  };
+export default function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
+  // Calculate days remaining
+  const now = new Date()
+  const expiresAt = new Date(trialEndDate)
+  const daysRemaining = Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
 
   return (
-    <div
-      style={{
-        backgroundColor: "#FFF4E6",
-        border: "1px solid #FFD700",
-        borderRadius: "8px",
-        padding: "1rem 1.5rem",
-        marginBottom: "1.5rem",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: "1rem",
-      }}
-    >
+    <div style={{
+      backgroundColor: "#FEF3C7",
+      border: "1px solid #FCD34D",
+      borderRadius: "8px",
+      padding: "1rem 1.5rem",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "1rem"
+    }}>
       <div style={{ flex: 1, minWidth: "200px" }}>
-        <h3
-          style={{
-            fontSize: "1.1rem",
-            fontWeight: "600",
-            color: "#B8860B",
-            marginBottom: "0.5rem",
-          }}
-        >
-          Trial aktiv - {daysRemaining} Tag{daysRemaining !== 1 ? "e" : ""} verbleibend
-        </h3>
-        <p style={{ color: "#856404", fontSize: "0.95rem", margin: 0 }}>
-          Sie nutzen aktuell einen {plan === "premium" ? "Premium" : plan}-Trial.
-          Upgrade jetzt, um Publishing zu aktivieren und den Zugriff nach dem
-          Trial-Ende aufrechtzuerhalten.
-        </p>
+        <div style={{
+          fontSize: "0.875rem",
+          fontWeight: "600",
+          color: "#92400E",
+          marginBottom: "0.25rem"
+        }}>
+          🎉 Sie befinden sich in der Testphase
+        </div>
+        <div style={{
+          fontSize: "0.75rem",
+          color: "#78350F"
+        }}>
+          {daysRemaining > 0
+            ? `${daysRemaining} Tag${daysRemaining !== 1 ? "e" : ""} verbleibend`
+            : "Testphase läuft ab"}
+          <span style={{ marginLeft: "0.5rem" }}>
+            (bis {expiresAt.toLocaleDateString("de-DE")})
+          </span>
+        </div>
+        <div style={{
+          fontSize: "0.75rem",
+          color: "#78350F",
+          marginTop: "0.5rem"
+        }}>
+          Während der Testphase können Sie Entwürfe erstellen, aber keine DPPs veröffentlichen.
+        </div>
       </div>
-      <div>
-        <Link
-          href="/app/account/subscription"
-          onClick={(e) => {
-            e.preventDefault();
-            handleUpgrade();
-          }}
-          style={{
-            backgroundColor: "#E20074",
-            color: "white",
-            padding: "0.75rem 1.5rem",
-            borderRadius: "6px",
-            textDecoration: "none",
-            fontWeight: "500",
-            display: "inline-block",
-            transition: "background-color 0.2s",
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = "#C1005F";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = "#E20074";
-          }}
-        >
-          Jetzt upgraden
-        </Link>
-      </div>
+      <Link
+        href="/pricing"
+        style={{
+          padding: "0.5rem 1rem",
+          backgroundColor: "#E20074",
+          color: "#FFFFFF",
+          textDecoration: "none",
+          borderRadius: "6px",
+          fontSize: "0.875rem",
+          fontWeight: "600",
+          whiteSpace: "nowrap",
+          transition: "background-color 0.2s"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = "#C00060"
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "#E20074"
+        }}
+      >
+        Jetzt upgraden
+      </Link>
     </div>
-  );
+  )
 }
-
-

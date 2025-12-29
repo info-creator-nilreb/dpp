@@ -64,3 +64,4 @@ Falls VirusTotal nicht ausreicht, können folgende Services verwendet werden:
 - **OPSWAT MetaDefender** - Enterprise-Lösung
 - **ClamAV** - Open Source (benötigt eigenen Server)
 
+

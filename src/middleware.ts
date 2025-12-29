@@ -40,9 +40,12 @@ export default auth(async (req) => {
     return NextResponse.redirect(new URL("/app/dashboard", baseUrl))
   }
 
-  // Wenn nicht eingeloggt und geschützte Route → Redirect zu Login
+  // Wenn nicht eingeloggt und geschützte Route → Redirect zu Login mit callbackUrl
   if (!isLoggedIn && (isAppRoute || isPlatformRoute)) {
-    return NextResponse.redirect(new URL("/login", baseUrl))
+    const loginUrl = new URL("/login", baseUrl)
+    // Speichere die ursprüngliche URL als callbackUrl, damit der User nach Login dorthin zurückkommt
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   // Platform-Routen: Nur für Platform-Admin

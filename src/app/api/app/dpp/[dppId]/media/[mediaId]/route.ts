@@ -6,6 +6,9 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { deleteFile } from "@/lib/storage"
 import { requireEditDPP } from "@/lib/api-permissions"
+import { logDppMediaAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-helpers"
+import { getClientIp } from "@/lib/audit/get-client-ip"
+import { getOrganizationRole } from "@/lib/permissions"
 
 /**
  * DELETE /api/app/dpp/[dppId]/media/[mediaId]
@@ -47,12 +50,38 @@ export async function DELETE(
       )
     }
 
+    // Hole DPP für Organization-ID
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      select: { organizationId: true }
+    })
+
+    if (!dpp) {
+      return NextResponse.json(
+        { error: "DPP nicht gefunden" },
+        { status: 404 }
+      )
+    }
+
     // Lösche Datei aus Storage
     await deleteFile(media.storageUrl)
 
     // Lösche Metadaten aus DB
     await prisma.dppMedia.delete({
       where: { id: mediaId }
+    })
+
+    // Audit Log: DPP Media gelöscht
+    const ipAddress = getClientIp(request)
+    const role = await getOrganizationRole(session.user.id, dpp.organizationId)
+    
+    await logDppMediaAction(ACTION_TYPES.DELETE, mediaId, dppId, {
+      actorId: session.user.id,
+      actorRole: role || undefined,
+      organizationId: dpp.organizationId,
+      source: SOURCES.UI,
+      complianceRelevant: false,
+      ipAddress,
     })
 
     return NextResponse.json(

@@ -2,14 +2,15 @@
 
 export const dynamic = "force-dynamic"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { LoginSplitLayout } from "@/components/LoginSplitLayout"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -17,6 +18,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [requires2FA, setRequires2FA] = useState(false)
   const [totpCode, setTotpCode] = useState("")
+  
+  // Lese callbackUrl aus Query-Parametern (falls vorhanden)
+  const callbackUrl = searchParams.get("callbackUrl") || "/app/dashboard"
 
   const performLogin = async () => {
     if (loading) {
@@ -68,7 +72,7 @@ export default function LoginPage() {
         email,
         password,
         redirect: false,
-        callbackUrl: "/app/dashboard"
+        callbackUrl: callbackUrl
       }
       
       // Nur totpCode hinzufügen, wenn 2FA erforderlich ist und ein Code vorhanden ist
@@ -105,8 +109,8 @@ export default function LoginPage() {
         }
         setLoading(false)
       } else {
-        // Login erfolgreich - verwende window.location für zuverlässige Navigation
-        window.location.href = "/app/dashboard"
+        // Login erfolgreich - leite zu callbackUrl weiter (oder Dashboard als Fallback)
+        window.location.href = callbackUrl
       }
     } catch (err: any) {
       console.error("Login error:", err)
@@ -383,3 +387,16 @@ export default function LoginPage() {
   )
 }
 
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <LoginSplitLayout>
+        <div style={{ textAlign: "center", padding: "2rem" }}>
+          <p style={{ color: "#7A7A7A" }}>Wird geladen...</p>
+        </div>
+      </LoginSplitLayout>
+    }>
+      <LoginForm />
+    </Suspense>
+  )
+}

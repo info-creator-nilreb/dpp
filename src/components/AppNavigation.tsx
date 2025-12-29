@@ -58,14 +58,17 @@ export default function AppNavigation() {
   async function handleLogout() {
     setLoggingOut(true)
     try {
+      // Speichere die aktuelle URL, damit der User nach Login dorthin zurückkommt
+      const currentPath = window.location.pathname
       // SignOut OHNE redirect, dann manuelle Weiterleitung mit aktueller Origin
       await signOut({ redirect: false })
-      // Verwende window.location für zuverlässige Navigation mit korrektem Port
-      window.location.href = "/login"
+      // Verwende window.location für zuverlässige Navigation mit korrektem Port und callbackUrl
+      window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`
     } catch (error) {
       console.error("Error during logout:", error)
       // Fallback: Manuelle Weiterleitung bei Fehler
-      window.location.href = "/login"
+      const currentPath = window.location.pathname
+      window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`
     }
   }
 

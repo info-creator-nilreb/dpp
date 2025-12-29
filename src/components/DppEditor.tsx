@@ -29,7 +29,7 @@ interface Dpp {
   id: string
   name: string
   description: string | null
-  category: "TEXTILE" | "FURNITURE" | "OTHER"
+  category: string
   sku: string | null
   gtin: string | null
   brand: string | null
@@ -60,6 +60,7 @@ interface DppEditorProps {
   dpp: Dpp
   isNew?: boolean
   onUnsavedChangesChange?: (hasChanges: boolean) => void
+  availableCategories?: Array<{ categoryKey: string; label: string }>
 }
 
 /**
@@ -145,7 +146,7 @@ function AccordionSection({
  * 4. Rechtliches & Konformität (einklappbar)
  * 5. Rücknahme & Second Life (einklappbar)
  */
-export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedChangesChange }: DppEditorProps) {
+export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedChangesChange, availableCategories: propCategories }: DppEditorProps) {
   const router = useRouter()
   const { showNotification } = useNotification()
   
@@ -257,6 +258,22 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
 
   // Lade verfügbare Kategorien beim Mount
   useEffect(() => {
+    // Wenn Kategorien als Prop übergeben wurden, verwende diese
+    if (propCategories && propCategories.length > 0) {
+      const categoryOptions = propCategories.map(cat => ({
+        value: cat.categoryKey,
+        label: cat.label
+      }))
+      setAvailableCategories(categoryOptions)
+      // Setze erste verfügbare Kategorie als Standard für neue DPPs, wenn noch keine gesetzt ist
+      if (isNew && (!category || category === "") && categoryOptions.length > 0) {
+        setCategory(categoryOptions[0].value)
+        setPreviousCategory(categoryOptions[0].value)
+      }
+      return
+    }
+
+    // Sonst lade Kategorien über API
     async function loadCategories() {
       try {
         const response = await fetch("/api/app/categories")
@@ -272,19 +289,19 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
             setCategory(categoryOptions[0].value)
             setPreviousCategory(categoryOptions[0].value)
           }
+        } else {
+          console.error("Error loading categories: API returned", response.status)
+          // Kein Fallback mehr - wenn keine Kategorien geladen werden können, bleibt die Liste leer
+          setAvailableCategories([])
         }
       } catch (error) {
         console.error("Error loading categories:", error)
-        // Fallback-Kategorien bei Fehler
-        setAvailableCategories([
-          { value: "TEXTILE", label: "Textil" },
-          { value: "FURNITURE", label: "Möbel" },
-          { value: "OTHER", label: "Sonstiges" }
-        ])
+        // Kein Fallback mehr - wenn keine Kategorien geladen werden können, bleibt die Liste leer
+        setAvailableCategories([])
       }
     }
     loadCategories()
-  }, [isNew])
+  }, [isNew, propCategories])
   
   // Initialisiere previousCategory beim Mount
   useEffect(() => {
@@ -786,16 +803,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
               dpp.status === "PUBLISHED" || // ESPR: Unveränderbar nach Veröffentlichung
               (!isNew && availableCategories.length === 0)
             }
-            options={
-              availableCategories.length > 0
-                ? availableCategories
-                : [
-                    // Fallback (sollte nicht passieren, da Kategorien immer geladen werden)
-                    { value: "TEXTILE", label: "Textil" },
-                    { value: "FURNITURE", label: "Möbel" },
-                    { value: "OTHER", label: "Sonstiges" }
-                  ]
-            }
+            options={availableCategories}
           />
           {dpp.status === "PUBLISHED" && (
             <p style={{

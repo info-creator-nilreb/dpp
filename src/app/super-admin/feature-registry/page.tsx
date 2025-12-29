@@ -78,9 +78,35 @@ export default async function SuperAdminFeatureRegistryPage({
       configSchema: true,
       enabled: true,
       defaultForNewDpps: true,
+      systemDefined: true,
       createdAt: true,
       updatedAt: true,
     },
+  });
+
+  // Get pricing plans that reference each feature (read-only, dynamically derived)
+  const pricingPlansByFeature = await prisma.pricingPlanFeature.findMany({
+    include: {
+      pricingPlan: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          isActive: true,
+        },
+      },
+    },
+  });
+
+  // Group by feature key
+  const plansByFeatureKey: Record<string, Array<{ id: string; name: string; slug: string; isActive: boolean }>> = {};
+  pricingPlansByFeature.forEach((ppf) => {
+    if (!plansByFeatureKey[ppf.featureKey]) {
+      plansByFeatureKey[ppf.featureKey] = [];
+    }
+    if (ppf.included) {
+      plansByFeatureKey[ppf.featureKey].push(ppf.pricingPlan);
+    }
   });
 
   // Convert Date objects to ISO strings for client component
@@ -143,6 +169,7 @@ export default async function SuperAdminFeatureRegistryPage({
           minimumPlan: minimumPlanFilter,
           status: statusFilter,
         }}
+        pricingPlansByFeature={plansByFeatureKey}
       />
     </div>
   );
