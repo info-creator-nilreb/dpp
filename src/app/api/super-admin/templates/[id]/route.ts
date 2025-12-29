@@ -155,7 +155,6 @@ export async function PUT(
 
     // Audit Log: Template aktualisiert
     const ipAddress = getClientIp(req)
-    const session = await requireSuperAdminPermissionApiThrow("template", "update")
     if (!(session instanceof NextResponse) && session) {
       await logTemplateAction(ACTION_TYPES.UPDATE, id, {
         actorId: session.id,
@@ -231,7 +230,6 @@ export async function DELETE(
 
     // Audit Log: Template gelöscht (vor dem Löschen)
     const ipAddress = getClientIp(req)
-    const session = await requireSuperAdminPermissionApiThrow("template", "update")
     if (!(session instanceof NextResponse) && session) {
       await logTemplateAction(ACTION_TYPES.DELETE, id, {
         actorId: session.id,

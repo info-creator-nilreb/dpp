@@ -51,8 +51,8 @@ export async function POST(request: Request) {
     }
 
     // Prüfe ob User DPPs erstellen darf (ORG_VIEWER darf keine erstellen)
-    const role = membership.role as string
-    if (role === ORGANIZATION_ROLES.ORG_VIEWER) {
+    const membershipRole = membership.role as string
+    if (membershipRole === ORGANIZATION_ROLES.ORG_VIEWER) {
       return NextResponse.json(
         { error: "Keine Berechtigung zum Erstellen von DPPs" },
         { status: 403 }
