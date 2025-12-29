@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
           await prisma.entitlementSnapshot.create({
             data: {
               subscriptionId: updatedSubscription.id,
-              key: entitlement.key,
+              key: entitlement.entitlementKey,
               value: entitlement.value
             }
           })
@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
           await prisma.entitlementSnapshot.create({
             data: {
               subscriptionId: newSubscription.id,
-              key: entitlement.key,
+              key: entitlement.entitlementKey,
               value: entitlement.value
             }
           })
