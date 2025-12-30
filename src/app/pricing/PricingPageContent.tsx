@@ -292,8 +292,10 @@ export default function PricingPageContent({
             {/* Toggle zentriert über mittlerer Card mit Badge */}
             <div style={{
               display: "flex",
+              flexDirection: isMobile ? "column" : "row",
               justifyContent: "center",
               alignItems: "center",
+              gap: isMobile ? "0.75rem" : "0",
               marginTop: "-1rem",
               marginBottom: "-1rem",
               position: "relative",
@@ -341,11 +343,11 @@ export default function PricingPageContent({
                   Jährlich
                 </button>
               </div>
-              {/* Badge - absolut positioniert rechts neben Toggle */}
+              {/* Badge - unter Toggle auf Mobile, rechts auf Desktop */}
               {pricingPlans.some(plan => calculateSavings(plan) !== null) && (
                 <span style={{
-                  position: "absolute",
-                  left: "calc(50% + 120px)", // 50% (center) + half toggle width + gap
+                  position: isMobile ? "relative" : "absolute",
+                  left: isMobile ? "auto" : "calc(50% + 120px)",
                   backgroundColor: "#22C55E",
                   color: "#FFFFFF",
                   fontSize: "0.625rem",
