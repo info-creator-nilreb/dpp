@@ -121,7 +121,7 @@ function FloatingBurgerButton({
       onClick={onMenuClick}
       style={{
         position: "fixed",
-        top: "1.5rem",
+        top: "2rem",
         right: "1.5rem",
         backgroundColor: "#FFFFFF",
         border: "1px solid #E20074",

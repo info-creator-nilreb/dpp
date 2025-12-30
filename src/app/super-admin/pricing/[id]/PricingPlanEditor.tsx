@@ -820,6 +820,8 @@ function EntitlementInput({
       }}>
         <input
           type="number"
+          inputMode="numeric"
+          pattern="[0-9]*"
           min="0"
           placeholder="Unbegrenzt"
           value={value ?? ""}
@@ -835,7 +837,7 @@ function EntitlementInput({
             padding: "0.75rem",
             border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
             borderRadius: "6px",
-            fontSize: "0.875rem",
+            fontSize: "clamp(1rem, 2vw, 0.875rem)",
             transition: "border-color 0.2s",
             outline: "none",
             boxSizing: "border-box"
@@ -1159,7 +1161,7 @@ function NewSubscriptionModelForm({
   const [formData, setFormData] = useState({
     billingInterval: "monthly" as "monthly" | "yearly",
     minCommitmentMonths: "",
-    trialDays: 0,
+    trialDays: "",
     isActive: true,
     amount: "",
     currency: "EUR"
@@ -1181,7 +1183,7 @@ function NewSubscriptionModelForm({
           pricingPlanId,
           billingInterval: formData.billingInterval,
           minCommitmentMonths: formData.minCommitmentMonths ? parseInt(formData.minCommitmentMonths) : null,
-          trialDays: formData.trialDays,
+          trialDays: formData.trialDays ? parseInt(formData.trialDays) : 0,
           isActive: formData.isActive
         })
       })
@@ -1298,6 +1300,8 @@ function NewSubscriptionModelForm({
             </label>
             <input
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min="0"
               value={formData.minCommitmentMonths}
               onChange={(e) => setFormData({ ...formData, minCommitmentMonths: e.target.value })}
@@ -1307,7 +1311,7 @@ function NewSubscriptionModelForm({
                 padding: "0.75rem",
                 border: "1px solid #E5E5E5",
                 borderRadius: "6px",
-                fontSize: "0.875rem",
+                fontSize: "clamp(1rem, 2vw, 0.875rem)",
                 boxSizing: "border-box"
               }}
             />
@@ -1327,7 +1331,7 @@ function NewSubscriptionModelForm({
               type="number"
               min="0"
               value={formData.trialDays}
-              onChange={(e) => setFormData({ ...formData, trialDays: parseInt(e.target.value) || 0 })}
+              onChange={(e) => setFormData({ ...formData, trialDays: e.target.value })}
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -1351,6 +1355,7 @@ function NewSubscriptionModelForm({
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="0.01"
               min="0"
               value={formData.amount}
@@ -1361,7 +1366,7 @@ function NewSubscriptionModelForm({
                 padding: "0.75rem",
                 border: "1px solid #E5E5E5",
                 borderRadius: "6px",
-                fontSize: "0.875rem",
+                fontSize: "clamp(1rem, 2vw, 0.875rem)",
                 boxSizing: "border-box"
               }}
             />
@@ -1428,7 +1433,7 @@ function SubscriptionModelEditor({
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     minCommitmentMonths: model.minCommitmentMonths?.toString() || "",
-    trialDays: model.trialDays,
+    trialDays: model.trialDays?.toString() || "",
     isActive: model.isActive
   })
 
@@ -1444,7 +1449,7 @@ function SubscriptionModelEditor({
         },
         body: JSON.stringify({
           minCommitmentMonths: formData.minCommitmentMonths ? parseInt(formData.minCommitmentMonths) : null,
-          trialDays: formData.trialDays,
+          trialDays: formData.trialDays ? parseInt(formData.trialDays) : 0,
           isActive: formData.isActive
         })
       })
@@ -1567,20 +1572,20 @@ function SubscriptionModelEditor({
           }}>
             Trial-Tage
           </label>
-          <input
-            type="number"
-            min="0"
-            value={formData.trialDays}
-            onChange={(e) => setFormData({ ...formData, trialDays: parseInt(e.target.value) || 0 })}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #E5E5E5",
-              borderRadius: "6px",
-              fontSize: "0.875rem",
-              boxSizing: "border-box"
-            }}
-          />
+            <input
+              type="number"
+              min="0"
+              value={formData.trialDays}
+              onChange={(e) => setFormData({ ...formData, trialDays: e.target.value })}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                border: "1px solid #E5E5E5",
+                borderRadius: "6px",
+                fontSize: "0.875rem",
+                boxSizing: "border-box"
+              }}
+            />
         </div>
 
         <div style={{
@@ -1606,7 +1611,7 @@ function SubscriptionModelEditor({
       </div>
 
       {/* Trial Configuration */}
-      {formData.trialDays > 0 && (
+      {formData.trialDays && parseInt(formData.trialDays) > 0 && (
         <div style={{
           marginTop: "1.5rem",
           paddingTop: "1.5rem",
@@ -1618,7 +1623,7 @@ function SubscriptionModelEditor({
             color: "#0A0A0A",
             marginBottom: "1rem"
           }}>
-            Trial-Konfiguration ({formData.trialDays} Tage)
+            Trial-Konfiguration ({parseInt(formData.trialDays)} Tage)
           </h4>
           <p style={{
             fontSize: "0.75rem",
@@ -1810,6 +1815,7 @@ function NewPriceForm({
       <div>
         <input
           type="number"
+          inputMode="decimal"
           step="0.01"
           min="0"
           value={amount}
@@ -1820,7 +1826,7 @@ function NewPriceForm({
             padding: "0.5rem",
             border: "1px solid #E5E5E5",
             borderRadius: "6px",
-            fontSize: "0.875rem",
+            fontSize: "clamp(1rem, 2vw, 0.875rem)",
             width: "120px"
           }}
         />
@@ -2176,6 +2182,8 @@ function ConfigurableLimitInput({
       }}>
         <input
           type="number"
+          inputMode="numeric"
+          pattern="[0-9]*"
           min="0"
           placeholder="Unbegrenzt"
           value={value ?? ""}
@@ -2191,7 +2199,7 @@ function ConfigurableLimitInput({
             padding: "0.75rem",
             border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
             borderRadius: "6px",
-            fontSize: "0.875rem",
+            fontSize: "clamp(1rem, 2vw, 0.875rem)",
             transition: "border-color 0.2s",
             outline: "none",
             boxSizing: "border-box"

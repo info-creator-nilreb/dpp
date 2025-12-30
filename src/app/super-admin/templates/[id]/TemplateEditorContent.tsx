@@ -631,13 +631,55 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             width: 100% !important;
           }
           
+          .block-header-container {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
           .block-actions {
-            gap: 1rem !important;
+            gap: 0.75rem !important;
             width: 100%;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
           }
           .block-delete {
-            margin-top: 0.25rem;
-            margin-left: auto;
+            margin-top: 0.5rem;
+            width: 100%;
+          }
+          .block-delete-button {
+            width: 100% !important;
+            padding: 0.625rem !important;
+            min-width: 48px;
+            min-height: 48px;
+          }
+          .block-delete-text {
+            display: none !important;
+          }
+          .block-delete-icon {
+            display: block !important;
+          }
+          @media (min-width: 769px) {
+            .block-header-container {
+              flex-direction: row !important;
+              align-items: center !important;
+            }
+            .block-actions {
+              margin-top: 0 !important;
+              width: auto !important;
+            }
+            .block-delete {
+              margin-top: 0 !important;
+              width: auto !important;
+            }
+            .block-delete-button {
+              width: auto !important;
+              padding: 0.5rem 1rem !important;
+            }
+            .block-delete-text {
+              display: inline !important;
+            }
+            .block-delete-icon {
+              display: none !important;
+            }
           }
         }
         @media (min-width: 769px) and (max-width: 1200px) {
@@ -913,7 +955,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               gap: "1rem",
               marginBottom: "1.5rem"
             }}>
-              <div style={{ 
+              <div className="block-header-container" style={{ 
                 display: "flex", 
                 alignItems: "center", 
                 gap: "0.75rem",
@@ -1012,6 +1054,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                         onClick={() => deleteBlock(block.id)}
                         disabled={loading || !isEditable}
                         title="Block löschen"
+                        className="block-delete-button"
                         style={{
                           padding: "0.5rem 1rem",
                           backgroundColor: "#DC2626",
@@ -1021,10 +1064,28 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                           fontSize: "0.875rem",
                           fontWeight: "600",
                           cursor: loading ? "not-allowed" : "pointer",
-                          whiteSpace: "nowrap"
+                          whiteSpace: "nowrap",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.5rem"
                         }}
                       >
-                        Block löschen
+                        <span className="block-delete-text">Block löschen</span>
+                        <svg
+                          className="block-delete-icon"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
                       </button>
                     </div>
                   </div>

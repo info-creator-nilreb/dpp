@@ -241,6 +241,8 @@ function SignupContent() {
             </label>
             <input
               type="email"
+              inputMode="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -268,6 +270,7 @@ function SignupContent() {
             <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -285,6 +288,7 @@ function SignupContent() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
                 style={{
                   position: "absolute",
                   right: "0.75rem",
@@ -293,7 +297,9 @@ function SignupContent() {
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  padding: "0.25rem",
+                  padding: "0.5rem",
+                  minWidth: "44px",
+                  minHeight: "44px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

@@ -41,7 +41,7 @@ export default function NewPricingPlanContent({
     descriptionMarketing: "",
     isPublic: true,
     isActive: true,
-    displayOrder: 0,
+    displayOrder: "",
     selectedFeatures: [] as string[],
     selectedEntitlements: {} as Record<string, number | null>
   })
@@ -80,7 +80,7 @@ export default function NewPricingPlanContent({
           descriptionMarketing: formData.descriptionMarketing || null,
           isPublic: formData.isPublic,
           isActive: formData.isActive,
-          displayOrder: formData.displayOrder,
+          displayOrder: formData.displayOrder ? parseInt(formData.displayOrder) : 0,
           features,
           entitlements: entitlementsData
         })
@@ -111,8 +111,16 @@ export default function NewPricingPlanContent({
       backgroundColor: "#FFFFFF",
       borderRadius: "12px",
       padding: "2rem",
-      border: "1px solid #E5E5E5"
-    }}>
+      border: "1px solid #E5E5E5",
+      boxSizing: "border-box"
+    }} className="pricing-plan-form">
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .pricing-plan-form {
+            padding: 1.5rem !important;
+          }
+        }
+      `}</style>
       {error && (
         <div style={{
           padding: "1rem",
@@ -163,7 +171,8 @@ export default function NewPricingPlanContent({
                 padding: "0.75rem",
                 border: "1px solid #E5E5E5",
                 borderRadius: "6px",
-                fontSize: "0.875rem"
+                fontSize: "0.875rem",
+                boxSizing: "border-box"
               }}
             />
           </div>
@@ -188,7 +197,8 @@ export default function NewPricingPlanContent({
                 padding: "0.75rem",
                 border: "1px solid #E5E5E5",
                 borderRadius: "6px",
-                fontSize: "0.875rem"
+                fontSize: "0.875rem",
+                boxSizing: "border-box"
               }}
             />
           </div>
@@ -213,7 +223,8 @@ export default function NewPricingPlanContent({
                 border: "1px solid #E5E5E5",
                 borderRadius: "6px",
                 fontSize: "0.875rem",
-                fontFamily: "inherit"
+                fontFamily: "inherit",
+                boxSizing: "border-box"
               }}
             />
           </div>
@@ -259,14 +270,17 @@ export default function NewPricingPlanContent({
             </label>
             <input
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={formData.displayOrder}
-              onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+              onChange={(e) => setFormData({ ...formData, displayOrder: e.target.value })}
               style={{
                 width: "100%",
                 padding: "0.75rem",
                 border: "1px solid #E5E5E5",
                 borderRadius: "6px",
-                fontSize: "0.875rem"
+                fontSize: "clamp(1rem, 2vw, 0.875rem)",
+                boxSizing: "border-box"
               }}
             />
           </div>
@@ -543,6 +557,8 @@ function EntitlementInput({
       }}>
         <input
           type="number"
+          inputMode="numeric"
+          pattern="[0-9]*"
           min="0"
           placeholder="Unbegrenzt"
           value={value ?? ""}
@@ -558,7 +574,7 @@ function EntitlementInput({
             padding: "0.75rem",
             border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
             borderRadius: "6px",
-            fontSize: "0.875rem",
+            fontSize: "clamp(1rem, 2vw, 0.875rem)",
             transition: "border-color 0.2s",
             outline: "none",
             boxSizing: "border-box"
@@ -874,6 +890,8 @@ function ConfigurableLimitInput({
       }}>
         <input
           type="number"
+          inputMode="numeric"
+          pattern="[0-9]*"
           min="0"
           placeholder="Unbegrenzt"
           value={value ?? ""}
@@ -889,7 +907,7 @@ function ConfigurableLimitInput({
             padding: "0.75rem",
             border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
             borderRadius: "6px",
-            fontSize: "0.875rem",
+            fontSize: "clamp(1rem, 2vw, 0.875rem)",
             transition: "border-color 0.2s",
             outline: "none",
             boxSizing: "border-box"

@@ -364,6 +364,8 @@ export default function TrialOverridesSection({
                 <div style={{ marginTop: "auto", paddingTop: "0.75rem" }}>
                   <input
                     type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min="0"
                     value={override?.value ?? ""}
                     onChange={(e) => {
@@ -377,7 +379,7 @@ export default function TrialOverridesSection({
                       padding: "0.75rem",
                       border: "1px solid #E5E5E5",
                       borderRadius: "6px",
-                      fontSize: "0.875rem",
+                      fontSize: "clamp(1rem, 2vw, 0.875rem)",
                       boxSizing: "border-box"
                     }}
                   />

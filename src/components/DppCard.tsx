@@ -147,16 +147,17 @@ export default function DppCard({ id, name, description, organizationName, media
   )
 
   // Gemeinsamer Style für alle Icon-Container (alle sind jetzt Links)
+  // Mobile: Mindestens 44x44px für Touch-Targets (WCAG 2.5.5)
   const iconContainerStyle: React.CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "32px",
-    height: "32px",
-    minWidth: "32px",
-    minHeight: "32px",
-    maxWidth: "32px",
-    maxHeight: "32px",
+    width: "44px",
+    height: "44px",
+    minWidth: "44px",
+    minHeight: "44px",
+    maxWidth: "44px",
+    maxHeight: "44px",
     borderRadius: "6px",
     color: "#7A7A7A",
     backgroundColor: "transparent",

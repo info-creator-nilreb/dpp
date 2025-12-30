@@ -24,6 +24,7 @@ const categoryLabels: Record<string, string> = {
   interaction: "Interaktion",
   styling: "Gestaltung",
   publishing: "Veröffentlichung",
+  system: "System",
 };
 
 const planLabels: Record<string, string> = {

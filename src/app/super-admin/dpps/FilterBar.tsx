@@ -36,8 +36,19 @@ export default function FilterBar({
   const [searchQuery, setSearchQuery] = useState(currentFilters.q)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   // Update local state when filters change (from URL)
   useEffect(() => {
@@ -140,7 +151,7 @@ export default function FilterBar({
     }}>
       <form onSubmit={(e) => e.preventDefault()} style={{ 
         display: "grid", 
-        gridTemplateColumns: "1fr auto auto auto auto",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr auto auto auto auto",
         gap: "1rem",
         alignItems: "end"
       }}>

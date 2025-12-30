@@ -651,10 +651,10 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
               padding: "2rem"
             }}
           >
-            <div style={{
+            <div className="new-template-block-header-container" style={{
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              flexDirection: "column",
+              gap: "0.75rem",
               marginBottom: "1.5rem"
             }}>
               <input
@@ -676,23 +676,55 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
                 }}
               />
               {blocks.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => deleteBlock(block.id)}
-                  disabled={loading}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    backgroundColor: "#DC2626",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    cursor: loading ? "not-allowed" : "pointer"
-                  }}
-                >
-                  Block löschen
-                </button>
+                <div className="new-template-block-actions" style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                  width: "100%"
+                }}>
+                  <div className="new-template-block-delete" style={{ width: "100%" }}>
+                    <button
+                      type="button"
+                      onClick={() => deleteBlock(block.id)}
+                      disabled={loading}
+                      title="Block löschen"
+                      className="new-template-block-delete-button"
+                      style={{
+                        padding: "0.625rem",
+                        backgroundColor: "#DC2626",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: "6px",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "0.5rem",
+                        width: "100%",
+                        minWidth: "48px",
+                        minHeight: "48px"
+                      }}
+                    >
+                      <span className="new-template-block-delete-text">Block löschen</span>
+                      <svg
+                        className="new-template-block-delete-icon"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -898,6 +930,51 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
             .template-submit-container > * {
               width: 100% !important;
               text-align: center !important;
+            }
+          }
+          @media (max-width: 768px) {
+            .new-template-block-header-container {
+              flex-direction: column !important;
+              align-items: flex-start !important;
+            }
+            .new-template-block-actions {
+              margin-top: 0.5rem;
+            }
+            .new-template-block-delete {
+              width: 100% !important;
+            }
+            .new-template-block-delete-button {
+              width: 100% !important;
+            }
+            .new-template-block-delete-text {
+              display: none !important;
+            }
+            .new-template-block-delete-icon {
+              display: block !important;
+            }
+          }
+          @media (min-width: 769px) {
+            .new-template-block-header-container {
+              flex-direction: row !important;
+              justify-content: space-between !important;
+              align-items: center !important;
+            }
+            .new-template-block-actions {
+              margin-top: 0 !important;
+              width: auto !important;
+            }
+            .new-template-block-delete {
+              width: auto !important;
+            }
+            .new-template-block-delete-button {
+              width: auto !important;
+              padding: 0.5rem 1rem !important;
+            }
+            .new-template-block-delete-text {
+              display: inline !important;
+            }
+            .new-template-block-delete-icon {
+              display: none !important;
             }
           }
         `}</style>

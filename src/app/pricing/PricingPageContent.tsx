@@ -85,7 +85,6 @@ export default function PricingPageContent({
   entitlements
 }: PricingPageContentProps) {
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly")
-  const [expandedFeatureCategory, setExpandedFeatureCategory] = useState<string | null>(null)
   const [hoveredFeature, setHoveredFeature] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -122,19 +121,19 @@ export default function PricingPageContent({
   }
 
   // Get all unique features across all plans for comparison table
-  const allFeatureKeys = new Set<string>()
+  const allFeatureKeysSet = new Set<string>()
   pricingPlans.forEach(plan => {
-    plan.features.forEach(f => allFeatureKeys.add(f.featureKey))
+    plan.features.forEach(f => allFeatureKeysSet.add(f.featureKey))
   })
 
-  // Group features by category
-  const featuresByCategory = Array.from(allFeatureKeys).reduce((acc, featureKey) => {
-    const featureInfo = featureRegistry.find(f => f.key === featureKey)
-    const category = featureInfo?.category || "Sonstiges"
-    if (!acc[category]) acc[category] = []
-    acc[category].push(featureKey)
-    return acc
-  }, {} as Record<string, string[]>)
+  // Sort features by name for better UX
+  const sortedFeatureKeys = Array.from(allFeatureKeysSet).sort((a, b) => {
+    const featureA = featureRegistry.find(f => f.key === a)
+    const featureB = featureRegistry.find(f => f.key === b)
+    const nameA = featureA?.name || a
+    const nameB = featureB?.name || b
+    return nameA.localeCompare(nameB, "de")
+  })
 
   // Get all unique entitlements across all plans
   const allEntitlementKeys = new Set<string>()
@@ -191,7 +190,7 @@ export default function PricingPageContent({
       <div style={{
         backgroundColor: "#FFFFFF",
         borderBottom: "1px solid #E5E5E5",
-        padding: "clamp(3rem, 8vw, 6rem) clamp(1rem, 3vw, 2rem)"
+        padding: "clamp(5rem, 10vw, 7rem) clamp(1rem, 3vw, 2rem) clamp(3rem, 8vw, 6rem) clamp(1rem, 3vw, 2rem)"
       }}>
         <div style={{
           maxWidth: "1200px",
@@ -708,7 +707,7 @@ export default function PricingPageContent({
         </div>
 
         {/* Feature Comparison Table */}
-        {allFeatureKeys.size > 0 && (
+        {sortedFeatureKeys.length > 0 && (
           <div style={{
             backgroundColor: "#FFFFFF",
             borderRadius: "12px",
@@ -779,272 +778,206 @@ export default function PricingPageContent({
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(featuresByCategory).map(([category, featureKeys]) => (
-                      <React.Fragment key={category}>
-                        <tr>
-                          <td
-                            colSpan={pricingPlans.length + 1}
-                            style={{
-                              padding: "1rem 0.75rem 0.5rem",
-                              fontSize: "0.75rem",
-                              fontWeight: "600",
-                              color: "#7A7A7A",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.05em"
-                            }}
-                          >
-                            {category}
-                          </td>
-                        </tr>
-                        {featureKeys.map(featureKey => {
-                          const featureInfo = featureRegistry.find(f => f.key === featureKey)
-                          const description = getFeatureDescription(featureKey, featureInfo?.description || null)
-                          return (
-                            <tr
-                              key={featureKey}
-                              onMouseEnter={() => setHoveredFeature(featureKey)}
-                              onMouseLeave={() => setHoveredFeature(null)}
-                              style={{
-                                backgroundColor: hoveredFeature === featureKey ? "#F9F9F9" : "transparent",
-                                transition: "background-color 0.2s"
-                              }}
-                            >
-                              <td style={{
-                                padding: "0.75rem",
-                                borderBottom: "1px solid #F5F5F5",
-                                fontSize: "0.875rem",
-                                color: "#0A0A0A",
-                                position: "relative",
+                    {sortedFeatureKeys.map(featureKey => {
+                      const featureInfo = featureRegistry.find(f => f.key === featureKey)
+                      const description = getFeatureDescription(featureKey, featureInfo?.description || null)
+                      return (
+                        <tr
+                          key={featureKey}
+                          onMouseEnter={() => setHoveredFeature(featureKey)}
+                          onMouseLeave={() => setHoveredFeature(null)}
+                          style={{
+                            backgroundColor: hoveredFeature === featureKey ? "#F9F9F9" : "transparent",
+                            transition: "background-color 0.2s"
+                          }}
+                        >
+                          <td style={{
+                            padding: "0.75rem",
+                            borderBottom: "1px solid #F5F5F5",
+                            fontSize: "0.875rem",
+                            color: "#0A0A0A",
+                            position: "relative",
+                            wordWrap: "break-word",
+                            overflowWrap: "break-word",
+                            maxWidth: "300px"
+                          }}>
+                            <div style={{ 
+                              display: "flex", 
+                              alignItems: "center", 
+                              gap: "0.5rem",
+                              minWidth: 0,
+                              flexWrap: "wrap"
+                            }}>
+                              <span style={{
                                 wordWrap: "break-word",
                                 overflowWrap: "break-word",
-                                maxWidth: "300px"
+                                flex: "1 1 auto",
+                                minWidth: 0
                               }}>
-                                <div style={{ 
-                                  display: "flex", 
-                                  alignItems: "center", 
-                                  gap: "0.5rem",
-                                  minWidth: 0,
-                                  flexWrap: "wrap"
+                                {featureInfo?.name || featureKey}
+                              </span>
+                              {description && (
+                                <div style={{
+                                  position: "relative",
+                                  display: "inline-block"
                                 }}>
-                                  <span style={{
-                                    wordWrap: "break-word",
-                                    overflowWrap: "break-word",
-                                    flex: "1 1 auto",
-                                    minWidth: 0
-                                  }}>
-                                    {featureInfo?.name || featureKey}
-                                  </span>
-                                  {description && (
+                                  <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="#7A7A7A"
+                                    strokeWidth="2"
+                                    style={{ cursor: "help" }}
+                                  >
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="16" x2="12" y2="12" />
+                                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                                  </svg>
+                                  {hoveredFeature === featureKey && (
                                     <div style={{
-                                      position: "relative",
-                                      display: "inline-block"
+                                      position: "absolute",
+                                      bottom: "100%",
+                                      left: "50%",
+                                      transform: "translateX(-50%)",
+                                      marginBottom: "0.5rem",
+                                      padding: "0.5rem 0.75rem",
+                                      backgroundColor: "#0A0A0A",
+                                      color: "#FFFFFF",
+                                      borderRadius: "6px",
+                                      fontSize: "0.75rem",
+                                      lineHeight: "1.5",
+                                      whiteSpace: "normal",
+                                      wordWrap: "break-word",
+                                      overflowWrap: "break-word",
+                                      textAlign: "left",
+                                      zIndex: 10,
+                                      maxWidth: "280px",
+                                      minWidth: "150px",
+                                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)"
                                     }}>
-                                      <svg
-                                        width="16"
-                                        height="16"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="#7A7A7A"
-                                        strokeWidth="2"
-                                        style={{ cursor: "help" }}
-                                      >
-                                        <circle cx="12" cy="12" r="10" />
-                                        <line x1="12" y1="16" x2="12" y2="12" />
-                                        <line x1="12" y1="8" x2="12.01" y2="8" />
-                                      </svg>
-                                      {hoveredFeature === featureKey && (
-                                        <div style={{
-                                          position: "absolute",
-                                          bottom: "100%",
-                                          left: "50%",
-                                          transform: "translateX(-50%)",
-                                          marginBottom: "0.5rem",
-                                          padding: "0.5rem 0.75rem",
-                                          backgroundColor: "#0A0A0A",
-                                          color: "#FFFFFF",
-                                          borderRadius: "6px",
-                                          fontSize: "0.75rem",
-                                          lineHeight: "1.5",
-                                          whiteSpace: "normal",
-                                          wordWrap: "break-word",
-                                          overflowWrap: "break-word",
-                                          textAlign: "left",
-                                          zIndex: 10,
-                                          maxWidth: "280px",
-                                          minWidth: "150px",
-                                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)"
-                                        }}>
-                                          {description}
-                                        </div>
-                                      )}
+                                      {description}
                                     </div>
                                   )}
                                 </div>
-                              </td>
-                              {pricingPlans.map(plan => {
-                                const hasFeature = plan.features.some(f => f.featureKey === featureKey && f.included)
-                                return (
-                                  <td
-                                    key={plan.id}
-                                    style={{
-                                      textAlign: "center",
-                                      padding: "0.75rem",
-                                      borderBottom: "1px solid #F5F5F5",
-                                      wordWrap: "break-word",
-                                      overflowWrap: "break-word"
-                                    }}
+                              )}
+                            </div>
+                          </td>
+                          {pricingPlans.map(plan => {
+                            const hasFeature = plan.features.some(f => f.featureKey === featureKey && f.included)
+                            return (
+                              <td
+                                key={plan.id}
+                                style={{
+                                  textAlign: "center",
+                                  padding: "0.75rem",
+                                  borderBottom: "1px solid #F5F5F5",
+                                  wordWrap: "break-word",
+                                  overflowWrap: "break-word"
+                                }}
+                              >
+                                {hasFeature ? (
+                                  <svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="#E20074"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    style={{ margin: "0 auto" }}
                                   >
-                                    {hasFeature ? (
-                                      <svg
-                                        width="20"
-                                        height="20"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="#E20074"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        style={{ margin: "0 auto" }}
-                                      >
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </svg>
-                                    ) : (
-                                      <span style={{ color: "#E5E5E5" }}>—</span>
-                                    )}
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          )
-                        })}
-                      </React.Fragment>
-                    ))}
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                ) : (
+                                  <span style={{ color: "#E5E5E5" }}>—</span>
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
               </div>
             )}
 
-            {/* Mobile: Accordions */}
+            {/* Mobile: Simple List */}
             {isMobile && (
               <div>
-                {Object.entries(featuresByCategory).map(([category, featureKeys]) => (
-                <div key={category} style={{ marginBottom: "1rem" }}>
-                  <button
-                    onClick={() => setExpandedFeatureCategory(
-                      expandedFeatureCategory === category ? null : category
-                    )}
-                    style={{
-                      width: "100%",
-                      padding: "1rem",
-                      backgroundColor: "#F9F9F9",
-                      border: "1px solid #E5E5E5",
-                      borderRadius: "8px",
-                      textAlign: "left",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      color: "#0A0A0A",
-                      cursor: "pointer",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <span>{category}</span>
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
+                {sortedFeatureKeys.map(featureKey => {
+                  const featureInfo = featureRegistry.find(f => f.key === featureKey)
+                  const description = getFeatureDescription(featureKey, featureInfo?.description || null)
+                  return (
+                    <div
+                      key={featureKey}
                       style={{
-                        transform: expandedFeatureCategory === category ? "rotate(180deg)" : "rotate(0deg)",
-                        transition: "transform 0.2s"
+                        padding: "1rem",
+                        marginBottom: "0.75rem",
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #E5E5E5",
+                        borderRadius: "8px"
                       }}
                     >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                  {expandedFeatureCategory === category && (
-                    <div style={{
-                      marginTop: "0.5rem",
-                      padding: "1rem",
-                      backgroundColor: "#FFFFFF",
-                      border: "1px solid #E5E5E5",
-                      borderRadius: "8px"
-                    }}>
-                      {featureKeys.map(featureKey => {
-                        const featureInfo = featureRegistry.find(f => f.key === featureKey)
-                        const description = getFeatureDescription(featureKey, featureInfo?.description || null)
-                        return (
-                          <div
-                            key={featureKey}
-                            style={{
-                              padding: "0.75rem 0",
-                              borderBottom: "1px solid #F5F5F5"
-                            }}
-                          >
-                            <div style={{
-                              fontSize: "0.875rem",
-                              fontWeight: "500",
-                              color: "#0A0A0A",
-                              marginBottom: "0.5rem"
-                            }}>
-                              {featureInfo?.name || featureKey}
+                      <div style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "500",
+                        color: "#0A0A0A",
+                        marginBottom: "0.5rem"
+                      }}>
+                        {featureInfo?.name || featureKey}
+                      </div>
+                      {description && (
+                        <div style={{
+                          fontSize: "0.75rem",
+                          color: "#7A7A7A",
+                          marginBottom: "0.75rem"
+                        }}>
+                          {description}
+                        </div>
+                      )}
+                      <div style={{
+                        display: "flex",
+                        gap: "1rem",
+                        flexWrap: "wrap"
+                      }}>
+                        {pricingPlans.map(plan => {
+                          const hasFeature = plan.features.some(f => f.featureKey === featureKey && f.included)
+                          return (
+                            <div
+                              key={plan.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                                fontSize: "0.75rem"
+                              }}
+                            >
+                              <span style={{ color: "#7A7A7A" }}>{plan.name}:</span>
+                              {hasFeature ? (
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="#E20074"
+                                  strokeWidth="2"
+                                >
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              ) : (
+                                <span style={{ color: "#E5E5E5" }}>—</span>
+                              )}
                             </div>
-                            {description && (
-                              <div style={{
-                                fontSize: "0.75rem",
-                                color: "#7A7A7A",
-                                marginBottom: "0.5rem"
-                              }}>
-                                {description}
-                              </div>
-                            )}
-                            <div style={{
-                              display: "flex",
-                              gap: "1rem",
-                              flexWrap: "wrap"
-                            }}>
-                              {pricingPlans.map(plan => {
-                                const hasFeature = plan.features.some(f => f.featureKey === featureKey && f.included)
-                                return (
-                                  <div
-                                    key={plan.id}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "0.5rem",
-                                      fontSize: "0.75rem"
-                                    }}
-                                  >
-                                    <span style={{ color: "#7A7A7A" }}>{plan.name}:</span>
-                                    {hasFeature ? (
-                                      <svg
-                                        width="16"
-                                        height="16"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="#E20074"
-                                        strokeWidth="2"
-                                      >
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </svg>
-                                    ) : (
-                                      <span style={{ color: "#E5E5E5" }}>—</span>
-                                    )}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+                  )
+                })}
               </div>
             )}
           </div>

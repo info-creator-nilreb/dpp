@@ -63,6 +63,7 @@ export default function FeatureFilterBar({
     interaction: "Interaktion",
     styling: "Gestaltung",
     publishing: "Veröffentlichung",
+    system: "System",
   };
 
   const planLabels: Record<string, string> = {

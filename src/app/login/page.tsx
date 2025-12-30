@@ -208,6 +208,8 @@ function LoginForm() {
             </label>
             <input
               type="email"
+              inputMode="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -235,6 +237,7 @@ function LoginForm() {
             <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -251,6 +254,7 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
                 style={{
                   position: "absolute",
                   right: "0.75rem",
@@ -259,7 +263,9 @@ function LoginForm() {
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  padding: "0.25rem",
+                  padding: "0.5rem",
+                  minWidth: "44px",
+                  minHeight: "44px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -314,6 +320,9 @@ function LoginForm() {
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
                 value={totpCode}
                 onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="000000"

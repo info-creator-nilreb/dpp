@@ -38,6 +38,16 @@ export default function SelectPlanPage() {
   const [plans, setPlans] = useState<PricingPlan[]>([])
   const [error, setError] = useState<string | null>(null)
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly")
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   useEffect(() => {
     async function loadPlans() {
@@ -133,8 +143,10 @@ export default function SelectPlanPage() {
           {/* Toggle zentriert über mittlerer Card mit Badge */}
           <div style={{
             display: "flex",
+            flexDirection: isMobile ? "column" : "row",
             justifyContent: "center",
             alignItems: "center",
+            gap: isMobile ? "0.75rem" : "0",
             marginTop: "-1rem",
             marginBottom: "-1rem",
             position: "relative",
@@ -182,7 +194,7 @@ export default function SelectPlanPage() {
                 Jährlich
               </button>
             </div>
-            {/* Badge - absolut positioniert rechts neben Toggle */}
+            {/* Badge - unter Toggle auf Mobile, rechts auf Desktop */}
             {(() => {
               // Calculate max savings across all plans
               let maxSavings = 0
@@ -203,8 +215,8 @@ export default function SelectPlanPage() {
               if (maxSavings > 0) {
                 return (
                   <span style={{
-                    position: "absolute",
-                    left: "calc(50% + 120px)", // 50% (center) + half toggle width + gap
+                    position: isMobile ? "relative" : "absolute",
+                    left: isMobile ? "auto" : "calc(50% + 120px)",
                     backgroundColor: "#22C55E",
                     color: "#FFFFFF",
                     fontSize: "0.625rem",
