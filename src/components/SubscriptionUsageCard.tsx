@@ -325,7 +325,9 @@ export default function SubscriptionUsageCard({
                     color: "#7A7A7A",
                     fontStyle: "italic"
                   }}>
-                    Keine Veröffentlichung in der Testphase möglich
+                    {entitlement.current === 0 
+                      ? "Keine Veröffentlichung in der Testphase möglich"
+                      : "Keine weitere Veröffentlichung in der Testphase möglich"}
                   </span>
                 )}
                 {entitlement.limit === null && !showTrialPublishingMessage && (
