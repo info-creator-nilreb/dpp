@@ -1,4 +1,5 @@
-export const dynamic = "force-dynamic";
+  
+  export const dynamic = "force-dynamic";
 
 import { NotificationProvider } from "@/components/NotificationProvider";
 import { AutoLogoutProvider } from "@/components/AutoLogoutProvider";

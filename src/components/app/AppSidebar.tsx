@@ -411,6 +411,7 @@ function SidebarContent({
       <div style={{ 
         marginTop: "auto", 
         paddingTop: "2rem", 
+            
         padding: isCollapsed ? "1rem 0" : "1.5rem",
       }}>
         {/* User Info (Shopware-style) */}

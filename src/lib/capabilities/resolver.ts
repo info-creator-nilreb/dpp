@@ -91,7 +91,6 @@ export async function hasFeature(
             include: {
               features: {
                 where: {
-                  featureKey,
                   included: true,
                 },
               },
@@ -102,8 +101,14 @@ export async function hasFeature(
     },
   })
 
-  // No active subscription
-  if (!subscription || subscription.status !== "active") {
+  // Normalize subscription status
+  const normalizedStatus = subscription?.status?.toLowerCase() || "expired"
+  const isActive = normalizedStatus === "active"
+  const isTrial = normalizedStatus === "trial" || normalizedStatus === "trial_active"
+  const hasSubscription = subscription && (isActive || isTrial)
+
+  // No active subscription or trial
+  if (!hasSubscription) {
     // Check if feature is available in trial/free tier
     if (feature.visibleInTrial || feature.minimumPlan === "free") {
       return feature.usableInTrial ?? true
@@ -119,6 +124,26 @@ export async function hasFeature(
 
   if (planFeature) {
     return true
+  }
+
+  // If not in pricing plan, check Feature Registry based on plan hierarchy
+  if (subscription.subscriptionModel?.pricingPlan) {
+    const planSlug = subscription.subscriptionModel.pricingPlan.slug?.toLowerCase() || null
+    
+    if (planSlug && (planSlug === "premium" || planSlug === "pro" || planSlug === "basic")) {
+      const planHierarchy: Record<string, string[]> = {
+        "basic": ["basic"],
+        "pro": ["basic", "pro"],
+        "premium": ["basic", "pro", "premium"]
+      }
+      
+      const allowedPlans = planHierarchy[planSlug] || []
+      
+      // Check if feature's minimumPlan matches the subscription's plan
+      if (allowedPlans.includes(feature.minimumPlan)) {
+        return true
+      }
+    }
   }
 
   // Feature not included in plan
