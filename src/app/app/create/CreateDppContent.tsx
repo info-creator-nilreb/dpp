@@ -1,9 +1,42 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import DashboardCard from "@/components/DashboardCard"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 export default function CreateDppContent() {
+  const [availableFeatures, setAvailableFeatures] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadFeatures() {
+      try {
+        const response = await fetch("/api/app/features")
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableFeatures(data.features || [])
+        }
+      } catch (error) {
+        console.error("Error loading features:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadFeatures()
+  }, [])
+
+  const hasAiAnalysis = availableFeatures.includes("ai_analysis")
+  const hasCsvImport = availableFeatures.includes("csv_import")
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <LoadingSpinner message="Wird geladen..." />
+      </div>
+    )
+  }
+
   return (
     <div className="create-page-container">
       {/* Navigation */}
@@ -39,36 +72,38 @@ export default function CreateDppContent() {
 
       {/* New Layout: 1 Primary + 2 Secondary Cards */}
       <div className="create-cards-grid">
-        {/* Primary Card - KI-unterstützt (groß) */}
-        <div className="create-primary-card">
-          <DashboardCard
-            href="/app/create/ai-start"
-            icon={
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="28"
-                height="28"
-                fill="none"
-                stroke="#E20074"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                viewBox="0 0 24 24"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <circle cx="11" cy="13" r="2" />
-                <path d="M16 16l-2-2" />
-              </svg>
-            }
-            title="KI-unterstützt starten"
-            description="Vorhandene Produktdaten analysieren und Pflichtfelder automatisch vorprüfen."
-          >
-            <div className="recommended-badge">
-              Empfohlen
-            </div>
-          </DashboardCard>
-        </div>
+        {/* Primary Card - KI-unterstützt (groß) - nur wenn Feature verfügbar */}
+        {hasAiAnalysis && (
+          <div className="create-primary-card">
+            <DashboardCard
+              href="/app/create/ai-start"
+              icon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="28"
+                  height="28"
+                  fill="none"
+                  stroke="#E20074"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <circle cx="11" cy="13" r="2" />
+                  <path d="M16 16l-2-2" />
+                </svg>
+              }
+              title="KI-unterstützt starten"
+              description="Vorhandene Produktdaten analysieren und Pflichtfelder automatisch vorprüfen."
+            >
+              <div className="recommended-badge">
+                Empfohlen
+              </div>
+            </DashboardCard>
+          </div>
+        )}
 
         {/* Secondary Cards Container */}
         <div className="create-secondary-cards">
@@ -94,28 +129,31 @@ export default function CreateDppContent() {
             description="Erstellen Sie einen neuen Digitalen Produktpass Schritt für Schritt mit dem Formular."
           />
 
-          <DashboardCard
-            href="/app/create/import"
-            icon={
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="#7A7A7A"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                viewBox="0 0 24 24"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-            }
-            title="Per CSV importieren"
-            description="Importieren Sie mehrere Produkte auf einmal über eine CSV-Datei."
-          />
+          {/* CSV Import - nur wenn Feature verfügbar */}
+          {hasCsvImport && (
+            <DashboardCard
+              href="/app/create/import"
+              icon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="#7A7A7A"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              }
+              title="Per CSV importieren"
+              description="Importieren Sie mehrere Produkte auf einmal über eine CSV-Datei."
+            />
+          )}
         </div>
       </div>
 

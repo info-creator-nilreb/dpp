@@ -3,9 +3,11 @@ export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
 import { extractTextFromUrl } from "@/lib/preflight/text-extractor"
 import { analyzePreflight, calculateOverallScore, normalizeCategory } from "@/lib/preflight/openai-service"
 import { PreflightResponse } from "@/lib/preflight/types"
+import { hasFeature } from "@/lib/capabilities/resolver"
 
 /**
  * POST /api/app/dpps/preflight/url
@@ -20,6 +22,32 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Nicht autorisiert" },
         { status: 401 }
+      )
+    }
+
+    // Get organization ID from session
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { organizationId: true },
+    })
+
+    if (!user?.organizationId) {
+      return NextResponse.json(
+        { error: "Keine Organisation zugeordnet" },
+        { status: 400 }
+      )
+    }
+
+    // Feature-Check: AI Analysis muss verfügbar sein
+    const canUseAiAnalysis = await hasFeature("ai_analysis", {
+      organizationId: user.organizationId,
+      userId: session.user.id,
+    })
+
+    if (!canUseAiAnalysis) {
+      return NextResponse.json(
+        { error: "KI-Analyse ist für Ihre Subscription nicht verfügbar" },
+        { status: 403 }
       )
     }
 

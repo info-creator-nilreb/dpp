@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { ORGANIZATION_ROLES } from "@/lib/permissions"
+import { hasFeature } from "@/lib/capabilities/resolver"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -42,6 +43,21 @@ export async function POST(request: Request) {
       )
     }
 
+    const resolvedOrganizationId = membership.organization.id
+
+    // Feature-Check: CSV Import muss verfügbar sein
+    const canUseCsvImport = await hasFeature("csv_import", {
+      organizationId: resolvedOrganizationId,
+      userId: session.user.id,
+    })
+
+    if (!canUseCsvImport) {
+      return NextResponse.json(
+        { error: "CSV-Import ist für Ihre Subscription nicht verfügbar" },
+        { status: 403 }
+      )
+    }
+
     // Prüfe ob User DPPs erstellen darf (ORG_VIEWER darf keine erstellen)
     const role = membership.role as string
     if (role === ORGANIZATION_ROLES.ORG_VIEWER) {
@@ -50,8 +66,6 @@ export async function POST(request: Request) {
         { status: 403 }
       )
     }
-
-    const resolvedOrganizationId = membership.organization.id
 
     const { products } = await request.json()
 

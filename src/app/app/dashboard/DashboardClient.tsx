@@ -24,16 +24,18 @@ export default function DashboardClient() {
   const [loading, setLoading] = useState(true)
   const [subscriptionDataLoaded, setSubscriptionDataLoaded] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [availableFeatures, setAvailableFeatures] = useState<string[]>([])
 
   useEffect(() => {
     async function loadContext() {
       try {
-        // Load all subscription data and user role in parallel for better performance
-        const [contextResponse, statusResponse, usageResponse, profileResponse] = await Promise.all([
+        // Load all subscription data, user role, and available features in parallel for better performance
+        const [contextResponse, statusResponse, usageResponse, profileResponse, featuresResponse] = await Promise.all([
           fetch("/api/subscription/context"),
           fetch("/api/app/subscription/status"),
           fetch("/api/app/subscription/usage"),
-          fetch("/api/app/profile")
+          fetch("/api/app/profile"),
+          fetch("/api/app/features")
         ])
 
         if (contextResponse.ok) {
@@ -62,6 +64,11 @@ export default function DashboardClient() {
         if (profileResponse.ok) {
           const profile = await profileResponse.json()
           setUserRole(profile.user?.role || null)
+        }
+
+        if (featuresResponse.ok) {
+          const featuresData = await featuresResponse.json()
+          setAvailableFeatures(featuresData.features || [])
         }
 
         // Mark subscription data as loaded
@@ -226,28 +233,30 @@ export default function DashboardClient() {
           description="Verwalten Sie Ihre Kontoinformationen und Einstellungen."
         />
 
-        {/* 4. Audit Log */}
-        <DashboardCard
-          href="/app/audit-logs"
-          icon={
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="none"
-              stroke="#E20074"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              viewBox="0 0 24 24"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
-            </svg>
-          }
-          title="Audit Log"
-          description="Unveränderliche Historie aller Compliance-relevanten und AI-gestützten Aktionen."
-        />
+        {/* 4. Audit Log (nur wenn Feature verfügbar) */}
+        {availableFeatures.includes("audit_logs") && (
+          <DashboardCard
+            href="/app/audit-logs"
+            icon={
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="#E20074"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+              </svg>
+            }
+            title="Audit Log"
+            description="Unveränderliche Historie aller Compliance-relevanten und AI-gestützten Aktionen."
+          />
+        )}
       </DashboardGrid>
     </div>
   )
