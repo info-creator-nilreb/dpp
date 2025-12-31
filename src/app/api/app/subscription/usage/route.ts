@@ -73,7 +73,15 @@ export async function GET() {
 
     if (subscription && subscription.subscriptionModel) {
       // Get all entitlement keys from snapshots (these are the entitlements for this plan)
-      const entitlementKeys = subscription.entitlementSnapshots.map(s => s.key)
+      // If no snapshots exist (legacy subscriptions), try to get from pricing plan entitlements
+      let entitlementKeys = subscription.entitlementSnapshots.map(s => s.key)
+      
+      // Legacy support: If no snapshots exist, try to get from pricing plan
+      if (entitlementKeys.length === 0 && subscription.subscriptionModel.pricingPlan) {
+        // This is a legacy subscription without snapshots - we need to create them or use defaults
+        // For now, use common entitlement keys as fallback
+        entitlementKeys = ["max_published_dpp"] // Default entitlement for legacy subscriptions
+      }
 
       // For each entitlement, determine the limit based on trial status
       for (const key of entitlementKeys) {
@@ -89,14 +97,31 @@ export async function GET() {
             // Trial override exists - use it (can be null for unlimited)
             limit = trialOverride.value
           } else {
-            // No trial override - use snapshot value
+            // No trial override - use snapshot value, or try pricing plan entitlement
             const snapshot = subscription.entitlementSnapshots.find(s => s.key === key)
-            limit = snapshot?.value ?? null
+            if (snapshot) {
+              limit = snapshot.value
+            } else {
+              // Legacy subscription: Try to get from pricing plan entitlements
+              // For now, use null (unlimited) as fallback for legacy subscriptions
+              limit = null
+            }
           }
         } else {
-          // Not in trial - use snapshot value
+          // Not in trial - use snapshot value, or try pricing plan entitlement
           const snapshot = subscription.entitlementSnapshots.find(s => s.key === key)
-          limit = snapshot?.value ?? null
+          if (snapshot) {
+            limit = snapshot.value
+          } else {
+            // Legacy subscription: Try to get from pricing plan entitlements
+            // For now, use null (unlimited) as fallback for legacy subscriptions
+            limit = null
+          }
+        }
+        
+        // Edge case: If limit is 0, treat as unlimited (null) to avoid "1 von 0" display issue
+        if (limit === 0) {
+          limit = null
         }
 
         let current = 0

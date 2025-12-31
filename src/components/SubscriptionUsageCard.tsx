@@ -251,6 +251,11 @@ export default function SubscriptionUsageCard({
             Nutzung
           </h3>
           {entitlements.map((entitlement) => {
+            // Special handling for published DPPs in trial: Show that publishing is not available
+            const isTrial = subscriptionState === "trial_subscription"
+            const isPublishedDppLimit = entitlement.key === "max_published_dpp"
+            const showTrialPublishingMessage = isTrial && isPublishedDppLimit && !statusData.canPublish
+            
             const percentage = entitlement.limit !== null 
               ? Math.min(100, (entitlement.current / entitlement.limit) * 100)
               : 0
@@ -284,7 +289,7 @@ export default function SubscriptionUsageCard({
                     {entitlement.unit && entitlement.unit !== "count" && ` ${entitlement.unit}`}
                   </span>
                 </div>
-                {entitlement.limit !== null && (
+                {entitlement.limit !== null && !showTrialPublishingMessage && (
                   <>
                     <div style={{
                       width: "100%",
@@ -314,7 +319,16 @@ export default function SubscriptionUsageCard({
                     )}
                   </>
                 )}
-                {entitlement.limit === null && (
+                {showTrialPublishingMessage && (
+                  <span style={{ 
+                    fontSize: "0.75rem", 
+                    color: "#7A7A7A",
+                    fontStyle: "italic"
+                  }}>
+                    Keine Veröffentlichung in der Testphase möglich
+                  </span>
+                )}
+                {entitlement.limit === null && !showTrialPublishingMessage && (
                   <span style={{ fontSize: "0.75rem", color: "#7A7A7A" }}>Unbegrenzt</span>
                 )}
               </div>

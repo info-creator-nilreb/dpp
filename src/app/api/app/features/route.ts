@@ -7,6 +7,7 @@
 import { auth } from "@/auth"
 import { getAvailableFeatures } from "@/lib/capabilities/resolver"
 import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
 
@@ -14,19 +15,28 @@ export async function GET(request: Request) {
   try {
     const session = await auth()
 
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get organization ID from session
-    const orgId = (session.user as any).organizationId
+    // Get organization ID from membership (not from session, as session doesn't include it)
+    const membership = await prisma.membership.findFirst({
+      where: { userId: session.user.id },
+      include: {
+        organization: {
+          select: { id: true }
+        }
+      }
+    })
 
-    if (!orgId) {
+    if (!membership?.organization) {
       return NextResponse.json(
-        { error: "Organization ID not found" },
-        { status: 400 }
+        { error: "Organization not found" },
+        { status: 404 }
       )
     }
+
+    const orgId = membership.organization.id
 
     const availableFeatures = await getAvailableFeatures({
       organizationId: orgId,

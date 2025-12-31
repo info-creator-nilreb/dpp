@@ -176,6 +176,17 @@ export async function getAvailableFeatures(
     },
   })
 
+  console.log("[getAvailableFeatures] Organization ID:", context.organizationId)
+  console.log("[getAvailableFeatures] Subscription:", subscription ? {
+    status: subscription.status,
+    subscriptionModelId: subscription.subscriptionModelId,
+    pricingPlan: subscription.subscriptionModel?.pricingPlan ? {
+      name: subscription.subscriptionModel.pricingPlan.name,
+      slug: subscription.subscriptionModel.pricingPlan.slug,
+      featuresCount: subscription.subscriptionModel.pricingPlan.features.length
+    } : null
+  } : null)
+
   const availableFeatures: string[] = []
 
   // Always include core features
@@ -235,12 +246,15 @@ export async function getAvailableFeatures(
       })
       
       // Add registry features that aren't already included
+      console.log("[getAvailableFeatures] Registry Features found:", registryFeatures.length, registryFeatures.map(f => f.key))
       for (const registryFeature of registryFeatures) {
         if (!availableFeatures.includes(registryFeature.key)) {
           availableFeatures.push(registryFeature.key)
         }
       }
     }
+    
+    console.log("[getAvailableFeatures] Final available features:", availableFeatures)
     
     // If in trial, apply trial feature overrides (these can enable/disable features during trial)
     if (isTrial && subscription.subscriptionModel.trialFeatureOverrides) {
