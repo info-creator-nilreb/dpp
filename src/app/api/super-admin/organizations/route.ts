@@ -174,13 +174,10 @@ export async function POST(request: Request) {
           session.id // Super Admin as inviter
         )
 
-        const invitationUrl = `${process.env.AUTH_URL || "http://localhost:3001"}/signup?token=${invitation.token}`
         await sendInvitationEmail(
           adminEmail,
-          organization.name,
-          "Super Admin",
-          PHASE1_ROLES.ORG_ADMIN,
-          invitationUrl
+          organization.id,
+          invitation.token
         )
         invitationSent = true
       } catch (emailError) {
