@@ -37,9 +37,22 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get subscription
+    // Get subscription with subscriptionModel for plan lookup
     const subscription = await prisma.subscription.findUnique({
       where: { organizationId: dpp.organizationId },
+      include: {
+        subscriptionModel: {
+          include: {
+            pricingPlan: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     // Get capabilities
@@ -50,12 +63,17 @@ export async function GET(
       ? getTrialDaysRemaining(subscription as any)
       : null;
 
+    // Get plan name from subscriptionModel.pricingPlan (not from deprecated subscription.plan)
+    const planSlug = subscription?.subscriptionModel?.pricingPlan?.slug || subscription?.plan || null;
+    const planName = subscription?.subscriptionModel?.pricingPlan?.name || null;
+
     return NextResponse.json({
       capabilities,
       subscription: subscription
         ? {
             id: subscription.id,
-            plan: subscription.plan,
+            plan: planSlug, // Use slug from pricingPlan
+            planName: planName, // Full plan name for display
             status: subscription.status,
             trialExpiresAt: subscription.trialExpiresAt,
             trialStartedAt: subscription.trialStartedAt,

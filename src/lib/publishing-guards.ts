@@ -98,12 +98,29 @@ export async function validateContentForPublishing(
       );
 
       if (feature) {
-        // Check minimum plan
+        // Check minimum plan - get plan from subscriptionModel.pricingPlan.slug or fallback to legacy plan
         const planHierarchy = { basic: 1, pro: 2, premium: 3 };
+        // Get subscription with subscriptionModel for plan lookup
+        const subscriptionWithModel = await prisma.subscription.findUnique({
+          where: { organizationId },
+          include: {
+            subscriptionModel: {
+              include: {
+                pricingPlan: {
+                  select: {
+                    slug: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+        const planSlug = subscriptionWithModel?.subscriptionModel?.pricingPlan?.slug?.toLowerCase() || subscription.plan;
+        const planKey = (planSlug === "basic" || planSlug === "pro" || planSlug === "premium") ? planSlug : "basic";
         const requiredLevel =
           planHierarchy[feature.minimumPlan as keyof typeof planHierarchy];
         const currentLevel =
-          planHierarchy[subscription.plan as keyof typeof planHierarchy];
+          planHierarchy[planKey as keyof typeof planHierarchy];
 
         if (currentLevel < requiredLevel) {
           errors.push(

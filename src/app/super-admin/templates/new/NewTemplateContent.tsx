@@ -6,9 +6,10 @@
  * Form to create a new template
  */
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Papa from "papaparse"
 
 interface Block {
   id: string
@@ -84,7 +85,7 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDialog, setShowDialog] = useState(true) // Show dialog on mount
-  const [creationMode, setCreationMode] = useState<"from-existing" | "empty" | null>(null)
+  const [creationMode, setCreationMode] = useState<"from-existing" | "empty" | "csv-import" | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
   const [categoryLocked, setCategoryLocked] = useState(false) // Lock category after selection
   
@@ -93,6 +94,11 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
   const [industry, setIndustry] = useState("")
   const [description, setDescription] = useState("")
   const [blocks, setBlocks] = useState<Block[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvErrors, setCsvErrors] = useState<string[]>([])
+  const [csvParsing, setCsvParsing] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
 
   const addBlock = () => {
     setBlocks([...blocks, {
@@ -194,6 +200,199 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
     }))
     setBlocks(canonicalBlocks)
     setShowDialog(false)
+  }
+
+  // CSV Template Download
+  const handleDownloadCsvTemplate = () => {
+    const csvContent = `Block Name,Field Label,Field Key,Field Type,Required,Config
+"Basis- & Produktdaten","Produktname","name","text",true,""
+"Basis- & Produktdaten","Beschreibung","description","textarea",false,""
+"Basis- & Produktdaten","SKU","sku","text",true,""
+"Materialien & Zusammensetzung","Material","material","text",true,""
+"Nutzung, Pflege & Lebensdauer","Pflegehinweise","careInstructions","textarea",false,""
+"Rechtliches & Konformität","Konformitätserklärung","conformityDeclaration","boolean",false,""
+"Rücknahme & Second Life","Rücknahmeprogramm","takeBackProgram","boolean",false,""
+
+Hinweise:
+- Block Name: Name des Blocks (muss exakt sein oder leer für neuen Block)
+- Field Label: Anzeigename des Feldes
+- Field Key: Technischer Schlüssel (lowercase, keine Leerzeichen)
+- Field Type: text, textarea, number, select, multi-select, boolean, date, url, file, reference
+- Required: true oder false
+- Config: JSON-String für erweiterte Konfiguration (z.B. {"options": ["Option 1", "Option 2"]} für select)`
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", "template-import-template.csv")
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // Parse CSV File (1:1 vom DPP-Import übernommen)
+  const parseCsvFile = (file: File) => {
+    setCsvParsing(true)
+    setCsvErrors([])
+    
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const errors: string[] = []
+        const parsedBlocks: Map<string, Block> = new Map()
+        
+        results.data.forEach((row: any, index: number) => {
+          const rowNum = index + 2 // +2 for header and 1-based counting
+          
+          // Normalisiere Felder (trim whitespace, lowercase, entferne Unterstriche/Bindestriche)
+          // Unterstützt: "Block Name", "block_name", "blockName" → "blockname"
+          const normalizedRow: any = {}
+          Object.keys(row).forEach(key => {
+            const normalizedKey = key.trim().toLowerCase().replace(/[_-]/g, "")
+            normalizedRow[normalizedKey] = typeof row[key] === "string" ? row[key].trim() : row[key]
+          })
+          
+          // Extract values from normalized row
+          const blockName = (normalizedRow["blockname"] || row["Block Name"] || row["block_name"] || row["blockName"] || "").trim()
+          const fieldLabel = (normalizedRow["fieldlabel"] || row["Field Label"] || row["field_label"] || row["fieldLabel"] || "").trim()
+          const fieldKey = (normalizedRow["fieldkey"] || row["Field Key"] || row["field_key"] || row["fieldKey"] || "").trim()
+          const fieldType = (normalizedRow["fieldtype"] || row["Field Type"] || row["field_type"] || row["fieldType"] || "text").trim().toLowerCase()
+          const required = (normalizedRow["required"] || row["Required"] || row["required"] || "false").toString().toLowerCase() === "true"
+          const configStr = (normalizedRow["config"] || row["Config"] || row["config"] || "").trim()
+          
+          // Validation
+          if (!blockName) {
+            errors.push(`Zeile ${rowNum}: Block Name ist erforderlich`)
+            return
+          }
+          
+          if (!fieldLabel) {
+            errors.push(`Zeile ${rowNum}: Field Label ist erforderlich`)
+            return
+          }
+          
+          if (!fieldKey) {
+            errors.push(`Zeile ${rowNum}: Field Key ist erforderlich`)
+            return
+          }
+          
+          // Validate field key format (lowercase, no spaces)
+          if (!/^[a-z][a-z0-9_]*$/.test(fieldKey)) {
+            errors.push(`Zeile ${rowNum}: Field Key muss mit Kleinbuchstaben beginnen und darf nur Kleinbuchstaben, Zahlen und Unterstriche enthalten`)
+            return
+          }
+          
+          // Validate field type
+          const validTypes = ["text", "textarea", "number", "select", "multi-select", "boolean", "date", "url", "file", "reference"]
+          if (!validTypes.includes(fieldType)) {
+            errors.push(`Zeile ${rowNum}: Ungültiger Field Type. Erlaubt: ${validTypes.join(", ")}`)
+            return
+          }
+          
+          // Parse config if provided
+          let config = null
+          if (configStr) {
+            try {
+              config = JSON.parse(configStr)
+            } catch (e) {
+              errors.push(`Zeile ${rowNum}: Config ist kein gültiger JSON-String`)
+              return
+            }
+          }
+          
+          // Get or create block
+          if (!parsedBlocks.has(blockName)) {
+            parsedBlocks.set(blockName, {
+              id: `block-${Date.now()}-${parsedBlocks.size}`,
+              name: blockName,
+              fields: []
+            })
+          }
+          
+          const block = parsedBlocks.get(blockName)!
+          
+          // Check for duplicate field keys in same block
+          if (block.fields.some(f => f.key === fieldKey)) {
+            errors.push(`Zeile ${rowNum}: Field Key "${fieldKey}" existiert bereits im Block "${blockName}"`)
+            return
+          }
+          
+          // Add field to block
+          block.fields.push({
+            id: `field-${Date.now()}-${block.fields.length}`,
+            label: fieldLabel,
+            key: fieldKey,
+            type: fieldType,
+            required: required,
+            config: config
+          })
+        })
+        
+        if (errors.length > 0) {
+          setCsvErrors(errors)
+          setCsvParsing(false)
+          return
+        }
+        
+        // Initialize template from CSV
+        const csvBlocks = Array.from(parsedBlocks.values())
+        if (csvBlocks.length === 0) {
+          setCsvErrors(["CSV-Datei enthält keine gültigen Blöcke und Felder"])
+          setCsvParsing(false)
+          return
+        }
+        
+        setBlocks(csvBlocks)
+        setCategory(category || "") // Keep category if already set
+        setShowDialog(false)
+        setCsvParsing(false)
+      },
+      error: (error) => {
+        setCsvErrors([`Fehler beim Parsen der CSV-Datei: ${error.message}`])
+        setCsvParsing(false)
+      }
+    })
+  }
+
+  // Datei-Handling (1:1 vom DPP-Import übernommen)
+  const handleFileSelect = (file: File) => {
+    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+      setCsvErrors(["Bitte wählen Sie eine CSV-Datei aus"])
+      return
+    }
+    
+    setCsvFile(file)
+    parseCsvFile(file)
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileSelect(file)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      handleFileSelect(file)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -410,6 +609,196 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
               Erstellt ein neues Template mit den 5 kanonischen Blöcken (ohne Felder)
             </p>
           </div>
+
+          {/* Option C: CSV Import */}
+          <div style={{
+            border: creationMode === "csv-import" ? "2px solid #E20074" : "2px solid #E5E5E5",
+            borderRadius: "8px",
+            padding: "1.5rem",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            backgroundColor: creationMode === "csv-import" ? "#FFF5F9" : "#FFFFFF"
+          }}
+          onClick={() => setCreationMode("csv-import")}
+          onMouseEnter={(e) => {
+            if (creationMode !== "csv-import") {
+              e.currentTarget.style.borderColor = "#E20074"
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (creationMode !== "csv-import") {
+              e.currentTarget.style.borderColor = "#E5E5E5"
+            }
+          }}>
+            <h3 style={{
+              fontSize: "1.1rem",
+              fontWeight: "600",
+              color: "#0A0A0A",
+              marginBottom: "0.5rem"
+            }}>
+              Per CSV importieren
+            </h3>
+            <p style={{
+              fontSize: "0.9rem",
+              color: "#7A7A7A",
+              marginBottom: creationMode === "csv-import" ? "1rem" : "0"
+            }}>
+              Importieren Sie Blöcke und Felder aus einer CSV-Datei
+            </p>
+            {creationMode === "csv-import" && (
+              <div style={{ marginTop: "1rem" }}>
+                {/* CSV Template Download */}
+                <div style={{ marginBottom: "1rem" }}>
+                  <button
+                    type="button"
+                    onClick={handleDownloadCsvTemplate}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      backgroundColor: "#F5F5F5",
+                      color: "#0A0A0A",
+                      border: "1px solid #CDCDCD",
+                      borderRadius: "6px",
+                      fontSize: "0.875rem",
+                      fontWeight: "500",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem"
+                    }}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    CSV Template herunterladen
+                  </button>
+                  <p style={{
+                    fontSize: "0.8rem",
+                    color: "#7A7A7A",
+                    marginTop: "0.5rem",
+                    margin: "0.5rem 0 0 0"
+                  }}>
+                    Laden Sie das Template herunter, um die erforderlichen Spalten und Formatierung zu sehen.
+                  </p>
+                </div>
+
+                {/* CSV File Upload (1:1 vom DPP-Import übernommen) */}
+                <div>
+                  <label htmlFor="csv-file" style={{
+                    display: "block",
+                    fontSize: "0.95rem",
+                    fontWeight: "500",
+                    color: "#0A0A0A",
+                    marginBottom: "0.5rem"
+                  }}>
+                    CSV-Datei hochladen *
+                  </label>
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    style={{
+                      border: `2px dashed ${isDragging ? "#E20074" : "#CDCDCD"}`,
+                      borderRadius: "8px",
+                      padding: "3rem",
+                      textAlign: "center",
+                      backgroundColor: isDragging ? "#F5F5F5" : "#FFFFFF",
+                      cursor: "pointer",
+                      transition: "border-color 0.2s, background-color 0.2s"
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      id="csv-file"
+                      type="file"
+                      accept=".csv,text/csv"
+                      onChange={handleFileInputChange}
+                      disabled={csvParsing}
+                      style={{ display: "none" }}
+                    />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="48"
+                      height="48"
+                      fill="none"
+                      stroke="#7A7A7A"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      viewBox="0 0 24 24"
+                      style={{ margin: "0 auto 1rem" }}
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p style={{
+                      color: "#0A0A0A",
+                      fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
+                      fontWeight: "600",
+                      marginBottom: "0.5rem"
+                    }}>
+                      {csvFile ? csvFile.name : "Datei hier ablegen oder klicken zum Auswählen"}
+                    </p>
+                    <p style={{
+                      color: "#7A7A7A",
+                      fontSize: "clamp(0.9rem, 2vw, 1rem)"
+                    }}>
+                      Nur CSV-Dateien
+                    </p>
+                    {csvParsing && (
+                      <p style={{
+                        fontSize: "0.875rem",
+                        color: "#E20074",
+                        marginTop: "0.5rem",
+                        margin: "0.5rem 0 0 0"
+                      }}>
+                        CSV wird verarbeitet...
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* CSV Errors (1:1 vom DPP-Import übernommen) */}
+                {csvErrors.length > 0 && (
+                  <div style={{
+                    backgroundColor: "#FEE2E2",
+                    border: "1px solid #FCA5A5",
+                    borderRadius: "8px",
+                    padding: "1rem",
+                    marginTop: "1rem"
+                  }}>
+                    <h3 style={{
+                      fontSize: "1rem",
+                      fontWeight: "700",
+                      color: "#991B1B",
+                      marginBottom: "0.5rem"
+                    }}>
+                      Fehler:
+                    </h3>
+                    <ul style={{ margin: 0, paddingLeft: "1.5rem", color: "#991B1B" }}>
+                      {csvErrors.map((err, idx) => (
+                        <li key={idx} style={{ marginBottom: "0.25rem" }}>
+                          {err}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
@@ -443,20 +832,40 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
                 }
               } else if (creationMode === "empty") {
                 initializeEmpty()
+              } else if (creationMode === "csv-import") {
+                if (!csvFile || csvErrors.length > 0) {
+                  setError("Bitte laden Sie eine gültige CSV-Datei hoch")
+                  return
+                }
+                // CSV was already parsed and blocks initialized in parseCsvFile
+                // Just close dialog if no errors
+                if (blocks.length > 0) {
+                  setShowDialog(false)
+                } else {
+                  setError("CSV-Datei konnte nicht verarbeitet werden")
+                }
               } else {
                 setError("Bitte wählen Sie eine Option aus")
               }
             }}
-            disabled={!creationMode || (creationMode === "from-existing" && !selectedTemplateId)}
+            disabled={!creationMode || (creationMode === "from-existing" && !selectedTemplateId) || (creationMode === "csv-import" && (!csvFile || csvErrors.length > 0 || csvParsing))}
             style={{
               padding: "0.75rem 1.5rem",
-              backgroundColor: creationMode && (creationMode === "empty" || selectedTemplateId) ? "#E20074" : "#CDCDCD",
+              backgroundColor: creationMode && (
+                creationMode === "empty" || 
+                (creationMode === "from-existing" && selectedTemplateId) ||
+                (creationMode === "csv-import" && csvFile && csvErrors.length === 0 && !csvParsing)
+              ) ? "#E20074" : "#CDCDCD",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "8px",
               fontSize: "0.95rem",
               fontWeight: "600",
-              cursor: creationMode && (creationMode === "empty" || selectedTemplateId) ? "pointer" : "not-allowed"
+              cursor: creationMode && (
+                creationMode === "empty" || 
+                (creationMode === "from-existing" && selectedTemplateId) ||
+                (creationMode === "csv-import" && csvFile && csvErrors.length === 0 && !csvParsing)
+              ) ? "pointer" : "not-allowed"
             }}
           >
             Weiter

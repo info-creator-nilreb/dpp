@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 /**
  * Persönliche Daten (My Profile)
@@ -110,7 +111,7 @@ export function PersonalDataPageContent() {
         alignItems: "center",
         minHeight: "400px"
       }}>
-        <p style={{ color: "#7A7A7A" }}>Lade Daten...</p>
+        <LoadingSpinner message="Lade Daten..." />
       </div>
     )
   }

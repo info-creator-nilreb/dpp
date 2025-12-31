@@ -29,7 +29,7 @@ export interface ResolvedCapabilities {
 export interface Subscription {
   id: string;
   organizationId: string;
-  plan: Plan;
+  plan: Plan; // Legacy field, deprecated - use subscriptionModel.pricingPlan.slug instead
   status: SubscriptionStatus;
   trialExpiresAt: Date | null;
   trialStartedAt: Date | null;
@@ -37,6 +37,12 @@ export interface Subscription {
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   canceledAt: Date | null;
+  subscriptionModel?: {
+    pricingPlan?: {
+      slug: string;
+      name: string;
+    } | null;
+  } | null;
 }
 
 /**
@@ -120,8 +126,10 @@ export function resolveCapabilities(
     styling_controls: false,
   };
   
-  // Plan-based capabilities
-  const planCapabilities = PLAN_CAPABILITIES[subscription.plan];
+  // Plan-based capabilities - get plan from subscriptionModel.pricingPlan.slug or fallback to legacy plan
+  const planSlug = subscription.subscriptionModel?.pricingPlan?.slug?.toLowerCase() || subscription.plan;
+  const planKey = (planSlug === "basic" || planSlug === "pro" || planSlug === "premium") ? planSlug : "basic";
+  const planCapabilities = PLAN_CAPABILITIES[planKey];
   
   // Merge: base + plan
   const resolved: ResolvedCapabilities = {
@@ -188,9 +196,11 @@ export async function resolveCapabilitiesWithRegistry(
       continue;
     }
     
-    // Check minimum plan
+    // Check minimum plan - get plan from subscriptionModel.pricingPlan.slug or fallback to legacy plan
+    const planSlug = subscription.subscriptionModel?.pricingPlan?.slug?.toLowerCase() || subscription.plan;
+    const planKey = (planSlug === "basic" || planSlug === "pro" || planSlug === "premium") ? planSlug : "basic";
     const requiredLevel = PLAN_HIERARCHY[feature.minimumPlan as Plan];
-    const currentLevel = PLAN_HIERARCHY[subscription.plan];
+    const currentLevel = PLAN_HIERARCHY[planKey];
     
     if (currentLevel < requiredLevel) {
       if (feature.capabilityKey) {

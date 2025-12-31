@@ -163,27 +163,74 @@ export async function getAvailableFeatures(
   })
   availableFeatures.push(...coreFeatures.map((f) => f.key))
 
+  // Normalize subscription status
+  const normalizedStatus = subscription?.status?.toLowerCase() || "expired"
+  const isActive = normalizedStatus === "active"
+  const isTrial = normalizedStatus === "trial" || normalizedStatus === "trial_active"
+  const hasSubscription = subscription && (isActive || isTrial)
+  
   // Add features from pricing plan (for active subscriptions OR trial subscriptions)
-  if (subscription && (subscription.status === "active" || subscription.status === "trial" || subscription.status === "trial_active")) {
-    // Check if in trial and apply trial feature overrides
-    const isInTrial = subscription.status === "trial" || subscription.status === "trial_active"
+  if (hasSubscription && subscription.subscriptionModel?.pricingPlan) {
+    // Get pricing plan slug for feature registry lookup
+    const planSlug = subscription.subscriptionModel.pricingPlan.slug?.toLowerCase() || null
     
-    if (isInTrial && subscription.subscriptionModel?.trialFeatureOverrides) {
-      // Apply trial feature overrides
-      const trialOverrides = subscription.subscriptionModel.trialFeatureOverrides
-      for (const override of trialOverrides) {
-        if (override.enabled && !availableFeatures.includes(override.featureKey)) {
-          availableFeatures.push(override.featureKey)
+    // Always add features from pricing plan first (these are the base features for the plan)
+    const planFeatures =
+      subscription.subscriptionModel.pricingPlan.features || []
+    
+    for (const planFeature of planFeatures) {
+      if (planFeature.included && !availableFeatures.includes(planFeature.featureKey)) {
+        availableFeatures.push(planFeature.featureKey)
+      }
+    }
+    
+    // ALWAYS check Feature Registry for features that match the plan's minimumPlan requirement
+    // This ensures features are available even if not explicitly added to Pricing Plan
+    if (planSlug && (planSlug === "premium" || planSlug === "pro" || planSlug === "basic")) {
+      const planHierarchy: Record<string, string[]> = {
+        "basic": ["basic"],
+        "pro": ["basic", "pro"],
+        "premium": ["basic", "pro", "premium"]
+      }
+      
+      const allowedPlans = planHierarchy[planSlug] || []
+      
+      // Get features from Feature Registry that match the plan's minimumPlan requirement
+      const registryFeatures = await prisma.featureRegistry.findMany({
+        where: {
+          enabled: true,
+          minimumPlan: {
+            in: allowedPlans
+          },
+          isCore: false, // Don't include core features (already added)
+        },
+        select: { key: true },
+      })
+      
+      // Add registry features that aren't already included
+      for (const registryFeature of registryFeatures) {
+        if (!availableFeatures.includes(registryFeature.key)) {
+          availableFeatures.push(registryFeature.key)
         }
       }
     }
     
-    // Add features from pricing plan (if not already added via trial override)
-    const planFeatures =
-      subscription.subscriptionModel?.pricingPlan?.features || []
-    for (const planFeature of planFeatures) {
-      if (planFeature.included && !availableFeatures.includes(planFeature.featureKey)) {
-        availableFeatures.push(planFeature.featureKey)
+    // If in trial, apply trial feature overrides (these can enable/disable features during trial)
+    if (isTrial && subscription.subscriptionModel.trialFeatureOverrides) {
+      const trialOverrides = subscription.subscriptionModel.trialFeatureOverrides
+      for (const override of trialOverrides) {
+        if (override.enabled) {
+          // Enable feature if override says so
+          if (!availableFeatures.includes(override.featureKey)) {
+            availableFeatures.push(override.featureKey)
+          }
+        } else {
+          // Disable feature if override says so (remove from available features)
+          const index = availableFeatures.indexOf(override.featureKey)
+          if (index > -1) {
+            availableFeatures.splice(index, 1)
+          }
+        }
       }
     }
   } else {
