@@ -143,6 +143,9 @@ export async function getAvailableFeatures(
               },
             },
           },
+          trialFeatureOverrides: {
+            where: { enabled: true },
+          },
         },
       },
     },
