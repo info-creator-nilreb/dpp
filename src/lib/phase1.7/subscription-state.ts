@@ -27,7 +27,7 @@ export interface SubscriptionState {
  */
 export function isFreeTier(subscription: {
   status: string
-  planId: string | null
+  subscriptionModelId?: string | null
 } | null): boolean {
   if (!subscription) {
     return true
@@ -44,7 +44,7 @@ export function isFreeTier(subscription: {
   }
   
   // If no plan is assigned, it's free
-  if (!subscription.planId) {
+  if (!subscription.subscriptionModelId) {
     return true
   }
   
@@ -61,7 +61,7 @@ export function isFreeTier(subscription: {
  */
 export function getDisplayTier(subscription: {
   status: string
-  planId: string | null
+  subscriptionModelId?: string | null
   subscriptionModel?: {
     pricingPlan?: {
       name: string
