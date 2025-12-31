@@ -85,6 +85,16 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Phase 1.7: Prevent creating "Free" pricing plans
+    const normalizedSlug = slug.toLowerCase().trim()
+    const normalizedName = name.toLowerCase().trim()
+    if (normalizedSlug === "free" || normalizedName === "free") {
+      return NextResponse.json(
+        { error: "Ein 'Free' Pricing Plan kann nicht erstellt werden. 'Free' ist ein abgeleiteter Zustand ohne Subscription." },
+        { status: 400 }
+      )
+    }
+
     // Check if slug already exists
     const existingPlan = await prisma.pricingPlan.findUnique({
       where: { slug }

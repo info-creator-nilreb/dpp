@@ -12,6 +12,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getPublishedDppCount } from "@/lib/pricing/entitlements"
 import { getEntitlementDefinition } from "@/lib/pricing/entitlement-definitions"
+import { isInTrial } from "@/lib/pricing/features"
 
 export async function GET() {
   try {
@@ -34,7 +35,8 @@ export async function GET() {
               include: {
                 subscriptionModel: {
                   include: {
-                    pricingPlan: true
+                    pricingPlan: true,
+                    trialEntitlementOverrides: true // Phase 1.9: Include trial overrides
                   }
                 },
                 priceSnapshot: true,
@@ -56,6 +58,9 @@ export async function GET() {
     const organization = membership.organization
     const subscription = organization.subscription
 
+    // Check if organization is in trial
+    const inTrial = await isInTrial(organization.id)
+
     // Build usage data
     const entitlements: Array<{
       key: string
@@ -66,26 +71,50 @@ export async function GET() {
       unit?: string
     }> = []
 
-    if (subscription) {
-      // Get current usage for each entitlement
-      for (const snapshot of subscription.entitlementSnapshots) {
-        const definition = getEntitlementDefinition(snapshot.key)
+    if (subscription && subscription.subscriptionModel) {
+      // Get all entitlement keys from snapshots (these are the entitlements for this plan)
+      const entitlementKeys = subscription.entitlementSnapshots.map(s => s.key)
+
+      // For each entitlement, determine the limit based on trial status
+      for (const key of entitlementKeys) {
+        const definition = getEntitlementDefinition(key)
+        let limit: number | null = null
+
+        // If in trial, check for trial entitlement override first
+        if (inTrial && subscription.subscriptionModel) {
+          const trialOverride = subscription.subscriptionModel.trialEntitlementOverrides?.find(
+            override => override.entitlementKey === key
+          )
+          if (trialOverride !== undefined) {
+            // Trial override exists - use it (can be null for unlimited)
+            limit = trialOverride.value
+          } else {
+            // No trial override - use snapshot value
+            const snapshot = subscription.entitlementSnapshots.find(s => s.key === key)
+            limit = snapshot?.value ?? null
+          }
+        } else {
+          // Not in trial - use snapshot value
+          const snapshot = subscription.entitlementSnapshots.find(s => s.key === key)
+          limit = snapshot?.value ?? null
+        }
+
         let current = 0
 
         // Get current usage based on entitlement key
-        if (snapshot.key === "max_published_dpp") {
+        if (key === "max_published_dpp") {
           current = await getPublishedDppCount(organization.id)
         }
         // Add more entitlement checks here as needed
 
-        const remaining = snapshot.value !== null 
-          ? Math.max(0, snapshot.value - current)
+        const remaining = limit !== null 
+          ? Math.max(0, limit - current)
           : null
 
         entitlements.push({
-          key: snapshot.key,
+          key,
           label: definition.label,
-          limit: snapshot.value,
+          limit,
           current,
           remaining,
           unit: definition.unit !== "count" ? definition.unit : undefined

@@ -36,17 +36,14 @@ export async function POST(req: NextRequest) {
     });
 
     // If no subscription exists, create one (shouldn't happen, but handle it)
+    // Phase 1.9: This should not create trial without planId - use expired instead
     if (!subscription) {
-      const trialExpiresAt = new Date();
-      trialExpiresAt.setDate(trialExpiresAt.getDate() + 30); // 30 days
-      
       subscription = await prisma.subscription.create({
         data: {
           organizationId: membership.organizationId,
           plan: "premium",
-          status: "trial_active",
-          trialStartedAt: new Date(),
-          trialExpiresAt: trialExpiresAt,
+          status: "expired", // Phase 1.9: Don't create trial without planId
+          // No trial dates - organization is on Free tier
         } as any, // Type assertion needed until Prisma Client is regenerated
       });
     }

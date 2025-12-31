@@ -52,7 +52,7 @@ export default function DashboardCard({ href, icon, title, description, children
     >
       <div style={{
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         gap: "1rem",
         marginBottom: "1rem"
       }}>
@@ -68,12 +68,23 @@ export default function DashboardCard({ href, icon, title, description, children
         }}>
           {icon}
         </div>
-        <h2 style={{
-          fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
-          fontWeight: "700",
-          color: "#0A0A0A",
-          margin: 0
-        }}>
+        <h2 
+          lang="de"
+          style={{
+            fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
+            fontWeight: "700",
+            color: "#0A0A0A",
+            margin: 0,
+            flex: 1,
+            minWidth: 0,
+            wordBreak: "break-word",
+            overflowWrap: "break-word",
+            hyphens: "auto",
+            WebkitHyphens: "auto",
+            msHyphens: "auto",
+            lineHeight: "1.3"
+          }}
+        >
           {title}
         </h2>
       </div>

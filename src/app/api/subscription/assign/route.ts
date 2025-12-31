@@ -102,6 +102,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Create price snapshot if we have a price
+    let priceSnapshotId: string | null = null
+    if (currentPrice) {
+      const priceSnapshot = await prisma.priceSnapshot.create({
+        data: {
+          amount: currentPrice.amount,
+          currency: currentPrice.currency,
+          billingInterval: subscriptionModel.billingInterval,
+        },
+      })
+      priceSnapshotId = priceSnapshot.id
+    }
+
     // Check if organization already has a subscription
     const existingSubscription = organization.subscription
 
@@ -120,27 +133,30 @@ export async function POST(req: NextRequest) {
         status = "trial_active"
       }
 
+      // Build update data
+      const updateData: any = {
+        subscriptionModelId: subscriptionModel.id,
+        priceSnapshotId: priceSnapshotId, // Use created snapshot or null
+        status,
+        trialStartedAt,
+        trialExpiresAt,
+        startedAt: startTrial ? null : now,
+        currentPeriodStart: startTrial ? null : now,
+        currentPeriodEnd: startTrial ? null : (() => {
+          const end = new Date(now)
+          if (subscriptionModel.billingInterval === "monthly") {
+            end.setMonth(end.getMonth() + 1)
+          } else {
+            end.setFullYear(end.getFullYear() + 1)
+          }
+          return end
+        })(),
+      }
+
       // Update subscription
       const updatedSubscription = await prisma.subscription.update({
         where: { id: existingSubscription.id },
-        data: {
-          subscriptionModelId: subscriptionModel.id,
-          priceSnapshotId: currentPrice ? currentPrice.id : null,
-          status,
-          trialStartedAt,
-          trialExpiresAt,
-          startedAt: startTrial ? null : now, // Only set startedAt if not trial
-          currentPeriodStart: startTrial ? null : now,
-          currentPeriodEnd: startTrial ? null : (() => {
-            const end = new Date(now)
-            if (subscriptionModel.billingInterval === "monthly") {
-              end.setMonth(end.getMonth() + 1)
-            } else {
-              end.setFullYear(end.getFullYear() + 1)
-            }
-            return end
-          })(),
-        },
+        data: updateData,
         include: {
           subscriptionModel: {
             include: {
@@ -199,27 +215,38 @@ export async function POST(req: NextRequest) {
         status = "trial_active"
       }
 
+      // Phase 1.9: Guard - Trial status requires subscriptionModelId
+      if ((status === "trial" || status === "trial_active") && !subscriptionModel.id) {
+        return NextResponse.json(
+          { error: "Trial subscriptions require a subscriptionModelId" },
+          { status: 400 }
+        )
+      }
+
+      // Build create data
+      const createData: any = {
+        organizationId: organization.id,
+        subscriptionModelId: subscriptionModel.id,
+        priceSnapshotId: priceSnapshotId, // Use created snapshot or null
+        status,
+        trialStartedAt,
+        trialExpiresAt,
+        startedAt: startTrial ? null : now,
+        currentPeriodStart: startTrial ? null : now,
+        currentPeriodEnd: startTrial ? null : (() => {
+          const end = new Date(now)
+          if (subscriptionModel.billingInterval === "monthly") {
+            end.setMonth(end.getMonth() + 1)
+          } else {
+            end.setFullYear(end.getFullYear() + 1)
+          }
+          return end
+        })(),
+      }
+
       // Create subscription
       const newSubscription = await prisma.subscription.create({
-        data: {
-          organizationId: organization.id,
-          subscriptionModelId: subscriptionModel.id,
-          priceSnapshotId: currentPrice ? currentPrice.id : null,
-          status,
-          trialStartedAt,
-          trialExpiresAt,
-          startedAt: startTrial ? null : now,
-          currentPeriodStart: startTrial ? null : now,
-          currentPeriodEnd: startTrial ? null : (() => {
-            const end = new Date(now)
-            if (subscriptionModel.billingInterval === "monthly") {
-              end.setMonth(end.getMonth() + 1)
-            } else {
-              end.setFullYear(end.getFullYear() + 1)
-            }
-            return end
-          })(),
-        },
+        data: createData,
         include: {
           subscriptionModel: {
             include: {

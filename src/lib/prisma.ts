@@ -48,6 +48,15 @@ function getPrisma(): PrismaClient {
     return globalForPrisma.prisma
   }
 
+  // Prüfe ob DATABASE_URL gesetzt ist
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      "DATABASE_URL environment variable is not set. " +
+      "Please check your .env file or environment variables. " +
+      "Expected format: postgresql://user:password@host:port/database"
+    )
+  }
+
   const prisma = new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   })

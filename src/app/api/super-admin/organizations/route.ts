@@ -7,7 +7,13 @@
 
 import { NextResponse } from "next/server"
 import { requireSuperAdminPermissionApiThrow } from "@/lib/super-admin-guards"
-import { createAuditLog, getClientIp, getClientUserAgent } from "@/lib/super-admin-audit"
+import { getClientIp, getClientUserAgent } from "@/lib/super-admin-audit"
+import { logSuperAdminOrganizationCreation } from "@/lib/phase1.5/super-admin-audit"
+import { createOrganizationWithFirstUser } from "@/lib/phase1/organization"
+import { PHASE1_ROLES } from "@/lib/phase1/roles"
+import { sendInvitationEmail } from "@/lib/email"
+import { createInvitation } from "@/lib/phase1/invitations"
+import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
@@ -56,7 +62,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST: Create new organization
+// POST: Create new organization (Phase 1.5)
 export async function POST(request: Request) {
   try {
     const session = await requireSuperAdminPermissionApiThrow("organization", "update")
@@ -65,11 +71,20 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, licenseTier = "free" } = body
+    const { 
+      name,
+      legalName,
+      country,
+      adminEmail,
+      adminFirstName,
+      adminLastName,
+      licenseTier = "free",
+    } = body
 
-    if (!name) {
+    // Phase 1.5: Required fields
+    if (!name || !legalName || !country || !adminEmail) {
       return NextResponse.json(
-        { error: "Name ist erforderlich" },
+        { error: "Name, rechtlicher Name, Land und Admin-E-Mail sind erforderlich" },
         { status: 400 }
       )
     }
@@ -83,13 +98,125 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check if user with adminEmail already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: adminEmail.toLowerCase().trim() },
+    })
+
+    let userId: string
+    let invitationSent = false
+
+    if (existingUser) {
+      // User exists, assign to organization
+      userId = existingUser.id
+      
+      // Update user's organization
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          organizationId: undefined, // Will be set after org creation
+        },
+      })
+    } else {
+      // Create new user with temporary password
+      const tempPassword = Math.random().toString(36).slice(-12) + "A1!"
+      const hashedPassword = await bcrypt.hash(tempPassword, 10)
+      
+      const newUser = await prisma.user.create({
+        data: {
+          email: adminEmail.toLowerCase().trim(),
+          password: hashedPassword,
+          firstName: adminFirstName || null,
+          lastName: adminLastName || null,
+          status: "invited",
+        },
+      })
+      
+      userId = newUser.id
+    }
+
+    // Create organization with Phase 1 fields
     const organization = await prisma.organization.create({
       data: {
         name: name.trim(),
+        legalName: legalName.trim(),
+        country: country.trim(),
         licenseTier,
-        status: "active"
+        status: "active",
       },
+    })
+
+    // Assign user to organization and create membership
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        organizationId: organization.id,
+        status: "active",
+      },
+    })
+
+    // Create membership with ORG_ADMIN role
+    await prisma.membership.create({
+      data: {
+        userId,
+        organizationId: organization.id,
+        role: PHASE1_ROLES.ORG_ADMIN,
+      },
+    })
+
+    // Send invitation email if user doesn't exist or is invited
+    if (!existingUser || existingUser.status === "invited") {
+      try {
+        const invitation = await createInvitation(
+          adminEmail,
+          organization.id,
+          PHASE1_ROLES.ORG_ADMIN,
+          session.id // Super Admin as inviter
+        )
+
+        const invitationUrl = `${process.env.AUTH_URL || "http://localhost:3001"}/signup?token=${invitation.token}`
+        await sendInvitationEmail(
+          adminEmail,
+          organization.name,
+          "Super Admin",
+          PHASE1_ROLES.ORG_ADMIN,
+          invitationUrl
+        )
+        invitationSent = true
+      } catch (emailError) {
+        console.error("[SUPER_ADMIN_ORGS] Failed to send invitation email:", emailError)
+        // Continue even if email fails
+      }
+    }
+
+    // Phase 1.5: Enhanced audit log
+    await logSuperAdminOrganizationCreation(
+      session.id,
+      organization.id,
+      {
+        name: organization.name,
+        legalName: organization.legalName,
+        country: organization.country,
+        licenseTier: organization.licenseTier,
+        adminEmail,
+        invitationSent,
+      },
+      getClientIp(request),
+      getClientUserAgent(request)
+    )
+
+    const organizationWithDetails = await prisma.organization.findUnique({
+      where: { id: organization.id },
       include: {
+        users: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            status: true,
+          },
+        },
         _count: {
           select: {
             memberships: true,
@@ -99,21 +226,14 @@ export async function POST(request: Request) {
       }
     })
 
-    // Audit log
-    await createAuditLog({
-      action: "organization.create",
-      entityType: "organization",
-      entityId: organization.id,
-      after: { name: organization.name, licenseTier: organization.licenseTier, status: organization.status },
-      ipAddress: getClientIp(request),
-      userAgent: getClientUserAgent(request)
+    return NextResponse.json({ 
+      organization: organizationWithDetails,
+      invitationSent,
     })
-
-    return NextResponse.json({ organization })
   } catch (error: any) {
     console.error("[SUPER_ADMIN_ORGS] POST error:", error)
     return NextResponse.json(
-      { error: "Fehler beim Erstellen der Organisation" },
+      { error: error.message || "Fehler beim Erstellen der Organisation" },
       { status: 500 }
     )
   }

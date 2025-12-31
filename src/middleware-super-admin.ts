@@ -80,7 +80,10 @@ export async function superAdminMiddleware(request: NextRequest) {
   const session = await getSuperAdminSessionFromCookie(request)
 
   if (!session) {
-    return NextResponse.redirect(new URL("/super-admin/login", baseUrl))
+    // Save the requested path as callbackUrl for redirect after login
+    const loginUrl = new URL("/super-admin/login", baseUrl)
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   // Allow access

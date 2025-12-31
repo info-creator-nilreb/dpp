@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import DashboardGrid from "@/components/DashboardGrid"
 import DashboardCard from "@/components/DashboardCard"
-import SubscriptionUsageCard from "@/components/SubscriptionUsageCard"
+import SubscriptionUsageCard, { type SubscriptionStatus, type UsageData } from "@/components/SubscriptionUsageCard"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface SubscriptionContext {
@@ -19,14 +19,25 @@ export default function DashboardClient() {
   const router = useRouter()
   const { data: session } = useSession()
   const [context, setContext] = useState<SubscriptionContext | null>(null)
+  const [statusData, setStatusData] = useState<SubscriptionStatus | null>(null)
+  const [usageData, setUsageData] = useState<UsageData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [subscriptionDataLoaded, setSubscriptionDataLoaded] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadContext() {
       try {
-        const response = await fetch("/api/subscription/context")
-        if (response.ok) {
-          const data = await response.json()
+        // Load all subscription data and user role in parallel for better performance
+        const [contextResponse, statusResponse, usageResponse, profileResponse] = await Promise.all([
+          fetch("/api/subscription/context"),
+          fetch("/api/app/subscription/status"),
+          fetch("/api/app/subscription/usage"),
+          fetch("/api/app/profile")
+        ])
+
+        if (contextResponse.ok) {
+          const data = await contextResponse.json()
           setContext(data)
         } else {
           // On error, assume no subscription
@@ -37,6 +48,24 @@ export default function DashboardClient() {
             trialEndsAt: null
           })
         }
+
+        if (statusResponse.ok) {
+          const status = await statusResponse.json()
+          setStatusData(status)
+        }
+
+        if (usageResponse.ok) {
+          const usage = await usageResponse.json()
+          setUsageData(usage)
+        }
+
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json()
+          setUserRole(profile.user?.role || null)
+        }
+
+        // Mark subscription data as loaded
+        setSubscriptionDataLoaded(true)
       } catch (error) {
         console.error("Error loading subscription context:", error)
         setContext({
@@ -45,6 +74,7 @@ export default function DashboardClient() {
           canPublish: false,
           trialEndsAt: null
         })
+        setSubscriptionDataLoaded(true)
       } finally {
         setLoading(false)
       }
@@ -60,8 +90,8 @@ export default function DashboardClient() {
     }
   }, [loading, context, router])
 
-  // Show loading spinner while loading context
-  if (loading || !context) {
+  // Show loading spinner while loading context and subscription data
+  if (loading || !context || !subscriptionDataLoaded) {
     return (
       <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <LoadingSpinner message="Dashboard wird geladen..." />
@@ -92,13 +122,42 @@ export default function DashboardClient() {
         Willkommen zurück, {session?.user?.name || session?.user?.email}!
       </p>
 
-      {/* Subscription Usage Card (includes Trial Banner) */}
+      {/* Subscription Usage Card (includes Trial Banner) - Pass preloaded data */}
       <div style={{ marginBottom: "2rem" }}>
-        <SubscriptionUsageCard />
+        <SubscriptionUsageCard 
+          statusData={statusData}
+          usageData={usageData}
+        />
       </div>
 
       {/* Dashboard-Kacheln: 3 Spalten auf Desktop, 1 Spalte auf Mobile */}
       <DashboardGrid>
+        {/* Organisation (nur für ORG_ADMIN) */}
+        {userRole === "ORG_ADMIN" && (
+          <DashboardCard
+            href="/app/organization"
+            icon={
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="#E20074"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            }
+            title="Organisation"
+            description="Verwalten Sie Ihre Organisationsdaten, Benutzer und Einstellungen."
+          />
+        )}
+
         {/* 1. Produktpass erstellen */}
         <DashboardCard
           href="/app/create"

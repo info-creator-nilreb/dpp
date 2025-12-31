@@ -108,14 +108,8 @@ export function SubscriptionPageContent() {
   };
 
   const getStatusName = (status: string) => {
-    const names: Record<string, string> = {
-      trial_active: "Trial aktiv",
-      active: "Aktiv",
-      past_due: "Überfällig",
-      canceled: "Gekündigt",
-      expired: "Abgelaufen",
-    };
-    return names[status] || status;
+    const { getSubscriptionStatusLabel } = require("@/lib/subscription-status-labels");
+    return getSubscriptionStatusLabel(status);
   };
 
   if (isLoading) {
@@ -195,12 +189,12 @@ export function SubscriptionPageContent() {
               marginBottom: "0.5rem",
             }}
           >
-            Trial aktiv - {trialDaysRemaining} Tag
+            Testphase aktiv - {trialDaysRemaining} Tag
             {trialDaysRemaining !== 1 ? "e" : ""} verbleibend
           </h2>
           <p style={{ color: "#856404", marginBottom: "1rem" }}>
-            Sie nutzen aktuell einen Premium-Trial. Upgrade jetzt, um Publishing
-            zu aktivieren und den Zugriff nach dem Trial-Ende aufrechtzuerhalten.
+            Sie nutzen aktuell eine Premium-Testphase. Upgrade jetzt, um Publishing
+            zu aktivieren und den Zugriff nach dem Ende der Testphase aufrechtzuerhalten.
           </p>
         </div>
       )}

@@ -32,10 +32,21 @@ export default async function SuperAdminOrganizationDetailPage({ params }: PageP
   
   const { id } = await params
 
-  // Get organization with details
+  // Get organization with details (Phase 1.7: include subscription for tier display)
   const organization = await prisma.organization.findUnique({
     where: { id },
     include: {
+      users: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          status: true,
+          lastLoginAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
       memberships: {
         include: {
           user: {
@@ -46,6 +57,19 @@ export default async function SuperAdminOrganizationDetailPage({ params }: PageP
             }
           }
         }
+      },
+      subscription: {
+        include: {
+          subscriptionModel: {
+            include: {
+              pricingPlan: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       },
       _count: {
         select: {
@@ -60,14 +84,21 @@ export default async function SuperAdminOrganizationDetailPage({ params }: PageP
   }
 
   return (
-    <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
+    <div style={{ 
+      maxWidth: "100%", 
+      margin: "0 auto", 
+      padding: "clamp(1rem, 2vw, 2rem)",
+      boxSizing: "border-box",
+      width: "100%",
+      overflowX: "hidden"
+    }}>
       <div style={{ marginBottom: "1.5rem" }}>
         <Link
           href="/super-admin/organizations"
           style={{
             color: "#7A7A7A",
             textDecoration: "none",
-            fontSize: "0.9rem",
+            fontSize: "clamp(0.85rem, 2vw, 0.9rem)",
             marginBottom: "0.5rem",
             display: "block"
           }}
@@ -75,9 +106,11 @@ export default async function SuperAdminOrganizationDetailPage({ params }: PageP
           ← Zurück zu Organisationen
         </Link>
         <h1 style={{
-          fontSize: "2rem",
+          fontSize: "clamp(1.5rem, 4vw, 2rem)",
           fontWeight: "700",
-          color: "#0A0A0A"
+          color: "#0A0A0A",
+          margin: 0,
+          wordBreak: "break-word"
         }}>
           {organization.name}
         </h1>

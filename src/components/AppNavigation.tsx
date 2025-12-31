@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
+import NotificationsIcon from "./NotificationsIcon"
 
 interface UserData {
   email?: string
@@ -148,22 +149,25 @@ export default function AppNavigation() {
               {user.email}
             </span>
           )}
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            style={{
-              padding: "clamp(0.5rem, 1.5vw, 0.75rem) clamp(0.75rem, 2vw, 1rem)",
-              backgroundColor: "transparent",
-              border: "1px solid #CDCDCD",
-              borderRadius: "6px",
-              color: "#0A0A0A",
-              cursor: loggingOut ? "not-allowed" : "pointer",
-              fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
-              opacity: loggingOut ? 0.6 : 1
-            }}
-          >
-            {loggingOut ? "Abmelden..." : "Abmelden"}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            {!loading && <NotificationsIcon />}
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              style={{
+                padding: "clamp(0.5rem, 1.5vw, 0.75rem) clamp(0.75rem, 2vw, 1rem)",
+                backgroundColor: "transparent",
+                border: "1px solid #CDCDCD",
+                borderRadius: "6px",
+                color: "#0A0A0A",
+                cursor: loggingOut ? "not-allowed" : "pointer",
+                fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
+                opacity: loggingOut ? 0.6 : 1
+              }}
+            >
+              {loggingOut ? "Abmelden..." : "Abmelden"}
+            </button>
+          </div>
         </div>
       </div>
     </nav>

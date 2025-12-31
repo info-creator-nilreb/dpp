@@ -76,7 +76,7 @@ export function AccountPageContent() {
             </svg>
           }
           title="Persönliche Daten"
-          description="Verwalten Sie Ihre persönlichen Informationen, E-Mail-Adresse, Anschrift und Organisation."
+          description="Verwalten Sie Ihre persönlichen Informationen, E-Mail-Adresse und Rolle."
         />
 
         {/* Sicherheitseinstellungen */}

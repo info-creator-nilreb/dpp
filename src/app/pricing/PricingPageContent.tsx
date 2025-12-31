@@ -100,7 +100,9 @@ export default function PricingPageContent({
   const formatPrice = (amount: number, currency: string = "EUR") => {
     return new Intl.NumberFormat("de-DE", {
       style: "currency",
-      currency: currency
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount / 100)
   }
 
@@ -373,7 +375,8 @@ export default function PricingPageContent({
           gap: "1.5rem",
           marginBottom: "4rem",
           width: "100%",
-          boxSizing: "border-box"
+          boxSizing: "border-box",
+          alignItems: "stretch" // Alle Cards haben gleiche Höhe
         }}>
           {pricingPlans.map((plan) => {
             const subscriptionModel = plan.subscriptionModels.find(
@@ -392,13 +395,14 @@ export default function PricingPageContent({
                   padding: "2rem",
                   border: isHighlighted ? "2px solid #E20074" : "1px solid #E5E5E5",
                   display: "flex",
-                  flexDirection: "column",
+                  flexDirection: "column"
                   position: "relative",
                   transition: "all 0.2s",
                   boxShadow: isHighlighted ? "0 8px 24px rgba(226, 0, 116, 0.15)" : "0 2px 8px rgba(0, 0, 0, 0.04)",
                   boxSizing: "border-box",
                   width: "100%",
-                  minWidth: 0
+                  minWidth: 0,
+                  height: "100%" // Wichtig: Card füllt gesamte Grid-Zelle
                 }}
                 onMouseEnter={(e) => {
                   if (!isHighlighted) {
@@ -430,12 +434,13 @@ export default function PricingPageContent({
                   </div>
                 )}
 
-                {/* Plan Header */}
+                {/* Plan Header - Feste Höhe für 3 Zeilen Marketing-Description */}
                 <div style={{ 
                   marginBottom: "1.5rem",
                   minWidth: 0,
                   wordWrap: "break-word",
-                  overflowWrap: "break-word"
+                  overflowWrap: "break-word",
+                  height: "100px" // Feste Höhe für Header + 3 Zeilen Description
                 }}>
                   <h2 style={{
                     fontSize: "1.5rem",
@@ -460,10 +465,125 @@ export default function PricingPageContent({
                   )}
                 </div>
 
-                {/* Price */}
+                {/* Trial Info und Key Limits - Zusammen in einer Zeile */}
+                <div>
+                  {/* Trial Info - nur wenn vorhanden */}
+                  {subscriptionModel && subscriptionModel.trialDays > 0 && (
+                    <div style={{
+                      padding: "0.75rem",
+                      backgroundColor: "#E6F7E6",
+                      borderRadius: "6px",
+                      marginBottom: "1.5rem",
+                      fontSize: "0.875rem",
+                      color: "#0A0A0A",
+                      textAlign: "center",
+                      wordWrap: "break-word",
+                      overflowWrap: "break-word",
+                      boxSizing: "border-box",
+                      width: "100%"
+                    }}>
+                      <strong>{subscriptionModel.trialDays} Tage</strong> kostenlos testen
+                    </div>
+                  )}
+
+                  {/* Key Limits */}
+                  {plan.entitlements.length > 0 && (
+                    <div style={{
+                      marginBottom: "1.5rem",
+                      padding: "1rem",
+                      backgroundColor: "#F9F9F9",
+                      borderRadius: "8px",
+                      boxSizing: "border-box",
+                      width: "100%",
+                      minWidth: 0
+                    }}>
+                      <h3 style={{
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        color: "#0A0A0A",
+                        marginBottom: "0.75rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        wordWrap: "break-word",
+                        overflowWrap: "break-word"
+                      }}>
+                        Wichtige Limits
+                      </h3>
+                      <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.75rem"
+                      }}>
+                        {plan.entitlements.slice(0, 3).map((entitlement) => {
+                          const definition = getEntitlementDefinition(entitlement.entitlementKey)
+                          const icon = getEntitlementIcon(definition.icon, 18, "#E20074")
+                          return (
+                            <div
+                              key={entitlement.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.75rem",
+                                minWidth: 0
+                              }}
+                            >
+                              {icon && (
+                                <div style={{ flexShrink: 0 }}>
+                                  {icon}
+                                </div>
+                              )}
+                              <div style={{ 
+                                flex: 1,
+                                minWidth: 0,
+                                wordWrap: "break-word",
+                                overflowWrap: "break-word"
+                              }}>
+                                <div style={{
+                                  fontSize: "0.875rem",
+                                  fontWeight: "500",
+                                  color: "#0A0A0A",
+                                  wordWrap: "break-word",
+                                  overflowWrap: "break-word"
+                                }}>
+                                  {entitlement.value === null ? (
+                                    <span style={{ color: "#E20074" }}>Unbegrenzt</span>
+                                  ) : (
+                                    <>
+                                      Bis zu {entitlement.value}
+                                      {definition.unit && definition.unit !== "count" && (
+                                        <span style={{
+                                          marginLeft: "0.25rem",
+                                          color: "#7A7A7A",
+                                          fontWeight: "400"
+                                        }}>
+                                          {definition.unit}
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                                <div style={{
+                                  fontSize: "0.75rem",
+                                  color: "#7A7A7A",
+                                  wordWrap: "break-word",
+                                  overflowWrap: "break-word"
+                                }}>
+                                  {definition.label}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Price - Feste Position für Alignment */}
                 {price ? (
                   <div style={{
-                    marginBottom: "1.5rem"
+                    marginBottom: "1.5rem",
+                    marginTop: "auto" // Positioniert am Ende der Card
                   }}>
                     <div style={{
                       display: "flex",
@@ -538,118 +658,7 @@ export default function PricingPageContent({
                   </div>
                 )}
 
-                {/* Trial Info */}
-                {subscriptionModel && subscriptionModel.trialDays > 0 && (
-                  <div style={{
-                    padding: "0.75rem",
-                    backgroundColor: "#E6F7E6",
-                    borderRadius: "6px",
-                    marginBottom: "1.5rem",
-                    fontSize: "0.875rem",
-                    color: "#0A0A0A",
-                    textAlign: "center",
-                    wordWrap: "break-word",
-                    overflowWrap: "break-word",
-                    boxSizing: "border-box",
-                    width: "100%"
-                  }}>
-                    <strong>{subscriptionModel.trialDays} Tage</strong> kostenlos testen
-                  </div>
-                )}
-
-                {/* Key Limits */}
-                {plan.entitlements.length > 0 && (
-                  <div style={{
-                    marginBottom: "1.5rem",
-                    padding: "1rem",
-                    backgroundColor: "#F9F9F9",
-                    borderRadius: "8px",
-                    boxSizing: "border-box",
-                    width: "100%",
-                    minWidth: 0
-                  }}>
-                    <h3 style={{
-                      fontSize: "0.75rem",
-                      fontWeight: "600",
-                      color: "#0A0A0A",
-                      marginBottom: "0.75rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      wordWrap: "break-word",
-                      overflowWrap: "break-word"
-                    }}>
-                      Wichtige Limits
-                    </h3>
-                    <div style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.75rem"
-                    }}>
-                      {plan.entitlements.slice(0, 3).map((entitlement) => {
-                        const definition = getEntitlementDefinition(entitlement.entitlementKey)
-                        const icon = getEntitlementIcon(definition.icon, 18, "#E20074")
-                        return (
-                          <div
-                            key={entitlement.id}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.75rem",
-                              minWidth: 0
-                            }}
-                          >
-                            {icon && (
-                              <div style={{ flexShrink: 0 }}>
-                                {icon}
-                              </div>
-                            )}
-                            <div style={{ 
-                              flex: 1,
-                              minWidth: 0,
-                              wordWrap: "break-word",
-                              overflowWrap: "break-word"
-                            }}>
-                              <div style={{
-                                fontSize: "0.875rem",
-                                fontWeight: "500",
-                                color: "#0A0A0A",
-                                wordWrap: "break-word",
-                                overflowWrap: "break-word"
-                              }}>
-                                {entitlement.value === null ? (
-                                  <span style={{ color: "#E20074" }}>Unbegrenzt</span>
-                                ) : (
-                                  <>
-                                    Bis zu {entitlement.value}
-                                    {definition.unit && definition.unit !== "count" && (
-                                      <span style={{
-                                        marginLeft: "0.25rem",
-                                        color: "#7A7A7A",
-                                        fontWeight: "400"
-                                      }}>
-                                        {definition.unit}
-                                      </span>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                              <div style={{
-                                fontSize: "0.75rem",
-                                color: "#7A7A7A",
-                                wordWrap: "break-word",
-                                overflowWrap: "break-word"
-                              }}>
-                                {definition.label}
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* CTA Button */}
+                {/* CTA Button - Feste Position am Ende */}
                 {price ? (
                   <Link
                     href={`/signup?plan=${plan.slug}`}
@@ -663,8 +672,7 @@ export default function PricingPageContent({
                       textAlign: "center",
                       fontSize: "0.875rem",
                       fontWeight: "600",
-                      transition: "background-color 0.2s",
-                      marginTop: "auto"
+                      transition: "background-color 0.2s"
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = "#C1005F"
@@ -688,8 +696,7 @@ export default function PricingPageContent({
                       textAlign: "center",
                       fontSize: "0.875rem",
                       fontWeight: "600",
-                      transition: "background-color 0.2s",
-                      marginTop: "auto"
+                      transition: "background-color 0.2s"
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = "#333333"

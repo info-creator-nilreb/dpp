@@ -5,45 +5,49 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 /**
- * Persönliche Daten
+ * Persönliche Daten (My Profile)
  * 
- * Name, E-Mail, Organisation verwalten
+ * Phase 1: User scope only - Name, E-Mail, Role, Organization (read-only link)
+ * Organization management is moved to /app/organization
  */
 export function PersonalDataPageContent() {
   const router = useRouter()
-  const [organizationName, setOrganizationName] = useState("")
   const [userName, setUserName] = useState("")
   const [userEmail, setUserEmail] = useState("")
-  const [organizationId, setOrganizationId] = useState("")
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [organizationName, setOrganizationName] = useState("")
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isEditing, setIsEditing] = useState(false)
 
-  // Lade Daten beim Mount
+  // Load user data and role
   useEffect(() => {
     async function loadData() {
       setLoading(true)
       try {
-        const [orgResponse, userResponse] = await Promise.all([
-          fetch("/api/app/organizations", { cache: "no-store" }),
-          fetch("/api/app/account", { cache: "no-store" })
+        const [userResponse, profileResponse] = await Promise.all([
+          fetch("/api/app/account", { cache: "no-store" }),
+          fetch("/api/app/profile", { cache: "no-store" })
         ])
-
-        if (orgResponse.ok) {
-          const orgData = await orgResponse.json()
-          if (orgData.organizations && orgData.organizations.length > 0) {
-            const org = orgData.organizations[0]
-            setOrganizationName(org.name)
-            setOrganizationId(org.id)
-          }
-        }
 
         if (userResponse.ok) {
           const userData = await userResponse.json()
           setUserName(userData.name || "")
           setUserEmail(userData.email || "")
+        }
+
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json()
+          if (profileData.user) {
+            setUserRole(profileData.user.role || null)
+            if (profileData.user.organization) {
+              setOrganizationName(profileData.user.organization.name)
+              setOrganizationId(profileData.user.organization.id)
+            }
+          }
         }
       } catch (err) {
         console.error("Error loading data:", err)
@@ -57,8 +61,8 @@ export function PersonalDataPageContent() {
   }, [])
 
   async function handleSave() {
-    if (!organizationName.trim() || !userName.trim()) {
-      setError("Bitte füllen Sie alle Pflichtfelder aus.")
+    if (!userName.trim()) {
+      setError("Bitte geben Sie einen Namen ein.")
       return
     }
 
@@ -67,23 +71,7 @@ export function PersonalDataPageContent() {
     setSuccess("")
 
     try {
-      // Update Organization
-      const orgResponse = await fetch("/api/app/organizations", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: organizationName.trim()
-        })
-      })
-
-      if (!orgResponse.ok) {
-        const errorData = await orgResponse.json()
-        throw new Error(errorData.error || "Fehler beim Aktualisieren der Organisation")
-      }
-
-      // Update User
+      // Update User (only user name, organization is managed separately)
       const userResponse = await fetch("/api/app/account", {
         method: "PUT",
         headers: {
@@ -96,15 +84,15 @@ export function PersonalDataPageContent() {
 
       if (!userResponse.ok) {
         const errorData = await userResponse.json()
-        throw new Error(errorData.error || "Fehler beim Aktualisieren des Users")
+        throw new Error(errorData.error || "Fehler beim Aktualisieren des Benutzers")
       }
 
-      // Erfolg: Bearbeitungsmodus verlassen und State aktualisieren
+      // Success: Exit edit mode and refresh
       setIsEditing(false)
-      setSuccess("Daten wurden erfolgreich gespeichert")
+      setSuccess("Ihre Daten wurden erfolgreich gespeichert")
       router.refresh()
       
-      // Success-Message nach 3 Sekunden entfernen
+      // Remove success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten.")
@@ -149,14 +137,14 @@ export function PersonalDataPageContent() {
         color: "#0A0A0A",
         marginBottom: "1rem"
       }}>
-        Persönliche Daten
+        Mein Profil
       </h1>
       <p style={{
         color: "#7A7A7A",
         fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
         marginBottom: "2rem"
       }}>
-        Verwalten Sie Ihre persönlichen Informationen und Organisationsdaten.
+        Verwalten Sie Ihre persönlichen Informationen. Organisationsdaten können Sie im Bereich Organisation verwalten.
       </p>
 
       {error && (
@@ -267,34 +255,46 @@ export function PersonalDataPageContent() {
             </p>
           </div>
 
-          {/* Organization Name */}
-          <div>
-            <label style={{
-              display: "block",
-              fontSize: "clamp(0.9rem, 2vw, 1rem)",
-              fontWeight: "600",
-              color: "#0A0A0A",
-              marginBottom: "0.5rem"
-            }}>
-              Organisation <span style={{ color: "#E20074" }}>*</span>
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={organizationName}
-                onChange={(e) => setOrganizationName(e.target.value)}
-                placeholder="Organisationsname"
-                style={{
-                  width: "100%",
-                  padding: "clamp(0.75rem, 2vw, 1rem)",
-                  fontSize: "clamp(0.9rem, 2vw, 1rem)",
-                  border: "1px solid #CDCDCD",
-                  borderRadius: "8px",
-                  color: "#0A0A0A",
-                  backgroundColor: "#FFFFFF"
-                }}
-              />
-            ) : (
+          {/* Role (read-only) */}
+          {userRole && (
+            <div>
+              <label style={{
+                display: "block",
+                fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                fontWeight: "600",
+                color: "#0A0A0A",
+                marginBottom: "0.5rem"
+              }}>
+                Rolle
+              </label>
+              <p style={{
+                fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                color: "#0A0A0A",
+                padding: "clamp(0.75rem, 2vw, 1rem)",
+                backgroundColor: "#F5F5F5",
+                borderRadius: "8px",
+                margin: 0,
+                fontWeight: "500"
+              }}>
+                {userRole === "ORG_ADMIN" ? "Organisations-Administrator" : 
+                 userRole === "EDITOR" ? "Editor" : 
+                 userRole === "VIEWER" ? "Betrachter" : userRole}
+              </p>
+            </div>
+          )}
+
+          {/* Organization (read-only, only show name) */}
+          {organizationId && (
+            <div>
+              <label style={{
+                display: "block",
+                fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                fontWeight: "600",
+                color: "#0A0A0A",
+                marginBottom: "0.5rem"
+              }}>
+                Organisation
+              </label>
               <p style={{
                 fontSize: "clamp(0.9rem, 2vw, 1rem)",
                 color: "#0A0A0A",
@@ -305,8 +305,8 @@ export function PersonalDataPageContent() {
               }}>
                 {organizationName || "Nicht gesetzt"}
               </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

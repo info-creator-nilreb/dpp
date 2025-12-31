@@ -64,16 +64,23 @@ function calculatePasswordStrength(password: string): {
 function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [name, setName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [organizationAction, setOrganizationAction] = useState<"create_new_organization" | "request_to_join_organization">("create_new_organization")
+  const [organizationName, setOrganizationName] = useState("")
+  const [organizationId, setOrganizationId] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState("")
 
   const passwordStrength = useMemo(() => calculatePasswordStrength(password), [password])
+  
+  // Check for invitation token in URL
+  const invitationToken = searchParams.get("invitation")
 
   // Prüfe ob Erfolgs-Nachricht angezeigt werden soll
   useEffect(() => {
@@ -92,19 +99,65 @@ function SignupContent() {
     setLoading(true)
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password })
-      })
+      // Phase 1: Use new signup endpoint if invitation token exists or organizationAction is set
+      const usePhase1Signup = invitationToken || organizationAction === "request_to_join_organization"
+      
+      if (usePhase1Signup) {
+        if (!firstName.trim() || !lastName.trim()) {
+          setError("Vorname und Nachname sind erforderlich")
+          setLoading(false)
+          return
+        }
 
-      const data = await response.json()
+        if (organizationAction === "create_new_organization" && !organizationName.trim()) {
+          setError("Organisationsname ist erforderlich")
+          setLoading(false)
+          return
+        }
 
-      if (!response.ok) {
-        setError(data.error || "Ein Fehler ist aufgetreten")
+        if (organizationAction === "request_to_join_organization" && !organizationId.trim()) {
+          setError("Organisations-ID ist erforderlich")
+          setLoading(false)
+          return
+        }
+
+        const response = await fetch("/api/auth/signup-phase1", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email,
+            password,
+            organizationAction,
+            organizationName: organizationName.trim() || undefined,
+            organizationId: organizationId.trim() || undefined,
+            invitationToken: invitationToken || undefined,
+          })
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          setError(data.error || "Ein Fehler ist aufgetreten")
+        } else {
+          router.push("/signup?success=true&email=" + encodeURIComponent(email))
+        }
       } else {
-        // Nach Registrierung zur Info-Seite weiterleiten, die den User auf Verifizierung hinweist
-        router.push("/signup?success=true&email=" + encodeURIComponent(email))
+        // Legacy signup (fallback)
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: `${firstName} ${lastName}`.trim(), email, password })
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          setError(data.error || "Ein Fehler ist aufgetreten")
+        } else {
+          router.push("/signup?success=true&email=" + encodeURIComponent(email))
+        }
       }
     } catch (err) {
       setError("Ein Fehler ist aufgetreten")
@@ -212,12 +265,39 @@ function SignupContent() {
               fontWeight: "500",
               fontSize: "0.9rem"
             }}>
-              Name
+              Vorname *
             </label>
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                border: "1px solid #CDCDCD",
+                borderRadius: "6px",
+                fontSize: "1rem",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label style={{
+              display: "block",
+              marginBottom: "0.5rem",
+              color: "#0A0A0A",
+              fontWeight: "500",
+              fontSize: "0.9rem"
+            }}>
+              Nachname *
+            </label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -381,6 +461,116 @@ function SignupContent() {
               </div>
             )}
           </div>
+
+          {/* Organization Action (only if no invitation token) */}
+          {!invitationToken && (
+            <>
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{
+                  display: "block",
+                  marginBottom: "0.5rem",
+                  color: "#0A0A0A",
+                  fontWeight: "500",
+                  fontSize: "0.9rem"
+                }}>
+                  Ich möchte...
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      name="organizationAction"
+                      value="create_new_organization"
+                      checked={organizationAction === "create_new_organization"}
+                      onChange={(e) => setOrganizationAction(e.target.value as any)}
+                    />
+                    <span>Eine neue Organisation erstellen</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      name="organizationAction"
+                      value="request_to_join_organization"
+                      checked={organizationAction === "request_to_join_organization"}
+                      onChange={(e) => setOrganizationAction(e.target.value as any)}
+                    />
+                    <span>Einer bestehenden Organisation beitreten</span>
+                  </label>
+                </div>
+              </div>
+
+              {organizationAction === "create_new_organization" && (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    color: "#0A0A0A",
+                    fontWeight: "500",
+                    fontSize: "0.9rem"
+                  }}>
+                    Organisationsname *
+                  </label>
+                  <input
+                    type="text"
+                    value={organizationName}
+                    onChange={(e) => setOrganizationName(e.target.value)}
+                    required={organizationAction === "create_new_organization"}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #CDCDCD",
+                      borderRadius: "6px",
+                      fontSize: "1rem",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+              )}
+
+              {organizationAction === "request_to_join_organization" && (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    color: "#0A0A0A",
+                    fontWeight: "500",
+                    fontSize: "0.9rem"
+                  }}>
+                    Organisations-ID *
+                  </label>
+                  <input
+                    type="text"
+                    value={organizationId}
+                    onChange={(e) => setOrganizationId(e.target.value)}
+                    required={organizationAction === "request_to_join_organization"}
+                    placeholder="ID der Organisation"
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #CDCDCD",
+                      borderRadius: "6px",
+                      fontSize: "1rem",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          {invitationToken && (
+            <div style={{
+              padding: "0.75rem",
+              marginBottom: "1.5rem",
+              backgroundColor: "#E8F5E9",
+              border: "1px solid #C8E6C9",
+              borderRadius: "6px",
+              color: "#2E7D32",
+              fontSize: "0.9rem"
+            }}>
+              Sie wurden zu einer Organisation eingeladen. Nach der Registrierung werden Sie automatisch beitreten.
+            </div>
+          )}
 
           <button
             type="submit"

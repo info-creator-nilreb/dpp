@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import TPassLogo from "../components/TPassLogo"
 import { LoginSplitLayout } from "@/components/LoginSplitLayout"
@@ -14,13 +14,37 @@ import { LoginSplitLayout } from "@/components/LoginSplitLayout"
  * - Different API endpoint
  * - Different session management
  */
-export default function SuperAdminLoginPage() {
+function SuperAdminLoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Get return URL from query params or sessionStorage
+  const getReturnUrl = () => {
+    // First check query params (from middleware redirect)
+    const callbackUrl = searchParams.get("callbackUrl")
+    if (callbackUrl) {
+      return callbackUrl
+    }
+    
+    // Then check sessionStorage (from auto-logout)
+    try {
+      const storedUrl = sessionStorage.getItem("super_admin_return_url")
+      if (storedUrl) {
+        sessionStorage.removeItem("super_admin_return_url")
+        return storedUrl
+      }
+    } catch (e) {
+      // sessionStorage might not be available
+    }
+    
+    // Default to dashboard
+    return "/super-admin/dashboard"
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,8 +61,9 @@ export default function SuperAdminLoginPage() {
       const data = await response.json()
 
       if (response.ok && data.success !== false) {
-        // Redirect to dashboard using window.location for reliable navigation
-        window.location.href = "/super-admin/dashboard"
+        // Redirect to return URL (or dashboard as fallback)
+        const returnUrl = getReturnUrl()
+        window.location.href = returnUrl
       } else {
         setError(data.error || "Anmeldung fehlgeschlagen")
       }
@@ -243,5 +268,26 @@ export default function SuperAdminLoginPage() {
         </form>
       </div>
     </LoginSplitLayout>
+  )
+}
+
+export default function SuperAdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <LoginSplitLayout
+        title="Super Admin"
+        subtitle="Willkommen im Admin-Bereich."
+        quote={{
+          text: "Exzellenz ist keine Fähigkeit, es ist eine Haltung.",
+          author: "Ralph Marston"
+        }}
+      >
+        <div style={{ textAlign: "center", padding: "2rem" }}>
+          <p style={{ color: "#7A7A7A" }}>Wird geladen...</p>
+        </div>
+      </LoginSplitLayout>
+    }>
+      <SuperAdminLoginForm />
+    </Suspense>
   )
 }

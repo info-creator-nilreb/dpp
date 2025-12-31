@@ -27,6 +27,10 @@ yarn-error.log*
 # local env files
 .env
 .env*.local
+.env.production
+.env.development
+.env.backup
+.env.*.backup
 
 # vercel
 .vercel
@@ -37,7 +41,3 @@ next-env.d.ts
 
 # uploads
 /public/uploads
-
-
-
-.env.backup

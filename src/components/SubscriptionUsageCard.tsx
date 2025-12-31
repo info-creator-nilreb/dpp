@@ -10,6 +10,8 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import TrialBanner from "./TrialBanner"
+import { LoadingSpinner } from "./LoadingSpinner"
+import { getSubscriptionStatusLabel } from "@/lib/subscription-status-labels"
 
 interface SubscriptionStatus {
   subscriptionState: "no_subscription" | "trial_subscription" | "active_subscription" | "expired_or_suspended"
@@ -61,23 +63,44 @@ interface UsageData {
   }>
 }
 
-export default function SubscriptionUsageCard() {
-  const [statusData, setStatusData] = useState<SubscriptionStatus | null>(null)
-  const [usageData, setUsageData] = useState<UsageData | null>(null)
-  const [loading, setLoading] = useState(true)
+export interface SubscriptionUsageCardProps {
+  statusData?: SubscriptionStatus | null
+  usageData?: UsageData | null
+  onLoadComplete?: () => void
+}
+
+export default function SubscriptionUsageCard({ 
+  statusData: externalStatusData, 
+  usageData: externalUsageData,
+  onLoadComplete 
+}: SubscriptionUsageCardProps) {
+  const [statusData, setStatusData] = useState<SubscriptionStatus | null>(externalStatusData || null)
+  const [usageData, setUsageData] = useState<UsageData | null>(externalUsageData || null)
+  const [loading, setLoading] = useState(!externalStatusData || !externalUsageData)
 
   useEffect(() => {
+    // If data is provided externally, use it and skip loading
+    if (externalStatusData && externalUsageData) {
+      setStatusData(externalStatusData)
+      setUsageData(externalUsageData)
+      setLoading(false)
+      onLoadComplete?.()
+      return
+    }
+
     async function fetchData() {
       try {
-        // Fetch subscription status (single source of truth)
-        const statusResponse = await fetch("/api/app/subscription/status")
+        // Fetch both endpoints in parallel for better performance
+        const [statusResponse, usageResponse] = await Promise.all([
+          fetch("/api/app/subscription/status"),
+          fetch("/api/app/subscription/usage")
+        ])
+
         if (statusResponse.ok) {
           const status = await statusResponse.json()
           setStatusData(status)
         }
 
-        // Fetch usage data
-        const usageResponse = await fetch("/api/app/subscription/usage")
         if (usageResponse.ok) {
           const usage = await usageResponse.json()
           setUsageData(usage)
@@ -86,11 +109,12 @@ export default function SubscriptionUsageCard() {
         console.error("Error fetching data:", error)
       } finally {
         setLoading(false)
+        onLoadComplete?.()
       }
     }
 
     fetchData()
-  }, [])
+  }, [externalStatusData, externalUsageData, onLoadComplete])
 
   if (loading) {
     return (
@@ -98,9 +122,13 @@ export default function SubscriptionUsageCard() {
         padding: "1.5rem",
         backgroundColor: "#FFFFFF",
         borderRadius: "12px",
-        border: "1px solid #E5E5E5"
+        border: "1px solid #E5E5E5",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "200px"
       }}>
-        <div style={{ color: "#7A7A7A" }}>Lade Abo-Informationen...</div>
+        <LoadingSpinner message="Lade Abo-Informationen..." />
       </div>
     )
   }
@@ -206,7 +234,7 @@ export default function SubscriptionUsageCard() {
               backgroundColor: subscription.status === "active" ? "#E6F7E6" : "#FFF4E6",
               color: subscription.status === "active" ? "#2D7A2D" : "#B45309"
             }}>
-              {subscription.status === "active" ? "Aktiv" : subscription.status}
+              {getSubscriptionStatusLabel(subscription.status)}
             </span>
           </div>
         </div>

@@ -295,3 +295,130 @@ Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorie
   }
 }
 
+/**
+ * Sendet eine Einladungs-E-Mail
+ * 
+ * Phase 1: Organisation lädt User per E-Mail ein
+ */
+export async function sendInvitationEmail(
+  email: string,
+  organizationId: string,
+  invitationToken: string
+): Promise<void> {
+  const appName = process.env.APP_NAME || "T-Pass"
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
+  
+  // Hole Organisationsname
+  const { prisma } = await import("@/lib/prisma")
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { name: true },
+  })
+  
+  const organizationName = organization?.name || "eine Organisation"
+  const signupUrl = `${baseUrl}/signup?invitation=${invitationToken}`
+  
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .container {
+            background-color: #FFFFFF;
+            border: 1px solid #CDCDCD;
+            border-radius: 12px;
+            padding: 2rem;
+          }
+          .button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: #E20074;
+            color: #FFFFFF;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 1rem 0;
+          }
+          .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #CDCDCD;
+            font-size: 0.85rem;
+            color: #7A7A7A;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1 style="color: #0A0A0A; margin-bottom: 1rem;">Einladung zu ${organizationName}</h1>
+          <p>Hallo,</p>
+          <p>Sie wurden eingeladen, ${organizationName} auf ${appName} beizutreten.</p>
+          <p>Klicken Sie auf den folgenden Button, um sich zu registrieren und der Organisation beizutreten:</p>
+          <a href="${signupUrl}" class="button">Einladung annehmen</a>
+          <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
+          <p style="word-break: break-all; color: #7A7A7A; font-size: 0.9rem;">${signupUrl}</p>
+          <p style="margin-top: 2rem;">Diese Einladung ist 7 Tage gültig.</p>
+          <div class="footer">
+            <p>Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+  
+  const textContent = `
+Hallo,
+
+Sie wurden eingeladen, ${organizationName} auf ${appName} beizutreten.
+
+Klicken Sie auf den folgenden Link, um sich zu registrieren:
+
+${signupUrl}
+
+Diese Einladung ist 7 Tage gültig.
+
+Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.
+  `
+  
+  try {
+    const transport = createEmailTransport()
+    
+    const mailOptions = {
+      from: fromEmail,
+      to: email,
+      subject: `Einladung zu ${organizationName} - ${appName}`,
+      text: textContent,
+      html: htmlContent,
+    }
+    
+    const info = await transport.sendMail(mailOptions)
+    
+    if (process.env.SMTP_HOST) {
+      console.log(`Einladungs-E-Mail gesendet an: ${email}`)
+    } else {
+      console.log(`\n=== Einladungs-E-Mail (Development Mode) ===`)
+      console.log(`An: ${email}`)
+      console.log(`Von: ${fromEmail}`)
+      console.log(`Einladungs-URL: ${signupUrl}`)
+      console.log(`\nFalls ein E-Mail-Service konfiguriert wäre, würde die E-Mail jetzt gesendet werden.`)
+      console.log(`================================================\n`)
+      if (info && typeof info === 'object' && 'message' in info) {
+        console.log(`E-Mail-Daten:`, JSON.stringify(info, null, 2))
+      }
+    }
+  } catch (error) {
+    console.error("Fehler beim Senden der Einladungs-E-Mail:", error)
+    throw error // Wirf Fehler weiter, damit API-Endpoint ihn behandeln kann
+  }
+}
+

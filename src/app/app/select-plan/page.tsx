@@ -243,7 +243,8 @@ export default function SelectPlanPage() {
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
         gap: "2rem",
-        marginBottom: "2rem"
+        marginBottom: "3rem", // Mehr Abstand vor dem Link
+        alignItems: "stretch" // Alle Cards haben gleiche Höhe
       }}>
         {plans.map((plan) => {
           // Find subscription models for selected billing interval
@@ -293,42 +294,50 @@ export default function SelectPlanPage() {
                 flexDirection: "column"
               }}
             >
-              <h2 style={{
-                fontSize: "1.5rem",
-                fontWeight: "700",
-                color: "#0A0A0A",
-                marginBottom: "0.5rem"
+              <div style={{
+                marginBottom: "0.5rem", // Verkleinerter Abstand
+                height: "100px" // Feste Höhe für Header + 3 Zeilen Description
               }}>
-                {plan.name}
-              </h2>
-              {plan.description && (
-                <p style={{
-                  color: "#7A7A7A",
-                  fontSize: "0.875rem",
-                  marginBottom: "1rem"
+                <h2 style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "700",
+                  color: "#0A0A0A",
+                  marginBottom: "0.5rem"
                 }}>
-                  {plan.description}
-                </p>
-              )}
-              
-              {/* Show helper text if plan doesn't support selected interval */}
-              {billingInterval === "yearly" && !hasYearlyOption && (
-                <p style={{
-                  color: "#7A7A7A",
-                  fontSize: "0.75rem",
-                  fontStyle: "italic",
-                  marginBottom: "1rem",
-                  padding: "0.5rem",
-                  backgroundColor: "#F9F9F9",
-                  borderRadius: "4px"
-                }}>
-                  Nur monatliche Abrechnung verfügbar
-                </p>
-              )}
+                  {plan.name}
+                </h2>
+                {plan.description && (
+                  <p style={{
+                    color: "#7A7A7A",
+                    fontSize: "0.875rem",
+                    marginBottom: "1rem"
+                  }}>
+                    {plan.description}
+                  </p>
+                )}
+                
+                {/* Show helper text if plan doesn't support selected interval */}
+                {billingInterval === "yearly" && !hasYearlyOption && (
+                  <p style={{
+                    color: "#7A7A7A",
+                    fontSize: "0.75rem",
+                    fontStyle: "italic",
+                    marginBottom: "1rem",
+                    padding: "0.5rem",
+                    backgroundColor: "#F9F9F9",
+                    borderRadius: "4px"
+                  }}>
+                    Nur monatliche Abrechnung verfügbar
+                  </p>
+                )}
+              </div>
 
-              {/* Price display - always show if available, above trial button */}
+              {/* Price display - Feste Position */}
               {selectedPrice > 0 && (
-                <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{
+                  marginBottom: "1.5rem",
+                  marginTop: "1.5rem" // Positioniert am Ende der Card
+                }}>
                   <div style={{
                     display: "flex",
                     alignItems: "baseline",
@@ -340,7 +349,7 @@ export default function SelectPlanPage() {
                       fontWeight: "700",
                       color: "#0A0A0A"
                     }}>
-                      {(selectedPrice / 100).toFixed(2)}€
+                      {Math.round(selectedPrice / 100)}€
                     </span>
                     <span style={{
                       fontSize: "0.875rem",
@@ -356,15 +365,15 @@ export default function SelectPlanPage() {
                       color: "#7A7A7A",
                       textAlign: "center"
                     }}>
-                      {(selectedPrice / 100 / 12).toFixed(2)}€ / Monat
+                      {Math.round(selectedPrice / 100 / 12)}€ / Monat
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Trial CTA - "7 Tage kostenlos testen" */}
+              {/* Trial CTA - "7 Tage kostenlos testen" - Feste Position am Ende */}
               {trialModel && (
-                <div style={{ marginBottom: "1.5rem" }}>
+                <>
                   <button
                     onClick={async () => {
                       try {
@@ -387,11 +396,11 @@ export default function SelectPlanPage() {
                           window.location.href = "/app/dashboard"
                         } else {
                           const data = await response.json()
-                          alert(`Fehler: ${data.error || "Trial konnte nicht gestartet werden"}`)
+                          alert(`Fehler: ${data.error || "Testphase konnte nicht gestartet werden"}`)
                         }
                       } catch (error) {
                         console.error("Error starting trial:", error)
-                        alert("Fehler beim Starten des Trials")
+                        alert("Fehler beim Starten der Testphase")
                       }
                     }}
                     style={{
@@ -403,77 +412,76 @@ export default function SelectPlanPage() {
                       borderRadius: "6px",
                       fontSize: "0.875rem",
                       fontWeight: "600",
-                      cursor: "pointer",
-                      marginBottom: "0.5rem"
+                      cursor: "pointer"
                     }}
                   >
                     {trialDays} Tag{trialDays !== 1 ? "e" : ""} kostenlos testen
                   </button>
-                  <p style={{
-                    fontSize: "0.75rem",
-                    color: "#7A7A7A",
-                    textAlign: "center",
-                    margin: 0,
-                    marginBottom: "0.5rem"
-                  }}>
-                    Keine Kreditkarte erforderlich
-                  </p>
-                  <p style={{
-                    fontSize: "0.75rem",
-                    color: "#7A7A7A",
-                    textAlign: "center",
-                    margin: 0,
-                    fontStyle: "italic"
-                  }}>
-                    Das Abo endet nach der Probezeit automatisch
-                  </p>
-                </div>
+                  <div style={{ marginTop: "1.5rem" }}>
+                    <p style={{
+                      fontSize: "0.75rem",
+                      color: "#7A7A7A",
+                      textAlign: "center",
+                      margin: 0,
+                      marginBottom: "0.25rem"
+                    }}>
+                      Keine Kreditkarte erforderlich
+                    </p>
+                    <p style={{
+                      fontSize: "0.75rem",
+                      color: "#7A7A7A",
+                      textAlign: "center",
+                      margin: 0,
+                      fontStyle: "italic"
+                    }}>
+                      Das Abo endet nach der Probezeit automatisch
+                    </p>
+                  </div>
+                </>
               )}
 
-              {/* Paid subscription button - only show if no trial available */}
+              {/* Paid subscription button - only show if no trial available - Feste Position am Ende */}
               {!trialModel && paidModel && selectedPrice > 0 ? (
-                <div>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const response = await fetch("/api/subscription/assign", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({
-                            subscriptionModelId: paidModel.id,
-                            startTrial: false,
-                          }),
-                        })
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/subscription/assign", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          subscriptionModelId: paidModel.id,
+                          startTrial: false,
+                        }),
+                      })
 
-                        if (response.ok) {
-                          // Redirect to dashboard after successful subscription assignment
-                          window.location.href = "/app/dashboard"
-                        } else {
-                          const data = await response.json()
-                          alert(`Fehler: ${data.error || "Subscription konnte nicht aktiviert werden"}`)
-                        }
-                      } catch (error) {
-                        console.error("Error assigning subscription:", error)
-                        alert("Fehler beim Aktivieren der Subscription")
+                      if (response.ok) {
+                        // Redirect to dashboard after successful subscription assignment
+                        window.location.href = "/app/dashboard"
+                      } else {
+                        const data = await response.json()
+                        alert(`Fehler: ${data.error || "Subscription konnte nicht aktiviert werden"}`)
                       }
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem 1.5rem",
-                      backgroundColor: "#FFFFFF",
-                      color: "#E20074",
-                      border: "2px solid #E20074",
-                      borderRadius: "6px",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Jetzt abonnieren
-                  </button>
-                </div>
+                    } catch (error) {
+                      console.error("Error assigning subscription:", error)
+                      alert("Fehler beim Aktivieren der Subscription")
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1.5rem",
+                    backgroundColor: "#FFFFFF",
+                    color: "#E20074",
+                    border: "2px solid #E20074",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Jetzt abonnieren
+                </button>
               ) : billingInterval === "yearly" && !hasYearlyOption ? (
                 <div style={{
                   padding: "1rem",
@@ -495,7 +503,13 @@ export default function SelectPlanPage() {
         })}
       </div>
 
-      <div style={{ textAlign: "center" }}>
+      {/* Link unter allen Cards */}
+      <div style={{ 
+        textAlign: "center",
+        marginTop: "3rem",
+        width: "100%",
+        clear: "both" // Stellt sicher, dass der Link unter dem Grid ist
+      }}>
         <Link
           href="/pricing"
           style={{

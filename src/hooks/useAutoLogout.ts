@@ -66,6 +66,15 @@ export function useAutoLogout(options: UseAutoLogoutOptions = {}) {
       : "/api/auth/signout";
     const loginPath = isSuperAdmin ? "/super-admin/login" : "/login";
 
+    // Save current path for redirect after login (only for Super Admin)
+    if (isSuperAdmin && currentPath !== "/super-admin/login") {
+      try {
+        sessionStorage.setItem("super_admin_return_url", currentPath);
+      } catch (e) {
+        // sessionStorage might not be available, ignore
+      }
+    }
+
     try {
       // Call logout endpoint (best effort)
       await fetch(logoutPath, {

@@ -8,7 +8,11 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate:production:missing-tables": "node scripts/apply-missing-tables-to-production.js"
+    "migrate:production:missing-tables": "node scripts/apply-missing-tables-to-production.js",
+    "db:check": "./scripts/check-database-environment.sh",
+    "db:push": "./scripts/safe-prisma-wrapper.sh db push",
+    "db:migrate:dev": "./scripts/safe-prisma-wrapper.sh migrate dev",
+    "db:migrate:deploy": "echo '⚠️  Verwende ./scripts/migrate-production.sh für Production-Migrationen' && exit 1"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -8,41 +8,90 @@ datasource db {
 }
 
 model User {
-  id                        String             @id @default(cuid())
-  email                     String             @unique
+  id                        String    @id @default(cuid())
+  email                     String    @unique
   password                  String
-  name                      String?
+  firstName                 String?
+  lastName                  String?
+  name                      String? // Legacy field, kept for backward compatibility
   systemRole                String?
-  isPlatformAdmin           Boolean            @default(false)
-  emailVerified             Boolean            @default(false)
-  verificationToken         String?            @unique
+  isPlatformAdmin           Boolean   @default(false)
+  emailVerified             Boolean   @default(false)
+  verificationToken         String?   @unique
   verificationTokenExpires  DateTime?
-  passwordResetToken        String?            @unique
+  passwordResetToken        String?   @unique
   passwordResetTokenExpires DateTime?
   totpSecret                String?
-  totpEnabled               Boolean            @default(false)
-  createdAt                 DateTime           @default(now())
-  updatedAt                 DateTime           @updatedAt
-  dppPermissions            DppPermission[]
-  publishedVersions         DppVersion[]
-  memberships               Membership[]
-  auditLogs                 PlatformAuditLog[]
+  totpEnabled               Boolean   @default(false)
 
+  // Phase 1: Extended profile fields
+  status            String    @default("active") // active | invited | suspended
+  lastLoginAt       DateTime?
+  jobTitle          String?
+  phone             String?
+  preferredLanguage String    @default("en")
+  timeZone          String?
+
+  // Phase 1: One organization per user (N:1 relationship - many users to one org)
+  organizationId String?
+  organization   Organization? @relation("OrganizationUsers", fields: [organizationId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  dppPermissions    DppPermission[]
+  publishedVersions DppVersion[]
+  memberships       Membership[] // Legacy: kept for migration compatibility
+  auditLogs         PlatformAuditLog[]
+  invitations       Invitation[] // Invitations sent by this user
+  notifications     Notification[]
+  joinRequests      JoinRequest[]
+
+  @@index([organizationId])
+  @@index([status])
   @@map("users")
 }
 
 model Organization {
-  id           String             @id @default(cuid())
-  name         String
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  licenseTier  String             @default("free")
-  status       String             @default("active")
+  id          String   @id @default(cuid())
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  licenseTier String   @default("free")
+  status      String   @default("active")
+
+  // Phase 1: Company Details (legal & operational)
+  legalName            String?
+  companyType          String? // e.g., "GmbH", "AG", "UG", "Ltd", etc.
+  vatId                String? // VAT/UID number
+  commercialRegisterId String? // Handelsregisternummer
+  addressStreet        String?
+  addressZip           String?
+  addressCity          String?
+  addressCountry       String?
+  country              String? // ISO country code
+
+  // Phase 1: Billing Information (separate from company details)
+  billingEmail          String?
+  billingContactUserId  String? // Reference to User.id
+  invoiceAddressStreet  String?
+  invoiceAddressZip     String?
+  invoiceAddressCity    String?
+  invoiceAddressCountry String?
+  billingCountry        String? // Tax-relevant country
+
+  // Relations
   dpps         Dpp[]
-  memberships  Membership[]
+  memberships  Membership[] // Legacy: kept for migration compatibility
+  users        User[]             @relation("OrganizationUsers") // Phase 1: Users belonging to this organization
   subscription Subscription?
   auditLogs    PlatformAuditLog[]
+  invitations  Invitation[]
+  joinRequests JoinRequest[]
 
+  @@index([status])
+  @@index([country])
   @@map("organizations")
 }
 
@@ -50,12 +99,13 @@ model Membership {
   id             String       @id @default(cuid())
   userId         String
   organizationId String
-  role           String       @default("ORG_MEMBER")
+  role           String       @default("VIEWER") // Phase 1: ORG_ADMIN | EDITOR | VIEWER
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, organizationId])
+  @@index([role])
   @@map("memberships")
 }
 
@@ -613,4 +663,71 @@ model TrialEntitlementOverride {
   @@index([subscriptionModelId])
   @@index([entitlementKey])
   @@map("trial_entitlement_overrides")
+}
+
+// ============================================
+// PHASE 1: ORGANIZATION & USER MANAGEMENT
+// ============================================
+
+// Invitation: Organization invites User via email
+model Invitation {
+  id             String       @id @default(cuid())
+  email          String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String       @default("VIEWER") // ORG_ADMIN | EDITOR | VIEWER
+  status         String       @default("pending") // pending | accepted | expired
+  token          String       @unique
+  expiresAt      DateTime
+  invitedById    String? // User who sent the invitation
+  invitedBy      User?        @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([email, organizationId, status])
+  @@index([organizationId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
+// JoinRequest: User requests to join Organization
+model JoinRequest {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status         String       @default("pending") // pending | approved | rejected
+  message        String? // Optional message from user
+  reviewedById   String? // User who reviewed the request
+  reviewedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, organizationId, status])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([status])
+  @@map("join_requests")
+}
+
+// Notification: To-Do notifications for users
+model Notification {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String // join_request | invitation_accepted | subscription_warning | etc.
+  referenceType String? // e.g., "join_request", "invitation", "subscription"
+  referenceId   String? // ID of the referenced entity
+  read          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([type])
+  @@index([createdAt])
+  @@map("notifications")
 }
