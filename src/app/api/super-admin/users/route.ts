@@ -104,17 +104,16 @@ export async function POST(request: Request) {
 
     // Create invitation and send email
     const invitation = await createInvitation(
-      user.id,
-      organizationId,
       email,
-      role
+      organizationId,
+      role,
+      session.id // Super Admin as inviter
     )
 
     await sendInvitationEmail(
       email,
-      `${firstName} ${lastName}`,
-      invitation.token,
-      organization.name
+      organizationId,
+      invitation.token
     )
 
     // Audit log
