@@ -653,9 +653,12 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
           >
             <div className="new-template-block-header-container" style={{
               display: "flex",
-              flexDirection: "column",
+              alignItems: "center",
               gap: "0.75rem",
-              marginBottom: "1.5rem"
+              marginBottom: "1.5rem",
+              paddingBottom: "1rem",
+              borderBottom: "2px solid #E20074",
+              flexWrap: "wrap"
             }}>
               <input
                 type="text"
@@ -668,62 +671,63 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
                   fontWeight: "600",
                   color: "#0A0A0A",
                   border: "none",
-                  borderBottom: "2px solid #E20074",
                   padding: "0.5rem 0",
                   outline: "none",
-                  width: "100%",
-                  maxWidth: "500px"
+                  flex: 1,
+                  minWidth: "200px",
+                  backgroundColor: "transparent"
                 }}
               />
               {blocks.length > 1 && (
-                <div className="new-template-block-actions" style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  width: "100%"
-                }}>
-                  <div className="new-template-block-delete" style={{ width: "100%" }}>
-                    <button
-                      type="button"
-                      onClick={() => deleteBlock(block.id)}
-                      disabled={loading}
-                      title="Block löschen"
-                      className="new-template-block-delete-button"
-                      style={{
-                        padding: "0.625rem",
-                        backgroundColor: "#DC2626",
-                        color: "#FFFFFF",
-                        border: "none",
-                        borderRadius: "6px",
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                        cursor: loading ? "not-allowed" : "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "0.5rem",
-                        width: "100%",
-                        minWidth: "48px",
-                        minHeight: "48px"
-                      }}
+                <div className="new-template-block-delete">
+                  <button
+                    type="button"
+                    onClick={() => deleteBlock(block.id)}
+                    disabled={loading}
+                    title="Block entfernen"
+                    className="new-template-block-delete-button"
+                    style={{
+                      padding: "0.5rem",
+                      backgroundColor: "transparent",
+                      color: "#7A7A7A",
+                      border: "1px solid #CDCDCD",
+                      borderRadius: "6px",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "32px",
+                      height: "32px",
+                      opacity: loading ? 0.5 : 1,
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.backgroundColor = "#F5F5F5"
+                        e.currentTarget.style.borderColor = "#7A7A7A"
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.backgroundColor = "transparent"
+                        e.currentTarget.style.borderColor = "#CDCDCD"
+                      }
+                    }}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      <span className="new-template-block-delete-text">Block löschen</span>
-                      <svg
-                        className="new-template-block-delete-icon"
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </button>
-                  </div>
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
                 </div>
               )}
             </div>
@@ -742,7 +746,7 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
                 >
                   <div style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 2fr 1fr auto auto",
+                    gridTemplateColumns: "2fr 2fr 1fr auto 32px",
                     gap: "1rem",
                     alignItems: "center"
                   }}>
@@ -814,19 +818,49 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
                       type="button"
                       onClick={() => deleteField(block.id, field.id)}
                       disabled={loading}
+                      title="Feld entfernen"
                       style={{
-                        padding: "0.5rem 0.75rem",
+                        padding: "0.5rem",
                         backgroundColor: "transparent",
-                        color: "#DC2626",
-                        border: "1px solid #DC2626",
+                        color: "#7A7A7A",
+                        border: "1px solid #CDCDCD",
                         borderRadius: "6px",
-                        fontSize: "0.875rem",
                         cursor: loading ? "not-allowed" : "pointer",
-                        whiteSpace: "nowrap",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "32px",
+                        height: "32px",
+                        opacity: loading ? 0.5 : 1,
+                        flexShrink: 0,
                         boxSizing: "border-box"
                       }}
+                      onMouseEnter={(e) => {
+                        if (!loading) {
+                          e.currentTarget.style.backgroundColor = "#F5F5F5"
+                          e.currentTarget.style.borderColor = "#7A7A7A"
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!loading) {
+                          e.currentTarget.style.backgroundColor = "transparent"
+                          e.currentTarget.style.borderColor = "#CDCDCD"
+                        }
+                      }}
                     >
-                      Löschen
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -934,47 +968,29 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
           }
           @media (max-width: 768px) {
             .new-template-block-header-container {
-              flex-direction: column !important;
-              align-items: flex-start !important;
-            }
-            .new-template-block-actions {
-              margin-top: 0.5rem;
+              flex-direction: row !important;
+              align-items: center !important;
             }
             .new-template-block-delete {
-              width: 100% !important;
+              width: auto !important;
             }
             .new-template-block-delete-button {
-              width: 100% !important;
-            }
-            .new-template-block-delete-text {
-              display: none !important;
-            }
-            .new-template-block-delete-icon {
-              display: block !important;
+              width: 32px !important;
+              height: 32px !important;
             }
           }
           @media (min-width: 769px) {
             .new-template-block-header-container {
               flex-direction: row !important;
-              justify-content: space-between !important;
               align-items: center !important;
-            }
-            .new-template-block-actions {
-              margin-top: 0 !important;
-              width: auto !important;
             }
             .new-template-block-delete {
               width: auto !important;
             }
             .new-template-block-delete-button {
-              width: auto !important;
-              padding: 0.5rem 1rem !important;
-            }
-            .new-template-block-delete-text {
-              display: inline !important;
-            }
-            .new-template-block-delete-icon {
-              display: none !important;
+              width: 32px !important;
+              height: 32px !important;
+              padding: 0.5rem !important;
             }
           }
         `}</style>

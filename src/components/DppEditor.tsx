@@ -458,33 +458,9 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         const newDppId = data.dpp.id
         setDpp(prev => ({ ...prev, id: newDppId, status: "DRAFT" }))
         
-        // Lade zwischengespeicherte Dateien hoch
-        if (pendingFiles.length > 0) {
-          try {
-            const uploadPromises = pendingFiles.map(async (pendingFile) => {
-              const formData = new FormData()
-              formData.append("file", pendingFile.file)
-              
-              const uploadResponse = await fetch(`/api/app/dpp/${newDppId}/media`, {
-                method: "POST",
-                body: formData
-              })
-              
-              if (!uploadResponse.ok) {
-                console.error(`Fehler beim Hochladen von ${pendingFile.file.name}`)
-              }
-            })
-            
-            await Promise.all(uploadPromises)
-            // Pending files zurücksetzen, da sie jetzt hochgeladen sind
-            setPendingFiles([])
-            // Medien-Liste aktualisieren
-            await refreshMedia()
-          } catch (uploadError) {
-            console.error("Fehler beim Hochladen der zwischengespeicherten Dateien:", uploadError)
-            // Fehler wird ignoriert, da der DPP bereits gespeichert ist
-          }
-        }
+        // NOTE: Media uploads are now handled as first-class field types within blocks.
+        // No implicit media upload at the end of save. Media fields in template blocks
+        // handle their own uploads when users interact with them.
         
         setLastSaved(new Date())
         setSaveStatus("saved")
