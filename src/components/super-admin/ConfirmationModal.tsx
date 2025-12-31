@@ -11,6 +11,8 @@ interface ConfirmationModalProps {
   severity: "medium" | "high"
   requireReason?: boolean
   changedFields?: string[]
+  confirmText?: string
+  loading?: boolean
 }
 
 /**
@@ -28,6 +30,8 @@ export default function ConfirmationModal({
   severity,
   requireReason = false,
   changedFields = [],
+  confirmText = "Änderungen bestätigen",
+  loading = false,
 }: ConfirmationModalProps) {
   const [reason, setReason] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -272,31 +276,31 @@ export default function ConfirmationModal({
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!canConfirm}
+            disabled={!canConfirm || loading}
             style={{
               flex: 1,
               padding: "0.75rem 1.5rem",
-              backgroundColor: canConfirm ? "#E20074" : "#CDCDCD",
+              backgroundColor: canConfirm && !loading ? "#E20074" : "#CDCDCD",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",
               fontSize: "0.9rem",
               fontWeight: "600",
-              cursor: canConfirm ? "pointer" : "not-allowed",
-              opacity: canConfirm ? 1 : 0.6,
+              cursor: canConfirm && !loading ? "pointer" : "not-allowed",
+              opacity: canConfirm && !loading ? 1 : 0.6,
             }}
             onMouseEnter={(e) => {
-              if (canConfirm) {
+              if (canConfirm && !loading) {
                 e.currentTarget.style.backgroundColor = "#C1005F"
               }
             }}
             onMouseLeave={(e) => {
-              if (canConfirm) {
+              if (canConfirm && !loading) {
                 e.currentTarget.style.backgroundColor = "#E20074"
               }
             }}
           >
-            Änderungen bestätigen
+            {loading ? "Wird verarbeitet..." : confirmText}
           </button>
         </div>
       </div>

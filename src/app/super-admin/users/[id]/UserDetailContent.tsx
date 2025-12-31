@@ -842,6 +842,7 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
         onConfirm={handlePasswordReset}
         title="Passwort zurücksetzen"
         message={`Möchten Sie wirklich eine Passwort-Reset-E-Mail an ${user.email} senden?`}
+        severity="medium"
         confirmText="E-Mail senden"
         loading={actionLoading}
       />
@@ -852,6 +853,8 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
         onConfirm={handleSuspend}
         title="Benutzer sperren"
         message={`Möchten Sie wirklich den Benutzer ${user.email} sperren? Der Benutzer kann sich danach nicht mehr anmelden.`}
+        severity="high"
+        requireReason={true}
         confirmText="Sperren"
         loading={actionLoading}
       />
@@ -862,6 +865,8 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
         onConfirm={handleReactivate}
         title="Benutzer reaktivieren"
         message={`Möchten Sie wirklich den Benutzer ${user.email} reaktivieren?`}
+        severity="high"
+        requireReason={true}
         confirmText="Reaktivieren"
         loading={actionLoading}
       />
