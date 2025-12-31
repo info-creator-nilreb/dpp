@@ -336,9 +336,11 @@ export default function OrganizationDetailContent({
         handleSuspend(reason || "")
       } else if (pendingSave.action === "reactivate") {
         handleReactivate(reason || "")
-      } else {
-        handleSave(pendingSave.section, reason)
+      } else if (pendingSave.section !== "subscription") {
+        // Only call handleSave for basic, company, or billing sections
+        handleSave(pendingSave.section as "basic" | "company" | "billing", reason)
       }
+      // Note: subscription changes are handled via the subscription modal, not handleSave
       setPendingSave(null)
     }
     setShowConfirmation(false)
