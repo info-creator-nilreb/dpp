@@ -133,7 +133,7 @@ export async function cleanupInvalidSubscriptionState(
         actorId: actorId || "SYSTEM",
         actorRole: actorId ? "SUPER_ADMIN" : "SYSTEM",
         organizationId,
-        actionType: ACTION_TYPES.SUBSCRIPTION_UPDATED,
+        actionType: ACTION_TYPES.UPDATE,
         entityType: ENTITY_TYPES.SUBSCRIPTION,
         entityId: subscriptionId,
         fieldName: "status",
