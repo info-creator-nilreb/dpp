@@ -40,13 +40,16 @@ export async function GET(request: Request) {
       )
     }
 
+    // TypeScript: organizationId ist nach der Prüfung garantiert nicht null
+    const organizationId = user.organizationId
+
     // Hole alle User mit Rollen
-    const users = await getOrganizationUsers(user.organizationId)
+    const users = await getOrganizationUsers(organizationId)
     
     // Füge Rollen hinzu
     const usersWithRoles = await Promise.all(
       users.map(async (u) => {
-        const role = await getUserRole(u.id, user.organizationId)
+        const role = await getUserRole(u.id, organizationId)
         return {
           ...u,
           role,
