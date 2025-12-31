@@ -1,21 +1,25 @@
 import { writeFile, mkdir, unlink } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
+import { put, del } from "@vercel/blob"
 
 /**
  * Storage-Helper für Datei-Uploads
  * 
- * MVP: Lokales File-System
- * Später: Einfach auf Supabase Storage oder Vercel Blob umstellbar
+ * Verwendet Vercel Blob Storage in Production (Vercel)
+ * Fallback auf lokales File-System in Development
  */
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "dpp-media")
 
+// Prüfe ob wir in Vercel-Umgebung sind
+const isVercel = process.env.VERCEL === "1" || !!process.env.BLOB_READ_WRITE_TOKEN
+
 /**
- * Erstellt Upload-Verzeichnis falls nicht vorhanden
+ * Erstellt Upload-Verzeichnis falls nicht vorhanden (nur für lokales Storage)
  */
 async function ensureUploadDir() {
-  if (!existsSync(UPLOAD_DIR)) {
+  if (!isVercel && !existsSync(UPLOAD_DIR)) {
     await mkdir(UPLOAD_DIR, { recursive: true })
   }
 }
@@ -25,11 +29,9 @@ async function ensureUploadDir() {
  * 
  * @param file - File Buffer oder Blob
  * @param fileName - Dateiname (wird sanitized)
- * @returns Storage-URL (relativ zu /uploads)
+ * @returns Storage-URL (Vercel Blob URL oder relative URL für lokal)
  */
 export async function saveFile(file: Buffer, fileName: string): Promise<string> {
-  await ensureUploadDir()
-  
   // Dateiname sanitizen (nur alphanumerisch, Bindestrich, Unterstrich, Punkt)
   const sanitizedFileName = fileName
     .replace(/[^a-zA-Z0-9._-]/g, "_")
@@ -38,28 +40,74 @@ export async function saveFile(file: Buffer, fileName: string): Promise<string> 
   // Eindeutigen Dateinamen erstellen (Timestamp + Originalname)
   const timestamp = Date.now()
   const uniqueFileName = `${timestamp}_${sanitizedFileName}`
-  const filePath = join(UPLOAD_DIR, uniqueFileName)
   
-  // Datei speichern
-  await writeFile(filePath, file)
-  
-  // Relative URL zurückgeben (für Browser-Zugriff)
-  return `/uploads/dpp-media/${uniqueFileName}`
+  if (isVercel) {
+    // Vercel Blob Storage verwenden
+    try {
+      const blob = await put(`dpp-media/${uniqueFileName}`, file, {
+        access: "public",
+        contentType: getContentType(fileName)
+      })
+      return blob.url
+    } catch (error) {
+      console.error("Vercel Blob upload error:", error)
+      throw new Error("Fehler beim Hochladen der Datei")
+    }
+  } else {
+    // Lokales File-System (Development)
+    await ensureUploadDir()
+    const filePath = join(UPLOAD_DIR, uniqueFileName)
+    await writeFile(filePath, file)
+    return `/uploads/dpp-media/${uniqueFileName}`
+  }
 }
 
 /**
  * Löscht eine Datei aus dem Storage
  * 
- * @param storageUrl - Storage-URL (z.B. "/uploads/dpp-media/123_file.jpg")
+ * @param storageUrl - Storage-URL (Vercel Blob URL oder relative URL für lokal)
  */
 export async function deleteFile(storageUrl: string): Promise<void> {
-  // Entferne führenden Slash und konvertiere zu absolutem Pfad
-  const relativePath = storageUrl.startsWith("/") ? storageUrl.slice(1) : storageUrl
-  const filePath = join(process.cwd(), "public", relativePath)
-  
-  if (existsSync(filePath)) {
-    await unlink(filePath)
+  if (isVercel) {
+    // Vercel Blob Storage
+    try {
+      // Extrahiere Blob-URL aus der storageUrl
+      if (storageUrl.startsWith("http")) {
+        await del(storageUrl)
+      } else {
+        console.warn("Invalid blob URL for deletion:", storageUrl)
+      }
+    } catch (error) {
+      console.error("Vercel Blob delete error:", error)
+      // Fehler wird ignoriert, da Datei möglicherweise bereits gelöscht wurde
+    }
+  } else {
+    // Lokales File-System (Development)
+    const relativePath = storageUrl.startsWith("/") ? storageUrl.slice(1) : storageUrl
+    const filePath = join(process.cwd(), "public", relativePath)
+    
+    if (existsSync(filePath)) {
+      await unlink(filePath)
+    }
   }
+}
+
+/**
+ * Ermittelt Content-Type basierend auf Dateiname
+ */
+function getContentType(fileName: string): string {
+  const ext = fileName.toLowerCase().split(".").pop()
+  const contentTypes: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  }
+  return contentTypes[ext || ""] || "application/octet-stream"
 }
 
 /**
