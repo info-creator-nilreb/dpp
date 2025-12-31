@@ -395,7 +395,7 @@ export default function PricingPageContent({
                   padding: "2rem",
                   border: isHighlighted ? "2px solid #E20074" : "1px solid #E5E5E5",
                   display: "flex",
-                  flexDirection: "column"
+                  flexDirection: "column",
                   position: "relative",
                   transition: "all 0.2s",
                   boxShadow: isHighlighted ? "0 8px 24px rgba(226, 0, 116, 0.15)" : "0 2px 8px rgba(0, 0, 0, 0.04)",
