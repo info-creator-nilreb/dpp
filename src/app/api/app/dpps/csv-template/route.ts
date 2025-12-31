@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { auth } from "@/auth"
 import { latestPublishedTemplate } from "@/lib/template-helpers"
 
 export const runtime = "nodejs"
@@ -11,9 +12,20 @@ export const dynamic = "force-dynamic"
  * - Verwendet das aktuelle veröffentlichte Template der Kategorie
  * - Generiert CSV-Header basierend auf Template-Feldern
  * - 1 Beispiel-Datensatz
+ * - Erfordert Authentifizierung
  */
 export async function GET(request: Request) {
   try {
+    // Authentifizierung prüfen
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Nicht autorisiert" },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const category = searchParams.get("category")
 
