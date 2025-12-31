@@ -227,7 +227,9 @@ export async function getAvailableFeatures(
           minimumPlan: {
             in: allowedPlans
           },
-          isCore: false, // Don't include core features (already added)
+          category: {
+            not: "core" // Don't include core features (already added)
+          },
         },
         select: { key: true },
       })
