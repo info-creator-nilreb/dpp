@@ -13,7 +13,7 @@ import TrialBanner from "./TrialBanner"
 import { LoadingSpinner } from "./LoadingSpinner"
 import { getSubscriptionStatusLabel } from "@/lib/subscription-status-labels"
 
-interface SubscriptionStatus {
+export interface SubscriptionStatus {
   subscriptionState: "no_subscription" | "trial_subscription" | "active_subscription" | "expired_or_suspended"
   trialEndDate: string | null
   canPublish: boolean
@@ -37,7 +37,7 @@ interface SubscriptionStatus {
   } | null
 }
 
-interface UsageData {
+export interface UsageData {
   organizationId?: string
   subscription?: {
     status: string
