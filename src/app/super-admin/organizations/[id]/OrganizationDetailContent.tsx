@@ -53,10 +53,10 @@ interface Organization {
   subscription: {
     id: string
     status: string
-    planId: string | null
     subscriptionModelId: string | null
     subscriptionModel: {
       pricingPlan: {
+        id: string
         name: string
       } | null
     } | null
