@@ -6,7 +6,8 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 interface SubscriptionData {
   id: string;
-  plan: string;
+  plan: string; // Plan slug (e.g. "basic", "pro", "premium")
+  planName?: string | null; // Full plan name for display (e.g. "Basic", "Pro", "Premium")
   status: string;
   trialExpiresAt: string | null;
   trialStartedAt: string | null;
@@ -98,13 +99,18 @@ export function SubscriptionPageContent() {
     }
   };
 
-  const getPlanName = (plan: string) => {
+  const getPlanName = (plan: string, planName?: string | null) => {
+    // Use planName from API if available (from subscriptionModel.pricingPlan.name)
+    if (planName) {
+      return planName;
+    }
+    // Fallback to mapping if planName not available
     const names: Record<string, string> = {
       basic: "Basic",
       pro: "Pro",
       premium: "Premium",
     };
-    return names[plan] || plan;
+    return names[plan.toLowerCase()] || plan;
   };
 
   const getStatusName = (status: string) => {
@@ -219,7 +225,7 @@ export function SubscriptionPageContent() {
         </h2>
         <div style={{ display: "grid", gap: "1rem" }}>
           <div>
-            <strong>Plan:</strong> {getPlanName(subscription.plan)}
+            <strong>Plan:</strong> {getPlanName(subscription.plan, subscription.planName)}
           </div>
           <div>
             <strong>Status:</strong> {getStatusName(subscription.status)}

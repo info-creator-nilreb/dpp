@@ -160,8 +160,22 @@ export async function getAvailableFeatures(
   })
   availableFeatures.push(...coreFeatures.map((f) => f.key))
 
-  // Add features from pricing plan
-  if (subscription?.status === "active") {
+  // Add features from pricing plan (for active subscriptions OR trial subscriptions)
+  if (subscription && (subscription.status === "active" || subscription.status === "trial" || subscription.status === "trial_active")) {
+    // Check if in trial and apply trial feature overrides
+    const isInTrial = subscription.status === "trial" || subscription.status === "trial_active"
+    
+    if (isInTrial && subscription.subscriptionModel?.trialFeatureOverrides) {
+      // Apply trial feature overrides
+      const trialOverrides = subscription.subscriptionModel.trialFeatureOverrides
+      for (const override of trialOverrides) {
+        if (override.enabled && !availableFeatures.includes(override.featureKey)) {
+          availableFeatures.push(override.featureKey)
+        }
+      }
+    }
+    
+    // Add features from pricing plan (if not already added via trial override)
     const planFeatures =
       subscription.subscriptionModel?.pricingPlan?.features || []
     for (const planFeature of planFeatures) {

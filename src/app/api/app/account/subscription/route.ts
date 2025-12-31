@@ -18,7 +18,21 @@ export async function GET(req: NextRequest) {
       include: {
         organization: {
           include: {
-            subscription: true,
+            subscription: {
+              include: {
+                subscriptionModel: {
+                  include: {
+                    pricingPlan: {
+                      select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -37,11 +51,16 @@ export async function GET(req: NextRequest) {
       ? getTrialDaysRemaining(subscription as any)
       : null;
 
+    // Get plan name from subscriptionModel.pricingPlan.name (not from deprecated subscription.plan)
+    const planName = subscription?.subscriptionModel?.pricingPlan?.name || subscription?.plan || null;
+    const planSlug = subscription?.subscriptionModel?.pricingPlan?.slug || null;
+
     return NextResponse.json({
       subscription: subscription
         ? {
             id: subscription.id,
-            plan: subscription.plan,
+            plan: planSlug || planName?.toLowerCase() || subscription.plan, // Use slug or lowercase name, fallback to legacy plan
+            planName: planName, // Full plan name for display
             status: subscription.status,
             trialExpiresAt: subscription.trialExpiresAt,
             trialStartedAt: subscription.trialStartedAt,
