@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { getPublishedDppCount } from "@/lib/pricing/entitlements"
+import { getPublishedDppCount, getTeamMembersCount } from "@/lib/pricing/entitlements"
 import { getEntitlementDefinition } from "@/lib/pricing/entitlement-definitions"
 import { isInTrial } from "@/lib/pricing/features"
 
@@ -129,6 +129,8 @@ export async function GET() {
         // Get current usage based on entitlement key
         if (key === "max_published_dpp") {
           current = await getPublishedDppCount(organization.id)
+        } else if (key === "max_users") {
+          current = await getTeamMembersCount(organization.id)
         }
         // Add more entitlement checks here as needed
 

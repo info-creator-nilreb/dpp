@@ -5,6 +5,7 @@ import ConfirmationModal from "@/components/super-admin/ConfirmationModal"
 import SubscriptionChangeModal from "@/components/super-admin/SubscriptionChangeModal"
 import { getFieldSensitivity, getHighestSensitivityLevel, requiresConfirmation, requiresReason } from "@/lib/phase1.5/organization-sensitivity"
 import { getDisplayTier, isFreeTier } from "@/lib/phase1.7/subscription-state"
+import { Tooltip, TooltipIcon } from "@/components/Tooltip"
 
 interface User {
   id: string
@@ -476,7 +477,14 @@ export default function OrganizationDetailContent({
             fontWeight: value ? "500" : "400",
             fontStyle: value ? "normal" : "italic"
           }}>
-            {value || "Nicht gesetzt"}
+            {(() => {
+              // If this is a select field with options, translate the value using the options
+              if (type === "select" && options && value) {
+                const option = options.find(opt => opt.value === value)
+                return option ? option.label : value
+              }
+              return value || "Nicht gesetzt"
+            })()}
           </div>
         )}
       </div>
@@ -673,9 +681,24 @@ export default function OrganizationDetailContent({
             <div style={{
               fontSize: "0.85rem",
               color: "#7A7A7A",
-              marginBottom: "0.25rem"
+              marginBottom: "0.25rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.25rem"
             }}>
               Aktueller Tarif
+              {/* Legacy tier info tooltip */}
+              {organization.licenseTier && (
+                <Tooltip content={`Diese Organisation hatte früher einen abgelösten Tarif (${organization.licenseTier}). Der aktuelle Tarif ist maßgeblich.`}>
+                  <TooltipIcon />
+                </Tooltip>
+              )}
+              {/* Test phase tooltip */}
+              {organization.subscription && (organization.subscription.status === "trial_active" || organization.subscription.status === "trial") && (
+                <Tooltip content="Zeitlich begrenzte Testphase mit eingeschränkten Veröffentlichungsrechten.">
+                  <TooltipIcon />
+                </Tooltip>
+              )}
             </div>
             <div style={{
               fontSize: "1rem",
@@ -685,25 +708,6 @@ export default function OrganizationDetailContent({
               {getDisplayTier(organization.subscription, organization.subscription?.subscriptionModel?.pricingPlan?.name || null)}
             </div>
           </div>
-          {/* Legacy licenseTier field (read-only, for reference) */}
-          {organization.licenseTier && (
-            <div>
-              <div style={{
-                fontSize: "0.85rem",
-                color: "#7A7A7A",
-                marginBottom: "0.25rem"
-              }}>
-                Legacy License Tier (nur Referenz)
-              </div>
-              <div style={{
-                fontSize: "0.85rem",
-                color: "#7A7A7A",
-                fontStyle: "italic"
-              }}>
-                {organization.licenseTier}
-              </div>
-            </div>
-          )}
           {renderField("Status", organization.status, "status", "basic", "select", [
             { value: "active", label: "Aktiv" },
             { value: "suspended", label: "Gesperrt" },
@@ -967,7 +971,7 @@ export default function OrganizationDetailContent({
               fontWeight: "600",
               color: "#0A0A0A"
             }}>
-              Subscription
+              Abonnement
             </h2>
           </div>
           <div style={{
@@ -996,14 +1000,25 @@ export default function OrganizationDetailContent({
                 color: "#7A7A7A",
                 marginBottom: "0.25rem"
               }}>
-                Subscription-Status
+                Status
               </div>
               <div style={{
                 fontSize: "1rem",
                 color: "#0A0A0A",
                 fontWeight: "500"
               }}>
-                {organization.subscription?.status || "abgelaufen"}
+                {(() => {
+                  const status = organization.subscription?.status || "expired"
+                  const statusMap: Record<string, string> = {
+                    "active": "Aktiv",
+                    "trial_active": "Testphase",
+                    "trial": "Testphase",
+                    "expired": "Abgelaufen",
+                    "canceled": "Gekündigt",
+                    "past_due": "Überfällig"
+                  }
+                  return statusMap[status] || status
+                })()}
               </div>
             </div>
             {organization.subscription?.trialExpiresAt && (
@@ -1013,7 +1028,7 @@ export default function OrganizationDetailContent({
                   color: "#7A7A7A",
                   marginBottom: "0.25rem"
                 }}>
-                  Trial endet am
+                  Testphase endet am
                 </div>
                 <div style={{
                   fontSize: "1rem",
@@ -1037,7 +1052,7 @@ export default function OrganizationDetailContent({
                 marginTop: "0.5rem"
               }}
             >
-              Subscription ändern
+              Abonnement ändern
             </button>
           </div>
         </div>

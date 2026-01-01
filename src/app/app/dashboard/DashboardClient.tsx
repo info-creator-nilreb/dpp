@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useAppData } from "@/contexts/AppDataContext"
 import DashboardGrid from "@/components/DashboardGrid"
 import DashboardCard from "@/components/DashboardCard"
 import SubscriptionUsageCard, { type SubscriptionStatus, type UsageData } from "@/components/SubscriptionUsageCard"
@@ -18,24 +19,23 @@ interface SubscriptionContext {
 export default function DashboardClient() {
   const router = useRouter()
   const { data: session } = useSession()
+  const { availableFeatures } = useAppData()
   const [context, setContext] = useState<SubscriptionContext | null>(null)
+  
+  // User role from Session (synchronously available)
+  const userRole = session?.user?.role ?? null
   const [statusData, setStatusData] = useState<SubscriptionStatus | null>(null)
   const [usageData, setUsageData] = useState<UsageData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [subscriptionDataLoaded, setSubscriptionDataLoaded] = useState(false)
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [availableFeatures, setAvailableFeatures] = useState<string[]>([])
 
   useEffect(() => {
     async function loadContext() {
       try {
-        // Load all subscription data, user role, and available features in parallel for better performance
-        const [contextResponse, statusResponse, usageResponse, profileResponse, featuresResponse] = await Promise.all([
+        // Load subscription data only (profile and features are already loaded via AppDataContext)
+        const [contextResponse, statusResponse, usageResponse] = await Promise.all([
           fetch("/api/subscription/context"),
           fetch("/api/app/subscription/status"),
-          fetch("/api/app/subscription/usage"),
-          fetch("/api/app/profile"),
-          fetch("/api/app/features")
+          fetch("/api/app/subscription/usage")
         ])
 
         if (contextResponse.ok) {
@@ -60,19 +60,6 @@ export default function DashboardClient() {
           const usage = await usageResponse.json()
           setUsageData(usage)
         }
-
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json()
-          setUserRole(profile.user?.role || null)
-        }
-
-        if (featuresResponse.ok) {
-          const featuresData = await featuresResponse.json()
-          setAvailableFeatures(featuresData.features || [])
-        }
-
-        // Mark subscription data as loaded
-        setSubscriptionDataLoaded(true)
       } catch (error) {
         console.error("Error loading subscription context:", error)
         setContext({
@@ -81,7 +68,6 @@ export default function DashboardClient() {
           canPublish: false,
           trialEndsAt: null
         })
-        setSubscriptionDataLoaded(true)
       } finally {
         setLoading(false)
       }
@@ -97,8 +83,9 @@ export default function DashboardClient() {
     }
   }, [loading, context, router])
 
-  // Show loading spinner while loading context and subscription data
-  if (loading || !context || !subscriptionDataLoaded) {
+  // Show loading spinner only while loading context (required for redirect check)
+  // Allow dashboard to render even if subscription data is still loading
+  if (loading || !context) {
     return (
       <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <LoadingSpinner message="Dashboard wird geladen..." />
@@ -137,35 +124,9 @@ export default function DashboardClient() {
         />
       </div>
 
-      {/* Dashboard-Kacheln: 3 Spalten auf Desktop, 1 Spalte auf Mobile */}
+      {/* Dashboard-Kacheln: Reihenfolge entspricht Sidebar-Reihenfolge */}
       <DashboardGrid>
-        {/* Organisation (nur für ORG_ADMIN) */}
-        {userRole === "ORG_ADMIN" && (
-          <DashboardCard
-            href="/app/organization"
-            icon={
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="#E20074"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                viewBox="0 0 24 24"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-            }
-            title="Organisation"
-            description="Verwalten Sie Ihre Organisationsdaten, Benutzer und Einstellungen."
-          />
-        )}
-
-        {/* 1. Produktpass erstellen */}
+        {/* 1. Produktpass erstellen (entspricht Sidebar-Reihenfolge) */}
         <DashboardCard
           href="/app/create"
           icon={
@@ -187,7 +148,7 @@ export default function DashboardClient() {
           description="Erstellen Sie einen neuen Digitalen Produktpass für Ihr Produkt."
         />
 
-        {/* 2. Produktpässe verwalten */}
+        {/* 2. Produktpässe verwalten (entspricht Sidebar-Reihenfolge) */}
         <DashboardCard
           href="/app/dpps"
           icon={
@@ -210,7 +171,32 @@ export default function DashboardClient() {
           description="Verwalten Sie alle Ihre Digitalen Produktpässe an einem Ort."
         />
 
-        {/* 3. Meine Daten */}
+        {/* 3. Organisation (für ORG_ADMIN und ORG_OWNER) - entspricht Sidebar-Reihenfolge */}
+        {(userRole === "ORG_ADMIN" || userRole === "ORG_OWNER") && (
+          <DashboardCard
+            href="/app/organization"
+            icon={
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="#E20074"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            }
+            title="Organisation"
+            description="Verwalten Sie Ihre Organisationsdaten, Benutzer und Einstellungen."
+          />
+        )}
+
+        {/* 4. Meine Daten (entspricht Sidebar-Reihenfolge) */}
         <DashboardCard
           href="/app/account"
           icon={
@@ -233,7 +219,7 @@ export default function DashboardClient() {
           description="Verwalten Sie Ihre Kontoinformationen und Einstellungen."
         />
 
-        {/* 4. Audit Log (nur wenn Feature verfügbar) */}
+        {/* 5. Audit Log (nur wenn Feature verfügbar) - entspricht Sidebar-Reihenfolge */}
         {availableFeatures.includes("audit_logs") && (
           <DashboardCard
             href="/app/audit-logs"
@@ -249,11 +235,10 @@ export default function DashboardClient() {
                 strokeLinejoin="round"
                 viewBox="0 0 24 24"
               >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
               </svg>
             }
-            title="Audit Log"
+            title="Audit Logs"
             description="Unveränderliche Historie aller Compliance-relevanten und AI-gestützten Aktionen."
           />
         )}

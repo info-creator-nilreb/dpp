@@ -25,7 +25,7 @@ export default auth(async (req) => {
 
   // Öffentliche Routen
   const publicRoutes = ["/", "/login", "/signup", "/onboarding"]
-  const isPublicRoute = publicRoutes.includes(pathname)
+  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/contribute")
 
   // Auth-Routen (Login, Signup) - Landingpage "/" ist NICHT dabei
   const isAuthRoute = pathname === "/login" || pathname === "/signup"

@@ -120,6 +120,22 @@ export async function getDppCount(organizationId: string): Promise<number> {
 }
 
 /**
+ * Get current team members count for an organization
+ * Counts all active memberships, including ORG_OWNER, ORG_ADMIN, ORG_MEMBER, and ORG_VIEWER
+ * Only counts active memberships (users with status = "active")
+ */
+export async function getTeamMembersCount(organizationId: string): Promise<number> {
+  return await prisma.membership.count({
+    where: {
+      organizationId,
+      user: {
+        status: "active"
+      }
+    }
+  })
+}
+
+/**
  * Check if organization can publish a new DPP
  * Uses max_published_dpp entitlement and only counts PUBLISHED DPPs
  */

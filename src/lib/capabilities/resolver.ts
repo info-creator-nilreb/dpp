@@ -315,3 +315,66 @@ export async function hasActiveSubscription(
  */
 export const checkFeature = hasFeature
 
+/**
+ * Check if organization is in test phase with published DPPs
+ * 
+ * This enforces strict test phase limitations:
+ * - If in test phase AND has published DPPs → block createDPP, createVersion, publishVersion
+ * - This prevents organizations from creating new content during test phase after initial publishing
+ * 
+ * @param organizationId - Organization ID to check
+ * @returns true if organization is in test phase with published DPPs
+ */
+export async function isTestPhaseWithPublishedDpps(organizationId: string): Promise<boolean> {
+  const { isInTrial } = await import("@/lib/pricing/features")
+  const { getPublishedDppCount } = await import("@/lib/pricing/entitlements")
+  
+  const inTrial = await isInTrial(organizationId)
+  if (!inTrial) {
+    return false
+  }
+  
+  const publishedCount = await getPublishedDppCount(organizationId)
+  return publishedCount > 0
+}
+
+/**
+ * Check if a capability is blocked due to test phase restrictions
+ * 
+ * Capabilities blocked during test phase (if published DPPs exist):
+ * - createDPP: Cannot create new DPPs
+ * - createVersion: Cannot create new DPP versions
+ * - publishVersion: Cannot publish DPP versions
+ * 
+ * @param capabilityKey - Capability key to check (createDPP, createVersion, publishVersion)
+ * @param context - Organization context
+ * @returns Object with blocked flag and reason if blocked
+ */
+export async function checkTestPhaseBlock(
+  capabilityKey: "createDPP" | "createVersion" | "publishVersion",
+  context: CapabilityContext
+): Promise<{ blocked: boolean; reason?: string }> {
+  const blockedCapabilities = ["createDPP", "createVersion", "publishVersion"]
+  
+  if (!blockedCapabilities.includes(capabilityKey)) {
+    return { blocked: false }
+  }
+  
+  const hasPublishedDpps = await isTestPhaseWithPublishedDpps(context.organizationId)
+  
+  if (hasPublishedDpps) {
+    const reasonMap = {
+      createDPP: "Diese Aktion ist während der Testphase nicht möglich, da bereits veröffentlichte DPPs vorhanden sind.",
+      createVersion: "Diese Aktion ist während der Testphase nicht möglich, da bereits veröffentlichte DPPs vorhanden sind.",
+      publishVersion: "Diese Aktion ist während der Testphase nicht möglich, da bereits veröffentlichte DPPs vorhanden sind."
+    }
+    
+    return {
+      blocked: true,
+      reason: reasonMap[capabilityKey]
+    }
+  }
+  
+  return { blocked: false }
+}
+

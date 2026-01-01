@@ -6,6 +6,9 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getPublicUrl } from "@/lib/getPublicUrl"
 import { requireEditDPP } from "@/lib/api-permissions"
+import { isInTrial } from "@/lib/pricing/features"
+import { hasFeature, checkTestPhaseBlock } from "@/lib/capabilities/resolver"
+import { getPublishedDppCount, canPublishDpp } from "@/lib/pricing/entitlements"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
 import { getOrganizationRole } from "@/lib/permissions"
@@ -63,7 +66,23 @@ export async function POST(
       )
     }
 
-    // Prüfe ob Organization im Trial ist und ob Publishing erlaubt ist
+    // Prüfe Testphase-Block: Kein Veröffentlichen wenn bereits veröffentlichte DPPs existieren
+    const testPhaseBlock = await checkTestPhaseBlock("publishVersion", {
+      organizationId: dpp.organizationId,
+      userId: session.user.id
+    })
+    
+    if (testPhaseBlock.blocked) {
+      return NextResponse.json(
+        { 
+          error: testPhaseBlock.reason || "Diese Aktion ist während der Testphase nicht möglich.",
+          testPhaseBlocked: true
+        },
+        { status: 403 }
+      )
+    }
+
+    // Prüfe ob Organization im Trial ist und ob Publishing erlaubt ist (für neue Veröffentlichungen)
     const inTrial = await isInTrial(dpp.organizationId)
     const canPublishFeature = await hasFeature("publish_dpp", {
       organizationId: dpp.organizationId,

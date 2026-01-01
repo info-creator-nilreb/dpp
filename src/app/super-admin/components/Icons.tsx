@@ -98,17 +98,17 @@ export const FeatureRegistryIcon = () => (
 
 export const PricingIcon = () => (
   <svg {...iconProps}>
-    {/* Euro/Dollar Sign Icon */}
-    <line x1="12" y1="2" x2="12" y2="22"/>
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    {/* Price Tag Icon */}
+    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+    <circle cx="7" cy="7" r="1.5"/>
   </svg>
 )
 
 export const PricingIconLarge = () => (
   <svg {...iconPropsLarge}>
-    {/* Euro/Dollar Sign Icon - Large Version */}
-    <line x1="12" y1="2" x2="12" y2="22"/>
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    {/* Price Tag Icon - Large Version */}
+    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+    <circle cx="7" cy="7" r="1.5"/>
   </svg>
 )
 

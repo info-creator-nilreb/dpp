@@ -108,6 +108,12 @@ export default async function SuperAdminDashboardPage() {
             description="Organisationen verwalten, Mitglieder zuweisen und Status ändern"
           />
           <WorkAreaCard
+            href="/super-admin/users"
+            icon={<UsersIconLarge />}
+            title="Benutzer"
+            description="Benutzer verwalten und Zugriffe konfigurieren"
+          />
+          <WorkAreaCard
             href="/super-admin/dpps"
             icon={<DppsIconLarge />}
             title="DPPs"
@@ -120,18 +126,6 @@ export default async function SuperAdminDashboardPage() {
             description="DPP-Templates erstellen, bearbeiten und verwalten"
           />
           <WorkAreaCard
-            href="/super-admin/users"
-            icon={<UsersIconLarge />}
-            title="Benutzer"
-            description="Benutzer verwalten und Zugriffe konfigurieren"
-          />
-          <WorkAreaCard
-            href="/super-admin/audit-logs"
-            icon={<AuditLogsIconLarge />}
-            title="Audit Logs"
-            description="Alle Admin-Aktionen und Änderungen einsehen"
-          />
-          <WorkAreaCard
             href="/super-admin/feature-registry"
             icon={<FeatureRegistryIconLarge />}
             title="Funktionen"
@@ -142,6 +136,12 @@ export default async function SuperAdminDashboardPage() {
             icon={<PricingIconLarge />}
             title="Preise & Abos"
             description="Pricing Plans, Features, Limits und Subscription Models verwalten"
+          />
+          <WorkAreaCard
+            href="/super-admin/audit-logs"
+            icon={<AuditLogsIconLarge />}
+            title="Audit Logs"
+            description="Alle Admin-Aktionen und Änderungen einsehen"
           />
         </div>
       </section>

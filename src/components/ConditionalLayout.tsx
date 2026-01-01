@@ -19,9 +19,10 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   const isSuperAdminRoute = pathname?.startsWith("/super-admin")
   const isAppRoute = pathname?.startsWith("/app")
   const isPublicEditorialRoute = pathname?.startsWith("/public/dpp")
+  const isContributeRoute = pathname?.startsWith("/contribute")
 
-  // Super-admin, app, and public editorial routes use their own layout - don't wrap with PublicLayoutClient
-  if (isSuperAdminRoute || isAppRoute || isPublicEditorialRoute) {
+  // Super-admin, app, public editorial, and contribute routes use their own layout - don't wrap with PublicLayoutClient
+  if (isSuperAdminRoute || isAppRoute || isPublicEditorialRoute || isContributeRoute) {
     return <>{children}</>
   }
 

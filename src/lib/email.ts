@@ -1,5 +1,17 @@
 import crypto from "crypto"
-import nodemailer from "nodemailer"
+
+// Dynamically import nodemailer only on the server
+// This prevents it from being bundled in client-side code
+let nodemailer: typeof import("nodemailer") | undefined
+function getNodemailer() {
+  if (typeof window !== "undefined") {
+    throw new Error("Email functions can only be used on the server")
+  }
+  if (!nodemailer) {
+    nodemailer = require("nodemailer")
+  }
+  return nodemailer
+}
 
 /**
  * Generiert einen sicheren Verifizierungs-Token
@@ -12,12 +24,14 @@ export function generateVerificationToken(): string {
  * Erstellt einen konfigurierten Nodemailer-Transport
  */
 function createEmailTransport() {
+  const nm = getNodemailer()
+  
   // Wenn SMTP konfiguriert ist, verwende SMTP
   if (process.env.SMTP_HOST) {
     const port = parseInt(process.env.SMTP_PORT || "587")
     const isSecure = port === 465
     
-    return nodemailer.createTransport({
+    return nm.createTransport({
       host: process.env.SMTP_HOST,
       port: port,
       secure: isSecure, // true für Port 465 (SSL), false für Port 587 (TLS)
@@ -36,7 +50,7 @@ function createEmailTransport() {
   }
   
   // Fallback: Log-Only Mode (für Entwicklung)
-  return nodemailer.createTransport({
+  return nm.createTransport({
     jsonTransport: true, // Gibt E-Mail als JSON zurück (für Logging)
   })
 }
@@ -419,6 +433,158 @@ Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorier
   } catch (error) {
     console.error("Fehler beim Senden der Einladungs-E-Mail:", error)
     throw error // Wirf Fehler weiter, damit API-Endpoint ihn behandeln kann
+  }
+}
+
+/**
+ * Sendet eine Supplier Data Request E-Mail
+ * 
+ * Sendet einen Magic Link an einen Partner/Lieferanten, um Daten zu einem DPP beizutragen
+ */
+export async function sendSupplierDataRequestEmail(
+  email: string,
+  data: {
+    organizationName: string
+    productName: string
+    partnerRole: string
+    contributeUrl: string
+  }
+): Promise<void> {
+  const appName = process.env.APP_NAME || "T-Pass"
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
+  
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .container {
+            background-color: #FFFFFF;
+            border: 1px solid #CDCDCD;
+            border-radius: 12px;
+            padding: 2rem;
+          }
+          .button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: #E20074;
+            color: #FFFFFF;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 1rem 0;
+          }
+          .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #CDCDCD;
+            font-size: 0.85rem;
+            color: #7A7A7A;
+          }
+          .benefits {
+            margin: 1.5rem 0;
+            padding-left: 0;
+          }
+          .benefits li {
+            margin: 0.5rem 0;
+            list-style: none;
+            padding-left: 1.5rem;
+            position: relative;
+          }
+          .benefits li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #E20074;
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1 style="color: #0A0A0A; margin-bottom: 1rem;">Request for product data for EU Digital Product Passport</h1>
+          <p>Hello,</p>
+          <p><strong>${data.organizationName}</strong> is requesting product information for <strong>${data.productName}</strong>.</p>
+          <p>This data is needed to comply with EU Digital Product Passport requirements.</p>
+          <ul class="benefits">
+            <li>No account required</li>
+            <li>Only specific data fields</li>
+            <li>Takes approximately 3–5 minutes</li>
+          </ul>
+          <p>Please click the button below to provide the requested information:</p>
+          <a href="${data.contributeUrl}" class="button">Provide data now</a>
+          <p style="margin-top: 2rem; font-size: 0.9rem; color: #7A7A7A;">Or copy this link into your browser:</p>
+          <p style="word-break: break-all; color: #7A7A7A; font-size: 0.85rem;">${data.contributeUrl}</p>
+          <div class="footer">
+            <p>This link expires in 14 days.</p>
+            <p>If you did not expect this request, you can safely ignore this email.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+  
+  const textContent = `Request for product data for EU Digital Product Passport
+
+Hello,
+
+${data.organizationName} is requesting product information for ${data.productName}.
+
+This data is needed to comply with EU Digital Product Passport requirements.
+
+What you can do:
+✓ No account required
+✓ Only specific data fields
+✓ Takes approximately 3–5 minutes
+
+Please click the link below to provide the requested information:
+
+${data.contributeUrl}
+
+This link expires in 14 days.
+
+If you did not expect this request, you can safely ignore this email.
+  `
+  
+  try {
+    const transport = createEmailTransport()
+    
+    const mailOptions = {
+      from: fromEmail,
+      to: email,
+      subject: "Request for product data for EU Digital Product Passport",
+      text: textContent,
+      html: htmlContent,
+    }
+    
+    const info = await transport.sendMail(mailOptions)
+    
+    if (process.env.SMTP_HOST) {
+      console.log(`Supplier data request email sent to: ${email}`)
+    } else {
+      console.log(`\n=== Supplier Data Request Email (Development Mode) ===`)
+      console.log(`To: ${email}`)
+      console.log(`From: ${fromEmail}`)
+      console.log(`Contribute URL: ${data.contributeUrl}`)
+      console.log(`\nIf an email service were configured, the email would be sent now.`)
+      console.log(`For production: Please configure SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASSWORD in .env`)
+      console.log(`================================================\n`)
+      if (info && typeof info === 'object' && 'message' in info) {
+        console.log(`Email data:`, JSON.stringify(info, null, 2))
+      }
+    }
+  } catch (error) {
+    console.error("Error sending supplier data request email:", error)
+    throw error
   }
 }
 

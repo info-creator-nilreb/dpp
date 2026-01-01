@@ -52,11 +52,11 @@ export function isFreeTier(subscription: {
 }
 
 /**
- * Get display tier name for organization
+ * Get display tier name for organization (German)
  * 
  * Returns:
- * - "Free" if isFreeTier === true
- * - "Trial (Plan Name)" if status === "trial"
+ * - "Kostenlos" if isFreeTier === true
+ * - "Testphase (Plan Name)" if status === "trial" or "trial_active"
  * - "Plan Name" if status === "active"
  */
 export function getDisplayTier(subscription: {
@@ -69,21 +69,21 @@ export function getDisplayTier(subscription: {
   } | null
 } | null, planName?: string | null): string {
   if (isFreeTier(subscription)) {
-    return "Free"
+    return "Kostenlos"
   }
   
   if (!subscription) {
-    return "Free"
+    return "Kostenlos"
   }
   
   // Get plan name from subscription or parameter
   const displayPlanName = planName || 
     subscription.subscriptionModel?.pricingPlan?.name || 
-    "Unknown Plan"
+    "Unbekannter Plan"
   
-  // Legacy: trial_active
+  // Trial status: Display as "Testphase (Plan Name)"
   if (subscription.status === "trial_active" || subscription.status === "trial") {
-    return `Trial (${displayPlanName})`
+    return `Testphase (${displayPlanName})`
   }
   
   // Active subscription
@@ -92,7 +92,7 @@ export function getDisplayTier(subscription: {
   }
   
   // Fallback
-  return "Free"
+  return "Kostenlos"
 }
 
 /**

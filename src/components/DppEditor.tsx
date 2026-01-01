@@ -9,6 +9,7 @@ import InputField from "@/components/InputField"
 import StickySaveBar from "@/components/StickySaveBar"
 import { TrialBanner } from "@/components/TrialBanner"
 import { useCapabilities } from "@/hooks/useCapabilities"
+import { DPP_SECTIONS } from "@/lib/permissions"
 
 interface PendingFile {
   id: string
@@ -180,6 +181,14 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   const [section3Open, setSection3Open] = useState(false)
   const [section4Open, setSection4Open] = useState(false)
   const [section5Open, setSection5Open] = useState(false)
+  
+  // Data Request Form State
+  const [dataEntryMode, setDataEntryMode] = useState<"manual" | "request">("manual")
+  const [requestEmail, setRequestEmail] = useState("")
+  const [requestRole, setRequestRole] = useState("")
+  const [requestSections, setRequestSections] = useState<string[]>([])
+  const [requestMessage, setRequestMessage] = useState("")
+  const [requestLoading, setRequestLoading] = useState(false)
   
   // Save Status für Sticky Save Bar
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "publishing" | "error">("idle")
@@ -937,27 +946,204 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         isOpen={section2Open}
         onToggle={() => setSection2Open(!section2Open)}
       >
-        <InputField
-          id="dpp-materials"
-          label="Materialliste"
-          value={materials}
-          onChange={(e) => {
-            setMaterials(e.target.value)
-            markFieldAsEdited("materials")
-          }}
-          rows={4}
-          helperText={shouldShowPrefillHint("materials") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <InputField
-          id="dpp-material-source"
-          label="Datenquelle (z. B. Lieferant)"
-          value={materialSource}
-          onChange={(e) => {
-            setMaterialSource(e.target.value)
-            markFieldAsEdited("materialSource")
-          }}
-          helperText={shouldShowPrefillHint("materialSource") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
+        {/* Data Entry Mode Selection */}
+        <div style={{ marginBottom: "2rem", padding: "1rem", backgroundColor: "#F5F5F5", borderRadius: "8px" }}>
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", marginBottom: "0.75rem" }}>
+              <input
+                type="radio"
+                name="dataEntryMode"
+                checked={dataEntryMode === "manual"}
+                onChange={() => setDataEntryMode("manual")}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0A0A0A" }}>
+                Daten manuell eingeben
+              </span>
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: isNew ? "not-allowed" : "pointer", opacity: isNew ? 0.6 : 1 }}>
+              <input
+                type="radio"
+                name="dataEntryMode"
+                checked={dataEntryMode === "request"}
+                onChange={() => !isNew && setDataEntryMode("request")}
+                disabled={isNew}
+                style={{ width: "18px", height: "18px", cursor: isNew ? "not-allowed" : "pointer" }}
+              />
+              <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0A0A0A" }}>
+                Daten von Partner anfordern {isNew && <span style={{ fontSize: "0.85rem", color: "#7A7A7A", fontStyle: "italic" }}>(erst nach Speichern verfügbar)</span>}
+              </span>
+            </label>
+          </div>
+          {dataEntryMode === "request" && (
+            <p style={{ fontSize: "0.85rem", color: "#7A7A7A", margin: 0, fontStyle: "italic" }}>
+              Der Partner erhält einen sicheren Link. Kein Konto erforderlich. Der Zugriff ist auf die ausgewählten Sektionen beschränkt.
+            </p>
+          )}
+        </div>
+
+        {dataEntryMode === "manual" ? (
+          <>
+            <InputField
+              id="dpp-materials"
+              label="Materialliste"
+              value={materials}
+              onChange={(e) => {
+                setMaterials(e.target.value)
+                markFieldAsEdited("materials")
+              }}
+              rows={4}
+              helperText={shouldShowPrefillHint("materials") ? "Aus KI-Vorprüfung übernommen" : undefined}
+            />
+            <InputField
+              id="dpp-material-source"
+              label="Datenquelle (z. B. Lieferant)"
+              value={materialSource}
+              onChange={(e) => {
+                setMaterialSource(e.target.value)
+                markFieldAsEdited("materialSource")
+              }}
+              helperText={shouldShowPrefillHint("materialSource") ? "Aus KI-Vorprüfung übernommen" : undefined}
+            />
+          </>
+        ) : (
+          <div style={{ marginTop: "1rem" }}>
+            {isNew ? (
+              <div style={{
+                padding: "1rem",
+                backgroundColor: "#FFF5F5",
+                border: "1px solid #FEB2B2",
+                borderRadius: "8px",
+                marginBottom: "1.5rem",
+              }}>
+                <p style={{ color: "#C53030", margin: 0, fontSize: "0.9rem" }}>
+                  Bitte speichern Sie den DPP zuerst, bevor Sie Daten von Partnern anfordern können.
+                </p>
+              </div>
+            ) : (
+              <>
+            <SelectField
+              id="request-partner-role"
+              label="Partner-Rolle"
+              value={requestRole}
+              onChange={(e) => setRequestRole(e.target.value)}
+              options={[
+                { value: "", label: "Bitte wählen" },
+                { value: "Material supplier", label: "Materiallieferant" },
+                { value: "Manufacturer", label: "Hersteller" },
+                { value: "Processor / Finisher", label: "Verarbeiter / Veredler" },
+                { value: "Recycler", label: "Recycler" },
+                { value: "Other", label: "Sonstiges" },
+              ]}
+              required
+            />
+            <InputField
+              id="request-email"
+              label="E-Mail-Adresse"
+              type="email"
+              value={requestEmail}
+              onChange={(e) => setRequestEmail(e.target.value)}
+              required
+            />
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{
+                display: "block",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                color: "#0A0A0A",
+                marginBottom: "0.5rem"
+              }}>
+                Sektionen für Zugriff <span style={{ color: "#E20074" }}>*</span>
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {[
+                  { value: DPP_SECTIONS.MATERIALS, label: "Materialien" },
+                  { value: DPP_SECTIONS.MATERIAL_SOURCE, label: "Materialherkunft" },
+                ].map((section) => (
+                  <label key={section.value} style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={requestSections.includes(section.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setRequestSections([...requestSections, section.value])
+                        } else {
+                          setRequestSections(requestSections.filter((s) => s !== section.value))
+                        }
+                      }}
+                      style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                    />
+                    <span style={{ fontSize: "0.9rem", color: "#0A0A0A" }}>{section.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <InputField
+              id="request-message"
+              label="Optionale Nachricht"
+              value={requestMessage}
+              onChange={(e) => setRequestMessage(e.target.value)}
+              rows={3}
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                if (!requestEmail || !requestRole || requestSections.length === 0) {
+                  showNotification("Bitte füllen Sie alle Pflichtfelder aus", "error")
+                  return
+                }
+
+                setRequestLoading(true)
+                try {
+                  const response = await fetch(`/api/app/dpp/${dpp.id}/data-requests`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      email: requestEmail,
+                      partnerRole: requestRole,
+                      sections: requestSections,
+                      message: requestMessage || null,
+                    }),
+                  })
+
+                  const data = await response.json()
+
+                  if (!response.ok) {
+                    showNotification(data.error || "Fehler beim Senden der Anfrage", "error")
+                    return
+                  }
+
+                  showNotification("Datenanfrage erfolgreich gesendet", "success")
+                  setDataEntryMode("manual")
+                  setRequestEmail("")
+                  setRequestRole("")
+                  setRequestSections([])
+                  setRequestMessage("")
+                } catch (error) {
+                  showNotification("Fehler beim Senden der Anfrage", "error")
+                } finally {
+                  setRequestLoading(false)
+                }
+              }}
+              disabled={requestLoading}
+              style={{
+                padding: "0.75rem 1.5rem",
+                backgroundColor: requestLoading ? "#7A7A7A" : "#E20074",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "1rem",
+                fontWeight: "600",
+                cursor: requestLoading ? "not-allowed" : "pointer",
+                width: "100%",
+              }}
+            >
+              {requestLoading ? "Wird gesendet..." : "Datenanfrage senden"}
+            </button>
+              </>
+            )}
+          </div>
+        )}
       </AccordionSection>
 
       {/* 3. Nutzung, Pflege & Lebensdauer */}

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { ORGANIZATION_ROLES, getOrganizationRole } from "@/lib/permissions"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
+import { checkTestPhaseBlock } from "@/lib/capabilities/resolver"
 
 /**
  * POST /api/app/dpp
@@ -61,6 +62,22 @@ export async function POST(request: Request) {
 
     const resolvedOrganizationId = membership.organization.id
     console.log("DPP CREATE: resolved organizationId", resolvedOrganizationId)
+
+    // Prüfe Testphase-Block: Kein Erstellen neuer DPPs wenn bereits veröffentlichte DPPs existieren
+    const testPhaseBlock = await checkTestPhaseBlock("createDPP", {
+      organizationId: resolvedOrganizationId,
+      userId: session.user.id
+    })
+    
+    if (testPhaseBlock.blocked) {
+      return NextResponse.json(
+        { 
+          error: testPhaseBlock.reason || "Diese Aktion ist während der Testphase nicht möglich.",
+          testPhaseBlocked: true
+        },
+        { status: 403 }
+      )
+    }
 
     const {
       name, description, category, organizationId,

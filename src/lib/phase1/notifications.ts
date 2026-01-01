@@ -13,6 +13,7 @@ export type NotificationType =
   | "user_invited"
   | "user_removed"
   | "organization_updated"
+  | "supplier_data_submitted"
 
 /**
  * Erstellt eine Notification

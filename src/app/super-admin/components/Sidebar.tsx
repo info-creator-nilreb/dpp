@@ -21,11 +21,11 @@ import { apiFetch } from "@/lib/api-client"
 const navigationItems = [
   { href: "/super-admin/dashboard", label: "Dashboard", icon: DashboardIcon },
   { href: "/super-admin/organizations", label: "Organisationen", icon: OrganizationsIcon },
+  { href: "/super-admin/users", label: "Benutzer", icon: UsersIcon },
   { href: "/super-admin/dpps", label: "DPPs", icon: DppsIcon },
   { href: "/super-admin/templates", label: "Templates", icon: TemplatesIcon },
   { href: "/super-admin/feature-registry", label: "Funktionen", icon: FeatureRegistryIcon },
   { href: "/super-admin/pricing", label: "Preise & Abos", icon: PricingIcon },
-  { href: "/super-admin/users", label: "Benutzer", icon: UsersIcon },
   { href: "/super-admin/audit-logs", label: "Audit Logs", icon: AuditLogsIcon },
 ]
 

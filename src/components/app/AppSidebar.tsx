@@ -2,15 +2,17 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { signOut } from "next-auth/react"
 import TPassLogo from "@/app/super-admin/components/TPassLogo"
+import { AuditLogsIcon } from "@/app/super-admin/components/Icons"
 
 interface NavigationItem {
   href: string
   label: string
   icon: React.ReactNode
-  condition?: boolean // Optional condition to show/hide item
+  featureKey?: string // Optional feature key to check availability
+  requiredRoles?: string[] // Optional roles required to enable item (e.g., ["ORG_ADMIN", "ORG_OWNER"])
 }
 
 interface AppSidebarProps {
@@ -38,7 +40,7 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname()
 
-  // Define navigation items based on dashboard cards
+  // Define navigation items - ALL items are always visible, disabled-state is computed
   const navigationItems: NavigationItem[] = [
     {
       href: "/app/dashboard",
@@ -116,12 +118,11 @@ export default function AppSidebar({
           strokeLinejoin="round"
           viewBox="0 0 24 24"
         >
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
       ),
-      condition: userRole === "ORG_ADMIN",
+      requiredRoles: ["ORG_ADMIN", "ORG_OWNER"],
     },
     {
       href: "/app/account",
@@ -145,26 +146,29 @@ export default function AppSidebar({
     },
     {
       href: "/app/audit-logs",
-      label: "Audit Log",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          viewBox="0 0 24 24"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.35-4.35" />
-        </svg>
-      ),
-      condition: availableFeatures.includes("audit_logs"),
+      label: "Audit Logs",
+      icon: <AuditLogsIcon />,
+      featureKey: "audit_logs",
     },
   ]
+
+  // Check if item is visible (user has permission to see it)
+  // Use useMemo to ensure stable calculation - prevents sidebar from changing after initial render
+  const visibleNavigationItems = useMemo(() => {
+    return navigationItems.filter((item) => {
+      // Check required roles
+      if (item.requiredRoles && item.requiredRoles.length > 0) {
+        if (!userRole || !item.requiredRoles.includes(userRole)) {
+          return false
+        }
+      }
+      // Check feature availability
+      if (item.featureKey && !availableFeatures.includes(item.featureKey)) {
+        return false
+      }
+      return true
+    })
+  }, [userRole, availableFeatures])
 
   // Mobile overlay
   if (isMobileOpen) {
@@ -204,7 +208,7 @@ export default function AppSidebar({
           userFirstName={userFirstName}
           userLastName={userLastName}
           isCollapsed={isCollapsed}
-          navigationItems={navigationItems}
+          navigationItems={visibleNavigationItems}
           onToggleCollapse={onToggleCollapse}
         />
         </nav>
@@ -253,7 +257,7 @@ export default function AppSidebar({
           userFirstName={userFirstName}
           userLastName={userLastName}
           isCollapsed={isCollapsed}
-          navigationItems={navigationItems}
+          navigationItems={visibleNavigationItems}
           onToggleCollapse={onToggleCollapse}
         />
       </nav>
@@ -269,7 +273,7 @@ function SidebarContent({
   userLastName,
   isCollapsed = false,
   navigationItems,
-  onToggleCollapse
+  onToggleCollapse,
 }: { 
   pathname: string
   userEmail?: string
@@ -324,88 +328,87 @@ function SidebarContent({
         )}
       </div>
 
-      {/* Navigation Items */}
+      {/* Navigation Items - Only visible items are shown */}
       <div style={{ padding: isCollapsed ? "1rem 0" : "1.5rem 0" }}>
-        {navigationItems
-          .filter(item => item.condition !== false) // Filter out items where condition is false
-          .map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: isCollapsed ? "center" : "flex-start",
-                  gap: "0.75rem",
-                  padding: isCollapsed ? "0.75rem" : "0.75rem 1.5rem",
-                  color: isActive ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)",
-                  backgroundColor: isActive ? "rgba(255, 255, 255, 0.1)" : "transparent",
-                  textDecoration: "none",
-                  fontSize: "0.95rem",
-                  fontWeight: isActive ? "600" : "400",
-                  borderLeft: isActive && !isCollapsed ? "3px solid #E20074" : "3px solid transparent",
-                  transition: "all 0.15s ease",
-                  position: "relative",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)"
-                    e.currentTarget.style.color = "#FFFFFF"
-                  }
-                  // Tooltip when collapsed
-                  if (isCollapsed) {
-                    const tooltip = document.createElement("div")
-                    tooltip.textContent = item.label
-                    tooltip.style.cssText = `
-                      position: absolute;
-                      left: 100%;
-                      top: 50%;
-                      transform: translateY(-50%);
-                      margin-left: 0.5rem;
-                      padding: 0.5rem 0.75rem;
-                      backgroundColor: #0A0A0A;
-                      color: #FFFFFF;
-                      fontSize: 0.875rem;
-                      borderRadius: 4px;
-                      whiteSpace: nowrap;
-                      zIndex: 1000;
-                      pointerEvents: none;
-                      boxShadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-                    `
-                    tooltip.className = "sidebar-tooltip"
-                    e.currentTarget.style.position = "relative"
-                    e.currentTarget.appendChild(tooltip)
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = "transparent"
-                    e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)"
-                  }
-                  // Remove tooltip
-                  const tooltip = e.currentTarget.querySelector(".sidebar-tooltip")
-                  if (tooltip) {
-                    tooltip.remove()
-                  }
-                }}
-                title={isCollapsed ? item.label : undefined}
-              >
-                <span style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  width: "20px",
-                  height: "20px",
-                  flexShrink: 0,
-                }}>
-                  {item.icon}
-                </span>
-                {!isCollapsed && <span style={{ color: "inherit" }}>{item.label}</span>}
-              </Link>
-            )
-          })}
+        {navigationItems.map((item) => {
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: isCollapsed ? "center" : "flex-start",
+                gap: "0.75rem",
+                padding: isCollapsed ? "0.75rem" : "0.75rem 1.5rem",
+                color: isActive ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)",
+                backgroundColor: isActive ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                textDecoration: "none",
+                fontSize: "0.95rem",
+                fontWeight: isActive ? "600" : "400",
+                borderLeft: isActive && !isCollapsed ? "3px solid #E20074" : "3px solid transparent",
+                transition: "all 0.15s ease",
+                position: "relative",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)"
+                  e.currentTarget.style.color = "#FFFFFF"
+                }
+                // Tooltip when collapsed
+                if (isCollapsed) {
+                  const tooltip = document.createElement("div")
+                  tooltip.textContent = item.label
+                  tooltip.style.cssText = `
+                    position: absolute;
+                    left: 100%;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    margin-left: 0.5rem;
+                    padding: 0.5rem 0.75rem;
+                    backgroundColor: #0A0A0A;
+                    color: #FFFFFF;
+                    fontSize: 0.875rem;
+                    borderRadius: 4px;
+                    whiteSpace: nowrap;
+                    zIndex: 1000;
+                    pointerEvents: none;
+                    boxShadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                  `
+                  tooltip.className = "sidebar-tooltip"
+                  e.currentTarget.style.position = "relative"
+                  e.currentTarget.appendChild(tooltip)
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = "transparent"
+                  e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)"
+                }
+                // Remove tooltip
+                const tooltip = e.currentTarget.querySelector(".sidebar-tooltip")
+                if (tooltip) {
+                  tooltip.remove()
+                }
+              }}
+              title={isCollapsed ? item.label : undefined}
+            >
+              <span style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center",
+                width: "20px",
+                height: "20px",
+                flexShrink: 0,
+              }}>
+                {item.icon}
+              </span>
+              {!isCollapsed && <span style={{ color: "inherit" }}>{item.label}</span>}
+            </Link>
+          )
+        })}
       </div>
 
       {/* Bottom Section - User Info & Logout */}
@@ -415,8 +418,8 @@ function SidebarContent({
             
         padding: isCollapsed ? "1rem 0" : "1.5rem",
       }}>
-        {/* User Info (Shopware-style) */}
-        {(userEmail || userFirstName || userLastName) && (
+        {/* User Info (Shopware-style) - Always render if session is available, even without full profile data */}
+        {userEmail && (
           <div style={{ 
             marginTop: "0.5rem", 
             paddingTop: "0.75rem", 

@@ -138,6 +138,7 @@ model Dpp {
   permissions           DppPermission[]
   versions              DppVersion[]
   content               DppContent[]
+  contributorTokens     ContributorToken[]
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("dpps")
@@ -202,6 +203,32 @@ model DppPermission {
 
   @@unique([dppId, userId, role])
   @@map("dpp_permissions")
+}
+
+// Contributor Token: Scoped access token for supplier data requests
+model ContributorToken {
+  id           String   @id @default(cuid())
+  token        String   @unique
+  dppId        String
+  dpp          Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  email        String
+  partnerRole  String // Material supplier | Manufacturer | Processor | Recycler | Other
+  sections     String // Comma-separated list of allowed sections
+  message      String? // Optional message from DPP owner
+  status       String   @default("pending") // pending | submitted | expired
+  expiresAt    DateTime
+  submittedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  requestedBy  String? // User ID who created the request
+  submittedData Json? // Submitted data as JSON
+
+  @@index([token])
+  @@index([dppId])
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("contributor_tokens")
 }
 
 model SuperAdmin {

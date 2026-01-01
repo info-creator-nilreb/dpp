@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { usePathname } from "next/navigation"
 import AppSidebar from "./AppSidebar"
 import { useSession } from "next-auth/react"
 import { useAutoLogout } from "@/hooks/useAutoLogout"
+import { useAppData } from "@/contexts/AppDataContext"
 
 interface AppLayoutClientProps {
   children: React.ReactNode
@@ -15,47 +16,14 @@ export default function AppLayoutClient({
 }: AppLayoutClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [userFirstName, setUserFirstName] = useState<string | null>(null)
-  const [userLastName, setUserLastName] = useState<string | null>(null)
-  const [availableFeatures, setAvailableFeatures] = useState<string[]>([])
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { availableFeatures, isLoading: featuresLoading } = useAppData()
   
   // Hide sidebar on login/signup pages and public DPP views
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname?.startsWith("/api/auth")
   const isPublicDppPage = pathname?.startsWith("/public/dpp/")
   const shouldShowSidebar = !isAuthPage && !isPublicDppPage
-  
-  // Load user role and available features
-  useEffect(() => {
-    async function loadUserData() {
-      try {
-        const [profileResponse, featuresResponse] = await Promise.all([
-          fetch("/api/app/profile"),
-          fetch("/api/app/features")
-        ])
-
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json()
-          setUserRole(profile.user?.role || null)
-          setUserFirstName(profile.user?.firstName || null)
-          setUserLastName(profile.user?.lastName || null)
-        }
-
-        if (featuresResponse.ok) {
-          const featuresData = await featuresResponse.json()
-          setAvailableFeatures(featuresData.features || [])
-        }
-      } catch (error) {
-        console.error("Error loading user data:", error)
-      }
-    }
-
-    if (shouldShowSidebar) {
-      loadUserData()
-    }
-  }, [shouldShowSidebar])
   
   // Auto logout after 60 minutes of inactivity (only when logged in)
   useAutoLogout({
@@ -63,12 +31,19 @@ export default function AppLayoutClient({
     enabled: shouldShowSidebar,
   })
 
+  // User data from Session (synchronously available)
+  const userEmail = session?.user?.email ?? undefined
+  const userFirstName = session?.user?.firstName ?? undefined
+  const userLastName = session?.user?.lastName ?? undefined
+  const userRole = session?.user?.role ?? undefined
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#F5F5F5" }}>
       {/* Sidebar - Desktop (fixed) & Mobile (overlay) - only show when not on auth pages or public DPP views */}
-      {shouldShowSidebar && (
+      {/* Only render sidebar when features are loaded to prevent layout shifts */}
+      {shouldShowSidebar && !featuresLoading && (
         <AppSidebar
-          userEmail={session?.user?.email || undefined}
+          userEmail={userEmail}
           userRole={userRole}
           userFirstName={userFirstName}
           userLastName={userLastName}

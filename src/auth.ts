@@ -156,19 +156,91 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signOut: "/login"
   },
   callbacks: {
-    // Session-Callback: User-ID und Platform-Admin-Flag zur Session hinzufügen
+    // Session-Callback: User-ID, Platform-Admin-Flag und Profil-Daten zur Session hinzufügen
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub
         session.user.isPlatformAdmin = token.isPlatformAdmin as boolean
+        session.user.firstName = token.firstName ?? null
+        session.user.lastName = token.lastName ?? null
+        session.user.role = token.role ?? null
       }
       return session
     },
-    // JWT-Callback: User-ID und Platform-Admin-Flag ins Token schreiben
-    async jwt({ token, user }) {
+    // JWT-Callback: User-ID, Platform-Admin-Flag und Profil-Daten ins Token schreiben
+    async jwt({ token, user, trigger }) {
+      // Session-Ablauf-Prüfung: Verhindere automatische Token-Erneuerung nach 60 Minuten
+      // NextAuth erneuert Token standardmäßig automatisch - wir müssen das verhindern
+      if (token.iat) {
+        const sessionDuration = 60 * 60 // 60 Minuten in Sekunden
+        const now = Math.floor(Date.now() / 1000) // Aktuelle Zeit in Sekunden
+        const issuedAt = typeof token.iat === "number" ? token.iat : parseInt(String(token.iat))
+        const sessionAge = now - issuedAt
+        
+        // Wenn Session älter als 60 Minuten ist, Token nicht erneuern
+        if (sessionAge > sessionDuration) {
+          // Token ist abgelaufen - wirf einen Fehler, der zu einer Invalidierung führt
+          throw new Error("Session expired")
+        }
+      }
+
+      // Beim Login (user vorhanden) oder beim Session-Update: Profil-Daten laden
       if (user) {
         token.sub = user.id
         token.isPlatformAdmin = (user as any).isPlatformAdmin
+        // Profil-Daten laden
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            firstName: true,
+            lastName: true,
+            organizationId: true,
+          },
+        })
+        if (dbUser) {
+          token.firstName = dbUser.firstName ?? null
+          token.lastName = dbUser.lastName ?? null
+          // Rolle aus Membership laden
+          if (dbUser.organizationId) {
+            const membership = await prisma.membership.findFirst({
+              where: {
+                userId: user.id,
+                organizationId: dbUser.organizationId,
+              },
+              select: { role: true },
+            })
+            token.role = membership?.role ?? null
+          } else {
+            token.role = null
+          }
+        }
+      }
+      // Beim Session-Update (z.B. nach Profil-Update) neu laden
+      if (trigger === "update" && token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: {
+            firstName: true,
+            lastName: true,
+            organizationId: true,
+          },
+        })
+        if (dbUser) {
+          token.firstName = dbUser.firstName ?? null
+          token.lastName = dbUser.lastName ?? null
+          if (dbUser.organizationId) {
+            const membership = await prisma.membership.findFirst({
+              where: {
+                userId: token.sub,
+                organizationId: dbUser.organizationId,
+              },
+              select: { role: true },
+            })
+            token.role = membership?.role ?? null
+          } else {
+            token.role = null
+          }
+        }
       }
       return token
     }

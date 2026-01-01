@@ -135,7 +135,7 @@ export default function SubscriptionChangeModal({
               color: "#E20074",
               marginBottom: "0.25rem",
             }}>
-              Subscription-Status ändern
+              Abonnement-Status ändern
             </h2>
             <div style={{
               fontSize: "0.75rem",
@@ -168,7 +168,18 @@ export default function SubscriptionChangeModal({
             fontWeight: "600",
             color: "#0A0A0A",
           }}>
-            {currentStatus || "expired"} {currentPlanName && `(${currentPlanName})`}
+            {(() => {
+              const status = currentStatus || "expired"
+              const statusMap: Record<string, string> = {
+                "active": "Aktiv",
+                "trial_active": "Testphase",
+                "trial": "Testphase",
+                "expired": "Abgelaufen",
+                "canceled": "Gekündigt",
+                "past_due": "Überfällig"
+              }
+              return statusMap[status] || status
+            })()} {currentPlanName && `(${currentPlanName})`}
           </div>
         </div>
 
@@ -181,7 +192,7 @@ export default function SubscriptionChangeModal({
               color: "#0A0A0A",
               marginBottom: "0.5rem",
             }}>
-              Subscription-Status <span style={{ color: "#E20074" }}>*</span>
+              Status <span style={{ color: "#E20074" }}>*</span>
             </label>
             <select
               value={status}
@@ -196,7 +207,7 @@ export default function SubscriptionChangeModal({
                 boxSizing: "border-box",
               }}
             >
-              <option value="trial">Trial</option>
+              <option value="trial">Testphase</option>
               <option value="active">Aktiv</option>
               <option value="expired">Abgelaufen</option>
               <option value="canceled">Gekündigt</option>
