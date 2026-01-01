@@ -122,11 +122,14 @@ export async function GET(request: Request) {
 
     const csvContent = csvRows.join("\n")
 
+    // Verwende Template-Kategorie als Fallback, falls category null ist
+    const categoryForFilename = (category || template.category || "template").toLowerCase()
+
     // CSV als Response zurückgeben
     return new NextResponse(csvContent, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="dpp-template-${category.toLowerCase()}-v${template.version}.csv"`
+        "Content-Disposition": `attachment; filename="dpp-template-${categoryForFilename}-v${template.version}.csv"`
       }
     })
   } catch (error: any) {
