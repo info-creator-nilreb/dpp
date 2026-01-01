@@ -3,7 +3,7 @@ import crypto from "crypto"
 // Dynamically import nodemailer only on the server
 // This prevents it from being bundled in client-side code
 let nodemailer: typeof import("nodemailer") | undefined
-function getNodemailer() {
+function getNodemailer(): typeof import("nodemailer") {
   if (typeof window !== "undefined") {
     throw new Error("Email functions can only be used on the server")
   }
