@@ -165,7 +165,7 @@ export async function POST(
     // Audit Log
     const ipAddress = getClientIp(request)
     await logDppAction(ACTION_TYPES.UPDATE, contributorToken.dppId, {
-      actorId: null, // Externer Contributor, kein User
+      actorId: undefined, // Externer Contributor, kein User
       actorRole: "SUPPLIER",
       organizationId: contributorToken.dpp.organizationId,
       source: SOURCES.API,
