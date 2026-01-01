@@ -302,9 +302,6 @@ export async function getAllPublishedTemplates(): Promise<Array<{
     where: {
       status: {
         in: ["active", "Active", "ACTIVE"]
-      },
-      category: {
-        isNot: null
       }
     },
     select: {
@@ -319,6 +316,9 @@ export async function getAllPublishedTemplates(): Promise<Array<{
       { version: "desc" }
     ]
   })
+  
+  // Filtere Templates ohne Kategorie heraus (nach dem Laden, da Prisma TypeScript-Probleme mit null-Checks hat)
+  templates = templates.filter(t => t.category !== null)
 
   // Fallback: Wenn nichts gefunden, filtere manuell
   if (templates.length === 0) {
