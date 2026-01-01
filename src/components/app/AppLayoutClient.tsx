@@ -60,6 +60,9 @@ export default function AppLayoutClient({
         {shouldShowSidebar && (
           <style dangerouslySetInnerHTML={{
             __html: `
+              :root {
+                --sidebar-width: ${isSidebarCollapsed ? "64px" : "280px"};
+              }
               @media (min-width: 768px) {
                 .app-main-content {
                   margin-left: ${isSidebarCollapsed ? "64px" : "280px"} !important;
