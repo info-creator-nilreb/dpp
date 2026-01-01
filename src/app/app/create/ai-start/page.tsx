@@ -1,24 +1,34 @@
 export const dynamic = "force-dynamic"
 
-import { redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { auth } from "@/auth"
 import AiStartDppContent from "./AiStartDppContent"
 import AuthGate from "../../_auth/AuthGate"
 import { hasFeature } from "@/lib/capabilities/resolver"
+import { prisma } from "@/lib/prisma"
 
 export default async function AiStartDppPage() {
   const session = await auth()
 
   if (!session?.user?.id) {
-    redirect("/login")
+    notFound()
   }
 
-  // Get organization ID from session
-  const orgId = (session.user as any).organizationId
+  // Get organization ID from membership (not from session)
+  const membership = await prisma.membership.findFirst({
+    where: { userId: session.user.id },
+    include: {
+      organization: {
+        select: { id: true }
+      }
+    }
+  })
 
-  if (!orgId) {
-    redirect("/app/select-plan")
+  if (!membership?.organization) {
+    notFound()
   }
+
+  const orgId = membership.organization.id
 
   // Check if AI analysis feature is available
   const canUseAiAnalysis = await hasFeature("ai_analysis", {
@@ -27,7 +37,7 @@ export default async function AiStartDppPage() {
   })
 
   if (!canUseAiAnalysis) {
-    redirect("/app/create")
+    notFound()
   }
 
   return (

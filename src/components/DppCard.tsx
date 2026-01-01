@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNotification } from "@/components/NotificationProvider"
 import ConfirmDialog from "@/components/ConfirmDialog"
 
@@ -32,6 +32,25 @@ export default function DppCard({ id, name, description, organizationName, media
   const { showNotification } = useNotification()
   const [publishing, setPublishing] = useState(false)
   const [showPublishDialog, setShowPublishDialog] = useState(false)
+  const [subscriptionCanPublish, setSubscriptionCanPublish] = useState<boolean>(true)
+  
+  // Load subscription context
+  useEffect(() => {
+    async function loadSubscriptionContext() {
+      try {
+        const response = await fetch("/api/subscription/context")
+        if (response.ok) {
+          const data = await response.json()
+          setSubscriptionCanPublish(data.canPublish ?? false)
+        }
+      } catch (error) {
+        console.error("Error loading subscription context:", error)
+        // Default to false on error (fail-safe)
+        setSubscriptionCanPublish(false)
+      }
+    }
+    loadSubscriptionContext()
+  }, [])
 
   const formatDate = (date: Date | undefined) => {
     if (!date) return ""
@@ -48,6 +67,11 @@ export default function DppCard({ id, name, description, organizationName, media
   const handlePublishClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    // Don't open dialog if publishing is not allowed by subscription
+    if (!subscriptionCanPublish) {
+      showNotification("Veröffentlichung von Produktpässen ist in der Testphase nicht verfügbar. Upgrade erforderlich.", "info")
+      return
+    }
     setShowPublishDialog(true)
   }
 
@@ -361,15 +385,16 @@ export default function DppCard({ id, name, description, organizationName, media
         <a
           href="#"
           onClick={handlePublishClick}
-          title="Neue Version veröffentlichen"
+          title={subscriptionCanPublish ? "Neue Version veröffentlichen" : "Veröffentlichung von Produktpässen ist in der Testphase nicht verfügbar. Upgrade erforderlich."}
           style={{
             ...iconContainerStyle,
-            color: publishing ? "#CDCDCD" : "#7A7A7A",
-            cursor: publishing ? "not-allowed" : "pointer",
-            pointerEvents: publishing ? "none" : "auto"
+            color: (publishing || !subscriptionCanPublish) ? "#CDCDCD" : "#7A7A7A",
+            cursor: (publishing || !subscriptionCanPublish) ? "not-allowed" : "pointer",
+            pointerEvents: (publishing || !subscriptionCanPublish) ? "none" : "auto",
+            opacity: !subscriptionCanPublish ? 0.6 : 1
           }}
           onMouseEnter={(e) => {
-            if (!publishing) {
+            if (!publishing && subscriptionCanPublish) {
               e.currentTarget.style.borderColor = "#E20074"
               e.currentTarget.style.color = "#E20074"
               e.currentTarget.style.backgroundColor = "#FFF5F9"
@@ -377,7 +402,7 @@ export default function DppCard({ id, name, description, organizationName, media
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = "#CDCDCD"
-            e.currentTarget.style.color = publishing ? "#CDCDCD" : "#7A7A7A"
+            e.currentTarget.style.color = (publishing || !subscriptionCanPublish) ? "#CDCDCD" : "#7A7A7A"
             e.currentTarget.style.backgroundColor = "transparent"
           }}
         >

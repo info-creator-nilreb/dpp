@@ -24,7 +24,6 @@ export async function POST(request: Request) {
       password,
       organizationAction,
       organizationName,
-      organizationId,
       invitationToken,
     } = body
 
@@ -60,6 +59,14 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validierung: Bei request_to_join_organization muss invitationToken vorhanden sein
+    if (organizationAction === "request_to_join_organization" && !invitationToken) {
+      return NextResponse.json(
+        { error: "Um einer bestehenden Organisation beizutreten, benötigen Sie eine Einladung" },
+        { status: 400 }
+      )
+    }
+
     // Signup durchführen
     const result = await signupUser({
       firstName,
@@ -68,7 +75,6 @@ export async function POST(request: Request) {
       password,
       organizationAction: organizationAction as OrganizationAction,
       organizationName,
-      organizationId,
       invitationToken,
     })
 
@@ -118,9 +124,16 @@ export async function POST(request: Request) {
       )
     }
 
-    if (error.message === "Organization ID required") {
+    if (error.message === "Invitation token required to join an organization") {
       return NextResponse.json(
-        { error: "Organisations-ID ist erforderlich" },
+        { error: "Um einer bestehenden Organisation beizutreten, benötigen Sie eine Einladung" },
+        { status: 400 }
+      )
+    }
+
+    if (error.message === "Invalid or expired invitation token") {
+      return NextResponse.json(
+        { error: "Ungültiger oder abgelaufener Einladungslink" },
         { status: 400 }
       )
     }

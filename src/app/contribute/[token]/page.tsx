@@ -6,6 +6,7 @@ import { useState, useEffect, Suspense } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import InputField from "@/components/InputField"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { DPP_SECTIONS } from "@/lib/permissions"
 
 interface DppData {
@@ -33,34 +34,6 @@ interface TokenData {
   dpp: DppData
 }
 
-function LoadingSpinner() {
-  return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "2rem" }}>
-      <svg
-        width="48"
-        height="48"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        style={{ animation: "spin 1s linear infinite" }}
-      >
-        <circle cx="12" cy="12" r="10" stroke="#E20074" strokeWidth="2" strokeOpacity="0.25" />
-        <path
-          d="M12 2C6.477 2 2 6.477 2 12"
-          stroke="#E20074"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  )
-}
 
 function ContributeContent() {
   const params = useParams()
@@ -76,7 +49,7 @@ function ContributeContent() {
   useEffect(() => {
     if (!token) {
       setStatus("error")
-      setError("Token is required")
+      setError("Token ist erforderlich")
       return
     }
 
@@ -87,7 +60,7 @@ function ContributeContent() {
 
         if (!response.ok) {
           setStatus("error")
-          setError(data.error || "Invalid or expired token")
+          setError(data.error || "Ungültiger oder abgelaufener Link")
           return
         }
 
@@ -96,7 +69,7 @@ function ContributeContent() {
         setStatus("ready")
       } catch (err) {
         setStatus("error")
-        setError("An error occurred")
+        setError("Ein Fehler ist aufgetreten")
       }
     }
 
@@ -105,7 +78,7 @@ function ContributeContent() {
 
   const handleSubmit = async () => {
     if (!confirmed) {
-      setError("Please confirm that the information is correct")
+      setError("Bitte bestätigen Sie, dass die Informationen korrekt sind")
       return
     }
 
@@ -126,14 +99,14 @@ function ContributeContent() {
 
       if (!response.ok) {
         setStatus("ready")
-        setError(data.error || "An error occurred")
+        setError(data.error || "Ein Fehler ist aufgetreten")
         return
       }
 
       setStatus("success")
     } catch (err) {
       setStatus("ready")
-      setError("An error occurred")
+      setError("Ein Fehler ist aufgetreten")
     }
   }
 
@@ -192,15 +165,15 @@ function ContributeContent() {
 
   const getSectionLabel = (section: string): string => {
     const labels: Record<string, string> = {
-      [DPP_SECTIONS.MATERIALS]: "Materials",
-      [DPP_SECTIONS.MATERIAL_SOURCE]: "Material Source",
-      [DPP_SECTIONS.CARE]: "Care Instructions",
-      [DPP_SECTIONS.REPAIR]: "Repair Information",
-      [DPP_SECTIONS.LIFESPAN]: "Lifespan",
-      [DPP_SECTIONS.CONFORMITY]: "Conformity Declaration",
-      [DPP_SECTIONS.DISPOSAL]: "Disposal Information",
-      [DPP_SECTIONS.TAKEBACK]: "Takeback Information",
-      [DPP_SECTIONS.SECOND_LIFE]: "Second Life Information",
+      [DPP_SECTIONS.MATERIALS]: "Materialien",
+      [DPP_SECTIONS.MATERIAL_SOURCE]: "Materialherkunft",
+      [DPP_SECTIONS.CARE]: "Pflegehinweise",
+      [DPP_SECTIONS.REPAIR]: "Reparaturinformationen",
+      [DPP_SECTIONS.LIFESPAN]: "Lebensdauer",
+      [DPP_SECTIONS.CONFORMITY]: "Konformitätserklärung",
+      [DPP_SECTIONS.DISPOSAL]: "Entsorgungsinformationen",
+      [DPP_SECTIONS.TAKEBACK]: "Rücknahmeinformationen",
+      [DPP_SECTIONS.SECOND_LIFE]: "Second-Life-Informationen",
     }
     return labels[section] || section
   }
@@ -222,16 +195,7 @@ function ContributeContent() {
           borderRadius: "12px",
           border: "1px solid #CDCDCD",
         }}>
-          <LoadingSpinner />
-          <h1 style={{
-            fontSize: "1.5rem",
-            fontWeight: "700",
-            color: "#0A0A0A",
-            marginBottom: "0.5rem",
-            textAlign: "center",
-          }}>
-            Loading...
-          </h1>
+          <LoadingSpinner message="Daten werden geladen..." />
         </div>
       </div>
     )
@@ -275,10 +239,10 @@ function ContributeContent() {
             color: "#E20074",
             marginBottom: "0.5rem",
           }}>
-            Invalid or Expired Link
+            Ungültiger oder abgelaufener Link
           </h1>
           <p style={{ color: "#7A7A7A", marginBottom: "1.5rem" }}>
-            {error || "This link is invalid or has expired. Please contact the requesting organization for a new link."}
+            {error || "Dieser Link ist ungültig oder abgelaufen. Bitte kontaktieren Sie die anfragende Organisation für einen neuen Link."}
           </p>
         </div>
       </div>
@@ -294,40 +258,78 @@ function ContributeContent() {
         alignItems: "center",
         justifyContent: "center",
         padding: "2rem",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
       }}>
         <div style={{
           width: "100%",
           maxWidth: "600px",
-          padding: "2rem",
+          padding: "3rem 2rem",
           backgroundColor: "#FFFFFF",
           borderRadius: "12px",
           border: "1px solid #CDCDCD",
           textAlign: "center",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
         }}>
-          <div style={{ marginBottom: "1.5rem" }}>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ margin: "0 auto" }}
-            >
-              <circle cx="12" cy="12" r="10" fill="#00A651" />
-              <path d="M9 12l2 2 4-4" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <div style={{ marginBottom: "2rem" }}>
+            <div style={{
+              width: "80px",
+              height: "80px",
+              margin: "0 auto",
+              borderRadius: "50%",
+              backgroundColor: "#E20074",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)",
+            }}>
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path 
+                  d="M9 12l2 2 4-4" 
+                  stroke="#FFFFFF" 
+                  strokeWidth="3" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                />
+              </svg>
+            </div>
           </div>
           <h1 style={{
-            fontSize: "1.5rem",
+            fontSize: "2rem",
             fontWeight: "700",
-            color: "#00A651",
-            marginBottom: "0.5rem",
+            color: "#0A0A0A",
+            marginBottom: "1rem",
+            letterSpacing: "-0.02em",
           }}>
-            Thank You!
+            Vielen Dank!
           </h1>
-          <p style={{ color: "#7A7A7A", marginBottom: "1.5rem" }}>
-            Your data has been successfully submitted. The requesting organization has been notified.
+          <p style={{ 
+            color: "#7A7A7A", 
+            marginBottom: "2rem",
+            fontSize: "1rem",
+            lineHeight: "1.6",
+          }}>
+            Ihre Daten wurden erfolgreich übermittelt. Die anfragende Organisation wurde benachrichtigt.
           </p>
+          <div style={{
+            padding: "1rem",
+            backgroundColor: "#F5F5F5",
+            borderRadius: "8px",
+            border: "1px solid #E5E5E5",
+          }}>
+            <p style={{
+              fontSize: "0.875rem",
+              color: "#7A7A7A",
+              margin: 0,
+            }}>
+              Sie können dieses Fenster jetzt schließen.
+            </p>
+          </div>
         </div>
       </div>
     )
@@ -363,13 +365,13 @@ function ContributeContent() {
             color: "#0A0A0A",
             marginBottom: "1rem",
           }}>
-            Provide Product Data
+            Produktdaten bereitstellen
           </h1>
           <p style={{ color: "#7A7A7A", marginBottom: "1rem" }}>
-            <strong>{tokenData.dpp.organizationName}</strong> is requesting product information for <strong>{tokenData.dpp.name}</strong>.
+            <strong>{tokenData.dpp.organizationName}</strong> benötigt Produktinformationen für <strong>{tokenData.dpp.name}</strong>.
           </p>
           <p style={{ color: "#7A7A7A", fontSize: "0.9rem" }}>
-            This data is needed to comply with EU Digital Product Passport requirements.
+            Diese Daten sind erforderlich, um den Anforderungen des EU Digital Product Passports zu entsprechen.
           </p>
           {tokenData.message && (
             <div style={{
@@ -380,7 +382,7 @@ function ContributeContent() {
               border: "1px solid #CDCDCD",
             }}>
               <p style={{ color: "#0A0A0A", fontSize: "0.9rem", margin: 0 }}>
-                <strong>Message:</strong> {tokenData.message}
+                <strong>Nachricht:</strong> {tokenData.message}
               </p>
             </div>
           )}
@@ -396,7 +398,7 @@ function ContributeContent() {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
             <span style={{ fontSize: "0.9rem", fontWeight: "600", color: "#0A0A0A" }}>
-              Progress
+              Fortschritt
             </span>
             <span style={{ fontSize: "0.9rem", color: "#7A7A7A" }}>
               {progress}%
@@ -418,7 +420,7 @@ function ContributeContent() {
           </div>
           <div style={{ marginTop: "1rem" }}>
             <p style={{ fontSize: "0.85rem", color: "#7A7A7A", margin: 0 }}>
-              Required sections:
+              Erforderliche Bereiche:
             </p>
             <ul style={{ margin: "0.5rem 0 0 0", paddingLeft: "1.5rem", fontSize: "0.85rem", color: "#7A7A7A" }}>
               {tokenData.allowedSections.map((section) => (
@@ -440,7 +442,7 @@ function ContributeContent() {
             {tokenData.allowedSections.includes(DPP_SECTIONS.MATERIALS) && (
               <InputField
                 id="materials"
-                label="Materials"
+                label="Materialien"
                 value={formData.materials || ""}
                 onChange={(e) => setFormData({ ...formData, materials: e.target.value })}
                 rows={4}
@@ -450,7 +452,7 @@ function ContributeContent() {
             {tokenData.allowedSections.includes(DPP_SECTIONS.MATERIAL_SOURCE) && (
               <InputField
                 id="materialSource"
-                label="Material Source"
+                label="Materialherkunft"
                 value={formData.materialSource || ""}
                 onChange={(e) => setFormData({ ...formData, materialSource: e.target.value })}
               />
@@ -459,7 +461,7 @@ function ContributeContent() {
             {tokenData.allowedSections.includes(DPP_SECTIONS.CARE) && (
               <InputField
                 id="careInstructions"
-                label="Care Instructions"
+                label="Pflegehinweise"
                 value={formData.careInstructions || ""}
                 onChange={(e) => setFormData({ ...formData, careInstructions: e.target.value })}
                 rows={3}
@@ -476,7 +478,7 @@ function ContributeContent() {
                     color: "#0A0A0A",
                     marginBottom: "0.5rem",
                   }}>
-                    Is Repairable
+                    Ist reparierbar
                   </label>
                   <select
                     id="isRepairable"
@@ -492,9 +494,9 @@ function ContributeContent() {
                       color: "#0A0A0A",
                     }}
                   >
-                    <option value="">Please select</option>
-                    <option value="YES">Yes</option>
-                    <option value="NO">No</option>
+                    <option value="">Bitte auswählen</option>
+                    <option value="YES">Ja</option>
+                    <option value="NO">Nein</option>
                   </select>
                 </div>
                 <div style={{ marginBottom: "1.5rem" }}>
@@ -505,7 +507,7 @@ function ContributeContent() {
                     color: "#0A0A0A",
                     marginBottom: "0.5rem",
                   }}>
-                    Spare Parts Available
+                    Ersatzteile verfügbar
                   </label>
                   <select
                     id="sparePartsAvailable"
@@ -521,9 +523,9 @@ function ContributeContent() {
                       color: "#0A0A0A",
                     }}
                   >
-                    <option value="">Please select</option>
-                    <option value="YES">Yes</option>
-                    <option value="NO">No</option>
+                    <option value="">Bitte auswählen</option>
+                    <option value="YES">Ja</option>
+                    <option value="NO">Nein</option>
                   </select>
                 </div>
               </>
@@ -532,7 +534,7 @@ function ContributeContent() {
             {tokenData.allowedSections.includes(DPP_SECTIONS.LIFESPAN) && (
               <InputField
                 id="lifespan"
-                label="Lifespan"
+                label="Lebensdauer"
                 value={formData.lifespan || ""}
                 onChange={(e) => setFormData({ ...formData, lifespan: e.target.value })}
               />
@@ -541,7 +543,7 @@ function ContributeContent() {
             {tokenData.allowedSections.includes(DPP_SECTIONS.CONFORMITY) && (
               <InputField
                 id="conformityDeclaration"
-                label="Conformity Declaration"
+                label="Konformitätserklärung"
                 value={formData.conformityDeclaration || ""}
                 onChange={(e) => setFormData({ ...formData, conformityDeclaration: e.target.value })}
                 rows={4}
@@ -551,7 +553,7 @@ function ContributeContent() {
             {tokenData.allowedSections.includes(DPP_SECTIONS.DISPOSAL) && (
               <InputField
                 id="disposalInfo"
-                label="Disposal Information"
+                label="Entsorgungsinformationen"
                 value={formData.disposalInfo || ""}
                 onChange={(e) => setFormData({ ...formData, disposalInfo: e.target.value })}
                 rows={3}
@@ -568,7 +570,7 @@ function ContributeContent() {
                     color: "#0A0A0A",
                     marginBottom: "0.5rem",
                   }}>
-                    Takeback Offered
+                    Rücknahme angeboten
                   </label>
                   <select
                     id="takebackOffered"
@@ -584,14 +586,14 @@ function ContributeContent() {
                       color: "#0A0A0A",
                     }}
                   >
-                    <option value="">Please select</option>
-                    <option value="YES">Yes</option>
-                    <option value="NO">No</option>
+                    <option value="">Bitte auswählen</option>
+                    <option value="YES">Ja</option>
+                    <option value="NO">Nein</option>
                   </select>
                 </div>
                 <InputField
                   id="takebackContact"
-                  label="Takeback Contact"
+                  label="Rücknahmekontakt"
                   value={formData.takebackContact || ""}
                   onChange={(e) => setFormData({ ...formData, takebackContact: e.target.value })}
                 />
@@ -601,7 +603,7 @@ function ContributeContent() {
             {tokenData.allowedSections.includes(DPP_SECTIONS.SECOND_LIFE) && (
               <InputField
                 id="secondLifeInfo"
-                label="Second Life Information"
+                label="Second-Life-Informationen"
                 value={formData.secondLifeInfo || ""}
                 onChange={(e) => setFormData({ ...formData, secondLifeInfo: e.target.value })}
                 rows={3}
@@ -641,7 +643,7 @@ function ContributeContent() {
                   }}
                 />
                 <span style={{ fontSize: "0.9rem", color: "#0A0A0A" }}>
-                  I confirm that the information provided is correct to the best of my knowledge.
+                  Ich bestätige, dass die bereitgestellten Informationen nach bestem Wissen korrekt sind.
                 </span>
               </label>
             </div>
@@ -659,9 +661,10 @@ function ContributeContent() {
                 fontSize: "1rem",
                 fontWeight: "600",
                 cursor: status === "submitting" ? "not-allowed" : "pointer",
+                transition: "background-color 0.2s ease",
               }}
             >
-              {status === "submitting" ? "Submitting..." : "Submit Data"}
+              {status === "submitting" ? "Wird übermittelt..." : "Daten übermitteln"}
             </button>
           </div>
         </form>
@@ -680,7 +683,7 @@ export default function ContributePage() {
         alignItems: "center",
         justifyContent: "center",
       }}>
-        <LoadingSpinner />
+        <LoadingSpinner message="Daten werden geladen..." />
       </div>
     }>
       <ContributeContent />

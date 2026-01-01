@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { latestPublishedTemplate } from "@/lib/template-helpers"
+import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -28,16 +29,47 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const category = searchParams.get("category")
+    const templateId = searchParams.get("templateId")
 
-    if (!category) {
+    let template
+
+    if (templateId) {
+      // Wenn templateId angegeben ist, lade dieses Template
+      template = await prisma.template.findFirst({
+        where: {
+          id: templateId,
+          status: "active"
+        },
+        include: {
+          blocks: {
+            orderBy: { order: "asc" },
+            include: {
+              fields: {
+                where: {
+                  deprecatedInVersion: null
+                },
+                orderBy: { order: "asc" }
+              }
+            }
+          }
+        }
+      })
+
+      if (!template) {
+        return NextResponse.json(
+          { error: `Template mit ID "${templateId}" nicht gefunden oder nicht veröffentlicht.` },
+          { status: 404 }
+        )
+      }
+    } else if (category) {
+      // Fallback: Lade aktuelles veröffentlichtes Template für die Kategorie
+      template = await latestPublishedTemplate(category)
+    } else {
       return NextResponse.json(
-        { error: "Kategorie-Parameter ist erforderlich" },
+        { error: "Kategorie-Parameter oder templateId ist erforderlich" },
         { status: 400 }
       )
     }
-
-    // Lade aktuelles veröffentlichtes Template für die Kategorie
-    const template = await latestPublishedTemplate(category)
 
     if (!template) {
       return NextResponse.json(

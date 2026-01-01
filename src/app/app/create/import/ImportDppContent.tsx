@@ -23,10 +23,21 @@ interface ImportDppContentProps {
   availableCategories: Array<{ categoryKey: string; label: string }>
 }
 
+interface Template {
+  id: string
+  name: string
+  category: string
+  version: number
+  label: string
+}
+
 export default function ImportDppContent({ availableCategories }: ImportDppContentProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [category, setCategory] = useState<string>(availableCategories[0]?.categoryKey || "")
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [templatesByCategory, setTemplatesByCategory] = useState<Map<string, Template[]>>(new Map())
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [parsedData, setParsedData] = useState<CsvRow[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
@@ -38,13 +49,46 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
   const [dataImported, setDataImported] = useState(false) // Track if data was imported
 
-  // Lade Kategorie-Labels beim Mount
+  // Lade Templates und Kategorie-Labels beim Mount
   useEffect(() => {
-    async function loadCategoryLabels() {
+    async function loadTemplatesAndLabels() {
       try {
-        const response = await fetch("/api/app/categories")
-        if (response.ok) {
-          const data = await response.json()
+        // Lade Templates gruppiert nach Kategorie
+        const templatesResponse = await fetch("/api/app/templates?groupByCategory=true")
+        if (templatesResponse.ok) {
+          const templatesData = await templatesResponse.json()
+          const templatesMap = new Map<string, Template[]>()
+          const allTemplates: Template[] = []
+          
+          for (const [cat, templateList] of Object.entries(templatesData.templatesByCategory || {})) {
+            const templatesForCategory = (templateList as any[]).map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              category: t.category,
+              version: t.version,
+              label: t.label
+            }))
+            templatesMap.set(cat, templatesForCategory)
+            allTemplates.push(...templatesForCategory)
+          }
+          
+          setTemplatesByCategory(templatesMap)
+          setTemplates(allTemplates)
+          
+          // Setze das erste Template der ersten Kategorie als Standard
+          if (availableCategories.length > 0) {
+            const firstCategory = availableCategories[0].categoryKey
+            const templatesForFirstCategory = templatesMap.get(firstCategory) || []
+            if (templatesForFirstCategory.length > 0) {
+              setSelectedTemplateId(templatesForFirstCategory[0].id)
+            }
+          }
+        }
+
+        // Lade Kategorie-Labels
+        const categoriesResponse = await fetch("/api/app/categories")
+        if (categoriesResponse.ok) {
+          const data = await categoriesResponse.json()
           const labelsMap = new Map<string, { label: string; categoryKey: string }>()
           for (const cat of data.categories || []) {
             labelsMap.set(cat.categoryKey, cat)
@@ -52,16 +96,32 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
           setCategoriesWithLabels(labelsMap)
         }
       } catch (err) {
-        console.error("Error loading category labels:", err)
+        console.error("Error loading templates and category labels:", err)
       }
     }
-    loadCategoryLabels()
-  }, [])
+    loadTemplatesAndLabels()
+  }, [availableCategories])
+
+  // Aktualisiere ausgewähltes Template wenn Kategorie geändert wird
+  useEffect(() => {
+    if (category && templatesByCategory.has(category)) {
+      const templatesForCategory = templatesByCategory.get(category) || []
+      if (templatesForCategory.length > 0) {
+        setSelectedTemplateId(templatesForCategory[0].id)
+      } else {
+        setSelectedTemplateId("")
+      }
+    }
+  }, [category, templatesByCategory])
 
   // CSV Template herunterladen
   const handleDownloadTemplate = () => {
+    if (!selectedTemplateId) {
+      setError("Bitte wählen Sie zuerst ein Template aus")
+      return
+    }
     const link = document.createElement("a")
-    link.href = `/api/app/dpps/csv-template?category=${category}`
+    link.href = `/api/app/dpps/csv-template?category=${category}&templateId=${selectedTemplateId}`
     link.download = `dpp-template-${category.toLowerCase()}.csv`
     document.body.appendChild(link)
     link.click()
@@ -218,6 +278,12 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
     setIsImporting(true)
     setError("")
 
+    if (!selectedTemplateId) {
+      setError("Bitte wählen Sie zuerst ein Template aus")
+      setIsImporting(false)
+      return
+    }
+
     try {
       const response = await fetch("/api/app/dpps/import", {
         method: "POST",
@@ -225,7 +291,8 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          products: parsedData
+          products: parsedData,
+          templateId: selectedTemplateId
         })
       })
 
@@ -284,6 +351,59 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
       setShowLeaveWarning(true)
     }
   }
+
+  // Wenn keine Templates verfügbar sind, zeige leeren Zustand
+  if (availableCategories.length === 0 || templates.length === 0) {
+    return (
+      <div>
+        <div style={{ marginBottom: "1rem" }}>
+          <a
+            href="/app/create"
+            style={{
+              color: "#7A7A7A",
+              textDecoration: "none",
+              fontSize: "clamp(0.9rem, 2vw, 1rem)",
+              cursor: "pointer"
+            }}
+          >
+            ← Zurück
+          </a>
+        </div>
+        <h1 style={{
+          fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
+          fontWeight: "700",
+          color: "#0A0A0A",
+          marginBottom: "1rem"
+        }}>
+          CSV Import
+        </h1>
+        <div style={{
+          backgroundColor: "#FFFFFF",
+          padding: "clamp(2rem, 5vw, 4rem)",
+          borderRadius: "12px",
+          border: "1px solid #CDCDCD",
+          textAlign: "center"
+        }}>
+          <p style={{
+            color: "#7A7A7A",
+            fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
+            marginBottom: "1rem"
+          }}>
+            Keine Templates verfügbar
+          </p>
+          <p style={{
+            color: "#7A7A7A",
+            fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            marginBottom: "1.5rem"
+          }}>
+            Es sind derzeit keine veröffentlichten Templates verfügbar. Bitte kontaktieren Sie einen Administrator, um Templates zu veröffentlichen.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const templatesForSelectedCategory = templatesByCategory.get(category) || []
 
   return (
     <div>
@@ -373,15 +493,62 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
             MozAppearance: "none",
             backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
             backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 0.75rem center",
+            marginBottom: "1.5rem"
+          }}
+        >
+          {availableCategories.map((cat) => (
+            <option key={cat.categoryKey} value={cat.categoryKey}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Template-Auswahl */}
+        <h2 style={{
+          fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
+          fontWeight: "700",
+          color: "#0A0A0A",
+          marginBottom: "1rem",
+          marginTop: "1.5rem"
+        }}>
+          Template
+        </h2>
+        <p style={{
+          color: "#7A7A7A",
+          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+          marginBottom: "1rem"
+        }}>
+          Wählen Sie das Template für die zu importierenden Produkte:
+        </p>
+        <select
+          value={selectedTemplateId}
+          onChange={(e) => setSelectedTemplateId(e.target.value)}
+          style={{
+            width: "100%",
+            maxWidth: "500px",
+            padding: "0.6875rem 2.5rem 0.6875rem 0.75rem",
+            border: "1px solid #CDCDCD",
+            borderRadius: "6px",
+            fontSize: "1rem",
+            backgroundColor: "#FFFFFF",
+            boxSizing: "border-box",
+            height: "42px",
+            lineHeight: "1.5",
+            appearance: "none",
+            WebkitAppearance: "none",
+            MozAppearance: "none",
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
+            backgroundRepeat: "no-repeat",
             backgroundPosition: "right 0.75rem center"
           }}
         >
-          {availableCategories.length === 0 ? (
-            <option value="">Keine Kategorien verfügbar</option>
+          {templatesForSelectedCategory.length === 0 ? (
+            <option value="">Keine Templates für diese Kategorie verfügbar</option>
           ) : (
-            availableCategories.map((cat) => (
-              <option key={cat.categoryKey} value={cat.categoryKey}>
-                {cat.label}
+            templatesForSelectedCategory.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.label}
               </option>
             ))
           )}

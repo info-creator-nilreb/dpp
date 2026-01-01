@@ -15,6 +15,220 @@ function getNodemailer(): typeof import("nodemailer") {
 }
 
 /**
+ * E-Mail Template Interface
+ */
+interface EmailTemplateOptions {
+  headline: string
+  subline: string
+  content: string[]
+  ctaText: string
+  ctaUrl: string
+  infoBox?: string
+  appName?: string
+  baseUrl?: string
+}
+
+/**
+ * Generiert ein konsistentes E-Mail-Template für alle Transaktions-E-Mails
+ * Entspricht den B2B SaaS Design-Prinzipien: clean, minimal, produktorientiert
+ */
+function generateEmailTemplate(options: EmailTemplateOptions): string {
+  const appName = options.appName || process.env.APP_NAME || "T-Pass"
+  const baseUrl = options.baseUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
+  
+  // Logo SVG (T-Pass Logo)
+  const logoSvg = `
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="#E20074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9 12l2 2 4-4" stroke="#E20074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `
+  
+  const infoBoxHtml = options.infoBox ? `
+    <div style="background-color: #FAFAFA; border: 1px solid #E5E5E5; border-radius: 4px; padding: 16px; margin: 24px 0; font-size: 14px; line-height: 1.5; color: #0A0A0A;">
+      ${options.infoBox}
+    </div>
+  ` : ''
+  
+  return `
+    <!DOCTYPE html>
+    <html lang="de">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #0A0A0A;
+            background-color: #F5F5F5;
+            padding: 0;
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+          }
+          .email-wrapper {
+            max-width: 640px;
+            margin: 0 auto;
+            background-color: #FFFFFF;
+            padding: 0;
+          }
+          .email-container {
+            padding: 32px 24px;
+          }
+          @media only screen and (max-width: 640px) {
+            .email-container {
+              padding: 24px 16px;
+            }
+          }
+          .logo {
+            text-align: left;
+            margin-bottom: 32px;
+          }
+          .logo svg {
+            display: inline-block;
+            vertical-align: middle;
+          }
+          .headline {
+            font-size: 24px;
+            font-weight: 600;
+            line-height: 1.3;
+            color: #0A0A0A;
+            margin-bottom: 8px;
+          }
+          .subline {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #7A7A7A;
+            margin-bottom: 24px;
+          }
+          .content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #0A0A0A;
+            margin-bottom: 24px;
+          }
+          .content p {
+            margin-bottom: 16px;
+          }
+          .content p:last-child {
+            margin-bottom: 0;
+          }
+          .cta-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #E20074;
+            color: #FFFFFF;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 16px;
+            margin: 24px 0;
+            text-align: center;
+            border: none;
+          }
+          .cta-button:hover {
+            background-color: #C1005F;
+          }
+          .divider {
+            height: 1px;
+            background-color: #E5E5E5;
+            margin: 32px 0;
+            border: none;
+          }
+          .footer {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #7A7A7A;
+            text-align: center;
+            padding-top: 24px;
+          }
+          .footer-links {
+            margin-bottom: 16px;
+          }
+          .footer-links a {
+            color: #E20074;
+            text-decoration: none;
+            margin: 0 12px;
+          }
+          .footer-links a:hover {
+            text-decoration: underline;
+          }
+          .footer-text {
+            font-size: 13px;
+            color: #9A9A9A;
+            margin-top: 16px;
+          }
+          .link-fallback {
+            font-size: 14px;
+            color: #7A7A7A;
+            word-break: break-all;
+            margin-top: 16px;
+            padding: 12px;
+            background-color: #FAFAFA;
+            border-radius: 4px;
+            font-family: monospace;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-wrapper">
+          <div class="email-container">
+            <!-- Logo -->
+            <div class="logo">
+              ${logoSvg}
+            </div>
+            
+            <!-- Headline -->
+            <h1 class="headline">${options.headline}</h1>
+            
+            <!-- Subline -->
+            <p class="subline">${options.subline}</p>
+            
+            <!-- Content -->
+            <div class="content">
+              ${options.content.map(paragraph => `<p>${paragraph}</p>`).join('')}
+            </div>
+            
+            <!-- CTA Button -->
+            <div style="text-align: left;">
+              <a href="${options.ctaUrl}" class="cta-button">${options.ctaText}</a>
+            </div>
+            
+            <!-- Link Fallback -->
+            <p class="link-fallback">${options.ctaUrl}</p>
+            
+            <!-- Optional Info Box -->
+            ${infoBoxHtml}
+            
+            <!-- Divider -->
+            <hr class="divider">
+            
+            <!-- Footer -->
+            <div class="footer">
+              <div class="footer-links">
+                <a href="${baseUrl}/login">Login</a>
+                <a href="${baseUrl}/help">Hilfe</a>
+                <a href="${baseUrl}/legal">Rechtliches</a>
+              </div>
+              <div class="footer-text">
+                ${appName} – Transaktions-E-Mail
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+}
+
+/**
  * Generiert einen sicheren Verifizierungs-Token
  */
 export function generateVerificationToken(): string {
@@ -71,68 +285,27 @@ export async function sendVerificationEmail(
   const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/verify-email?token=${verificationToken}`
   const appName = process.env.APP_NAME || "T-Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #0A0A0A;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .container {
-            background-color: #FFFFFF;
-            border: 1px solid #CDCDCD;
-            border-radius: 12px;
-            padding: 2rem;
-          }
-          .button {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background-color: #E20074;
-            color: #FFFFFF;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            margin: 1rem 0;
-          }
-          .footer {
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #CDCDCD;
-            font-size: 0.85rem;
-            color: #7A7A7A;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1 style="color: #0A0A0A; margin-bottom: 1rem;">E-Mail-Adresse verifizieren</h1>
-          <p>Hallo ${name || email},</p>
-          <p>vielen Dank für Ihre Registrierung bei ${appName}!</p>
-          <p>Bitte klicken Sie auf den folgenden Button, um Ihre E-Mail-Adresse zu verifizieren:</p>
-          <a href="${verificationUrl}" class="button">E-Mail-Adresse verifizieren</a>
-          <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
-          <p style="word-break: break-all; color: #7A7A7A; font-size: 0.9rem;">${verificationUrl}</p>
-          <p style="margin-top: 2rem;">Dieser Link ist 24 Stunden gültig.</p>
-          <div class="footer">
-            <p>Wenn Sie sich nicht bei ${appName} registriert haben, können Sie diese E-Mail ignorieren.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
+  const htmlContent = generateEmailTemplate({
+    headline: "E-Mail-Adresse verifizieren",
+    subline: "Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihr Konto zu aktivieren.",
+    content: [
+      `Hallo ${name || email},`,
+      `Bitte klicken Sie auf den Button, um Ihre E-Mail-Adresse zu verifizieren. Dieser Link ist 24 Stunden gültig.`
+    ],
+    ctaText: "E-Mail-Adresse verifizieren",
+    ctaUrl: verificationUrl,
+    infoBox: "Wenn Sie sich nicht bei " + appName + " registriert haben, können Sie diese E-Mail ignorieren.",
+    appName,
+    baseUrl
+  })
   
-  const textContent = `
+  const textContent = `E-Mail-Adresse verifizieren
+
 Hallo ${name || email},
 
-vielen Dank für Ihre Registrierung bei ${appName}!
+Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihr Konto zu aktivieren.
 
 Bitte klicken Sie auf den folgenden Link, um Ihre E-Mail-Adresse zu verifizieren:
 
@@ -140,8 +313,7 @@ ${verificationUrl}
 
 Dieser Link ist 24 Stunden gültig.
 
-Wenn Sie sich nicht bei ${appName} registriert haben, können Sie diese E-Mail ignorieren.
-  `
+Wenn Sie sich nicht bei ${appName} registriert haben, können Sie diese E-Mail ignorieren.`
   
   try {
     const transport = createEmailTransport()
@@ -149,7 +321,7 @@ Wenn Sie sich nicht bei ${appName} registriert haben, können Sie diese E-Mail i
     const mailOptions = {
       from: fromEmail,
       to: email,
-      subject: `E-Mail-Adresse verifizieren - ${appName}`,
+      subject: `E-Mail-Adresse verifizieren – ${appName}`,
       text: textContent,
       html: htmlContent,
     }
@@ -190,75 +362,24 @@ export async function sendPasswordResetEmail(
   const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/reset-password?token=${resetToken}`
   const appName = process.env.APP_NAME || "T-Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #0A0A0A;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .container {
-            background-color: #FFFFFF;
-            border: 1px solid #CDCDCD;
-            border-radius: 12px;
-            padding: 2rem;
-          }
-          .button {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background-color: #E20074;
-            color: #FFFFFF;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            margin: 1rem 0;
-          }
-          .footer {
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #CDCDCD;
-            font-size: 0.85rem;
-            color: #7A7A7A;
-          }
-          .warning {
-            background-color: #FFF3CD;
-            border: 1px solid #FFE69C;
-            border-radius: 6px;
-            padding: 1rem;
-            margin: 1rem 0;
-            color: #856404;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1 style="color: #0A0A0A; margin-bottom: 1rem;">Passwort zurücksetzen</h1>
-          <p>Hallo ${name || email},</p>
-          <p>Sie haben die Zurücksetzung Ihres Passworts für ${appName} angefordert.</p>
-          <p>Bitte klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
-          <a href="${resetUrl}" class="button">Passwort zurücksetzen</a>
-          <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
-          <p style="word-break: break-all; color: #7A7A7A; font-size: 0.9rem;">${resetUrl}</p>
-          <div class="warning">
-            <strong>Wichtig:</strong> Dieser Link ist 1 Stunde gültig. Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorieren.
-          </div>
-          <div class="footer">
-            <p>Wenn Sie diese E-Mail nicht angefordert haben, können Sie sie sicher ignorieren. Ihr Passwort bleibt unverändert.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
+  const htmlContent = generateEmailTemplate({
+    headline: "Passwort zurücksetzen",
+    subline: "Sie haben die Zurücksetzung Ihres Passworts angefordert.",
+    content: [
+      `Hallo ${name || email},`,
+      `Bitte klicken Sie auf den Button, um ein neues Passwort festzulegen. Dieser Link ist 1 Stunde gültig.`
+    ],
+    ctaText: "Passwort zurücksetzen",
+    ctaUrl: resetUrl,
+    infoBox: "Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorieren. Ihr Passwort bleibt unverändert.",
+    appName,
+    baseUrl
+  })
 
-  const textContent = `
+  const textContent = `Passwort zurücksetzen
+
 Hallo ${name || email},
 
 Sie haben die Zurücksetzung Ihres Passworts für ${appName} angefordert.
@@ -269,8 +390,7 @@ ${resetUrl}
 
 Wichtig: Dieser Link ist 1 Stunde gültig.
 
-Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorieren. Ihr Passwort bleibt unverändert.
-  `
+Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorieren. Ihr Passwort bleibt unverändert.`
 
   try {
     const transport = createEmailTransport()
@@ -278,7 +398,7 @@ Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorie
     const mailOptions = {
       from: fromEmail,
       to: email,
-      subject: `Passwort zurücksetzen - ${appName}`,
+      subject: `Passwort zurücksetzen – ${appName}`,
       text: textContent,
       html: htmlContent,
     }
@@ -334,64 +454,22 @@ export async function sendInvitationEmail(
   const organizationName = organization?.name || "eine Organisation"
   const signupUrl = `${baseUrl}/signup?invitation=${invitationToken}`
   
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #0A0A0A;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .container {
-            background-color: #FFFFFF;
-            border: 1px solid #CDCDCD;
-            border-radius: 12px;
-            padding: 2rem;
-          }
-          .button {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background-color: #E20074;
-            color: #FFFFFF;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            margin: 1rem 0;
-          }
-          .footer {
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #CDCDCD;
-            font-size: 0.85rem;
-            color: #7A7A7A;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1 style="color: #0A0A0A; margin-bottom: 1rem;">Einladung zu ${organizationName}</h1>
-          <p>Hallo,</p>
-          <p>Sie wurden eingeladen, ${organizationName} auf ${appName} beizutreten.</p>
-          <p>Klicken Sie auf den folgenden Button, um sich zu registrieren und der Organisation beizutreten:</p>
-          <a href="${signupUrl}" class="button">Einladung annehmen</a>
-          <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
-          <p style="word-break: break-all; color: #7A7A7A; font-size: 0.9rem;">${signupUrl}</p>
-          <p style="margin-top: 2rem;">Diese Einladung ist 7 Tage gültig.</p>
-          <div class="footer">
-            <p>Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
+  const htmlContent = generateEmailTemplate({
+    headline: `Einladung zu ${organizationName}`,
+    subline: `Sie wurden eingeladen, ${organizationName} auf ${appName} beizutreten.`,
+    content: [
+      "Hallo,",
+      `Bitte klicken Sie auf den Button, um sich zu registrieren und der Organisation beizutreten. Diese Einladung ist 7 Tage gültig.`
+    ],
+    ctaText: "Einladung annehmen",
+    ctaUrl: signupUrl,
+    infoBox: "Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.",
+    appName,
+    baseUrl
+  })
   
-  const textContent = `
+  const textContent = `Einladung zu ${organizationName}
+
 Hallo,
 
 Sie wurden eingeladen, ${organizationName} auf ${appName} beizutreten.
@@ -402,8 +480,7 @@ ${signupUrl}
 
 Diese Einladung ist 7 Tage gültig.
 
-Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.
-  `
+Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.`
   
   try {
     const transport = createEmailTransport()
@@ -411,7 +488,7 @@ Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorier
     const mailOptions = {
       from: fromEmail,
       to: email,
-      subject: `Einladung zu ${organizationName} - ${appName}`,
+      subject: `Einladung zu ${organizationName} – ${appName}`,
       text: textContent,
       html: htmlContent,
     }
@@ -453,108 +530,35 @@ export async function sendSupplierDataRequestEmail(
 ): Promise<void> {
   const appName = process.env.APP_NAME || "T-Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #0A0A0A;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .container {
-            background-color: #FFFFFF;
-            border: 1px solid #CDCDCD;
-            border-radius: 12px;
-            padding: 2rem;
-          }
-          .button {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background-color: #E20074;
-            color: #FFFFFF;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            margin: 1rem 0;
-          }
-          .footer {
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #CDCDCD;
-            font-size: 0.85rem;
-            color: #7A7A7A;
-          }
-          .benefits {
-            margin: 1.5rem 0;
-            padding-left: 0;
-          }
-          .benefits li {
-            margin: 0.5rem 0;
-            list-style: none;
-            padding-left: 1.5rem;
-            position: relative;
-          }
-          .benefits li:before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #E20074;
-            font-weight: bold;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1 style="color: #0A0A0A; margin-bottom: 1rem;">Request for product data for EU Digital Product Passport</h1>
-          <p>Hello,</p>
-          <p><strong>${data.organizationName}</strong> is requesting product information for <strong>${data.productName}</strong>.</p>
-          <p>This data is needed to comply with EU Digital Product Passport requirements.</p>
-          <ul class="benefits">
-            <li>No account required</li>
-            <li>Only specific data fields</li>
-            <li>Takes approximately 3–5 minutes</li>
-          </ul>
-          <p>Please click the button below to provide the requested information:</p>
-          <a href="${data.contributeUrl}" class="button">Provide data now</a>
-          <p style="margin-top: 2rem; font-size: 0.9rem; color: #7A7A7A;">Or copy this link into your browser:</p>
-          <p style="word-break: break-all; color: #7A7A7A; font-size: 0.85rem;">${data.contributeUrl}</p>
-          <div class="footer">
-            <p>This link expires in 14 days.</p>
-            <p>If you did not expect this request, you can safely ignore this email.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
+  const htmlContent = generateEmailTemplate({
+    headline: "Anfrage für Produktdaten",
+    subline: `${data.organizationName} benötigt Produktinformationen für ${data.productName} zur Erfüllung der EU Digital Product Passport Anforderungen.`,
+    content: [
+      "Hallo,",
+      "Bitte klicken Sie auf den Button, um die angefragten Informationen bereitzustellen. Kein Konto erforderlich. Dieser Link ist 14 Tage gültig."
+    ],
+    ctaText: "Daten bereitstellen",
+    ctaUrl: data.contributeUrl,
+    infoBox: "Wenn Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.",
+    appName,
+    baseUrl
+  })
   
-  const textContent = `Request for product data for EU Digital Product Passport
+  const textContent = `Anfrage für Produktdaten
 
-Hello,
+Hallo,
 
-${data.organizationName} is requesting product information for ${data.productName}.
+${data.organizationName} benötigt Produktinformationen für ${data.productName} zur Erfüllung der EU Digital Product Passport Anforderungen.
 
-This data is needed to comply with EU Digital Product Passport requirements.
-
-What you can do:
-✓ No account required
-✓ Only specific data fields
-✓ Takes approximately 3–5 minutes
-
-Please click the link below to provide the requested information:
+Bitte klicken Sie auf den folgenden Link, um die angefragten Informationen bereitzustellen:
 
 ${data.contributeUrl}
 
-This link expires in 14 days.
+Kein Konto erforderlich. Dieser Link ist 14 Tage gültig.
 
-If you did not expect this request, you can safely ignore this email.
-  `
+Wenn Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.`
   
   try {
     const transport = createEmailTransport()
@@ -562,7 +566,7 @@ If you did not expect this request, you can safely ignore this email.
     const mailOptions = {
       from: fromEmail,
       to: email,
-      subject: "Request for product data for EU Digital Product Passport",
+      subject: `Anfrage für Produktdaten – ${appName}`,
       text: textContent,
       html: htmlContent,
     }

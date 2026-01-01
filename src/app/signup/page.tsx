@@ -71,7 +71,6 @@ function SignupContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [organizationAction, setOrganizationAction] = useState<"create_new_organization" | "request_to_join_organization">("create_new_organization")
   const [organizationName, setOrganizationName] = useState("")
-  const [organizationId, setOrganizationId] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
@@ -99,65 +98,45 @@ function SignupContent() {
     setLoading(true)
 
     try {
-      // Phase 1: Use new signup endpoint if invitation token exists or organizationAction is set
-      const usePhase1Signup = invitationToken || organizationAction === "request_to_join_organization"
-      
-      if (usePhase1Signup) {
-        if (!firstName.trim() || !lastName.trim()) {
-          setError("Vorname und Nachname sind erforderlich")
-          setLoading(false)
-          return
-        }
+      // Phase 1: Always use new signup endpoint (organizationAction is always set)
+      if (!firstName.trim() || !lastName.trim()) {
+        setError("Vorname und Nachname sind erforderlich")
+        setLoading(false)
+        return
+      }
 
-        if (organizationAction === "create_new_organization" && !organizationName.trim()) {
-          setError("Organisationsname ist erforderlich")
-          setLoading(false)
-          return
-        }
+      if (organizationAction === "create_new_organization" && !organizationName.trim()) {
+        setError("Organisationsname ist erforderlich")
+        setLoading(false)
+        return
+      }
 
-        if (organizationAction === "request_to_join_organization" && !organizationId.trim()) {
-          setError("Organisations-ID ist erforderlich")
-          setLoading(false)
-          return
-        }
+      if (organizationAction === "request_to_join_organization" && !invitationToken) {
+        setError("Um einer bestehenden Organisation beizutreten, benötigen Sie eine Einladung. Bitte verwenden Sie den Einladungslink aus Ihrer E-Mail.")
+        setLoading(false)
+        return
+      }
 
-        const response = await fetch("/api/auth/signup-phase1", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            email,
-            password,
-            organizationAction,
-            organizationName: organizationName.trim() || undefined,
-            organizationId: organizationId.trim() || undefined,
-            invitationToken: invitationToken || undefined,
-          })
+      const response = await fetch("/api/auth/signup-phase1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email,
+          password,
+          organizationAction,
+          organizationName: organizationName.trim() || undefined,
+          invitationToken: invitationToken || undefined,
         })
+      })
 
-        const data = await response.json()
+      const data = await response.json()
 
-        if (!response.ok) {
-          setError(data.error || "Ein Fehler ist aufgetreten")
-        } else {
-          router.push("/signup?success=true&email=" + encodeURIComponent(email))
-        }
+      if (!response.ok) {
+        setError(data.error || "Ein Fehler ist aufgetreten")
       } else {
-        // Legacy signup (fallback)
-        const response = await fetch("/api/auth/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: `${firstName} ${lastName}`.trim(), email, password })
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          setError(data.error || "Ein Fehler ist aufgetreten")
-        } else {
-          router.push("/signup?success=true&email=" + encodeURIComponent(email))
-        }
+        router.push("/signup?success=true&email=" + encodeURIComponent(email))
       }
     } catch (err) {
       setError("Ein Fehler ist aufgetreten")
@@ -465,94 +444,171 @@ function SignupContent() {
           {/* Organization Action (only if no invitation token) */}
           {!invitationToken && (
             <>
-              <div style={{ marginBottom: "1.5rem" }}>
+              <div style={{ marginBottom: "1.75rem" }}>
                 <label style={{
                   display: "block",
-                  marginBottom: "0.5rem",
+                  marginBottom: "0.75rem",
                   color: "#0A0A0A",
-                  fontWeight: "500",
-                  fontSize: "0.9rem"
+                  fontWeight: "600",
+                  fontSize: "0.9375rem"
                 }}>
-                  Ich möchte...
+                  Organisation
                 </label>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.625rem",
+                  padding: "0.75rem",
+                  backgroundColor: "#FAFAFA",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "8px"
+                }}>
+                  <label style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    cursor: "pointer",
+                    padding: "0.625rem",
+                    borderRadius: "6px",
+                    transition: "background-color 0.2s",
+                    backgroundColor: organizationAction === "create_new_organization" ? "#F3F4F6" : "transparent"
+                  }}>
                     <input
                       type="radio"
                       name="organizationAction"
                       value="create_new_organization"
                       checked={organizationAction === "create_new_organization"}
                       onChange={(e) => setOrganizationAction(e.target.value as any)}
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        cursor: "pointer",
+                        accentColor: "#E20074"
+                      }}
                     />
-                    <span>Eine neue Organisation erstellen</span>
+                    <span style={{
+                      fontSize: "0.9375rem",
+                      color: "#0A0A0A",
+                      fontWeight: organizationAction === "create_new_organization" ? "500" : "400"
+                    }}>
+                      Neue Organisation erstellen
+                    </span>
                   </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                  <label style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    cursor: "pointer",
+                    padding: "0.625rem",
+                    borderRadius: "6px",
+                    transition: "background-color 0.2s",
+                    backgroundColor: organizationAction === "request_to_join_organization" ? "#F3F4F6" : "transparent"
+                  }}>
                     <input
                       type="radio"
                       name="organizationAction"
                       value="request_to_join_organization"
                       checked={organizationAction === "request_to_join_organization"}
                       onChange={(e) => setOrganizationAction(e.target.value as any)}
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        cursor: "pointer",
+                        accentColor: "#E20074"
+                      }}
                     />
-                    <span>Einer bestehenden Organisation beitreten</span>
+                    <span style={{
+                      fontSize: "0.9375rem",
+                      color: "#0A0A0A",
+                      fontWeight: organizationAction === "request_to_join_organization" ? "500" : "400"
+                    }}>
+                      Bestehender Organisation beitreten
+                    </span>
                   </label>
                 </div>
               </div>
 
               {organizationAction === "create_new_organization" && (
-                <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{ marginBottom: "1.75rem" }}>
                   <label style={{
                     display: "block",
                     marginBottom: "0.5rem",
                     color: "#0A0A0A",
                     fontWeight: "500",
-                    fontSize: "0.9rem"
+                    fontSize: "0.9375rem"
                   }}>
-                    Organisationsname *
+                    Organisationsname
                   </label>
                   <input
                     type="text"
                     value={organizationName}
                     onChange={(e) => setOrganizationName(e.target.value)}
                     required={organizationAction === "create_new_organization"}
+                    placeholder="z. B. Acme GmbH"
                     style={{
                       width: "100%",
                       padding: "0.75rem",
                       border: "1px solid #CDCDCD",
                       borderRadius: "6px",
-                      fontSize: "1rem",
-                      boxSizing: "border-box"
+                      fontSize: "0.9375rem",
+                      boxSizing: "border-box",
+                      transition: "border-color 0.2s",
                     }}
+                    onFocus={(e) => e.target.style.borderColor = "#E20074"}
+                    onBlur={(e) => e.target.style.borderColor = "#CDCDCD"}
                   />
+                  <p style={{
+                    marginTop: "0.5rem",
+                    fontSize: "0.8125rem",
+                    color: "#6B7280",
+                    marginBottom: 0,
+                    lineHeight: "1.4"
+                  }}>
+                    Der Name kann später in den Einstellungen geändert werden.
+                  </p>
                 </div>
               )}
 
               {organizationAction === "request_to_join_organization" && (
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <label style={{
-                    display: "block",
-                    marginBottom: "0.5rem",
-                    color: "#0A0A0A",
-                    fontWeight: "500",
-                    fontSize: "0.9rem"
-                  }}>
-                    Organisations-ID *
-                  </label>
-                  <input
-                    type="text"
-                    value={organizationId}
-                    onChange={(e) => setOrganizationId(e.target.value)}
-                    required={organizationAction === "request_to_join_organization"}
-                    placeholder="ID der Organisation"
+                <div style={{
+                  padding: "1rem",
+                  marginBottom: "1.75rem",
+                  backgroundColor: "#F9FAFB",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  color: "#374151",
+                  lineHeight: "1.6",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "0.75rem"
+                }}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    viewBox="0 0 24 24"
                     style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #CDCDCD",
-                      borderRadius: "6px",
-                      fontSize: "1rem",
-                      boxSizing: "border-box"
+                      flexShrink: 0,
+                      marginTop: "0.0625rem",
+                      color: "#6B7280"
                     }}
-                  />
+                  >
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontWeight: "500", marginBottom: "0.25rem", color: "#111827" }}>
+                      Einladung erforderlich
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.8125rem", color: "#6B7280" }}>
+                      Der Beitritt erfolgt über eine Einladung. Verwenden Sie den Einladungslink aus Ihrer E-Mail oder kontaktieren Sie Ihren Administrator.
+                    </p>
+                  </div>
                 </div>
               )}
             </>
@@ -560,15 +616,39 @@ function SignupContent() {
 
           {invitationToken && (
             <div style={{
-              padding: "0.75rem",
-              marginBottom: "1.5rem",
-              backgroundColor: "#E8F5E9",
-              border: "1px solid #C8E6C9",
-              borderRadius: "6px",
-              color: "#2E7D32",
-              fontSize: "0.9rem"
+              padding: "0.875rem 1rem",
+              marginBottom: "1.75rem",
+              backgroundColor: "#ECFDF5",
+              border: "1px solid #A7F3D0",
+              borderRadius: "8px",
+              color: "#065F46",
+              fontSize: "0.875rem",
+              lineHeight: "1.5",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.75rem"
             }}>
-              Sie wurden zu einer Organisation eingeladen. Nach der Registrierung werden Sie automatisch beitreten.
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+                style={{
+                  flexShrink: 0,
+                  marginTop: "0.0625rem"
+                }}
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <p style={{ margin: 0 }}>
+                Sie wurden zu einer Organisation eingeladen. Nach der Registrierung werden Sie automatisch beitreten.
+              </p>
             </div>
           )}
 
@@ -588,7 +668,12 @@ function SignupContent() {
               marginBottom: "1rem"
             }}
           >
-            {loading ? "Wird erstellt..." : "Konto erstellen"}
+            {loading 
+              ? (organizationAction === "request_to_join_organization" ? "Wird beigetreten..." : "Wird erstellt...")
+              : (organizationAction === "request_to_join_organization" 
+                  ? (invitationToken ? "Konto erstellen und beitreten" : "Konto erstellen")
+                  : "Konto erstellen")
+            }
           </button>
         </form>
 

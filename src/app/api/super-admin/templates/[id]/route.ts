@@ -24,7 +24,16 @@ export async function PUT(
 
     const { id } = await params
     const body = await req.json()
+    
+    console.log("[Template API] ===== START UPDATE =====")
+    console.log("[Template API] Template ID:", id)
+    console.log("[Template API] Request Body:", JSON.stringify(body, null, 2))
+    
     const { name, description, status, category, categoryLabel, blocks } = body
+    console.log("[Template API] Extrahierte Werte:")
+    console.log("[Template API]   - Status:", status, "Type:", typeof status, "Truthy:", !!status)
+    console.log("[Template API]   - Name:", name)
+    console.log("[Template API]   - Description:", description)
 
     // Get existing template
     const existing = await prisma.template.findUnique({
@@ -39,19 +48,29 @@ export async function PUT(
     })
 
     if (!existing) {
+      console.error("[Template API] Template nicht gefunden:", id)
       return NextResponse.json(
         { error: "Template nicht gefunden" },
         { status: 404 }
       )
     }
 
+    console.log("[Template API] Existing Template:")
+    console.log("[Template API]   - Status:", existing.status, "Type:", typeof existing.status)
+    console.log("[Template API]   - Status === 'active':", existing.status === "active")
+    console.log("[Template API]   - Status === 'draft':", existing.status === "draft")
+
     // CRITICAL: Templates are IMMUTABLE once active
-    if (existing.status === "active" || existing.status === "archived") {
+    // ABER: Erlaube Status-Änderung von draft zu active
+    if ((existing.status === "active" || existing.status === "archived") && status !== "active") {
+      console.log("[Template API] BLOCKIERT: Template ist bereits active/archived und Status wird nicht auf active geändert")
       return NextResponse.json(
         { error: "Aktive oder archivierte Templates können nicht bearbeitet werden. Bitte erstellen Sie eine neue Version." },
         { status: 400 }
       )
     }
+    
+    console.log("[Template API] Prüfung bestanden: Template kann bearbeitet werden")
 
     // GUARDRAIL: Kategorie-Key ist IMMUTABLE (immutable nach Erstellung)
     if (category && category !== existing.category) {
@@ -80,22 +99,35 @@ export async function PUT(
     }
 
     // Update template basic info (only for drafts)
+    console.log("[Template API] Update Request - Status:", status, "Type:", typeof status, "Truthy:", !!status)
+    console.log("[Template API] Update Request - Full body:", JSON.stringify({ name, description, status, categoryLabel }, null, 2))
+    
     const updateData: any = {}
     if (name) updateData.name = name
     if (description !== undefined) updateData.description = description
     // categoryLabel kann bearbeitet werden (sprachlich, nicht regulatorisch)
     if (categoryLabel !== undefined) updateData.categoryLabel = categoryLabel
-    if (status) {
+    
+    // Status MUSS immer gesetzt werden, wenn er im Request vorhanden ist
+    if (status !== undefined && status !== null) {
       updateData.status = status
+      console.log("[Template API] Setze Status auf:", status)
       if (status === "active") {
         updateData.effectiveFrom = new Date()
+        console.log("[Template API] Setze effectiveFrom auf:", updateData.effectiveFrom)
       }
+    } else {
+      console.log("[Template API] WARNUNG: Status ist undefined/null, wird nicht aktualisiert!")
     }
+
+    console.log("[Template API] Update Data:", JSON.stringify(updateData, null, 2))
 
     const template = await prisma.template.update({
       where: { id },
       data: updateData
     })
+    
+    console.log("[Template API] Template nach Update - Status:", template.status)
 
     // If blocks are provided, update them (this is a simplified version - full implementation would handle add/update/delete)
     if (blocks) {

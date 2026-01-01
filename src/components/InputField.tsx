@@ -11,12 +11,14 @@ interface InputFieldProps {
   type?: string
   rows?: number
   helperText?: string
+  disabled?: boolean
+  readOnly?: boolean
 }
 
 /**
  * Input-Feld Komponente (separat, um Re-Rendering zu vermeiden)
  */
-export default function InputField({ id, label, value, onChange, required = false, type = "text", rows = 1, helperText }: InputFieldProps) {
+export default function InputField({ id, label, value, onChange, required = false, type = "text", rows = 1, helperText, disabled = false, readOnly = false }: InputFieldProps) {
   return (
     <div style={{ marginBottom: "1.5rem" }}>
       <label htmlFor={id} style={{
@@ -35,17 +37,20 @@ export default function InputField({ id, label, value, onChange, required = fals
           onChange={onChange}
           rows={rows}
           required={required}
+          disabled={disabled}
+          readOnly={readOnly}
           style={{
             width: "100%",
             padding: "clamp(0.75rem, 2vw, 1rem)",
             fontSize: "clamp(0.9rem, 2vw, 1rem)",
             border: "1px solid #CDCDCD",
             borderRadius: "8px",
-            backgroundColor: "#FFFFFF",
-            color: "#0A0A0A",
+            backgroundColor: disabled || readOnly ? "#F5F5F5" : "#FFFFFF",
+            color: disabled || readOnly ? "#7A7A7A" : "#0A0A0A",
             boxSizing: "border-box",
             fontFamily: "inherit",
-            resize: "vertical"
+            resize: "vertical",
+            cursor: disabled || readOnly ? "not-allowed" : "text"
           }}
         />
       ) : (
@@ -55,15 +60,18 @@ export default function InputField({ id, label, value, onChange, required = fals
           value={value}
           onChange={onChange}
           required={required}
+          disabled={disabled}
+          readOnly={readOnly}
           style={{
             width: "100%",
             padding: "clamp(0.75rem, 2vw, 1rem)",
             fontSize: "clamp(0.9rem, 2vw, 1rem)",
             border: "1px solid #CDCDCD",
             borderRadius: "8px",
-            backgroundColor: "#FFFFFF",
-            color: "#0A0A0A",
-            boxSizing: "border-box"
+            backgroundColor: disabled || readOnly ? "#F5F5F5" : "#FFFFFF",
+            color: disabled || readOnly ? "#7A7A7A" : "#0A0A0A",
+            boxSizing: "border-box",
+            cursor: disabled || readOnly ? "not-allowed" : "text"
           }}
         />
       )}

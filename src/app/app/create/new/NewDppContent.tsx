@@ -157,6 +157,34 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
     )
   }
 
+  // Wenn keine veröffentlichten Templates vorhanden sind, zeige leeren Zustand
+  if (availableCategories.length === 0) {
+    return (
+      <div style={{
+        backgroundColor: "#FFFFFF",
+        padding: "clamp(2rem, 5vw, 4rem)",
+        borderRadius: "12px",
+        border: "1px solid #CDCDCD",
+        textAlign: "center"
+      }}>
+        <p style={{
+          color: "#7A7A7A",
+          fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
+          marginBottom: "1rem"
+        }}>
+          Keine Templates verfügbar
+        </p>
+        <p style={{
+          color: "#7A7A7A",
+          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+          marginBottom: "1.5rem"
+        }}>
+          Es sind derzeit keine veröffentlichten Templates verfügbar. Bitte kontaktieren Sie einen Administrator, um Templates zu veröffentlichen.
+        </p>
+      </div>
+    )
+  }
+
   // Erstelle DPP-Objekt für Neuanlage (mit Prefill-Daten falls vorhanden)
   const emptyDpp = {
     id: "new", // Temporäre ID

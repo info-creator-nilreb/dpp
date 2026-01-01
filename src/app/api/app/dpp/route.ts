@@ -8,6 +8,7 @@ import { ORGANIZATION_ROLES, getOrganizationRole } from "@/lib/permissions"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
 import { checkTestPhaseBlock } from "@/lib/capabilities/resolver"
+import { latestPublishedTemplate, hasPublishedTemplate, normalizeCategory } from "@/lib/template-helpers"
 
 /**
  * POST /api/app/dpp
@@ -85,7 +86,8 @@ export async function POST(request: Request) {
       materials, materialSource,
       careInstructions, isRepairable, sparePartsAvailable, lifespan,
       conformityDeclaration, disposalInfo,
-      takebackOffered, takebackContact, secondLifeInfo
+      takebackOffered, takebackContact, secondLifeInfo,
+      templateId
     } = await request.json()
 
     // Validierung (Pflichtfelder)
@@ -96,11 +98,84 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!category || !["TEXTILE", "FURNITURE", "OTHER"].includes(category)) {
-      return NextResponse.json(
-        { error: "Produktkategorie ist erforderlich" },
-        { status: 400 }
-      )
+    console.log("[DPP Create] ===== START =====")
+    console.log("[DPP Create] Erhaltene Kategorie:", category, "Type:", typeof category)
+    
+    // Prüfe ob eine veröffentlichte Template für diese Kategorie existiert
+    // (keine hart codierte Kategorie-Prüfung - nur Templates aus DB zählen)
+    const hasTemplate = await hasPublishedTemplate(category)
+    console.log("[DPP Create] Hat Template für Kategorie:", hasTemplate)
+    
+    if (!hasTemplate) {
+      // Versuche auch mit normalisierter Kategorie
+      const normalizedCategory = normalizeCategory(category)
+      console.log("[DPP Create] Versuche normalisierte Kategorie:", normalizedCategory)
+      const hasTemplateNormalized = normalizedCategory && normalizedCategory !== category 
+        ? await hasPublishedTemplate(normalizedCategory)
+        : false
+      
+      if (!hasTemplateNormalized) {
+        return NextResponse.json(
+          { error: `Kein veröffentlichtes Template für die Kategorie "${category}" gefunden. Bitte kontaktieren Sie einen Administrator.` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Template-Validierung: templateId ist erforderlich
+    let validatedTemplate
+    if (templateId) {
+      // Wenn templateId angegeben ist, validiere es
+      // Suche mit normalisierter Kategorie (unterstützt deutsche/englische Namen)
+      validatedTemplate = await prisma.template.findFirst({
+        where: {
+          id: templateId,
+          status: "active"
+        }
+      })
+
+      if (!validatedTemplate) {
+        return NextResponse.json(
+          { error: "Ungültiges oder nicht veröffentlichtes Template" },
+          { status: 400 }
+        )
+      }
+      
+      // Prüfe ob Template-Kategorie zur DPP-Kategorie passt (mit Normalisierung)
+      const normalizedTemplateCategory = normalizeCategory(validatedTemplate.category)
+      const normalizedDppCategory = normalizeCategory(category)
+      
+      console.log("[DPP Create] Kategorie-Vergleich:")
+      console.log("[DPP Create]   - Template-Kategorie:", validatedTemplate.category, "-> normalisiert:", normalizedTemplateCategory)
+      console.log("[DPP Create]   - DPP-Kategorie:", category, "-> normalisiert:", normalizedDppCategory)
+      
+      if (normalizedTemplateCategory !== normalizedDppCategory) {
+        return NextResponse.json(
+          { error: `Template-Kategorie "${validatedTemplate.category}" passt nicht zur DPP-Kategorie "${category}"` },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Fallback: Lade das neueste veröffentlichte Template für die Kategorie
+      // Versuche zuerst mit der originalen Kategorie, dann mit normalisierter
+      validatedTemplate = await latestPublishedTemplate(category)
+      
+      if (!validatedTemplate) {
+        const normalizedCategory = normalizeCategory(category)
+        if (normalizedCategory && normalizedCategory !== category) {
+          console.log("[DPP Create] Versuche Template-Suche mit normalisierter Kategorie:", normalizedCategory)
+          validatedTemplate = await latestPublishedTemplate(normalizedCategory)
+        }
+      }
+      
+      if (!validatedTemplate) {
+        return NextResponse.json(
+          { error: `Kein veröffentlichtes Template für die Kategorie "${category}" gefunden` },
+          { status: 400 }
+        )
+      }
+      
+      console.log("[DPP Create] Template gefunden:", { id: validatedTemplate.id, name: validatedTemplate.name, category: validatedTemplate.category })
     }
 
     if (!sku || typeof sku !== "string" || sku.trim().length === 0) {
@@ -127,12 +202,20 @@ export async function POST(request: Request) {
     // Verwende die aufgelöste organizationId (ignoriere organizationId aus Request, falls vorhanden)
     // organizationId wird explizit gesetzt
 
+    // Normalisiere die Kategorie für die DPP-Erstellung (verwende Template-Kategorie als Quelle der Wahrheit)
+    const normalizedCategory = normalizeCategory(validatedTemplate.category) || validatedTemplate.category
+    
+    console.log("[DPP Create] Kategorie-Normalisierung:")
+    console.log("[DPP Create]   - Original Kategorie:", category)
+    console.log("[DPP Create]   - Template-Kategorie:", validatedTemplate.category)
+    console.log("[DPP Create]   - Normalisierte Kategorie:", normalizedCategory)
+    
     // DPP erstellen - organizationId wird explizit gesetzt
     const dpp = await prisma.dpp.create({
       data: {
         name: name.trim(),
         description: description?.trim() || null,
-        category: category as "TEXTILE" | "FURNITURE" | "OTHER",
+        category: normalizedCategory as "TEXTILE" | "FURNITURE" | "OTHER",
         sku: sku.trim(),
         gtin: gtin?.trim() || null,
         brand: brand.trim(),

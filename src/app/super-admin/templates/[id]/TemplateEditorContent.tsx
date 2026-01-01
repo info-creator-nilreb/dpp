@@ -278,10 +278,27 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       }
 
       // Prepare data - Filter out any category fields (safety check)
+      // Verwende IMMER den aktuellen Status-State (nicht template.status als Fallback!)
+      console.log("[Template Save] ===== START SAVE =====")
+      console.log("[Template Save] Status-State:", status, "Type:", typeof status)
+      console.log("[Template Save] Template-Status (DB):", template.status, "Type:", typeof template.status)
+      console.log("[Template Save] Status-State === 'active':", status === "active")
+      console.log("[Template Save] Status-State === 'draft':", status === "draft")
+      
+      const currentStatus = status || template.status // Fallback zu template.status nur wenn status undefined/null
+      console.log("[Template Save] Finaler Status zum Speichern:", currentStatus)
+      
+      if (!currentStatus) {
+        console.error("[Template Save] FEHLER: Kein Status vorhanden!")
+        setError("Status ist erforderlich")
+        setLoading(false)
+        return
+      }
+      
       const templateData = {
         name,
         description: description || null,
-        status,
+        status: currentStatus, // Explizit den State verwenden
         blocks: blocks.map((block, blockIndex) => ({
           name: block.name,
           fields: block.fields
@@ -303,6 +320,9 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         }))
       }
 
+      console.log("[Template Save] Sende Request mit Daten:", JSON.stringify(templateData, null, 2))
+      console.log("[Template Save] Status im Request-Body:", templateData.status)
+
       const response = await fetch(`/api/super-admin/templates/${template.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -310,12 +330,17 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       })
 
       const data = await response.json()
+      console.log("[Template Save] Response Status:", response.status)
+      console.log("[Template Save] Response Data:", JSON.stringify(data, null, 2))
 
       if (!response.ok) {
+        console.error("[Template Save] FEHLER:", data.error)
         setError(data.error || "Fehler beim Aktualisieren des Templates")
         setLoading(false)
         return
       }
+      
+      console.log("[Template Save] ===== SAVE ERFOLGREICH =====")
 
       setSaved(true)
       setLoading(false)
@@ -904,8 +929,12 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             <select
               id="status"
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              disabled={loading || !isEditable}
+              onChange={(e) => {
+                const newStatus = e.target.value
+                console.log("[Template Editor] Status geändert von", status, "zu", newStatus)
+                setStatus(newStatus)
+              }}
+              disabled={loading || (!isEditable && template.status !== "draft")}
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -1670,10 +1699,101 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         message="Möchten Sie dieses Template wirklich veröffentlichen? Nur ein aktives Template pro Kategorie ist erlaubt."
         confirmLabel="Veröffentlichen"
         cancelLabel="Abbrechen"
-        onConfirm={() => {
+        onConfirm={async () => {
           setShowPublishDialog(false)
           setStatus("active")
-          handleSubmit(new Event("submit") as any)
+          // Rufe handleSubmit direkt mit aktivem Status auf
+          // Erstelle einen Wrapper, der den Status explizit setzt
+          const publishTemplate = async () => {
+            setError(null)
+            setSaved(false)
+            setLoading(true)
+
+            try {
+              // Validate
+              if (!name) {
+                setError("Name ist erforderlich")
+                setLoading(false)
+                return
+              }
+
+              // Validate blocks
+              for (const block of blocks) {
+                if (!block.name) {
+                  setError("Alle Blöcke benötigen einen Namen")
+                  setLoading(false)
+                  return
+                }
+              }
+
+              // Validate fields
+              for (const block of blocks) {
+                for (const field of block.fields) {
+                  if (!field.label || !field.key) {
+                    setError("Alle Felder benötigen einen Label und Key")
+                    setLoading(false)
+                    return
+                  }
+                }
+              }
+
+              // Prepare data mit explizitem Status "active"
+              const templateData = {
+                name,
+                description: description || null,
+                status: "active", // Explizit auf "active" setzen
+                blocks: blocks.map((block) => ({
+                  name: block.name,
+                  fields: block.fields
+                    .filter(field => {
+                      const keyLower = field.key?.toLowerCase() || ""
+                      const labelLower = field.label?.toLowerCase() || ""
+                      return !keyLower.includes("category") && 
+                             !keyLower.includes("kategorie") &&
+                             !labelLower.includes("kategorie") &&
+                             !labelLower.includes("category")
+                    })
+                    .map((field) => ({
+                      label: field.label,
+                      key: field.key,
+                      type: field.type,
+                      required: field.required,
+                      config: field.config ? JSON.parse(field.config) : null
+                    }))
+                }))
+              }
+
+              console.log("[Template Publish] Sende Template mit Status 'active':", templateData.status)
+
+              const response = await fetch(`/api/super-admin/templates/${template.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(templateData)
+              })
+
+              const data = await response.json()
+
+              if (!response.ok) {
+                setError(data.error || "Fehler beim Veröffentlichen des Templates")
+                setLoading(false)
+                return
+              }
+
+              setSaved(true)
+              setLoading(false)
+              showNotification("Template erfolgreich veröffentlicht", "success")
+              
+              // Refresh page to show updated data
+              setTimeout(() => {
+                router.refresh()
+              }, 1000)
+            } catch (err: any) {
+              setError(err.message || "Ein Fehler ist aufgetreten")
+              setLoading(false)
+            }
+          }
+
+          await publishTemplate()
         }}
         onCancel={() => setShowPublishDialog(false)}
       />

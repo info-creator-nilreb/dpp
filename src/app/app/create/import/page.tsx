@@ -1,25 +1,35 @@
 export const dynamic = "force-dynamic"
 
-import { redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { auth } from "@/auth"
 import ImportDppContent from "./ImportDppContent"
 import AuthGate from "../../_auth/AuthGate"
 import { getCategoriesWithPublishedTemplates } from "@/lib/template-helpers"
 import { hasFeature } from "@/lib/capabilities/resolver"
+import { prisma } from "@/lib/prisma"
 
 export default async function ImportDppPage() {
   const session = await auth()
 
   if (!session?.user?.id) {
-    redirect("/login")
+    notFound()
   }
 
-  // Get organization ID from session
-  const orgId = (session.user as any).organizationId
+  // Get organization ID from membership (not from session)
+  const membership = await prisma.membership.findFirst({
+    where: { userId: session.user.id },
+    include: {
+      organization: {
+        select: { id: true }
+      }
+    }
+  })
 
-  if (!orgId) {
-    redirect("/app/select-plan")
+  if (!membership?.organization) {
+    notFound()
   }
+
+  const orgId = membership.organization.id
 
   // Check if CSV import feature is available
   const canUseCsvImport = await hasFeature("csv_import", {
@@ -28,16 +38,26 @@ export default async function ImportDppPage() {
   })
 
   if (!canUseCsvImport) {
-    redirect("/app/create")
+    notFound()
   }
 
   // Nur Kategorien mit veröffentlichten Templates laden
-  const availableCategories = await getCategoriesWithPublishedTemplates()
+  console.log("[ImportDppPage] ===== START ======")
+  console.log("[ImportDppPage] Starte getCategoriesWithPublishedTemplates...")
+  
+  try {
+    const availableCategories = await getCategoriesWithPublishedTemplates()
+    console.log("[ImportDppPage] availableCategories:", JSON.stringify(availableCategories, null, 2))
+    console.log("[ImportDppPage] Anzahl Kategorien:", availableCategories.length)
 
-  return (
-    <AuthGate>
-      <ImportDppContent availableCategories={availableCategories} />
-    </AuthGate>
-  )
+    return (
+      <AuthGate>
+        <ImportDppContent availableCategories={availableCategories} />
+      </AuthGate>
+    )
+  } catch (error) {
+    console.error("[ImportDppPage] FEHLER:", error)
+    throw error
+  }
 }
 

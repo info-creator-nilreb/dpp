@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { ORGANIZATION_ROLES } from "@/lib/permissions"
 import { hasFeature } from "@/lib/capabilities/resolver"
+import { latestPublishedTemplate, normalizeCategory } from "@/lib/template-helpers"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { products } = await request.json()
+    const { products, templateId } = await request.json()
 
     if (!products || !Array.isArray(products) || products.length === 0) {
       return NextResponse.json(
@@ -76,14 +77,41 @@ export async function POST(request: Request) {
       )
     }
 
+    // Template-Validierung: templateId ist erforderlich
+    if (!templateId || typeof templateId !== "string") {
+      return NextResponse.json(
+        { error: "Template-ID ist erforderlich" },
+        { status: 400 }
+      )
+    }
+
+    // Prüfe ob Template existiert und veröffentlicht ist
+    const template = await prisma.template.findFirst({
+      where: {
+        id: templateId,
+        status: "active"
+      }
+    })
+
+    if (!template) {
+      return NextResponse.json(
+        { error: "Ungültiges oder nicht veröffentlichtes Template" },
+        { status: 400 }
+      )
+    }
+
     // Validierung der Produkte
     const errors: string[] = []
+    const normalizedTemplateCategory = normalizeCategory(template.category)
+    
     products.forEach((product: any, index: number) => {
       if (!product.name || typeof product.name !== "string" || product.name.trim().length === 0) {
         errors.push(`Produkt ${index + 1}: Name ist erforderlich`)
       }
-      if (!product.category || !["TEXTILE", "FURNITURE", "OTHER"].includes(product.category)) {
-        errors.push(`Produkt ${index + 1}: Gültige Kategorie ist erforderlich`)
+      // Kategorie muss mit Template-Kategorie übereinstimmen (mit Normalisierung)
+      const normalizedProductCategory = normalizeCategory(product.category)
+      if (!product.category || normalizedProductCategory !== normalizedTemplateCategory) {
+        errors.push(`Produkt ${index + 1}: Kategorie muss "${template.category}" sein (entspricht dem ausgewählten Template)`)
       }
       if (!product.sku || typeof product.sku !== "string" || product.sku.trim().length === 0) {
         errors.push(`Produkt ${index + 1}: SKU ist erforderlich`)
@@ -108,11 +136,14 @@ export async function POST(request: Request) {
 
     await prisma.$transaction(async (tx) => {
       for (const product of products) {
+        // Verwende die normalisierte Kategorie für die DPP-Erstellung
+        const normalizedProductCategory = normalizeCategory(product.category) || product.category
+        
         const dpp = await tx.dpp.create({
           data: {
             name: product.name.trim(),
             description: product.description?.trim() || null,
-            category: product.category as "TEXTILE" | "FURNITURE" | "OTHER",
+            category: normalizedProductCategory as "TEXTILE" | "FURNITURE" | "OTHER",
             sku: product.sku.trim(),
             brand: product.brand.trim(),
             countryOfOrigin: product.countryOfOrigin.trim(),

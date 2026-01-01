@@ -72,13 +72,15 @@ function AccordionSection({
   isOpen,
   onToggle,
   children,
-  alwaysOpen = false
+  alwaysOpen = false,
+  statusBadge
 }: {
   title: string
   isOpen: boolean
   onToggle: () => void
   children: React.ReactNode
   alwaysOpen?: boolean
+  statusBadge?: React.ReactNode
 }) {
   return (
     <div style={{
@@ -106,14 +108,17 @@ function AccordionSection({
           textAlign: "left"
         }}
       >
-        <h2 style={{
-          fontSize: "clamp(1.1rem, 3vw, 1.25rem)",
-          fontWeight: "700",
-          color: "#0A0A0A",
-          margin: 0
-        }}>
-          {title}
-        </h2>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <h2 style={{
+            fontSize: "clamp(1.1rem, 3vw, 1.25rem)",
+            fontWeight: "700",
+            color: "#0A0A0A",
+            margin: 0
+          }}>
+            {title}
+          </h2>
+          {statusBadge}
+        </div>
         {!alwaysOpen && (
           <span style={{
             fontSize: "1.5rem",
@@ -183,17 +188,66 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   const [section5Open, setSection5Open] = useState(false)
   
   // Data Request Form State
-  const [dataEntryMode, setDataEntryMode] = useState<"manual" | "request">("manual")
+  const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestEmail, setRequestEmail] = useState("")
   const [requestRole, setRequestRole] = useState("")
   const [requestSections, setRequestSections] = useState<string[]>([])
   const [requestMessage, setRequestMessage] = useState("")
   const [requestLoading, setRequestLoading] = useState(false)
+  const [dataRequests, setDataRequests] = useState<Array<{
+    id: string
+    email: string
+    partnerRole: string
+    sections: string[]
+    status: string
+    expiresAt: string
+    submittedAt: string | null
+    createdAt: string
+  }>>([])
   
   // Save Status für Sticky Save Bar
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "publishing" | "error">("idle")
   const [lastSaved, setLastSaved] = useState<Date | null>(isNew ? null : initialDpp.updatedAt)
   const [saveError, setSaveError] = useState<string | null>(null)
+  
+  // Subscription Context für Publishing-Capability
+  const [subscriptionCanPublish, setSubscriptionCanPublish] = useState<boolean>(true)
+  
+  // Load subscription context
+  useEffect(() => {
+    async function loadSubscriptionContext() {
+      try {
+        const response = await fetch("/api/subscription/context")
+        if (response.ok) {
+          const data = await response.json()
+          setSubscriptionCanPublish(data.canPublish ?? false)
+        }
+      } catch (error) {
+        console.error("Error loading subscription context:", error)
+        // Default to false on error (fail-safe)
+        setSubscriptionCanPublish(false)
+      }
+    }
+    loadSubscriptionContext()
+  }, [])
+
+  // Load data requests
+  useEffect(() => {
+    if (isNew) return
+
+    async function loadDataRequests() {
+      try {
+        const response = await fetch(`/api/app/dpp/${dpp.id}/data-requests`)
+        if (response.ok) {
+          const data = await response.json()
+          setDataRequests(data.requests || [])
+        }
+      } catch (error) {
+        console.error("Error loading data requests:", error)
+      }
+    }
+    loadDataRequests()
+  }, [dpp.id, isNew])
   
   // Warnung beim Verlassen (nur für neue DPPs ohne Speicherung)
   const [showLeaveWarning, setShowLeaveWarning] = useState(false)
@@ -735,6 +789,79 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     dpp.id && dpp.id !== "new" ? dpp.id : ""
   );
 
+  // Helper: Get partner role label
+  const getPartnerRoleLabel = (role: string): string => {
+    const labels: Record<string, string> = {
+      "Material supplier": "Materiallieferant",
+      "Manufacturer": "Hersteller",
+      "Processor / Finisher": "Verarbeiter / Veredler",
+      "Recycler": "Recycler",
+      "Other": "Sonstiges",
+    }
+    return labels[role] || role
+  }
+
+  // Helper: Get section label
+  const getSectionLabel = (section: string): string => {
+    const labels: Record<string, string> = {
+      [DPP_SECTIONS.MATERIALS]: "Materialien",
+      [DPP_SECTIONS.MATERIAL_SOURCE]: "Materialherkunft",
+    }
+    return labels[section] || section
+  }
+
+  // Helper: Determine status badge for materials section
+  const getMaterialsSectionStatusBadge = (): React.ReactNode | undefined => {
+    const materialsRequests = dataRequests.filter(req => 
+      req.sections.includes(DPP_SECTIONS.MATERIALS) || 
+      req.sections.includes(DPP_SECTIONS.MATERIAL_SOURCE)
+    )
+    
+    if (materialsRequests.length === 0) return undefined
+
+    const pendingRequests = materialsRequests.filter(req => req.status === "pending")
+    const submittedRequests = materialsRequests.filter(req => req.status === "submitted")
+
+    if (submittedRequests.length > 0) {
+      return (
+        <span style={{
+          padding: "0.25rem 0.75rem",
+          backgroundColor: "#E6F7E6",
+          color: "#00A651",
+          borderRadius: "12px",
+          fontSize: "0.75rem",
+          fontWeight: "600"
+        }}>
+          Daten übermittelt
+        </span>
+      )
+    }
+
+    if (pendingRequests.length > 0) {
+      return (
+        <span style={{
+          padding: "0.25rem 0.75rem",
+          backgroundColor: "#FFF5E6",
+          color: "#B8860B",
+          borderRadius: "12px",
+          fontSize: "0.75rem",
+          fontWeight: "600"
+        }}>
+          Ausstehend
+        </span>
+      )
+    }
+
+    return undefined
+  }
+
+  // Helper: Check if a field is requested (and should be read-only)
+  const isFieldRequested = (fieldSection: string): boolean => {
+    return dataRequests.some(req => 
+      req.status === "pending" && req.sections.includes(fieldSection)
+    )
+  }
+
   return (
     <Fragment>
     <div>
@@ -945,44 +1072,97 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         title="Materialien & Zusammensetzung"
         isOpen={section2Open}
         onToggle={() => setSection2Open(!section2Open)}
+        statusBadge={getMaterialsSectionStatusBadge()}
       >
-        {/* Data Entry Mode Selection */}
-        <div style={{ marginBottom: "2rem", padding: "1rem", backgroundColor: "#F5F5F5", borderRadius: "8px" }}>
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", marginBottom: "0.75rem" }}>
-              <input
-                type="radio"
-                name="dataEntryMode"
-                checked={dataEntryMode === "manual"}
-                onChange={() => setDataEntryMode("manual")}
-                style={{ width: "18px", height: "18px", cursor: "pointer" }}
-              />
-              <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0A0A0A" }}>
-                Daten manuell eingeben
-              </span>
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: isNew ? "not-allowed" : "pointer", opacity: isNew ? 0.6 : 1 }}>
-              <input
-                type="radio"
-                name="dataEntryMode"
-                checked={dataEntryMode === "request"}
-                onChange={() => !isNew && setDataEntryMode("request")}
-                disabled={isNew}
-                style={{ width: "18px", height: "18px", cursor: isNew ? "not-allowed" : "pointer" }}
-              />
-              <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0A0A0A" }}>
-                Daten von Partner anfordern {isNew && <span style={{ fontSize: "0.85rem", color: "#7A7A7A", fontStyle: "italic" }}>(erst nach Speichern verfügbar)</span>}
-              </span>
-            </label>
-          </div>
-          {dataEntryMode === "request" && (
-            <p style={{ fontSize: "0.85rem", color: "#7A7A7A", margin: 0, fontStyle: "italic" }}>
-              Der Partner erhält einen sicheren Link. Kein Konto erforderlich. Der Zugriff ist auf die ausgewählten Sektionen beschränkt.
-            </p>
+        {/* Action CTAs */}
+        <div style={{ marginBottom: "2rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setShowRequestForm(false)}
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: showRequestForm ? "transparent" : "#E20074",
+              color: showRequestForm ? "#0A0A0A" : "#FFFFFF",
+              border: "1px solid #CDCDCD",
+              borderRadius: "8px",
+              fontSize: "0.95rem",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Daten manuell eingeben
+          </button>
+          {!isNew && (
+            <button
+              type="button"
+              onClick={() => setShowRequestForm(true)}
+              style={{
+                padding: "0.75rem 1.5rem",
+                backgroundColor: showRequestForm ? "#E20074" : "transparent",
+                color: showRequestForm ? "#FFFFFF" : "#0A0A0A",
+                border: "1px solid #CDCDCD",
+                borderRadius: "8px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              Daten von Partner anfordern
+            </button>
           )}
         </div>
 
-        {dataEntryMode === "manual" ? (
+        {/* Summary Cards for existing requests */}
+        {!isNew && dataRequests.filter(req => 
+          req.sections.includes(DPP_SECTIONS.MATERIALS) || 
+          req.sections.includes(DPP_SECTIONS.MATERIAL_SOURCE)
+        ).length > 0 && (
+          <div style={{ marginBottom: "2rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {dataRequests.filter(req => 
+              req.sections.includes(DPP_SECTIONS.MATERIALS) || 
+              req.sections.includes(DPP_SECTIONS.MATERIAL_SOURCE)
+            ).map((req) => (
+              <div
+                key={req.id}
+                style={{
+                  padding: "1rem",
+                  backgroundColor: "#F5F5F5",
+                  border: "1px solid #CDCDCD",
+                  borderRadius: "8px"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#0A0A0A", marginBottom: "0.25rem" }}>
+                      {req.email}
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "#7A7A7A", marginBottom: "0.5rem" }}>
+                      {getPartnerRoleLabel(req.partnerRole)}
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "#0A0A0A" }}>
+                      <strong>Sektionen:</strong> {req.sections.map(s => getSectionLabel(s)).join(", ")}
+                    </div>
+                  </div>
+                  <span style={{
+                    padding: "0.25rem 0.75rem",
+                    backgroundColor: req.status === "submitted" ? "#E6F7E6" : req.status === "pending" ? "#FFF5E6" : "#F5F5F5",
+                    color: req.status === "submitted" ? "#00A651" : req.status === "pending" ? "#B8860B" : "#7A7A7A",
+                    borderRadius: "12px",
+                    fontSize: "0.75rem",
+                    fontWeight: "600"
+                  }}>
+                    {req.status === "submitted" ? "Übermittelt" : req.status === "pending" ? "Ausstehend" : req.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Manual Entry Fields */}
+        {!showRequestForm && (
           <>
             <InputField
               id="dpp-materials"
@@ -993,7 +1173,14 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
                 markFieldAsEdited("materials")
               }}
               rows={4}
-              helperText={shouldShowPrefillHint("materials") ? "Aus KI-Vorprüfung übernommen" : undefined}
+              readOnly={isFieldRequested(DPP_SECTIONS.MATERIALS)}
+              helperText={
+                isFieldRequested(DPP_SECTIONS.MATERIALS)
+                  ? "Warte auf Eingabe vom Partner"
+                  : shouldShowPrefillHint("materials")
+                  ? "Aus KI-Vorprüfung übernommen"
+                  : undefined
+              }
             />
             <InputField
               id="dpp-material-source"
@@ -1003,28 +1190,53 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
                 setMaterialSource(e.target.value)
                 markFieldAsEdited("materialSource")
               }}
-              helperText={shouldShowPrefillHint("materialSource") ? "Aus KI-Vorprüfung übernommen" : undefined}
+              readOnly={isFieldRequested(DPP_SECTIONS.MATERIAL_SOURCE)}
+              helperText={
+                isFieldRequested(DPP_SECTIONS.MATERIAL_SOURCE)
+                  ? "Warte auf Eingabe vom Partner"
+                  : shouldShowPrefillHint("materialSource")
+                  ? "Aus KI-Vorprüfung übernommen"
+                  : undefined
+              }
             />
           </>
-        ) : (
-          <div style={{ marginTop: "1rem" }}>
-            {isNew ? (
-              <div style={{
-                padding: "1rem",
-                backgroundColor: "#FFF5F5",
-                border: "1px solid #FEB2B2",
-                borderRadius: "8px",
-                marginBottom: "1.5rem",
-              }}>
-                <p style={{ color: "#C53030", margin: 0, fontSize: "0.9rem" }}>
-                  Bitte speichern Sie den DPP zuerst, bevor Sie Daten von Partnern anfordern können.
-                </p>
-              </div>
-            ) : (
-              <>
+        )}
+
+        {/* Request Form */}
+        {showRequestForm && !isNew && (
+          <>
+            {/* Prominent "No Account Required" notice */}
+            <div style={{
+              marginBottom: "1.5rem",
+              padding: "0.75rem 1rem",
+              backgroundColor: "#E6F7FF",
+              border: "1px solid #B3E0FF",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem"
+            }}>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#0066CC"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              <span style={{ fontSize: "0.9rem", color: "#0066CC", fontWeight: "600" }}>
+                Kein Konto erforderlich
+              </span>
+            </div>
+
             <SelectField
               id="request-partner-role"
-              label="Partner-Rolle"
+              label="Art des Partners"
               value={requestRole}
               onChange={(e) => setRequestRole(e.target.value)}
               options={[
@@ -1037,6 +1249,9 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
               ]}
               required
             />
+            <div style={{ marginBottom: "0.5rem", fontSize: "0.85rem", color: "#7A7A7A" }}>
+              Hilft uns, die Anfrage korrekt zuzuordnen.
+            </div>
             <InputField
               id="request-email"
               label="E-Mail-Adresse"
@@ -1053,7 +1268,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
                 color: "#0A0A0A",
                 marginBottom: "0.5rem"
               }}>
-                Sektionen für Zugriff <span style={{ color: "#E20074" }}>*</span>
+                Welche Informationen soll der Partner befüllen? <span style={{ color: "#E20074" }}>*</span>
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {[
@@ -1114,11 +1329,18 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
                   }
 
                   showNotification("Datenanfrage erfolgreich gesendet", "success")
-                  setDataEntryMode("manual")
+                  setShowRequestForm(false)
                   setRequestEmail("")
                   setRequestRole("")
                   setRequestSections([])
                   setRequestMessage("")
+                  
+                  // Reload data requests
+                  const requestsResponse = await fetch(`/api/app/dpp/${dpp.id}/data-requests`)
+                  if (requestsResponse.ok) {
+                    const requestsData = await requestsResponse.json()
+                    setDataRequests(requestsData.requests || [])
+                  }
                 } catch (error) {
                   showNotification("Fehler beim Senden der Anfrage", "error")
                 } finally {
@@ -1140,8 +1362,20 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
             >
               {requestLoading ? "Wird gesendet..." : "Datenanfrage senden"}
             </button>
-              </>
-            )}
+          </>
+        )}
+
+        {isNew && (
+          <div style={{
+            padding: "1rem",
+            backgroundColor: "#FFF5F5",
+            border: "1px solid #FEB2B2",
+            borderRadius: "8px",
+            marginBottom: "1.5rem",
+          }}>
+            <p style={{ color: "#C53030", margin: 0, fontSize: "0.9rem" }}>
+              Bitte speichern Sie den DPP zuerst, bevor Sie Daten von Partnern anfordern können.
+            </p>
           </div>
         )}
       </AccordionSection>
@@ -1315,6 +1549,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
       onPublish={handlePublish}
       isNew={isNew}
       canPublish={!!name.trim()}
+      subscriptionCanPublish={subscriptionCanPublish}
       error={saveError}
     />
     

@@ -25,8 +25,7 @@ export interface SignupData {
   password: string
   organizationAction: OrganizationAction
   organizationName?: string // Nur bei create_new_organization
-  organizationId?: string // Nur bei request_to_join_organization
-  invitationToken?: string // Optional: Falls User über Einladung kommt
+  invitationToken?: string // Erforderlich bei request_to_join_organization, optional bei create_new_organization
 }
 
 /**
@@ -94,35 +93,27 @@ export async function signupUser(data: SignupData): Promise<{
         data: { status: "active" },
       })
     } else if (data.organizationAction === "request_to_join_organization") {
-      if (!data.organizationId) {
-        throw new Error("Organization ID required")
+      // Beitritt nur über Einladung möglich
+      if (!data.invitationToken) {
+        throw new Error("Invitation token required to join an organization")
       }
 
-      // Prüfe ob Organisation existiert
-      const organization = await tx.organization.findUnique({
-        where: { id: data.organizationId },
+      // Akzeptiere Einladung
+      const invitationResult = await acceptInvitation(data.invitationToken, user.id)
+      if (!invitationResult) {
+        throw new Error("Invalid or expired invitation token")
+      }
+
+      organizationId = invitationResult.organizationId
+      role = invitationResult.role
+
+      // User-Status auf active setzen, da Einladung akzeptiert wurde
+      await tx.user.update({
+        where: { id: user.id },
+        data: { status: "active" },
       })
-
-      if (!organization) {
-        throw new Error("Organization not found")
-      }
-
-      // Erstelle Join Request
-      await createJoinRequest(user.id, data.organizationId)
-
-      organizationId = data.organizationId
-      role = "VIEWER" // Wird erst nach Genehmigung zugewiesen
     } else {
       throw new Error("Invalid organization action")
-    }
-
-    // 3. Falls Einladung vorhanden, akzeptiere sie
-    if (data.invitationToken) {
-      const invitationResult = await acceptInvitation(data.invitationToken, user.id)
-      if (invitationResult) {
-        organizationId = invitationResult.organizationId
-        role = invitationResult.role
-      }
     }
 
     return {
