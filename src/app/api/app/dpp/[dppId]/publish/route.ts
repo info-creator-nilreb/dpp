@@ -12,9 +12,6 @@ import { getPublishedDppCount, canPublishDpp } from "@/lib/pricing/entitlements"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
 import { getOrganizationRole } from "@/lib/permissions"
-import { canPublishDpp } from "@/lib/pricing/entitlements"
-import { hasFeature } from "@/lib/capabilities/resolver"
-import { isInTrial } from "@/lib/pricing/features"
 
 /**
  * POST /api/app/dpp/[dppId]/publish
