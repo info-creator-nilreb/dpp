@@ -304,7 +304,7 @@ export async function getAllPublishedTemplates(): Promise<Array<{
         in: ["active", "Active", "ACTIVE"]
       },
       category: {
-        not: null
+        isNot: null
       }
     },
     select: {
