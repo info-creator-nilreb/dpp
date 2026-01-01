@@ -414,8 +414,6 @@ function SidebarContent({
       {/* Bottom Section - User Info & Logout */}
       <div style={{ 
         marginTop: "auto", 
-        paddingTop: "2rem", 
-            
         padding: isCollapsed ? "1rem 0" : "1.5rem",
       }}>
         {/* User Info (Shopware-style) - Always render if session is available, even without full profile data */}
@@ -531,18 +529,18 @@ function SidebarContent({
           </button>
         )}
 
-        {/* Collapse Toggle Button */}
+        {/* Toggle Button */}
         {onToggleCollapse && (
-          <div style={{
-            marginTop: "1rem",
-            paddingTop: "1rem",
-            padding: isCollapsed ? "1rem 0" : "1.5rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: isCollapsed ? "center" : "flex-start",
-            borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-            gap: "0.75rem",
-          }}>
+          <div
+            style={{
+              marginTop: "1rem",
+              paddingTop: "1rem",
+              borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: isCollapsed ? "center" : "flex-start",
+            }}
+          >
             <button
               onClick={onToggleCollapse}
               style={{
@@ -579,7 +577,7 @@ function SidebarContent({
                   transition: "transform 0.3s ease",
                 }}
               >
-                <polyline points="15 18 9 12 15 6"/>
+                <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
           </div>

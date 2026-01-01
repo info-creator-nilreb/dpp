@@ -161,9 +161,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user && token.sub) {
         session.user.id = token.sub
         session.user.isPlatformAdmin = token.isPlatformAdmin as boolean
-        session.user.firstName = token.firstName ?? null
-        session.user.lastName = token.lastName ?? null
-        session.user.role = token.role ?? null
+        session.user.firstName = (token.firstName as string | null | undefined) ?? null
+        session.user.lastName = (token.lastName as string | null | undefined) ?? null
+        session.user.role = (token.role as string | null | undefined) ?? null
       }
       return session
     },
