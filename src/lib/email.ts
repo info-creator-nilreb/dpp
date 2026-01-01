@@ -10,7 +10,8 @@ function getNodemailer(): typeof import("nodemailer") {
   if (!nodemailer) {
     nodemailer = require("nodemailer")
   }
-  return nodemailer
+  // TypeScript type assertion: nodemailer is guaranteed to be set here
+  return nodemailer as typeof import("nodemailer")
 }
 
 /**
