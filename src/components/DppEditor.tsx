@@ -1,15 +1,16 @@
 "use client"
 
-import { useState, useEffect, Fragment } from "react"
+import { useState, useEffect, Fragment, useRef } from "react"
 import { useRouter } from "next/navigation"
 import DppMediaSection from "@/components/DppMediaSection"
 import CountrySelect from "@/components/CountrySelect"
 import { useNotification } from "@/components/NotificationProvider"
 import InputField from "@/components/InputField"
-import StickySaveBar from "@/components/StickySaveBar"
+// StickySaveBar removed - using EditorHeader instead
 import { TrialBanner } from "@/components/TrialBanner"
 import { useCapabilities } from "@/hooks/useCapabilities"
-import { DPP_SECTIONS } from "@/lib/permissions"
+import { DPP_SECTIONS } from "@/lib/dpp-sections"
+import { useAutoSave } from "@/hooks/useAutoSave"
 
 interface PendingFile {
   id: string
@@ -62,6 +63,16 @@ interface DppEditorProps {
   isNew?: boolean
   onUnsavedChangesChange?: (hasChanges: boolean) => void
   availableCategories?: Array<{ categoryKey: string; label: string }>
+  // Optional: If provided, DppEditor won't render StickySaveBar and will use these handlers instead
+  onSave?: () => Promise<void>
+  onPublish?: () => Promise<void>
+  // Optional: Status callbacks for header
+  onStatusChange?: (status: "idle" | "saving" | "saved" | "publishing" | "error") => void
+  onLastSavedChange?: (date: Date | null) => void
+  onErrorChange?: (error: string | null) => void
+  // CRITICAL: Callback to update global dpp state after auto-save
+  // This ensures tab switches don't reset the draft state
+  onDppUpdate?: (updatedDpp: Dpp) => void
 }
 
 /**
@@ -105,7 +116,8 @@ function AccordionSection({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          textAlign: "left"
+          textAlign: "left",
+          borderRadius: "12px"
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -152,13 +164,25 @@ function AccordionSection({
  * 4. Rechtliches & Konformität (einklappbar)
  * 5. Rücknahme & Second Life (einklappbar)
  */
-export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedChangesChange, availableCategories: propCategories }: DppEditorProps) {
+export default function DppEditor({ 
+  dpp: initialDpp, 
+  isNew = false, 
+  onUnsavedChangesChange, 
+  availableCategories: propCategories,
+  onSave: externalOnSave,
+  onPublish: externalOnPublish,
+  onStatusChange,
+  onLastSavedChange,
+  onErrorChange,
+  onDppUpdate
+}: DppEditorProps) {
   const router = useRouter()
   const { showNotification } = useNotification()
   
   // State für alle Felder
   const [dpp, setDpp] = useState(initialDpp)
-  const [name, setName] = useState(initialDpp.name)
+  // CRITICAL: Lokaler Edit-State für Inputs - nur bei dpp.id-Wechsel synchronisieren
+  const [name, setName] = useState(initialDpp.name || "")
   const [description, setDescription] = useState(initialDpp.description || "")
   const [category, setCategory] = useState<string>(initialDpp.category || "")
   const [sku, setSku] = useState(initialDpp.sku || "")
@@ -188,6 +212,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   const [section5Open, setSection5Open] = useState(false)
   
   // Data Request Form State
+  const [dataEntryMode, setDataEntryMode] = useState<"manual" | "request">("manual")
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestEmail, setRequestEmail] = useState("")
   const [requestRole, setRequestRole] = useState("")
@@ -205,10 +230,18 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     createdAt: string
   }>>([])
   
-  // Save Status für Sticky Save Bar
+  // Save Status (for header)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "publishing" | "error">("idle")
   const [lastSaved, setLastSaved] = useState<Date | null>(isNew ? null : initialDpp.updatedAt)
   const [saveError, setSaveError] = useState<string | null>(null)
+  
+  // Track if any field has changed (for auto-save)
+  const hasChangesRef = useRef(false)
+  const initialDppRef = useRef(initialDpp)
+  // CRITICAL: Track if user is typing to prevent state resets during typing
+  // This prevents characters from being cut off during auto-save
+  const isUserTypingRef = useRef(false)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   // Subscription Context für Publishing-Capability
   const [subscriptionCanPublish, setSubscriptionCanPublish] = useState<boolean>(true)
@@ -230,6 +263,53 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     }
     loadSubscriptionContext()
   }, [])
+
+  // CRITICAL: Synchronize local states with initialDpp prop
+  // This ensures tab switches don't reset the draft state
+  // SINGLE SOURCE OF TRUTH: Only update when initialDpp actually changes (not on every render)
+  // Pattern: Use a ref to track the last synced version to prevent unnecessary resets
+  const lastSyncedDppRef = useRef<string | null>(null)
+  
+  useEffect(() => {
+    // Only sync if:
+    // 1. DPP ID changed (new DPP loaded)
+    // 2. OR initialDpp was updated from outside (e.g. after save in another component)
+    // BUT: Don't sync if we have unsaved local changes (preserve draft)
+    // Handle updatedAt as Date, string, or undefined
+    const updatedAtValue = initialDpp.updatedAt instanceof Date 
+      ? initialDpp.updatedAt.getTime() 
+      : typeof initialDpp.updatedAt === 'string' 
+        ? new Date(initialDpp.updatedAt).getTime() 
+        : (initialDpp.updatedAt as any)?.getTime?.() || 0
+    const dppKey = `${initialDpp.id}-${updatedAtValue}`
+    
+    // Skip if this is the same DPP we already synced (prevents reset on tab switch)
+    if (lastSyncedDppRef.current === dppKey) {
+      return
+    }
+    
+    // CRITICAL: Synchronization logic
+    // - Sync if DPP ID changed (new DPP loaded)
+    // - Sync if we don't have unsaved changes (all changes saved)
+    // - Don't sync if user is actively typing (prevents characters from being cut off)
+    // - Don't sync if we already synced this exact version (prevents unnecessary resets)
+    const dppIdChanged = initialDpp.id !== lastSyncedDppRef.current?.split('-')[0]
+    const shouldSync = dppIdChanged || (!hasChangesRef.current && !isUserTypingRef.current)
+    
+    if (shouldSync) {
+      // CRITICAL: Update dpp state only when syncing (e.g. on mount or DPP ID change)
+      // Inputs write directly to dpp via onDppUpdate, so we only sync from props when needed
+      initialDppRef.current = initialDpp
+      setDpp(initialDpp)
+      
+      // Update lastSyncedDppRef to mark this version as synced
+      // This prevents unnecessary re-syncing of the same version
+      lastSyncedDppRef.current = dppKey
+      
+      // Reset hasChangesRef when syncing (no unsaved changes at sync time)
+      hasChangesRef.current = false
+    }
+  }, [initialDpp.id, initialDpp.updatedAt, initialDpp]) // Sync when DPP changes
 
   // Load data requests
   useEffect(() => {
@@ -426,6 +506,14 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     }
   }
 
+  // Helper: Aktualisiert den zentralen dpp-State und triggert Auto-Save
+  // MINIMAL-INVASIV: Ergänzt den bestehenden Mechanismus, ohne andere Logik zu ändern
+  const updateDppDraft = (patch: Partial<Dpp>) => {
+    setDpp(prev => ({ ...prev, ...patch }))
+    hasChangesRef.current = true
+    // scheduleSave wird automatisch durch useEffect([dpp]) getriggert
+  }
+
   // Aktualisiere Medien-Liste nach Upload/Delete
   const refreshMedia = async () => {
     if (!dpp.id || dpp.id === "new") return
@@ -434,39 +522,52 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
       if (response.ok) {
         const data = await response.json()
         setDpp(prev => ({ ...prev, media: data.media }))
+        // Trigger auto-save after media change (media is part of DPP data)
+        hasChangesRef.current = true
+        scheduleSave()
       }
     } catch (error) {
       console.error("Error refreshing media:", error)
     }
   }
 
-  // Speichere DPP-Daten (Draft Save)
-  const handleSave = async () => {
+  // Auto-Save: Save DPP data as draft
+  // CRITICAL: Server is write-only - never reload from server response
+  // Client draft (dpp) is the single source of truth
+  const performAutoSave = async () => {
+    // Skip if no changes (but always save new DPPs)
+    if (!hasChangesRef.current && !isNew) {
+      return
+    }
+    
+    // CRITICAL: Read from dpp state (single source of truth)
+    // All inputs write directly to dpp via onDppUpdate
     setSaveStatus("saving")
     setSaveError(null)
+    onStatusChange?.("saving")
     
     try {
       if (isNew) {
-        // Neuer DPP: Erstellen
+        // Neuer DPP: Erstellen - read from local state
         const payload = {
-          name,
-          description,
-          category,
-          sku,
-          gtin,
-          brand,
-          countryOfOrigin,
-          materials,
-          materialSource,
-          careInstructions,
-          isRepairable,
-          sparePartsAvailable,
-          lifespan,
-          conformityDeclaration,
-          disposalInfo,
-          takebackOffered,
-          takebackContact,
-          secondLifeInfo,
+          name: name || "",
+          description: description || "",
+          category: category || "",
+          sku: sku || "",
+          gtin: gtin || "",
+          brand: brand || "",
+          countryOfOrigin: countryOfOrigin || "",
+          materials: materials || "",
+          materialSource: materialSource || "",
+          careInstructions: careInstructions || "",
+          isRepairable: isRepairable || "",
+          sparePartsAvailable: sparePartsAvailable || "",
+          lifespan: lifespan || "",
+          conformityDeclaration: conformityDeclaration || "",
+          disposalInfo: disposalInfo || "",
+          takebackOffered: takebackOffered || "",
+          takebackContact: takebackContact || "",
+          secondLifeInfo: secondLifeInfo || "",
           organizationId: dpp.organizationId
         }
         
@@ -525,9 +626,14 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         // No implicit media upload at the end of save. Media fields in template blocks
         // handle their own uploads when users interact with them.
         
-        setLastSaved(new Date())
+        // IDENTICAL to DppContentTabV2: Always update lastSaved and propagate status
+        const savedDate = new Date()
+        setLastSaved(savedDate)
         setSaveStatus("saved")
-        showNotification("Entwurf gespeichert", "success")
+        onStatusChange?.("saved")
+        onLastSavedChange?.(savedDate) // ALWAYS propagate (same as DppContentTabV2)
+        hasChangesRef.current = false
+        // No notification for auto-save (silent)
         
         // Weiterleitung zur Edit-Seite (nicht zur Liste)
         // Verwende replace, damit Browser-History sauber bleibt
@@ -560,11 +666,47 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         })
 
         if (response.ok) {
-          // Erfolgreich gespeichert
-          setLastSaved(new Date())
+          // CRITICAL: Server is write-only during editing
+          // Do NOT reload or update state from server response
+          // The client draft (dpp) is the single source of truth
+          
+          // Success: Only update status feedback
+          const savedDate = new Date()
+          setLastSaved(savedDate)
           setSaveStatus("saved")
-          showNotification("Entwurf gespeichert", "success")
-          // Bleibe auf der Seite, kein Redirect
+          onStatusChange?.("saved")
+          onLastSavedChange?.(savedDate)
+          
+          // Reset change tracking
+          hasChangesRef.current = false
+          
+          // CRITICAL: Update initialDppRef with current local states to make them the new reference point
+          // This ensures that future changes are compared against the saved state, not the original load
+          initialDppRef.current = {
+            ...initialDppRef.current,
+            name: name || "",
+            description: description || "",
+            category: category || "",
+            sku: sku || "",
+            gtin: gtin || "",
+            brand: brand || "",
+            countryOfOrigin: countryOfOrigin || "",
+            materials: materials || "",
+            materialSource: materialSource || "",
+            careInstructions: careInstructions || "",
+            isRepairable: isRepairable || "",
+            sparePartsAvailable: sparePartsAvailable || "",
+            lifespan: lifespan || "",
+            conformityDeclaration: conformityDeclaration || "",
+            disposalInfo: disposalInfo || "",
+            takebackOffered: takebackOffered || "",
+            takebackContact: takebackContact || "",
+            secondLifeInfo: secondLifeInfo || ""
+          }
+          
+          // No notification for auto-save (silent)
+          // No state updates - client draft remains unchanged
+          // No reload - tab switches work with draft state
         } else {
           let errorData
           try {
@@ -582,12 +724,97 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
       const errorMsg = "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
       setSaveError(errorMsg)
       setSaveStatus("error")
-      showNotification(errorMsg, "error")
+      onStatusChange?.("error")
+      onErrorChange?.(errorMsg)
+      // Show error notification for auto-save failures
+      showNotification("Auto-Save fehlgeschlagen. Bitte versuchen Sie es erneut.", "error")
     }
   }
 
+  // Manual save handler (for external calls, e.g. from header)
+  // This is used when the header needs to trigger a save (e.g. retry after error)
+  const handleSave = async () => {
+    if (externalOnSave) {
+      await externalOnSave()
+      return
+    }
+    await performAutoSave()
+  }
+
+  // Auto-Save: Track field changes and trigger save
+  // IDENTICAL to DppContentTabV2 for consistent UX across all tabs
+  // Single Source of Truth: Same debounce, same behavior, same status updates
+  const { scheduleSave } = useAutoSave({
+    onSave: performAutoSave,
+    enabled: !isNew || (isNew && dpp.id !== "new"), // Only auto-save if DPP exists
+    debounceMs: 500, // IDENTICAL to DppContentTabV2 - 500ms catches every change including single characters
+    onStatusChange: (status) => {
+      // Update local state
+      if (status === "saving") {
+        setSaveStatus("saving")
+      } else if (status === "saved") {
+        setSaveStatus("saved")
+      } else if (status === "error") {
+        setSaveStatus("error")
+      }
+      // ALWAYS propagate to parent (same as DppContentTabV2)
+      onStatusChange?.(status)
+    }
+  })
+
+  // CRITICAL: Wrapper function for onChange handlers
+  // This marks user as typing and prevents state resets during typing
+  // Prevents characters from being cut off during auto-save
+  const createTypingAwareHandler = (setter: (value: string) => void) => {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = e.target.value
+      setter(value)
+      
+      // Mark that user is typing
+      isUserTypingRef.current = true
+      
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+      
+      // Reset typing flag after user stops typing for 1500ms
+      // CRITICAL: Longer timeout to prevent last character from being cut off
+      typingTimeoutRef.current = setTimeout(() => {
+        isUserTypingRef.current = false
+      }, 1500) // Longer timeout to ensure last character is saved
+    }
+  }
+  
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // CRITICAL: Change detection - inputs set hasChangesRef and trigger auto-save
+  // Inputs call onDppUpdate (updates dpp) and set hasChangesRef.current = true
+  // This effect triggers scheduleSave when dpp changes and hasChangesRef is true
+  useEffect(() => {
+    if (isNew && dpp.id === "new") return // Skip auto-save for brand new DPPs
+    if (!hasChangesRef.current) return // Only save if there are changes
+    
+    // Trigger auto-save when dpp changes and hasChangesRef is true
+    scheduleSave()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dpp]) // React to dpp changes (triggered by onDppUpdate in inputs)
+
   // Veröffentliche DPP als neue Version
   const handlePublish = async () => {
+    // If external handler provided, use it
+    if (externalOnPublish) {
+      await externalOnPublish()
+      return
+    }
+    
     if (!name.trim()) {
       showNotification("Produktname ist erforderlich für die Veröffentlichung", "error")
       return
@@ -595,6 +822,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
 
     setSaveStatus("publishing")
     setSaveError(null)
+    onStatusChange?.("publishing")
     
     try {
       let dppIdToPublish = dpp.id
@@ -902,6 +1130,13 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
                 return // Ignoriere Änderungsversuch
               }
               
+              // SYNCHRONE lokale State-Update
+              setCategory(newCategory)
+              if (onDppUpdate) {
+                onDppUpdate({ ...dpp, category: newCategory }) // SYNCHRONE globaler State-Update
+              }
+              updateDppDraft({ category: newCategory }) // MINIMAL-INVASIV: Triggert Auto-Save
+              
               // Im Draft: Warnung beim Kategorienwechsel
               if (!isNew && previousCategory && newCategory !== previousCategory) {
                 setPendingCategoryChange(newCategory)
@@ -1005,8 +1240,13 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Produktname"
           value={name}
           onChange={(e) => {
-            setName(e.target.value)
+            const value = e.target.value
+            setName(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, name: value }) // SYNCHRONE globaler State-Update
+            }
             markFieldAsEdited("name")
+            hasChangesRef.current = true
           }}
           required
           helperText={shouldShowPrefillHint("name") ? "Aus KI-Vorprüfung übernommen" : undefined}
@@ -1016,7 +1256,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Beschreibung"
           value={description}
           onChange={(e) => {
-            setDescription(e.target.value)
+            const value = e.target.value
+            setDescription(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, description: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ description: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("description")
           }}
           rows={4}
@@ -1027,7 +1272,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="SKU / Interne ID"
           value={sku}
           onChange={(e) => {
-            setSku(e.target.value)
+            const value = e.target.value
+            setSku(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, sku: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ sku: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("sku")
           }}
           required
@@ -1038,7 +1288,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="GTIN / EAN"
           value={gtin}
           onChange={(e) => {
-            setGtin(e.target.value)
+            const value = e.target.value
+            setGtin(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, gtin: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ gtin: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("gtin")
           }}
           helperText={shouldShowPrefillHint("gtin") ? "Aus KI-Vorprüfung übernommen" : undefined}
@@ -1048,7 +1303,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Marke / Hersteller"
           value={brand}
           onChange={(e) => {
-            setBrand(e.target.value)
+            const value = e.target.value
+            setBrand(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, brand: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ brand: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("brand")
           }}
           required
@@ -1059,7 +1319,11 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Herstellungsland"
           value={countryOfOrigin}
           onChange={(value) => {
-            setCountryOfOrigin(value)
+            setCountryOfOrigin(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, countryOfOrigin: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ countryOfOrigin: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("countryOfOrigin")
           }}
           required
@@ -1072,171 +1336,96 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         title="Materialien & Zusammensetzung"
         isOpen={section2Open}
         onToggle={() => setSection2Open(!section2Open)}
-        statusBadge={getMaterialsSectionStatusBadge()}
       >
-        {/* Action CTAs */}
-        <div style={{ marginBottom: "2rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={() => setShowRequestForm(false)}
-            style={{
-              padding: "0.75rem 1.5rem",
-              backgroundColor: showRequestForm ? "transparent" : "#E20074",
-              color: showRequestForm ? "#0A0A0A" : "#FFFFFF",
-              border: "1px solid #CDCDCD",
-              borderRadius: "8px",
-              fontSize: "0.95rem",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            Daten manuell eingeben
-          </button>
-          {!isNew && (
-            <button
-              type="button"
-              onClick={() => setShowRequestForm(true)}
-              style={{
-                padding: "0.75rem 1.5rem",
-                backgroundColor: showRequestForm ? "#E20074" : "transparent",
-                color: showRequestForm ? "#FFFFFF" : "#0A0A0A",
-                border: "1px solid #CDCDCD",
-                borderRadius: "8px",
-                fontSize: "0.95rem",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-            >
-              Daten von Partner anfordern
-            </button>
+        {/* Data Entry Mode Selection */}
+        <div style={{ marginBottom: "2rem", padding: "1rem", backgroundColor: "#F5F5F5", borderRadius: "8px", border: "none" }}>
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", marginBottom: "0.75rem" }}>
+              <input
+                type="radio"
+                name="dataEntryMode"
+                checked={dataEntryMode === "manual"}
+                onChange={() => setDataEntryMode("manual")}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0A0A0A" }}>
+                Daten manuell eingeben
+              </span>
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: isNew ? "not-allowed" : "pointer", opacity: isNew ? 0.6 : 1 }}>
+              <input
+                type="radio"
+                name="dataEntryMode"
+                checked={dataEntryMode === "request"}
+                onChange={() => !isNew && setDataEntryMode("request")}
+                disabled={isNew}
+                style={{ width: "18px", height: "18px", cursor: isNew ? "not-allowed" : "pointer" }}
+              />
+              <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "#0A0A0A" }}>
+                Daten von Partner anfordern {isNew && <span style={{ fontSize: "0.85rem", color: "#7A7A7A", fontStyle: "italic" }}>(erst nach Speichern verfügbar)</span>}
+              </span>
+            </label>
+          </div>
+          {dataEntryMode === "request" && (
+            <p style={{ fontSize: "0.85rem", color: "#7A7A7A", margin: 0, fontStyle: "italic" }}>
+              Der Partner erhält einen sicheren Link. Kein Konto erforderlich. Der Zugriff ist auf die ausgewählten Sektionen beschränkt.
+            </p>
           )}
         </div>
 
-        {/* Summary Cards for existing requests */}
-        {!isNew && dataRequests.filter(req => 
-          req.sections.includes(DPP_SECTIONS.MATERIALS) || 
-          req.sections.includes(DPP_SECTIONS.MATERIAL_SOURCE)
-        ).length > 0 && (
-          <div style={{ marginBottom: "2rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {dataRequests.filter(req => 
-              req.sections.includes(DPP_SECTIONS.MATERIALS) || 
-              req.sections.includes(DPP_SECTIONS.MATERIAL_SOURCE)
-            ).map((req) => (
-              <div
-                key={req.id}
-                style={{
-                  padding: "1rem",
-                  backgroundColor: "#F5F5F5",
-                  border: "1px solid #CDCDCD",
-                  borderRadius: "8px"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#0A0A0A", marginBottom: "0.25rem" }}>
-                      {req.email}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#7A7A7A", marginBottom: "0.5rem" }}>
-                      {getPartnerRoleLabel(req.partnerRole)}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#0A0A0A" }}>
-                      <strong>Sektionen:</strong> {req.sections.map(s => getSectionLabel(s)).join(", ")}
-                    </div>
-                  </div>
-                  <span style={{
-                    padding: "0.25rem 0.75rem",
-                    backgroundColor: req.status === "submitted" ? "#E6F7E6" : req.status === "pending" ? "#FFF5E6" : "#F5F5F5",
-                    color: req.status === "submitted" ? "#00A651" : req.status === "pending" ? "#B8860B" : "#7A7A7A",
-                    borderRadius: "12px",
-                    fontSize: "0.75rem",
-                    fontWeight: "600"
-                  }}>
-                    {req.status === "submitted" ? "Übermittelt" : req.status === "pending" ? "Ausstehend" : req.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Manual Entry Fields */}
-        {!showRequestForm && (
+        {dataEntryMode === "manual" ? (
           <>
             <InputField
               id="dpp-materials"
               label="Materialliste"
               value={materials}
               onChange={(e) => {
-                setMaterials(e.target.value)
+                const value = e.target.value
+                setMaterials(value) // SYNCHRONE lokale State-Update
+                if (onDppUpdate) {
+                  onDppUpdate({ ...dpp, materials: value }) // SYNCHRONE globaler State-Update
+                }
+                updateDppDraft({ materials: value }) // MINIMAL-INVASIV: Triggert Auto-Save
                 markFieldAsEdited("materials")
               }}
               rows={4}
-              readOnly={isFieldRequested(DPP_SECTIONS.MATERIALS)}
-              helperText={
-                isFieldRequested(DPP_SECTIONS.MATERIALS)
-                  ? "Warte auf Eingabe vom Partner"
-                  : shouldShowPrefillHint("materials")
-                  ? "Aus KI-Vorprüfung übernommen"
-                  : undefined
-              }
+              helperText={shouldShowPrefillHint("materials") ? "Aus KI-Vorprüfung übernommen" : undefined}
             />
             <InputField
               id="dpp-material-source"
               label="Datenquelle (z. B. Lieferant)"
               value={materialSource}
               onChange={(e) => {
-                setMaterialSource(e.target.value)
+                const value = e.target.value
+                setMaterialSource(value) // SYNCHRONE lokale State-Update
+                if (onDppUpdate) {
+                  onDppUpdate({ ...dpp, materialSource: value }) // SYNCHRONE globaler State-Update
+                }
+                updateDppDraft({ materialSource: value }) // MINIMAL-INVASIV: Triggert Auto-Save
                 markFieldAsEdited("materialSource")
               }}
-              readOnly={isFieldRequested(DPP_SECTIONS.MATERIAL_SOURCE)}
-              helperText={
-                isFieldRequested(DPP_SECTIONS.MATERIAL_SOURCE)
-                  ? "Warte auf Eingabe vom Partner"
-                  : shouldShowPrefillHint("materialSource")
-                  ? "Aus KI-Vorprüfung übernommen"
-                  : undefined
-              }
+              helperText={shouldShowPrefillHint("materialSource") ? "Aus KI-Vorprüfung übernommen" : undefined}
             />
           </>
-        )}
-
-        {/* Request Form */}
-        {showRequestForm && !isNew && (
-          <>
-            {/* Prominent "No Account Required" notice */}
-            <div style={{
-              marginBottom: "1.5rem",
-              padding: "0.75rem 1rem",
-              backgroundColor: "#E6F7FF",
-              border: "1px solid #B3E0FF",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem"
-            }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#0066CC"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-              </svg>
-              <span style={{ fontSize: "0.9rem", color: "#0066CC", fontWeight: "600" }}>
-                Kein Konto erforderlich
-              </span>
-            </div>
-
+        ) : (
+          <div style={{ marginTop: "1rem" }}>
+            {isNew ? (
+              <div style={{
+                padding: "1rem",
+                backgroundColor: "#FFF5F5",
+                border: "1px solid #FEB2B2",
+                borderRadius: "8px",
+                marginBottom: "1.5rem",
+              }}>
+                <p style={{ color: "#C53030", margin: 0, fontSize: "0.9rem" }}>
+                  Bitte speichern Sie den DPP zuerst, bevor Sie Daten von Partnern anfordern können.
+                </p>
+              </div>
+            ) : (
+              <>
             <SelectField
               id="request-partner-role"
-              label="Art des Partners"
+              label="Partner-Rolle"
               value={requestRole}
               onChange={(e) => setRequestRole(e.target.value)}
               options={[
@@ -1249,9 +1438,6 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
               ]}
               required
             />
-            <div style={{ marginBottom: "0.5rem", fontSize: "0.85rem", color: "#7A7A7A" }}>
-              Hilft uns, die Anfrage korrekt zuzuordnen.
-            </div>
             <InputField
               id="request-email"
               label="E-Mail-Adresse"
@@ -1268,7 +1454,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
                 color: "#0A0A0A",
                 marginBottom: "0.5rem"
               }}>
-                Welche Informationen soll der Partner befüllen? <span style={{ color: "#E20074" }}>*</span>
+                Sektionen für Zugriff <span style={{ color: "#E20074" }}>*</span>
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {[
@@ -1329,18 +1515,11 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
                   }
 
                   showNotification("Datenanfrage erfolgreich gesendet", "success")
-                  setShowRequestForm(false)
+                  setDataEntryMode("manual")
                   setRequestEmail("")
                   setRequestRole("")
                   setRequestSections([])
                   setRequestMessage("")
-                  
-                  // Reload data requests
-                  const requestsResponse = await fetch(`/api/app/dpp/${dpp.id}/data-requests`)
-                  if (requestsResponse.ok) {
-                    const requestsData = await requestsResponse.json()
-                    setDataRequests(requestsData.requests || [])
-                  }
                 } catch (error) {
                   showNotification("Fehler beim Senden der Anfrage", "error")
                 } finally {
@@ -1362,20 +1541,8 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
             >
               {requestLoading ? "Wird gesendet..." : "Datenanfrage senden"}
             </button>
-          </>
-        )}
-
-        {isNew && (
-          <div style={{
-            padding: "1rem",
-            backgroundColor: "#FFF5F5",
-            border: "1px solid #FEB2B2",
-            borderRadius: "8px",
-            marginBottom: "1.5rem",
-          }}>
-            <p style={{ color: "#C53030", margin: 0, fontSize: "0.9rem" }}>
-              Bitte speichern Sie den DPP zuerst, bevor Sie Daten von Partnern anfordern können.
-            </p>
+              </>
+            )}
           </div>
         )}
       </AccordionSection>
@@ -1391,7 +1558,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Pflegehinweise"
           value={careInstructions}
           onChange={(e) => {
-            setCareInstructions(e.target.value)
+            const value = e.target.value
+            setCareInstructions(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, careInstructions: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ careInstructions: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("careInstructions")
           }}
           rows={3}
@@ -1401,7 +1573,15 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           id="dpp-is-repairable"
           label="Reparierbarkeit"
           value={isRepairable}
-          onChange={(e) => setIsRepairable(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value
+            setIsRepairable(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, isRepairable: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ isRepairable: value }) // MINIMAL-INVASIV: Triggert Auto-Save
+            markFieldAsEdited("isRepairable")
+          }}
           options={[
             { value: "", label: "Bitte wählen" },
             { value: "YES", label: "Ja" },
@@ -1412,7 +1592,15 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           id="dpp-spare-parts"
           label="Ersatzteile verfügbar"
           value={sparePartsAvailable}
-          onChange={(e) => setSparePartsAvailable(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value
+            setSparePartsAvailable(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, sparePartsAvailable: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ sparePartsAvailable: value }) // MINIMAL-INVASIV: Triggert Auto-Save
+            markFieldAsEdited("sparePartsAvailable")
+          }}
           options={[
             { value: "", label: "Bitte wählen" },
             { value: "YES", label: "Ja" },
@@ -1424,7 +1612,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Lebensdauer"
           value={lifespan}
           onChange={(e) => {
-            setLifespan(e.target.value)
+            const value = e.target.value
+            setLifespan(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, lifespan: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ lifespan: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("lifespan")
           }}
           helperText={shouldShowPrefillHint("lifespan") ? "Aus KI-Vorprüfung übernommen" : undefined}
@@ -1442,7 +1635,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Konformitätserklärung"
           value={conformityDeclaration}
           onChange={(e) => {
-            setConformityDeclaration(e.target.value)
+            const value = e.target.value
+            setConformityDeclaration(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, conformityDeclaration: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ conformityDeclaration: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("conformityDeclaration")
           }}
           rows={4}
@@ -1453,7 +1651,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Hinweise zu Entsorgung / Recycling"
           value={disposalInfo}
           onChange={(e) => {
-            setDisposalInfo(e.target.value)
+            const value = e.target.value
+            setDisposalInfo(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, disposalInfo: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ disposalInfo: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("disposalInfo")
           }}
           rows={3}
@@ -1480,7 +1683,15 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           id="dpp-takeback"
           label="Rücknahme angeboten"
           value={takebackOffered}
-          onChange={(e) => setTakebackOffered(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value
+            setTakebackOffered(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, takebackOffered: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ takebackOffered: value }) // MINIMAL-INVASIV: Triggert Auto-Save
+            markFieldAsEdited("takebackOffered")
+          }}
           options={[
             { value: "", label: "Bitte wählen" },
             { value: "YES", label: "Ja" },
@@ -1493,7 +1704,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
             label="Kontakt / URL"
             value={takebackContact}
             onChange={(e) => {
-              setTakebackContact(e.target.value)
+              const value = e.target.value
+              setTakebackContact(value) // SYNCHRONE lokale State-Update
+              if (onDppUpdate) {
+                onDppUpdate({ ...dpp, takebackContact: value }) // SYNCHRONE globaler State-Update
+              }
+              updateDppDraft({ takebackContact: value }) // MINIMAL-INVASIV: Triggert Auto-Save
               markFieldAsEdited("takebackContact")
             }}
             helperText={shouldShowPrefillHint("takebackContact") ? "Aus KI-Vorprüfung übernommen" : undefined}
@@ -1504,7 +1720,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           label="Second-Life-Informationen"
           value={secondLifeInfo}
           onChange={(e) => {
-            setSecondLifeInfo(e.target.value)
+            const value = e.target.value
+            setSecondLifeInfo(value) // SYNCHRONE lokale State-Update
+            if (onDppUpdate) {
+              onDppUpdate({ ...dpp, secondLifeInfo: value }) // SYNCHRONE globaler State-Update
+            }
+            updateDppDraft({ secondLifeInfo: value }) // MINIMAL-INVASIV: Triggert Auto-Save
             markFieldAsEdited("secondLifeInfo")
           }}
           rows={3}
@@ -1530,28 +1751,20 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         </h2>
         <DppMediaSection 
           dppId={dpp.id && dpp.id !== "new" ? dpp.id : null} 
-          media={dpp.media} 
+          media={Array.isArray(dpp.media) ? dpp.media : []} 
           onMediaChange={refreshMedia}
           pendingFiles={pendingFiles}
           onPendingFilesChange={setPendingFiles}
         />
       </div>
 
-      {/* Bottom padding für Sticky Save Bar */}
+      {/* Bottom padding - only if no external handlers (footer pattern) */}
+      {!externalOnSave && !externalOnPublish && (
       <div style={{ height: "100px" }} />
+      )}
     </div>
 
-    {/* Sticky Save Bar */}
-    <StickySaveBar
-      status={saveStatus}
-      lastSaved={lastSaved}
-      onSave={handleSave}
-      onPublish={handlePublish}
-      isNew={isNew}
-      canPublish={!!name.trim()}
-      subscriptionCanPublish={subscriptionCanPublish}
-      error={saveError}
-    />
+    {/* Sticky Save Bar removed - using EditorHeader in DppEditorContent instead */}
     
     {/* Warnung beim Verlassen (nur für neue DPPs) */}
     {isNew && showLeaveWarning && (

@@ -151,14 +151,19 @@ model DppMedia {
   fileType   String
   fileSize   Int
   storageUrl String
+  role       String?  // Semantische Rolle: primary_product_image, gallery_image, certificate, logo, etc.
+  blockId   String?  // Optional: ID des Blocks, dem das Medium zugeordnet ist (für Content-Blöcke)
+  fieldKey   String?  // Optional: Key des File-Felds im Block
   uploadedAt DateTime @default(now())
   dpp        Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
 
+  @@index([dppId, role])
+  @@index([blockId])
   @@map("dpp_media")
 }
 
 model DppVersion {
-  id                    String   @id @default(cuid())
+  id                    String            @id @default(cuid())
   dppId                 String
   version               Int
   name                  String
@@ -179,15 +184,35 @@ model DppVersion {
   takebackOffered       String?
   takebackContact       String?
   secondLifeInfo        String?
-  createdAt             DateTime @default(now())
+  createdAt             DateTime          @default(now())
   createdByUserId       String
   publicUrl             String?
   qrCodeImageUrl        String?
-  createdBy             User     @relation(fields: [createdByUserId], references: [id])
-  dpp                   Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  createdBy             User              @relation(fields: [createdByUserId], references: [id])
+  dpp                   Dpp               @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  media                 DppVersionMedia[]
 
   @@unique([dppId, version])
   @@map("dpp_versions")
+}
+
+model DppVersionMedia {
+  id         String      @id @default(cuid())
+  versionId String
+  version    DppVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  fileName   String
+  fileType   String
+  fileSize   Int
+  storageUrl String
+  role       String?     // Semantische Rolle: primary_product_image, gallery_image, certificate, logo, etc.
+  blockId   String?     // Optional: ID des Blocks, dem das Medium zugeordnet ist
+  fieldKey   String?     // Optional: Key des File-Felds im Block
+  uploadedAt DateTime    @default(now())
+
+  @@index([versionId])
+  @@index([versionId, role])
+  @@index([blockId])
+  @@map("dpp_version_media")
 }
 
 model DppPermission {

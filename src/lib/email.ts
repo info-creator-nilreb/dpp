@@ -1,8 +1,18 @@
-import crypto from "crypto"
-
-// Dynamically import nodemailer only on the server
-// This prevents it from being bundled in client-side code
+// Dynamically import crypto and nodemailer only on the server
+// This prevents them from being bundled in client-side code or Edge Runtime
+let crypto: typeof import("crypto") | undefined
 let nodemailer: typeof import("nodemailer") | undefined
+
+function getCrypto(): typeof import("crypto") {
+  if (typeof window !== "undefined") {
+    throw new Error("Email functions can only be used on the server")
+  }
+  if (!crypto) {
+    crypto = require("crypto")
+  }
+  return crypto as typeof import("crypto")
+}
+
 function getNodemailer(): typeof import("nodemailer") {
   if (typeof window !== "undefined") {
     throw new Error("Email functions can only be used on the server")
@@ -232,7 +242,7 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
  * Generiert einen sicheren Verifizierungs-Token
  */
 export function generateVerificationToken(): string {
-  return crypto.randomBytes(32).toString("hex")
+  return getCrypto().randomBytes(32).toString("hex")
 }
 
 /**

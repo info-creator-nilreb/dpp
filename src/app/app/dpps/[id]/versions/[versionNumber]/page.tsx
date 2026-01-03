@@ -6,11 +6,12 @@ import AuthGate from "../../../../_auth/AuthGate"
 export default async function VersionViewPage({
   params,
 }: {
-  params: { id: string; versionNumber: string }
+  params: Promise<{ id: string; versionNumber: string }>
 }) {
+  const resolvedParams = await params
   return (
     <AuthGate>
-      <VersionViewContent id={params.id} versionNumber={params.versionNumber} />
+      <VersionViewContent id={resolvedParams.id} versionNumber={resolvedParams.versionNumber} />
     </AuthGate>
   )
 }

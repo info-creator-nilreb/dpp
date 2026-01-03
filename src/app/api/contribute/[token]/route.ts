@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { DPP_SECTIONS } from "@/lib/permissions"
+import { DPP_SECTIONS } from "@/lib/dpp-sections"
 
 /**
  * GET /api/contribute/[token]

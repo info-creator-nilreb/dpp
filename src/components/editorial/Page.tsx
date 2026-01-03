@@ -8,14 +8,29 @@
 import React from 'react'
 import { editorialTypography } from './tokens/typography'
 import { editorialColors } from './tokens/colors'
+import { StylingConfig } from "@/lib/cms/types"
+import { resolveTheme } from "@/lib/cms/validation"
 
 interface PageProps {
   children: React.ReactNode
   className?: string
   style?: React.CSSProperties
+  styling?: StylingConfig | null
 }
 
-export default function Page({ children, className = '', style = {} }: PageProps) {
+export default function Page({ children, className = '', style = {}, styling }: PageProps) {
+  // Resolve theme from styling config
+  const theme = resolveTheme(styling || undefined)
+  
+  // Use custom colors from theme, fallback to defaults
+  const primaryColor = theme.colors.primary || editorialColors.brand.primary
+  const secondaryColor = theme.colors.secondary || editorialColors.brand.secondary
+  const accentColor = theme.colors.accent || editorialColors.brand.accent
+  
+  // Use primary color for text, secondary for secondary text
+  const textPrimary = primaryColor
+  const textSecondary = secondaryColor || editorialColors.text.secondary
+  
   return (
     <div
       className={`editorial-page ${className}`}
@@ -23,11 +38,17 @@ export default function Page({ children, className = '', style = {} }: PageProps
         fontFamily: editorialTypography.fontFamily.body,
         fontSize: editorialTypography.fontSize.base,
         lineHeight: editorialTypography.lineHeight.normal,
-        color: editorialColors.text.primary,
+        color: textPrimary,
         backgroundColor: editorialColors.background.primary,
         minHeight: '100vh',
+        // CSS Variables for global theme access
+        '--editorial-primary': primaryColor,
+        '--editorial-secondary': secondaryColor || editorialColors.brand.secondary,
+        '--editorial-accent': accentColor,
+        '--editorial-text-primary': textPrimary,
+        '--editorial-text-secondary': textSecondary,
         ...style,
-      }}
+      } as React.CSSProperties}
     >
       {children}
     </div>

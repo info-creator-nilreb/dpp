@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import VersionCard from "@/components/VersionCard"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface VersionsContentProps {
   id: string
@@ -99,7 +100,7 @@ export default function VersionsContent({ id }: VersionsContentProps) {
         alignItems: "center",
         minHeight: "400px"
       }}>
-        <p style={{ color: "#7A7A7A" }}>Lade Versionen...</p>
+        <LoadingSpinner message="Lade Versionen..." />
       </div>
     )
   }

@@ -20,7 +20,7 @@ import { getOrganizationRole } from "@/lib/permissions"
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { dppId: string; mediaId: string } }
+  { params }: { params: Promise<{ dppId: string; mediaId: string }> }
 ) {
   try {
     const session = await auth()
@@ -32,7 +32,8 @@ export async function DELETE(
       )
     }
 
-    const { dppId, mediaId } = params
+    const resolvedParams = await params
+    const { dppId, mediaId } = resolvedParams
 
     // Prüfe Berechtigung zum Bearbeiten
     const permissionError = await requireEditDPP(dppId, session.user.id)

@@ -23,7 +23,8 @@ function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
       justifyContent: "space-between",
       alignItems: "center",
       flexWrap: "wrap",
-      gap: "1rem"
+      gap: "1rem",
+      marginBottom: "24px"
     }}>
       <div style={{ flex: 1, minWidth: "200px" }}>
         <div style={{

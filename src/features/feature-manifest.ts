@@ -182,6 +182,69 @@ export const FEATURE_MANIFEST: Record<string, FeatureDefinition> = {
     visibleInTrial: false,
     usableInTrial: false,
   },
+
+  // ============================================
+  // CMS BLOCK FEATURES
+  // ============================================
+  block_storytelling: {
+    key: "block_storytelling",
+    kind: "optional",
+    category: "content",
+    defaultName: "Storytelling Block",
+    defaultDescription: "Erzählende Inhaltsblöcke mit Text, Bildern und Abschnitten",
+    isCore: false,
+    isBillable: true,
+    systemFeature: false,
+    minimumPlan: "pro",
+    requiresActiveSubscription: true,
+    visibleInTrial: true,
+    usableInTrial: true,
+  },
+
+  block_quick_poll: {
+    key: "block_quick_poll",
+    kind: "optional",
+    category: "interaction",
+    defaultName: "Quick Poll Block",
+    defaultDescription: "Interaktive Umfrage-Blöcke für Nutzer-Feedback",
+    isCore: false,
+    isBillable: true,
+    systemFeature: false,
+    minimumPlan: "premium",
+    requiresActiveSubscription: true,
+    visibleInTrial: true,
+    usableInTrial: true,
+  },
+
+  block_image_text: {
+    key: "block_image_text",
+    kind: "optional",
+    category: "content",
+    defaultName: "Bild-Text Block",
+    defaultDescription: "Kombinierte Blöcke mit Bild und Text",
+    isCore: false,
+    isBillable: true,
+    systemFeature: false,
+    minimumPlan: "pro",
+    requiresActiveSubscription: true,
+    visibleInTrial: true,
+    usableInTrial: true,
+  },
+
+  cms_styling: {
+    key: "cms_styling",
+    kind: "optional",
+    category: "styling",
+    defaultName: "CMS Styling",
+    defaultDescription: "Brand-Styling für DPPs (Logo, Farben, Schriftarten)",
+    isCore: false,
+    isBillable: true,
+    systemFeature: false,
+    minimumPlan: "premium",
+    requiresActiveSubscription: true,
+    visibleInTrial: true,
+    usableInTrial: true,
+  },
 }
 
 /**

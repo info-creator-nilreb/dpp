@@ -41,7 +41,7 @@ export function TextBlock({
         fontSize: editorialTypography.fontSize[size],
         fontWeight: editorialTypography.fontWeight[weight],
         lineHeight: editorialTypography.lineHeight.normal,
-        color: editorialColors.text.primary,
+        color: 'var(--editorial-text-primary, ' + editorialColors.text.primary + ')',
         marginBottom: editorialSpacing.md,
         ...style,
       }}
@@ -72,8 +72,8 @@ export function QuoteBlock({
         lineHeight: editorialTypography.lineHeight.relaxed,
         fontWeight: editorialTypography.fontWeight.medium,
         fontStyle: 'italic',
-        color: editorialColors.text.secondary,
-        borderLeft: `4px solid ${editorialColors.brand.accent}`,
+        color: 'var(--editorial-text-secondary, ' + editorialColors.text.secondary + ')',
+        borderLeft: `4px solid var(--editorial-accent, ${editorialColors.brand.accent})`,
         paddingLeft: editorialSpacing.md,
         marginTop: editorialSpacing.xl,
         marginBottom: editorialSpacing.xl,
@@ -121,7 +121,7 @@ export function ListBlock({
       style={{
         fontSize: editorialTypography.fontSize.base,
         lineHeight: editorialTypography.lineHeight.relaxed,
-        color: editorialColors.text.primary,
+        color: 'var(--editorial-text-primary, ' + editorialColors.text.primary + ')',
         paddingLeft: editorialSpacing.md,
         marginTop: editorialSpacing.md,
         marginBottom: editorialSpacing.md,

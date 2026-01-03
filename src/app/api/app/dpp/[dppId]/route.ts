@@ -16,10 +16,11 @@ import { getOrganizationRole } from "@/lib/permissions"
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
     const session = await auth()
+    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -29,16 +30,16 @@ export async function GET(
     }
 
     // Prüfe Berechtigung mit neuem Permission-System
-    const permissionError = await requireViewDPP(params.dppId, session.user.id)
+    const permissionError = await requireViewDPP(resolvedParams.dppId, session.user.id)
     if (permissionError) {
-      console.error("Permission check failed:", params.dppId, session.user.id)
+      console.error("Permission check failed:", resolvedParams.dppId, session.user.id)
       return permissionError
     }
 
     // Lade DPP mit Medien
-    console.log("Loading DPP:", params.dppId)
+    console.log("Loading DPP:", resolvedParams.dppId)
     const dppWithMedia = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: resolvedParams.dppId },
       include: {
         organization: {
           select: {
@@ -78,10 +79,11 @@ export async function GET(
  */
 export async function PUT(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
     const session = await auth()
+    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -91,12 +93,12 @@ export async function PUT(
     }
 
     // Prüfe Berechtigung mit neuem Permission-System
-    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    const permissionError = await requireEditDPP(resolvedParams.dppId, session.user.id)
     if (permissionError) return permissionError
 
     // Lade existierenden DPP, um Status zu prüfen
     const existingDpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: resolvedParams.dppId },
       select: { status: true, category: true }
     })
 
@@ -165,7 +167,7 @@ export async function PUT(
 
     // Lade DPP für Audit-Log (alte Werte)
     const oldDpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: resolvedParams.dppId },
       select: {
         organizationId: true,
         name: true,
@@ -198,7 +200,7 @@ export async function PUT(
 
     // DPP aktualisieren
     const dpp = await prisma.dpp.update({
-      where: { id: params.dppId },
+      where: { id: resolvedParams.dppId },
       data: {
         name: name.trim(),
         description: description?.trim() || null,
@@ -250,7 +252,7 @@ export async function PUT(
       
       // Nur loggen wenn sich der Wert geändert hat
       if (oldValue !== newValue) {
-        await logDppAction(ACTION_TYPES.UPDATE, params.dppId, {
+        await logDppAction(ACTION_TYPES.UPDATE, resolvedParams.dppId, {
           actorId: session.user.id,
           actorRole: role || undefined,
           organizationId: oldDpp.organizationId,

@@ -6,6 +6,8 @@
  */
 
 import { Page, Section, TextBlock, QuoteBlock, Image, Accent } from './index'
+import { StylingConfig } from "@/lib/cms/types"
+import { resolveTheme } from "@/lib/cms/validation"
 
 interface EditorialDppData {
   id: string
@@ -42,9 +44,15 @@ interface EditorialDppData {
 
 interface EditorialDppViewProps {
   dpp: EditorialDppData
+  styling?: StylingConfig | null
 }
 
-export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
+export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps) {
+  // Resolve theme from styling config
+  const theme = resolveTheme(styling || undefined)
+  const accentColor = theme.colors.accent
+  const primaryColor = theme.colors.primary
+  const secondaryColor = theme.colors.secondary
   const heroImage = dpp.media.find(m => m.fileType.startsWith('image/'))
   const brandName = dpp.brand || dpp.organization.name
 
@@ -57,7 +65,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
   }
 
   return (
-    <Page>
+    <Page styling={styling}>
       {/* Hero Section - Full Bleed, direkt am Seitenbeginn ohne unnötigen Raum */}
       <Section variant="full-bleed" style={{ paddingTop: 0, paddingBottom: 0 }}>
         {heroImage ? (
@@ -137,7 +145,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
             {brandName && (
               <p style={{
                 fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
-                color: '#7A7A7A',
+                color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                 fontWeight: 500,
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
@@ -177,7 +185,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
         {/* Product Information Grid - Basis- & Produktdaten */}
         {(dpp.sku || dpp.gtin || dpp.countryOfOrigin) && (
           <>
-            <Accent type="highlight" style={{ margin: '3rem auto' }} />
+            <Accent type="highlight" color={accentColor} style={{ margin: '3rem auto' }} />
             
             <div style={{
               maxWidth: '900px',
@@ -193,7 +201,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
-                    color: '#7A7A7A',
+                    color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     marginBottom: '0.5rem',
                   }}>
                     SKU
@@ -209,7 +217,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
-                    color: '#7A7A7A',
+                    color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     marginBottom: '0.5rem',
                   }}>
                     GTIN/EAN
@@ -225,7 +233,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
-                    color: '#7A7A7A',
+                    color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     marginBottom: '0.5rem',
                   }}>
                     Herkunftsland
@@ -270,7 +278,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: '#7A7A7A',
+                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     }}>
                       Materialien
                     </h3>
@@ -286,7 +294,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: '#7A7A7A',
+                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     }}>
                       Materialherkunft
                     </h3>
@@ -331,7 +339,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: '#7A7A7A',
+                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     }}>
                       Pflegehinweise
                     </h3>
@@ -347,7 +355,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: '#7A7A7A',
+                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     }}>
                       Lebensdauer
                     </h3>
@@ -363,7 +371,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: '#7A7A7A',
+                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     }}>
                       Reparaturfähigkeit
                     </h3>
@@ -379,7 +387,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: '#7A7A7A',
+                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     }}>
                       Ersatzteile
                     </h3>
@@ -493,7 +501,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
                       marginBottom: '0.5rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: '#7A7A7A',
+                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
                     }}>
                       Kontakt für Rücknahme
                     </h3>
@@ -551,7 +559,7 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
 
       {/* Footer nur wenn Organization Name vorhanden (aus DPP-Daten) */}
       {dpp.organization.name && (
-        <Section variant="contained" backgroundColor="#0A0A0A">
+        <Section variant="contained" backgroundColor={primaryColor || '#0A0A0A'}>
           <div style={{
             maxWidth: '800px',
             margin: '0 auto',

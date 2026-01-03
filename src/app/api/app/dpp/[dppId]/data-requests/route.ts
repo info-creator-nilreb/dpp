@@ -10,7 +10,7 @@ import { sendSupplierDataRequestEmail } from "@/lib/email"
 import { getOrganizationRole } from "@/lib/permissions"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
-import { DPP_SECTIONS } from "@/lib/permissions"
+import { DPP_SECTIONS } from "@/lib/dpp-sections"
 
 /**
  * POST /api/app/dpp/[dppId]/data-requests
@@ -19,10 +19,11 @@ import { DPP_SECTIONS } from "@/lib/permissions"
  */
 export async function POST(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
     const session = await auth()
+    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -32,7 +33,7 @@ export async function POST(
     }
 
     // Prüfe Berechtigung zum Bearbeiten
-    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    const permissionError = await requireEditDPP(resolvedParams.dppId, session.user.id)
     if (permissionError) return permissionError
 
     const { email, partnerRole, sections, message } = await request.json()
@@ -61,7 +62,7 @@ export async function POST(
 
     // Hole DPP mit Organisation
     const dpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: resolvedParams.dppId },
       include: {
         organization: {
           select: {
@@ -90,7 +91,7 @@ export async function POST(
     const contributorToken = await prisma.contributorToken.create({
       data: {
         token,
-        dppId: params.dppId,
+        dppId: resolvedParams.dppId,
         email: email.toLowerCase().trim(),
         partnerRole,
         sections: sections.join(","),
@@ -123,7 +124,7 @@ export async function POST(
     const ipAddress = getClientIp(request)
     const role = await getOrganizationRole(session.user.id, dpp.organizationId)
 
-    await logDppAction(ACTION_TYPES.CREATE, params.dppId, {
+    await logDppAction(ACTION_TYPES.CREATE, resolvedParams.dppId, {
       actorId: session.user.id,
       actorRole: role || undefined,
       organizationId: dpp.organizationId,
@@ -159,10 +160,11 @@ export async function POST(
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
     const session = await auth()
+    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -172,12 +174,12 @@ export async function GET(
     }
 
     // Prüfe Berechtigung zum Ansehen
-    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    const permissionError = await requireEditDPP(resolvedParams.dppId, session.user.id)
     if (permissionError) return permissionError
 
     // Hole alle Contributor Tokens für diesen DPP
     const tokens = await prisma.contributorToken.findMany({
-      where: { dppId: params.dppId },
+      where: { dppId: resolvedParams.dppId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

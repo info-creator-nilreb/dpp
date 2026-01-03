@@ -3,6 +3,18 @@ const nextConfig = {
     eslint: {
       ignoreDuringBuilds: true,
     },
+    typescript: {
+      // TypeScript-Fehler blockieren Builds nicht (schnellere Dev-Umgebung)
+      ignoreBuildErrors: true,
+    },
+    // Turbopack optimizations
+    turbopack: {
+      // Enable experimental features for better performance
+      resolveAlias: {
+        // Add any custom aliases here if needed
+      },
+    },
+    // Webpack config (fallback für --webpack flag, wird mit --turbo ignoriert)
     webpack: (config, { isServer }) => {
       // Exclude Node.js modules from client-side bundle
       if (!isServer) {

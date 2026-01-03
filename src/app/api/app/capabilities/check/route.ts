@@ -2,10 +2,11 @@
  * CAPABILITY CHECK API
  * 
  * Check if a feature is available for an organization
+ * OR get all available features if no feature key is provided
  */
 
 import { auth } from "@/auth"
-import { hasFeature } from "@/lib/capabilities/resolver"
+import { hasFeature, getAvailableFeatures } from "@/lib/capabilities/resolver"
 import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
@@ -21,13 +22,6 @@ export async function GET(request: Request) {
   const featureKey = searchParams.get("feature")
   const organizationId = searchParams.get("organizationId")
 
-  if (!featureKey) {
-    return NextResponse.json(
-      { error: "Feature key is required" },
-      { status: 400 }
-    )
-  }
-
   // Get organization ID from session or parameter
   const orgId = organizationId || (session.user as any).organizationId
 
@@ -39,6 +33,20 @@ export async function GET(request: Request) {
   }
 
   try {
+    // If no feature key, return all available features
+    if (!featureKey) {
+      const features = await getAvailableFeatures({
+        organizationId: orgId,
+        userId: session.user.id,
+      })
+
+      return NextResponse.json({
+        features,
+        organizationId: orgId,
+      })
+    }
+
+    // Otherwise check specific feature
     const available = await hasFeature(featureKey, {
       organizationId: orgId,
       userId: session.user.id,

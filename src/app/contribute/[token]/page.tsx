@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import InputField from "@/components/InputField"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
-import { DPP_SECTIONS } from "@/lib/permissions"
+import { DPP_SECTIONS } from "@/lib/dpp-sections"
 
 interface DppData {
   id: string

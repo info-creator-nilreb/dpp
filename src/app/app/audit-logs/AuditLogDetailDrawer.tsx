@@ -146,7 +146,7 @@ export default function AuditLogDetailDrawer({
           </section>
 
           {/* Before / After Diff */}
-          {(log.oldValue || log.newValue) && (
+          {(log.fieldName || log.oldValue || log.newValue) && (
             <section style={{ marginBottom: "2rem" }}>
               <h3 style={{
                 fontSize: "1.125rem",
@@ -156,6 +156,12 @@ export default function AuditLogDetailDrawer({
               }}>
                 Änderungen
               </h3>
+              {log.fieldName && (
+                <div style={{ marginBottom: "1rem" }}>
+                  <strong style={{ color: "#7A7A7A" }}>Feld:</strong>{" "}
+                  <span style={{ color: "#0A0A0A" }}>{log.fieldName}</span>
+                </div>
+              )}
               <div style={{
                 backgroundColor: "#F9F9F9",
                 padding: "1rem",

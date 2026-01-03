@@ -193,6 +193,26 @@ export async function POST(
       console.log("DPP version created successfully:", version.id)
       console.log("Created version has publicPath:", version.publicUrl)
 
+      // Kopiere alle Medien vom Draft in die Version (versionsgebundene Medien)
+      if (dpp.media && dpp.media.length > 0) {
+        const versionMedia = dpp.media.map((media: any) => ({
+          versionId: version.id,
+          fileName: media.fileName,
+          fileType: media.fileType,
+          fileSize: media.fileSize,
+          storageUrl: media.storageUrl,
+          role: media.role || null,
+          blockId: media.blockId || null,
+          fieldKey: media.fieldKey || null,
+          uploadedAt: media.uploadedAt
+        }))
+        
+        await tx.dppVersionMedia.createMany({
+          data: versionMedia
+        })
+        console.log(`Copied ${versionMedia.length} media files to version ${nextVersion}`)
+      }
+
       // Setze Status auf PUBLISHED (falls noch nicht gesetzt)
       if (dpp.status !== "PUBLISHED") {
         await tx.dpp.update({

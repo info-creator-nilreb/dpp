@@ -13,6 +13,7 @@ type AccentType = 'divider' | 'highlight' | 'dot' | 'line'
 
 interface AccentProps {
   type?: AccentType
+  color?: string // Optional custom color override
   className?: string
   style?: React.CSSProperties
 }
@@ -52,16 +53,23 @@ const ACCENT_STYLES: Record<AccentType, React.CSSProperties> = {
 
 export default function Accent({
   type = 'divider',
+  color,
   className = '',
   style = {},
 }: AccentProps) {
   const Tag = type === 'divider' ? 'hr' : 'div'
+  
+  // Use custom color if provided, otherwise use CSS variable, fallback to default
+  const accentColor = color || (type === 'highlight' || type === 'dot' || type === 'line' 
+    ? `var(--editorial-accent, ${editorialColors.brand.accent})`
+    : undefined)
 
   return (
     <Tag
       className={`editorial-accent editorial-accent--${type} ${className}`}
       style={{
         ...ACCENT_STYLES[type],
+        ...(accentColor && type !== 'divider' && { backgroundColor: accentColor }),
         ...style,
       }}
     />

@@ -43,6 +43,10 @@ export default function DppMediaSection({
   pendingFiles = [],
   onPendingFilesChange 
 }: DppMediaSectionProps) {
+  // Ensure media is always an array
+  const safeMedia = Array.isArray(media) ? media : []
+  const safePendingFiles = Array.isArray(pendingFiles) ? pendingFiles : []
+  
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const { showNotification } = useNotification()
@@ -109,7 +113,7 @@ export default function DppMediaSection({
     // Prüfe, ob es eine pending file ist
     if (mediaId.startsWith("pending-")) {
       if (onPendingFilesChange) {
-        onPendingFilesChange(pendingFiles.filter(f => f.id !== mediaId))
+        onPendingFilesChange(safePendingFiles.filter(f => f.id !== mediaId))
         showNotification("Datei entfernt", "success")
       }
       return
@@ -185,7 +189,7 @@ export default function DppMediaSection({
       </div>
 
       {/* Medien-Liste */}
-      {(media.length > 0 || pendingFiles.length > 0) ? (
+      {(safeMedia.length > 0 || safePendingFiles.length > 0) ? (
         <div>
           <h3 style={{
             fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
@@ -193,15 +197,15 @@ export default function DppMediaSection({
             color: "#0A0A0A",
             marginBottom: "1rem"
           }}>
-            Medien ({media.length + pendingFiles.length})
-            {pendingFiles.length > 0 && (
+            Medien ({safeMedia.length + safePendingFiles.length})
+            {safePendingFiles.length > 0 && (
               <span style={{
                 fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
                 fontWeight: "400",
                 color: "#7A7A7A",
                 marginLeft: "0.5rem"
               }}>
-                ({pendingFiles.length} zum Upload)
+                ({safePendingFiles.length} zum Upload)
               </span>
             )}
           </h3>
@@ -211,7 +215,7 @@ export default function DppMediaSection({
             gap: "1rem"
           }}>
             {/* Pending Files */}
-            {pendingFiles.map((pendingFile) => (
+            {safePendingFiles.map((pendingFile) => (
               <div
                 key={pendingFile.id}
                 style={{
@@ -317,7 +321,7 @@ export default function DppMediaSection({
             ))}
             
             {/* Hochgeladene Medien */}
-            {media.map((item) => (
+            {safeMedia.map((item) => (
               <div
                 key={item.id}
                 style={{

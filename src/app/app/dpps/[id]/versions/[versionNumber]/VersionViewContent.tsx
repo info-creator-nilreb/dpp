@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import DppViewer from "@/components/DppViewer"
 import VersionQrCodeSection from "@/components/VersionQrCodeSection"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface VersionViewContentProps {
   id: string
@@ -78,7 +79,7 @@ export default function VersionViewContent({ id, versionNumber }: VersionViewCon
         alignItems: "center",
         minHeight: "400px"
       }}>
-        <p style={{ color: "#7A7A7A" }}>Lade Version...</p>
+        <LoadingSpinner message="Lade Version..." />
       </div>
     )
   }

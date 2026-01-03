@@ -6,7 +6,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { saveFile, isAllowedFileType, MAX_FILE_SIZE } from "@/lib/storage"
 import { requireEditDPP, requireViewDPP } from "@/lib/api-permissions"
-import { DPP_SECTIONS } from "@/lib/permissions"
+import { DPP_SECTIONS } from "@/lib/dpp-sections"
 import { scanFile } from "@/lib/virus-scanner"
 
 /**
@@ -20,10 +20,11 @@ import { scanFile } from "@/lib/virus-scanner"
  */
 export async function POST(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
     const session = await auth()
+    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -32,7 +33,7 @@ export async function POST(
       )
     }
 
-    const { dppId } = params
+    const { dppId } = resolvedParams
 
     // Prüfe Berechtigung zum Bearbeiten (inkl. Medien-Upload)
     const permissionError = await requireEditDPP(dppId, session.user.id)
@@ -41,6 +42,9 @@ export async function POST(
     // Parse FormData
     const formData = await request.formData()
     const file = formData.get("file") as File | null
+    const blockId = formData.get("blockId") as string | null
+    const fieldKey = formData.get("fieldKey") as string | null
+    const role = formData.get("role") as string | null
 
     if (!file) {
       return NextResponse.json(
@@ -83,14 +87,17 @@ export async function POST(
     // Datei im Storage speichern
     const storageUrl = await saveFile(buffer, file.name)
 
-    // Metadaten in DB speichern
+    // Metadaten in DB speichern (mit optionalen Block-Informationen und Rolle)
     const media = await prisma.dppMedia.create({
       data: {
         dppId,
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
-        storageUrl
+        storageUrl,
+        role: role || null,
+        blockId: blockId || null,
+        fieldKey: fieldKey || null
       }
     })
 
@@ -103,6 +110,9 @@ export async function POST(
           fileType: media.fileType,
           fileSize: media.fileSize,
           storageUrl: media.storageUrl,
+          role: media.role,
+          blockId: media.blockId,
+          fieldKey: media.fieldKey,
           uploadedAt: media.uploadedAt
         }
       },
@@ -124,7 +134,7 @@ export async function POST(
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
     const session = await auth()
@@ -136,7 +146,8 @@ export async function GET(
       )
     }
 
-    const { dppId } = params
+    const resolvedParams = await params
+    const { dppId } = resolvedParams
 
     // Prüfe Berechtigung zum Ansehen
     const permissionError = await requireViewDPP(dppId, session.user.id)

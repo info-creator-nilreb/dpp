@@ -7,7 +7,7 @@ import {
   canManageOrganization,
   isSuperAdmin,
 } from "@/lib/permissions"
-import { DPP_SECTIONS, DppSection } from "@/lib/permissions"
+import { DPP_SECTIONS, type DppSection } from "@/lib/dpp-sections"
 
 /**
  * API Permission Helpers

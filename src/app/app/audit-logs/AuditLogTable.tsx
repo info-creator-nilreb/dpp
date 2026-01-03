@@ -98,7 +98,8 @@ export default function AuditLogTable({
       width: "100%",
       maxWidth: "100%",
       boxSizing: "border-box",
-      overflowX: "auto"
+      overflowX: "auto",
+      WebkitOverflowScrolling: "touch"
     }}>
       {/* Desktop Table */}
       <div style={{
@@ -113,16 +114,21 @@ export default function AuditLogTable({
       }}
       className="audit-log-table-desktop"
       >
-        <div style={{ overflowX: "auto", width: "100%" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "800px" }}>
+        <div style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "20%" }} />
+            <col style={{ width: "22%" }} />
+            <col style={{ width: "25%" }} />
+            <col style={{ width: "15%" }} />
+          </colgroup>
           <thead>
             <tr style={{ backgroundColor: "#F9F9F9", borderBottom: "1px solid #E5E5E5" }}>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Zeit</th>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Ausführende Person</th>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Aktion</th>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Objekt</th>
-              <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Feld</th>
-              <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Änderung</th>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Quelle</th>
             </tr>
           </thead>
@@ -143,14 +149,38 @@ export default function AuditLogTable({
                   e.currentTarget.style.backgroundColor = "#FFFFFF"
                 }}
               >
-                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A", fontFamily: "monospace" }}>
+                <td style={{ 
+                  padding: "0.75rem", 
+                  fontSize: "0.875rem", 
+                  color: "#0A0A0A", 
+                  fontFamily: "monospace",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap"
+                }}>
                   {formatTimestamp(log.timestamp)}
                 </td>
-                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A" }}>
+                <td style={{ 
+                  padding: "0.75rem", 
+                  fontSize: "0.875rem", 
+                  color: "#0A0A0A",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap"
+                }}>
                   {log.actor?.name || log.actor?.email || log.actor?.id || "SYSTEM"}
                 </td>
-                <td style={{ padding: "0.75rem" }}>
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                <td style={{ 
+                  padding: "0.75rem",
+                  overflow: "hidden"
+                }}>
+                  <div style={{ 
+                    display: "flex", 
+                    gap: "0.5rem", 
+                    flexWrap: "wrap", 
+                    alignItems: "center",
+                    maxWidth: "100%"
+                  }}>
                     <span style={{
                       display: "inline-block",
                       padding: "0.25rem 0.5rem",
@@ -158,7 +188,9 @@ export default function AuditLogTable({
                       fontSize: "0.75rem",
                       fontWeight: "600",
                       color: "#FFFFFF",
-                      backgroundColor: getActionBadgeColor(log.actionType)
+                      backgroundColor: getActionBadgeColor(log.actionType),
+                      whiteSpace: "nowrap",
+                      flexShrink: 0
                     }}>
                       {getActionLabel(log.actionType)}
                     </span>
@@ -171,7 +203,9 @@ export default function AuditLogTable({
                         fontWeight: "600",
                         color: "#92400E",
                         backgroundColor: "#FEF3C7",
-                        border: "1px solid #FCD34D"
+                        border: "1px solid #FCD34D",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0
                       }}>
                         Compliance-relevant
                       </span>
@@ -184,33 +218,29 @@ export default function AuditLogTable({
                         fontSize: "0.6875rem",
                         fontWeight: "600",
                         color: "#FFFFFF",
-                        backgroundColor: "#E20074"
+                        backgroundColor: "#E20074",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0
                       }}>
                         KI-unterstützt
                       </span>
                     )}
                   </div>
                 </td>
-                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A" }}>
-                  {getEntityLabel(log.entityType)} {log.entityId ? `(${log.entityId.substring(0, 8)}...)` : ""}
+                <td style={{ 
+                  padding: "0.75rem", 
+                  fontSize: "0.875rem", 
+                  color: "#0A0A0A",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap"
+                }}>
+                  {getEntityLabel(log.entityType)}
                 </td>
-                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#7A7A7A" }}>
-                  {log.fieldName || "-"}
-                </td>
-                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A", fontFamily: "monospace", maxWidth: "200px" }}>
-                  {log.oldValue && log.newValue ? (
-                    <span>
-                      <span style={{ color: "#EF4444" }}>{truncateValue(log.oldValue)}</span>
-                      {" → "}
-                      <span style={{ color: "#10B981" }}>{truncateValue(log.newValue)}</span>
-                    </span>
-                  ) : log.newValue ? (
-                    <span style={{ color: "#10B981" }}>{truncateValue(log.newValue)}</span>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-                <td style={{ padding: "0.75rem" }}>
+                <td style={{ 
+                  padding: "0.75rem",
+                  overflow: "hidden"
+                }}>
                   <span style={{
                     display: "inline-block",
                     padding: "0.25rem 0.5rem",
@@ -218,7 +248,12 @@ export default function AuditLogTable({
                     fontSize: "0.75rem",
                     fontWeight: "600",
                     color: "#FFFFFF",
-                    backgroundColor: getSourceBadgeColor(log.source)
+                    backgroundColor: getSourceBadgeColor(log.source),
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "100%",
+                    boxSizing: "border-box"
                   }}>
                     {getSourceLabel(log.source)}
                   </span>
@@ -300,6 +335,23 @@ export default function AuditLogTable({
       </div>
 
       <style jsx>{`
+        .audit-log-table-container {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        .audit-log-table-desktop {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        .audit-log-table-desktop > div {
+          width: 100%;
+          max-width: 100%;
+        }
+        .audit-log-table-desktop table {
+          width: 100%;
+        }
         @media (min-width: 768px) {
           .audit-log-table-desktop {
             display: block !important;
