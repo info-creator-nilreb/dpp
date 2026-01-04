@@ -6,68 +6,28 @@
  * Editor für einfache Bild-Blöcke
  */
 
-import { useState } from "react"
-import FileUploadArea from "@/components/FileUploadArea"
-import { useNotification } from "@/components/NotificationProvider"
+import FileField from "@/components/cms/fields/FileField"
 
 interface ImageBlockEditorProps {
   content: Record<string, any>
   onChange: (content: Record<string, any>) => void
   dppId?: string
+  blockId?: string // Block-ID für versionsgebundene Medien
+  blockName?: string // Block-Name (für Hero-Logik)
 }
 
 export default function ImageBlockEditor({
   content,
   onChange,
-  dppId
+  dppId,
+  blockId,
+  blockName
 }: ImageBlockEditorProps) {
-  const { showNotification } = useNotification()
-  const [uploading, setUploading] = useState(false)
-  
   const data = {
     url: content.url || "",
     alt: content.alt || "",
     caption: content.caption || "",
     alignment: content.alignment || "center"
-  }
-
-  async function handleImageUpload(file: File) {
-    if (!dppId) {
-      showNotification("DPP-ID fehlt", "error")
-      return
-    }
-
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch(`/api/app/dpp/${dppId}/media`, {
-        method: "POST",
-        body: formData
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.error || errorData.message || `Fehler beim Hochladen (${response.status})`
-        throw new Error(errorMessage)
-      }
-
-      const result = await response.json()
-
-      if (!result.media || !result.media.storageUrl) {
-        throw new Error("Ungültige Antwort vom Server: Keine Bild-URL erhalten")
-      }
-
-      updateField("url", result.media.storageUrl)
-      showNotification("Bild erfolgreich hochgeladen", "success")
-    } catch (error: any) {
-      console.error("Error uploading image:", error)
-      const errorMessage = error.message || "Fehler beim Hochladen des Bildes"
-      showNotification(errorMessage, "error")
-    } finally {
-      setUploading(false)
-    }
   }
 
   function updateField(field: string, value: any) {
@@ -77,59 +37,70 @@ export default function ImageBlockEditor({
     })
   }
 
+  const isImage = data.url && (
+    data.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) || 
+    data.url.startsWith("/uploads/") && !data.url.endsWith(".pdf")
+  )
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {/* Image Upload */}
-      {dppId && (
-        <div>
-          <FileUploadArea
-            accept="image/*"
-            maxSize={5 * 1024 * 1024}
-            onFileSelect={handleImageUpload}
-            disabled={uploading}
-            label="Bild hochladen"
-            description="JPEG, PNG, GIF oder WebP (max. 5 MB)"
-          />
-        </div>
-      )}
-
-      {/* Image Preview */}
-      {data.url && (
+      {/* Thumbnail-Preview direkt im Block (wenn Bild vorhanden) */}
+      {data.url && isImage && (
         <div style={{
           padding: "1rem",
           backgroundColor: "#F9F9F9",
           border: "1px solid #E5E5E5",
-          borderRadius: "8px"
+          borderRadius: "8px",
+          marginBottom: "0.5rem"
         }}>
+          <p style={{
+            fontSize: "0.75rem",
+            fontWeight: "600",
+            color: "#7A7A7A",
+            marginBottom: "0.75rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em"
+          }}>
+            Vorschau
+          </p>
           <img
             src={data.url}
-            alt={data.alt || "Bild"}
+            alt={data.alt || "Bildvorschau"}
             style={{
-              maxWidth: "100%",
+              width: "100%",
+              maxWidth: "400px",
+              height: "auto",
               maxHeight: "300px",
+              objectFit: "contain",
               borderRadius: "6px",
-              marginBottom: "0.75rem",
+              border: "1px solid #E5E5E5",
+              backgroundColor: "#FFFFFF",
               display: "block"
             }}
-          />
-          <button
-            onClick={() => updateField("url", "")}
-            style={{
-              fontSize: "0.75rem",
-              color: "#DC2626",
-              backgroundColor: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: 0
+            onError={(e) => {
+              console.error("Error loading preview image:", data.url)
             }}
-          >
-            Bild entfernen
-          </button>
+          />
         </div>
       )}
 
-      {/* Image URL (Fallback wenn kein Upload möglich) */}
-      {!dppId && (
+      {/* Image Upload mit FileField-Komponente */}
+      {dppId ? (
+        <FileField
+          label="Bild"
+          value={data.url}
+          onChange={(url) => updateField("url", url || "")}
+          dppId={dppId}
+          blockId={blockId}
+          fieldKey="url"
+          blockName={blockName}
+          fileType="media"
+          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+          maxSize={5 * 1024 * 1024}
+          description="JPEG, PNG, GIF oder WebP (max. 5 MB)"
+          helperText="Dieses Bild wird im Block angezeigt"
+        />
+      ) : (
         <div>
           <label style={{
             display: "block",

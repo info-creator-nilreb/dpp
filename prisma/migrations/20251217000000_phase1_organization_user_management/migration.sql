@@ -74,12 +74,12 @@ BEGIN
 END $$;
 
 -- ============================================
--- 4. Update Membership default role
+-- 4. Add role column to memberships and set default
 -- ============================================
 
--- Change default role from ORG_MEMBER to VIEWER
+-- Add role column to memberships table (if it doesn't exist)
 ALTER TABLE "memberships"
-  ALTER COLUMN "role" SET DEFAULT 'VIEWER';
+  ADD COLUMN IF NOT EXISTS "role" TEXT NOT NULL DEFAULT 'VIEWER';
 
 -- Create index on role
 CREATE INDEX IF NOT EXISTS "memberships_role_idx" ON "memberships"("role");

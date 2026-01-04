@@ -4,15 +4,15 @@
  * Image Text Block Editor
  */
 
-import { useState } from "react"
 import { ImageTextBlockContent } from "@/lib/cms/types"
-import FileUploadArea from "@/components/FileUploadArea"
-import { useNotification } from "@/components/NotificationProvider"
+import FileField from "@/components/cms/fields/FileField"
 
 interface ImageTextBlockEditorProps {
   content: Record<string, any>
   onChange: (content: ImageTextBlockContent) => void
   dppId?: string
+  blockId?: string
+  blockName?: string
 }
 
 const LAYOUT_OPTIONS = [
@@ -25,46 +25,14 @@ const LAYOUT_OPTIONS = [
 export default function ImageTextBlockEditor({
   content,
   onChange,
-  dppId
+  dppId,
+  blockId,
+  blockName
 }: ImageTextBlockEditorProps) {
-  const { showNotification } = useNotification()
-  const [uploading, setUploading] = useState(false)
-  
   const data: ImageTextBlockContent = {
     layout: content.layout || "image_left",
     image: content.image || { url: "", alt: "" },
     text: content.text || { content: "" }
-  }
-
-  async function handleImageUpload(file: File) {
-    if (!dppId) {
-      showNotification("DPP-ID fehlt", "error")
-      return
-    }
-
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch(`/api/app/dpp/${dppId}/media`, {
-        method: "POST",
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || "Fehler beim Hochladen")
-      }
-
-      updateImage("url", result.media.storageUrl)
-      showNotification("Bild erfolgreich hochgeladen", "success")
-    } catch (error: any) {
-      showNotification(error.message || "Fehler beim Hochladen", "error")
-    } finally {
-      setUploading(false)
-    }
   }
 
   function updateField(field: keyof ImageTextBlockContent, value: any) {
@@ -110,77 +78,87 @@ export default function ImageTextBlockEditor({
 
       {/* Image */}
       <div>
-        <label style={{
-          display: "block",
-          fontSize: "0.875rem",
-          fontWeight: "500",
-          color: "#0A0A0A",
-          marginBottom: "0.5rem"
-        }}>
-          Bild *
-        </label>
-        
-        {dppId && (
-          <div style={{ marginBottom: "1rem" }}>
-            <FileUploadArea
-              accept="image/*"
-              maxSize={5 * 1024 * 1024}
-              onFileSelect={handleImageUpload}
-              disabled={uploading}
-              label="Bild hochladen"
-              description="JPEG, PNG, GIF oder WebP (max. 5 MB)"
+        {dppId && blockId ? (
+          <FileField
+            label="Bild"
+            value={data.image.url}
+            onChange={(url) => updateImage("url", url || "")}
+            dppId={dppId}
+            blockId={blockId}
+            fieldKey="image"
+            blockName={blockName}
+            fileType="media"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            maxSize={5 * 1024 * 1024}
+            description="JPEG, PNG, GIF oder WebP (max. 5 MB)"
+            required
+          />
+        ) : (
+          <div>
+            <label style={{
+              display: "block",
+              fontSize: "0.875rem",
+              fontWeight: "500",
+              color: "#0A0A0A",
+              marginBottom: "0.5rem"
+            }}>
+              Bild-URL *
+            </label>
+            <input
+              type="url"
+              value={data.image.url}
+              onChange={(e) => updateImage("url", e.target.value)}
+              placeholder="https://example.com/image.jpg"
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                border: "1px solid #E5E5E5",
+                borderRadius: "8px",
+                fontSize: "0.875rem"
+              }}
             />
           </div>
         )}
 
+        {/* Thumbnail-Preview */}
         {data.image.url && (
           <div style={{
-            marginBottom: "1rem",
+            marginTop: "1rem",
             padding: "1rem",
             backgroundColor: "#F9F9F9",
             border: "1px solid #E5E5E5",
             borderRadius: "8px"
           }}>
+            <p style={{
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              color: "#7A7A7A",
+              marginBottom: "0.75rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em"
+            }}>
+              Vorschau
+            </p>
             <img
               src={data.image.url}
               alt={data.image.alt || "Bild"}
               style={{
-                maxWidth: "100%",
-                maxHeight: "200px",
+                width: "100%",
+                maxWidth: "400px",
+                height: "auto",
+                maxHeight: "300px",
+                objectFit: "contain",
                 borderRadius: "6px",
-                marginBottom: "0.5rem"
+                border: "1px solid #E5E5E5",
+                backgroundColor: "#FFFFFF",
+                display: "block"
+              }}
+              onError={(e) => {
+                console.error("Error loading preview image:", data.image.url)
               }}
             />
-            <button
-              onClick={() => updateImage("url", "")}
-              style={{
-                fontSize: "0.75rem",
-                color: "#DC2626",
-                backgroundColor: "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: 0
-              }}
-            >
-              Bild entfernen
-            </button>
           </div>
         )}
-
-        <input
-          type="url"
-          value={data.image.url}
-          onChange={(e) => updateImage("url", e.target.value)}
-          placeholder="Oder Bild-URL eingeben"
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            border: "1px solid #E5E5E5",
-            borderRadius: "8px",
-            fontSize: "0.875rem",
-            marginBottom: "0.75rem"
-          }}
-        />
         <input
           type="text"
           value={data.image.alt}

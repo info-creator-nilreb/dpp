@@ -8,6 +8,7 @@
 import { Page, Section, TextBlock, QuoteBlock, Image, Accent } from './index'
 import { StylingConfig } from "@/lib/cms/types"
 import { resolveTheme } from "@/lib/cms/validation"
+import { getHeroImage, getGalleryImages, MediaItem } from "@/lib/media/hero-logic"
 
 interface EditorialDppData {
   id: string
@@ -35,6 +36,10 @@ interface EditorialDppData {
     id: string
     storageUrl: string
     fileType: string
+    role?: string | null
+    blockId?: string | null
+    fieldKey?: string | null
+    fileName: string
   }>
   versionInfo?: {
     version: number
@@ -53,7 +58,21 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
   const accentColor = theme.colors.accent
   const primaryColor = theme.colors.primary
   const secondaryColor = theme.colors.secondary
-  const heroImage = dpp.media.find(m => m.fileType.startsWith('image/'))
+  
+  // Hero-Logik: Erstes Bild aus "Basis- & Produktdaten"-Block
+  const mediaItems: MediaItem[] = dpp.media.map(m => ({
+    id: m.id,
+    storageUrl: m.storageUrl,
+    fileType: m.fileType,
+    role: m.role || null,
+    blockId: m.blockId || null,
+    fieldKey: m.fieldKey || null,
+    fileName: m.fileName
+  }))
+  
+  const heroImageItem = getHeroImage(mediaItems, "Basis- & Produktdaten")
+  const heroImage = heroImageItem ? { storageUrl: heroImageItem.storageUrl } : null
+  const galleryImages = getGalleryImages(mediaItems, "Basis- & Produktdaten")
   const brandName = dpp.brand || dpp.organization.name
 
   const formatDate = (date: Date) => {
@@ -520,8 +539,8 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
         </>
       )}
 
-      {/* Additional Media Gallery - Nur wenn weitere Bilder vorhanden */}
-      {dpp.media.length > 1 && (
+      {/* Product Gallery - Nur Bilder aus "Basis- & Produktdaten"-Block mit Rolle "gallery_image" */}
+      {galleryImages.length > 0 && (
         <>
           <Accent type="divider" style={{ margin: '4rem auto 3rem' }} />
           
@@ -534,7 +553,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
               textAlign: 'center',
               letterSpacing: '-0.02em',
             }}>
-              Galerie
+              Produktgalerie
             </h2>
             
             <div style={{
@@ -542,15 +561,13 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
               gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
               gap: '1.5rem',
             }}>
-              {dpp.media.slice(1).map((media) => (
-                media.fileType.startsWith('image/') && (
-                  <Image
-                    key={media.id}
-                    src={media.storageUrl}
-                    alt={`${dpp.name} - Bild ${media.id}`}
-                    aspectRatio="4:3"
-                  />
-                )
+              {galleryImages.map((media) => (
+                <Image
+                  key={media.id}
+                  src={media.storageUrl}
+                  alt={`${dpp.name} - ${media.fileName || 'Bild'}`}
+                  aspectRatio="4:3"
+                />
               ))}
             </div>
           </Section>

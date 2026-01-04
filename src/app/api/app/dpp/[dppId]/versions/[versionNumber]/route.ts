@@ -39,7 +39,7 @@ export async function GET(
       )
     }
 
-    // Hole spezifische Version
+    // Hole spezifische Version mit Medien
     const version = await prisma.dppVersion.findUnique({
       where: {
         dppId_version: {
@@ -59,6 +59,9 @@ export async function GET(
           select: {
             name: true
           }
+        },
+        media: {
+          orderBy: { uploadedAt: "asc" }
         }
       }
     })
@@ -102,7 +105,18 @@ export async function GET(
         },
         publicUrl: absolutePublicUrl, // Absolute URL für Client
         qrCodeImageUrl: version.qrCodeImageUrl,
-        dppName: version.dpp.name
+        dppName: version.dpp.name,
+        media: version.media.map(m => ({
+          id: m.id,
+          fileName: m.fileName,
+          fileType: m.fileType,
+          fileSize: m.fileSize,
+          storageUrl: m.storageUrl,
+          role: m.role,
+          blockId: m.blockId,
+          fieldKey: m.fieldKey,
+          uploadedAt: m.uploadedAt.toISOString()
+        }))
       }
     }, { status: 200 })
   } catch (error: any) {

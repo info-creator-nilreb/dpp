@@ -132,6 +132,7 @@ export default function ContentBlockEditor({ block, onUpdate, dppId }: ContentBl
             content={content}
             onChange={handleContentChange}
             dppId={dppId}
+            blockId={block.id}
           />
         )
       case "quick_poll":
@@ -147,6 +148,8 @@ export default function ContentBlockEditor({ block, onUpdate, dppId }: ContentBl
             content={content}
             onChange={handleContentChange}
             dppId={dppId}
+            blockId={block.id}
+            blockName={`Content Block: ${block.type}`}
           />
         )
       case "text":
@@ -162,6 +165,8 @@ export default function ContentBlockEditor({ block, onUpdate, dppId }: ContentBl
             content={content}
             onChange={handleContentChange}
             dppId={dppId}
+            blockId={block.id}
+            blockName={`Content Block: ${block.type}`} // Content-Blöcke haben keinen Namen, verwende Typ
           />
         )
       case "video":

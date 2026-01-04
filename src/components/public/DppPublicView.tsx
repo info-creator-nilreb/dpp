@@ -28,7 +28,7 @@ export default async function DppPublicView({
   let styling: any = null
 
   if (versionNumber) {
-    // Load specific version
+    // Load specific version with version-bound media
     const version = await prisma.dppVersion.findUnique({
       where: {
         dppId_version: {
@@ -41,12 +41,11 @@ export default async function DppPublicView({
           include: {
             organization: {
               select: { name: true }
-            },
-            media: {
-              orderBy: { uploadedAt: "asc" },
-              take: 10
             }
           }
+        },
+        media: {
+          orderBy: { uploadedAt: "asc" }
         }
       }
     })
@@ -75,10 +74,15 @@ export default async function DppPublicView({
       takebackContact: version.takebackContact,
       secondLifeInfo: version.secondLifeInfo,
       organization: version.dpp.organization,
-      media: version.dpp.media.map((m: any) => ({
+      // Verwende Version-Medien (versionsgebunden)
+      media: version.media.map((m: any) => ({
         id: m.id,
         storageUrl: m.storageUrl,
-        fileType: m.fileType
+        fileType: m.fileType,
+        role: m.role,
+        blockId: m.blockId,
+        fieldKey: m.fieldKey,
+        fileName: m.fileName
       })),
       versionInfo: {
         version: version.version,

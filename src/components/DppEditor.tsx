@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Fragment, useRef } from "react"
 import { useRouter } from "next/navigation"
-import DppMediaSection from "@/components/DppMediaSection"
 import CountrySelect from "@/components/CountrySelect"
 import { useNotification } from "@/components/NotificationProvider"
 import InputField from "@/components/InputField"
@@ -514,22 +513,7 @@ export default function DppEditor({
     // scheduleSave wird automatisch durch useEffect([dpp]) getriggert
   }
 
-  // Aktualisiere Medien-Liste nach Upload/Delete
-  const refreshMedia = async () => {
-    if (!dpp.id || dpp.id === "new") return
-    try {
-      const response = await fetch(`/api/app/dpp/${dpp.id}/media`)
-      if (response.ok) {
-        const data = await response.json()
-        setDpp(prev => ({ ...prev, media: data.media }))
-        // Trigger auto-save after media change (media is part of DPP data)
-        hasChangesRef.current = true
-        scheduleSave()
-      }
-    } catch (error) {
-      console.error("Error refreshing media:", error)
-    }
-  }
+  // Medien werden jetzt über File-Felder in Blöcken verwaltet - keine zentrale Medienverwaltung mehr
 
   // Auto-Save: Save DPP data as draft
   // CRITICAL: Server is write-only - never reload from server response
@@ -1668,7 +1652,7 @@ export default function DppEditor({
             color: "#7A7A7A",
             marginBottom: "1rem"
           }}>
-            Zertifikate können über den Medien-Upload hochgeladen werden.
+            Zertifikate können über File-Felder in Blöcken hochgeladen werden.
           </p>
         </div>
       </AccordionSection>
@@ -1733,30 +1717,7 @@ export default function DppEditor({
         />
       </AccordionSection>
 
-      {/* Medien & Dokumente */}
-      <div style={{
-        backgroundColor: "#FFFFFF",
-        padding: "clamp(1.5rem, 4vw, 2rem)",
-        borderRadius: "12px",
-        border: "1px solid #CDCDCD",
-        marginBottom: "2rem"
-      }}>
-        <h2 style={{
-          fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
-          fontWeight: "700",
-          color: "#0A0A0A",
-          marginBottom: "1rem"
-        }}>
-          Medien & Dokumente
-        </h2>
-        <DppMediaSection 
-          dppId={dpp.id && dpp.id !== "new" ? dpp.id : null} 
-          media={Array.isArray(dpp.media) ? dpp.media : []} 
-          onMediaChange={refreshMedia}
-          pendingFiles={pendingFiles}
-          onPendingFilesChange={setPendingFiles}
-        />
-      </div>
+      {/* Medien werden jetzt ausschließlich über File-Felder in Blöcken hochgeladen */}
 
       {/* Bottom padding - only if no external handlers (footer pattern) */}
       {!externalOnSave && !externalOnPublish && (
