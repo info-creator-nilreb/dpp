@@ -79,39 +79,36 @@ export async function signupUser(data: SignupData): Promise<{
         throw new Error("Organization name required")
       }
 
-      // Erstelle Organisation mit User als ORG_ADMIN
+      // Erstelle Organisation mit User als ORG_ADMIN (innerhalb der gleichen Transaction)
       const result = await createOrganizationWithFirstUser(
         user.id,
-        data.organizationName
+        data.organizationName,
+        tx // Wichtig: Transaction weitergeben
       )
       organizationId = result.organizationId
       role = "ORG_ADMIN"
-
-      // User-Status auf active setzen
-      await tx.user.update({
-        where: { id: user.id },
-        data: { status: "active" },
-      })
+      
+      // User-Status wird bereits in createOrganizationWithFirstUser auf "active" gesetzt
     } else if (data.organizationAction === "request_to_join_organization") {
       // Beitritt nur über Einladung möglich
       if (!data.invitationToken) {
         throw new Error("Invitation token required to join an organization")
       }
 
-      // Akzeptiere Einladung
-      const invitationResult = await acceptInvitation(data.invitationToken, user.id)
+      // Akzeptiere Einladung (innerhalb der gleichen Transaction)
+      const invitationResult = await acceptInvitation(
+        data.invitationToken,
+        user.id,
+        tx // Wichtig: Transaction weitergeben
+      )
       if (!invitationResult) {
         throw new Error("Invalid or expired invitation token")
       }
 
       organizationId = invitationResult.organizationId
       role = invitationResult.role
-
-      // User-Status auf active setzen, da Einladung akzeptiert wurde
-      await tx.user.update({
-        where: { id: user.id },
-        data: { status: "active" },
-      })
+      
+      // User-Status wird bereits in acceptInvitation auf "active" gesetzt
     } else {
       throw new Error("Invalid organization action")
     }

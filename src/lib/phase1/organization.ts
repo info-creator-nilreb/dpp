@@ -12,43 +12,54 @@ import { FIRST_USER_ROLE } from "./roles"
  * Erstellt eine neue Organisation mit Erstnutzer
  * 
  * Regel: Der erste User, der eine Organisation erstellt, erhält automatisch ORG_ADMIN
+ * 
+ * @param userId - ID des Users, der die Organisation erstellt
+ * @param organizationName - Name der neuen Organisation
+ * @param tx - Optional: Prisma Transaction Client. Falls nicht angegeben, wird eine neue Transaction gestartet
  */
 export async function createOrganizationWithFirstUser(
   userId: string,
-  organizationName: string
+  organizationName: string,
+  tx?: any // Prisma Transaction Client
 ): Promise<{ organizationId: string; membershipId: string }> {
-  return await prisma.$transaction(async (tx) => {
-    // 1. Organisation erstellen
-    const organization = await tx.organization.create({
-      data: {
-        name: organizationName,
-        status: "active",
-      },
+  // Wenn keine Transaction übergeben wurde, starte eine neue
+  if (!tx) {
+    return await prisma.$transaction(async (transactionClient) => {
+      return createOrganizationWithFirstUser(userId, organizationName, transactionClient)
     })
+  }
 
-    // 2. User zur Organisation zuordnen
-    await tx.user.update({
-      where: { id: userId },
-      data: {
-        organizationId: organization.id,
-        status: "active",
-      },
-    })
-
-    // 3. Membership erstellen (Legacy-Support + Phase 1)
-    const membership = await tx.membership.create({
-      data: {
-        userId,
-        organizationId: organization.id,
-        role: FIRST_USER_ROLE, // Automatisch ORG_ADMIN
-      },
-    })
-
-    return {
-      organizationId: organization.id,
-      membershipId: membership.id,
-    }
+  // Verwende die übergebene Transaction
+  // 1. Organisation erstellen
+  const organization = await tx.organization.create({
+    data: {
+      name: organizationName,
+      status: "active",
+    },
   })
+
+  // 2. User zur Organisation zuordnen
+  await tx.user.update({
+    where: { id: userId },
+    data: {
+      organizationId: organization.id,
+      status: "active",
+    },
+  })
+
+  // 3. Membership erstellen (Legacy-Support + Phase 1)
+  const membership = await tx.membership.create({
+    data: {
+      userId,
+      organizationId: organization.id,
+      role: FIRST_USER_ROLE, // Automatisch ORG_ADMIN
+    },
+  })
+
+  return {
+    organizationId: organization.id,
+    membershipId: membership.id,
+  }
 }
 
 /**

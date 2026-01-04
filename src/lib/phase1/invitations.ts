@@ -46,12 +46,25 @@ export async function createInvitation(
  * Akzeptiert eine Einladung
  * 
  * Wird aufgerufen, wenn User sich registriert oder einloggt
+ * 
+ * @param token - Einladungs-Token
+ * @param userId - ID des Users, der die Einladung akzeptiert
+ * @param tx - Optional: Prisma Transaction Client. Falls nicht angegeben, wird eine neue Transaction gestartet
  */
 export async function acceptInvitation(
   token: string,
-  userId: string
+  userId: string,
+  tx?: any // Prisma Transaction Client
 ): Promise<{ organizationId: string; role: Phase1Role } | null> {
-  const invitation = await prisma.invitation.findUnique({
+  // Wenn keine Transaction übergeben wurde, starte eine neue
+  if (!tx) {
+    return await prisma.$transaction(async (transactionClient) => {
+      return acceptInvitation(token, userId, transactionClient)
+    })
+  }
+
+  // Prüfe Einladung (innerhalb der Transaction, wenn übergeben, sonst außerhalb)
+  const invitation = await tx.invitation.findUnique({
     where: { token },
   })
 
@@ -64,8 +77,8 @@ export async function acceptInvitation(
     return null
   }
 
-  // Prüfe ob E-Mail übereinstimmt
-  const user = await prisma.user.findUnique({
+  // Prüfe ob E-Mail übereinstimmt (User sollte in der Transaction sichtbar sein)
+  const user = await tx.user.findUnique({
     where: { id: userId },
     select: { email: true },
   })
@@ -74,38 +87,37 @@ export async function acceptInvitation(
     return null
   }
 
-  return await prisma.$transaction(async (tx) => {
-    // 1. User zur Organisation zuordnen
-    await tx.user.update({
-      where: { id: userId },
-      data: {
-        organizationId: invitation.organizationId,
-        status: "active",
-      },
-    })
-
-    // 2. Membership erstellen
-    await tx.membership.create({
-      data: {
-        userId,
-        organizationId: invitation.organizationId,
-        role: invitation.role,
-      },
-    })
-
-    // 3. Einladung als akzeptiert markieren
-    await tx.invitation.update({
-      where: { id: invitation.id },
-      data: {
-        status: "accepted",
-      },
-    })
-
-    return {
+  // Verwende die übergebene Transaction
+  // 1. User zur Organisation zuordnen
+  await tx.user.update({
+    where: { id: userId },
+    data: {
       organizationId: invitation.organizationId,
-      role: invitation.role as Phase1Role,
-    }
+      status: "active",
+    },
   })
+
+  // 2. Membership erstellen
+  await tx.membership.create({
+    data: {
+      userId,
+      organizationId: invitation.organizationId,
+      role: invitation.role,
+    },
+  })
+
+  // 3. Einladung als akzeptiert markieren
+  await tx.invitation.update({
+    where: { id: invitation.id },
+    data: {
+      status: "accepted",
+    },
+  })
+
+  return {
+    organizationId: invitation.organizationId,
+    role: invitation.role as Phase1Role,
+  }
 }
 
 /**
