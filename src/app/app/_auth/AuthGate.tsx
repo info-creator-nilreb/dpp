@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { getBaseUrl } from "@/lib/getBaseUrl"
 
 /**
  * AuthGate - Server Component
@@ -18,11 +19,12 @@ export default async function AuthGate({
   // AuthGate prüft NUR Business-Logik (Onboarding)
 
   // Prüfe ob Onboarding benötigt wird via API route (Prisma not in render path)
-  // Use relative URL - Next.js fetch automatically forwards cookies for same-origin requests
+  // Use absolute URL - Server Components require absolute URLs for fetch
   let needsOnboarding = false
   
   try {
-    const response = await fetch("/api/app/onboarding/check", {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/app/onboarding/check`, {
       cache: "no-store",
     })
 
