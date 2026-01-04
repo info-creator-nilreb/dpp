@@ -81,10 +81,34 @@ export async function GET() {
       // Check if subscription has a Subscription Model with trial_days
       const hasTrialDays = subscription.subscriptionModel?.trialDays && subscription.subscriptionModel.trialDays > 0
       
-      if (hasTrialDays && subscription.trialStartedAt && subscription.subscriptionModel) {
-        // Calculate trial end date from trialStartedAt + trialDays
+      // Check if subscription is in trial status (either via trialStartedAt or status)
+      const isTrialStatus = subscription.status === "trial_active" || subscription.status === "trial"
+      
+      if (isTrialStatus && hasTrialDays && subscription.subscriptionModel) {
+        // Handle trial - use trialStartedAt if set, otherwise use createdAt or now
+        let trialStartDate: Date
+        if (subscription.trialStartedAt) {
+          trialStartDate = new Date(subscription.trialStartedAt)
+        } else {
+          // Fallback: Use createdAt if available, otherwise use now
+          // If trialStartedAt is null but status is trial_active, assume trial started now or at subscription creation
+          trialStartDate = subscription.createdAt ? new Date(subscription.createdAt) : new Date()
+          
+          // Update subscription to set trialStartedAt (if not set)
+          try {
+            await prisma.subscription.update({
+              where: { id: subscription.id },
+              data: { trialStartedAt: trialStartDate }
+            })
+          } catch (updateError) {
+            // Ignore update errors (e.g. connection pool issues) - continue with calculated date
+            console.warn("[Subscription Context] Could not update trialStartedAt:", updateError)
+          }
+        }
+        
+        // Calculate trial end date from trialStartDate + trialDays
         const subscriptionModel = subscription.subscriptionModel
-        const trialEnd = new Date(subscription.trialStartedAt)
+        const trialEnd = new Date(trialStartDate)
         trialEnd.setDate(trialEnd.getDate() + (subscriptionModel.trialDays || 0))
         
         const now = new Date()
@@ -95,12 +119,17 @@ export async function GET() {
           canAccessApp = true // Trial users can access the app
         } else {
           // Trial expired - automatically expire subscription if still in trial status
-          if (subscription.status === "trial_active") {
+          if (subscription.status === "trial_active" || subscription.status === "trial") {
             // Update subscription status to expired
-            await prisma.subscription.update({
-              where: { id: subscription.id },
-              data: { status: "expired" }
-            })
+            try {
+              await prisma.subscription.update({
+                where: { id: subscription.id },
+                data: { status: "expired" }
+              })
+            } catch (updateError) {
+              // Ignore update errors - continue with expired state
+              console.warn("[Subscription Context] Could not update expired status:", updateError)
+            }
             state = "none"
             canAccessApp = false
           } else if (subscription.status === "active") {
