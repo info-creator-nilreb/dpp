@@ -35,6 +35,9 @@ export async function signupUser(data: SignupData): Promise<{
   userId: string
   organizationId: string
   role: string
+  verificationToken: string
+  email: string
+  name: string
 }> {
   // Prüfe ob E-Mail bereits existiert
   const existingUser = await prisma.user.findUnique({
@@ -117,6 +120,9 @@ export async function signupUser(data: SignupData): Promise<{
       userId: user.id,
       organizationId,
       role,
+      verificationToken,
+      email: user.email,
+      name: `${data.firstName} ${data.lastName}`,
     }
   })
 }
