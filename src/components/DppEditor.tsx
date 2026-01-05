@@ -9,7 +9,7 @@ import InputField from "@/components/InputField"
 import StickySaveBar from "@/components/StickySaveBar"
 import { TrialBanner } from "@/components/TrialBanner"
 import { useCapabilities } from "@/hooks/useCapabilities"
-import { DPP_SECTIONS } from "@/lib/permissions"
+import { DPP_SECTIONS } from "@/lib/permissions-constants"
 
 interface PendingFile {
   id: string

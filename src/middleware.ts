@@ -1,18 +1,27 @@
 import { auth } from "@/auth"
 import { NextResponse } from "next/server"
 import { superAdminMiddleware } from "./middleware-super-admin"
+import { hasPasswordProtectionAccessEdge } from "./lib/password-protection-edge"
 
 export default auth(async (req) => {
   const { pathname } = req.nextUrl
 
-  // 🔴 FIX: Super Admin UI UND API Routen abfangen
+  // 🔴 FIX: Super Admin UI UND API Routen abfangen (UNPROTECTED)
   if (
     pathname.startsWith("/super-admin") ||
     pathname.startsWith("/api/super-admin")
   ) {
     const superAdminResponse = await superAdminMiddleware(req)
+    // Set pathname header for Super-Admin routes too (so PasswordProtectionWrapper can skip them)
+    superAdminResponse.headers.set("x-pathname", pathname)
     return superAdminResponse
   }
+
+  // PASSWORD PROTECTION: Skip check in middleware (Edge Runtime can't use Prisma)
+  // Full check is done in PasswordProtectionWrapper (Server Component with Prisma access)
+  // Set header with pathname so Server Components can access it
+  const response = NextResponse.next()
+  response.headers.set("x-pathname", pathname)
 
   // Continue with tenant/user auth (existing logic)
   const session = req.auth
@@ -57,15 +66,15 @@ export default auth(async (req) => {
   }
 
   // App-Routen: Zugriff erlauben (Membership-Prüfung erfolgt im Layout)
-  // WICHTIG: Prisma kann nicht im Edge Runtime (Middleware) verwendet werden
+  // WICHTIG: Prisma kann nicht im Edge Runtime (Middleware) verwendet wird
   if (isLoggedIn && isAppRoute) {
     if (!session.user?.id) {
       return NextResponse.redirect(new URL("/login", baseUrl))
     }
-    return NextResponse.next()
+    return response
   }
 
-  return NextResponse.next()
+  return response
 })
 
 export const config = {

@@ -758,3 +758,17 @@ model Notification {
   @@index([createdAt])
   @@map("notifications")
 }
+
+// Password Protection Config: Global password gate for Closed Alpha / Pre-Launch
+model PasswordProtectionConfig {
+  id                               String    @id @default(cuid())
+  passwordProtectionEnabled        Boolean   @default(false)
+  passwordProtectionStartDate      DateTime?
+  passwordProtectionEndDate        DateTime?
+  passwordProtectionPasswordHash   String?
+  passwordProtectionSessionTimeoutMinutes Int @default(60)
+  updatedAt                        DateTime  @updatedAt
+  updatedBy                        String? // Super Admin ID
+
+  @@map("password_protection_config")
+}

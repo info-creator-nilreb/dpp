@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import PublicLayoutClient from '@/components/PublicLayoutClient'
 import ConditionalLayout from '@/components/ConditionalLayout'
+import PasswordProtectionWrapper from '@/components/PasswordProtectionWrapper'
 
 export const metadata: Metadata = {
   title: 'Digitaler Produktpass - DPP in 3 Minuten | ESPR-ready',
@@ -21,9 +22,11 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/favicon.svg" />
       </head>
       <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-        <ConditionalLayout>
-          {children}
-        </ConditionalLayout>
+        <PasswordProtectionWrapper>
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
+        </PasswordProtectionWrapper>
       </body>
     </html>
   )
