@@ -36,6 +36,7 @@ const fieldTypes = [
   { value: "date", label: "Datum" },
   { value: "url", label: "URL" },
   { value: "file", label: "Datei" },
+  { value: "country", label: "Land (ISO-3166)" },
   { value: "reference", label: "Referenz" }
 ]
 
@@ -99,6 +100,22 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
   const [csvErrors, setCsvErrors] = useState<string[]>([])
   const [csvParsing, setCsvParsing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [editingFieldOptions, setEditingFieldOptions] = useState<string | null>(null)
+
+  // Helper: Generate key from label
+  const generateKeyFromLabel = (label: string): string => {
+    if (!label) return ""
+    return label
+      .toLowerCase()
+      .trim()
+      .replace(/[äöü]/g, (char) => {
+        const map: Record<string, string> = { ä: "ae", ö: "oe", ü: "ue" }
+        return map[char] || char
+      })
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/_+/g, "_")
+  }
 
   const addBlock = () => {
     setBlocks([...blocks, {
@@ -154,6 +171,46 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
     ))
   }
 
+  // Helper: Parse select options from config
+  const getSelectOptions = (config: any): Array<{ value: string; label: string; esprReference?: string }> => {
+    if (!config) return []
+    if (typeof config === "string") {
+      try {
+        const parsed = JSON.parse(config)
+        return parsed.options || []
+      } catch {
+        return []
+      }
+    }
+    return config.options || []
+  }
+
+  // Helper: Update select options in config
+  const updateSelectOptions = (blockId: string, fieldId: string, options: Array<{ value: string; label: string; esprReference?: string }>) => {
+    const config = JSON.stringify({ options })
+    updateField(blockId, fieldId, { config: JSON.parse(config) })
+  }
+
+  // Block reordering functions
+  const moveBlockUp = (blockIndex: number) => {
+    // Block 0 (Basis- & Produktdaten) is always fixed, block 1 can only move down
+    if (blockIndex <= 1 || blockIndex >= blocks.length) return
+    const newBlocks = [...blocks]
+    const temp = newBlocks[blockIndex]
+    newBlocks[blockIndex] = newBlocks[blockIndex - 1]
+    newBlocks[blockIndex - 1] = temp
+    setBlocks(newBlocks)
+  }
+
+  const moveBlockDown = (blockIndex: number) => {
+    if (blockIndex >= blocks.length - 1) return
+    const newBlocks = [...blocks]
+    const temp = newBlocks[blockIndex]
+    newBlocks[blockIndex] = newBlocks[blockIndex + 1]
+    newBlocks[blockIndex + 1] = temp
+    setBlocks(newBlocks)
+  }
+
   const deleteField = (blockId: string, fieldId: string) => {
     setBlocks(blocks.map(block =>
       block.id === blockId
@@ -204,22 +261,22 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
 
   // CSV Template Download
   const handleDownloadCsvTemplate = () => {
-    const csvContent = `Block Name,Field Label,Field Key,Field Type,Required,Config
-"Basis- & Produktdaten","Produktname","name","text",true,""
-"Basis- & Produktdaten","Beschreibung","description","textarea",false,""
-"Basis- & Produktdaten","SKU","sku","text",true,""
-"Materialien & Zusammensetzung","Material","material","text",true,""
-"Nutzung, Pflege & Lebensdauer","Pflegehinweise","careInstructions","textarea",false,""
-"Rechtliches & Konformität","Konformitätserklärung","conformityDeclaration","boolean",false,""
-"Rücknahme & Second Life","Rücknahmeprogramm","takeBackProgram","boolean",false,""
+    const csvContent = `Block Name,Field Label,Field Type,Required,Config
+"Basis- & Produktdaten","Produktname","text",true,""
+"Basis- & Produktdaten","Beschreibung","textarea",false,""
+"Basis- & Produktdaten","SKU","text",true,""
+"Materialien & Zusammensetzung","Material","text",true,""
+"Nutzung, Pflege & Lebensdauer","Pflegehinweise","textarea",false,""
+"Rechtliches & Konformität","Konformitätserklärung","boolean",false,""
+"Rücknahme & Second Life","Rücknahmeprogramm","boolean",false,""
 
 Hinweise:
 - Block Name: Name des Blocks (muss exakt sein oder leer für neuen Block)
-- Field Label: Anzeigename des Feldes
-- Field Key: Technischer Schlüssel (lowercase, keine Leerzeichen)
-- Field Type: text, textarea, number, select, multi-select, boolean, date, url, file, reference
+- Field Label: Anzeigename des Feldes (Pflichtfeld)
+- Field Type: text, textarea, number, select, multi-select, boolean, date, url, file, country, reference
 - Required: true oder false
-- Config: JSON-String für erweiterte Konfiguration (z.B. {"options": ["Option 1", "Option 2"]} für select)`
+- Config: JSON-String für erweiterte Konfiguration (z.B. {"options": [{"value": "opt1", "label": "Option 1"}]} für select)
+- Hinweis: Der technische Key wird automatisch aus dem Label generiert`
     
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
     const link = document.createElement("a")
@@ -274,19 +331,17 @@ Hinweise:
             return
           }
           
-          if (!fieldKey) {
-            errors.push(`Zeile ${rowNum}: Field Key ist erforderlich`)
-            return
-          }
+          // Auto-generate key from label if not provided
+          const finalFieldKey = fieldKey || generateKeyFromLabel(fieldLabel)
           
-          // Validate field key format (lowercase, no spaces)
-          if (!/^[a-z][a-z0-9_]*$/.test(fieldKey)) {
+          // Validate field key format if provided (lowercase, no spaces)
+          if (fieldKey && !/^[a-z][a-z0-9_]*$/.test(fieldKey)) {
             errors.push(`Zeile ${rowNum}: Field Key muss mit Kleinbuchstaben beginnen und darf nur Kleinbuchstaben, Zahlen und Unterstriche enthalten`)
             return
           }
           
           // Validate field type
-          const validTypes = ["text", "textarea", "number", "select", "multi-select", "boolean", "date", "url", "file", "reference"]
+          const validTypes = ["text", "textarea", "number", "select", "multi-select", "boolean", "date", "url", "file", "country", "reference"]
           if (!validTypes.includes(fieldType)) {
             errors.push(`Zeile ${rowNum}: Ungültiger Field Type. Erlaubt: ${validTypes.join(", ")}`)
             return
@@ -315,8 +370,8 @@ Hinweise:
           const block = parsedBlocks.get(blockName)!
           
           // Check for duplicate field keys in same block
-          if (block.fields.some(f => f.key === fieldKey)) {
-            errors.push(`Zeile ${rowNum}: Field Key "${fieldKey}" existiert bereits im Block "${blockName}"`)
+          if (block.fields.some(f => f.key === finalFieldKey)) {
+            errors.push(`Zeile ${rowNum}: Field Key "${finalFieldKey}" existiert bereits im Block "${blockName}"`)
             return
           }
           
@@ -324,7 +379,7 @@ Hinweise:
           block.fields.push({
             id: `field-${Date.now()}-${block.fields.length}`,
             label: fieldLabel,
-            key: fieldKey,
+            key: finalFieldKey,
             type: fieldType,
             required: required,
             config: config
@@ -427,15 +482,15 @@ Hinweise:
       // Validate fields
       for (const block of blocks) {
         for (const field of block.fields) {
-          if (!field.label || !field.key) {
-            setError("Alle Felder benötigen einen Label und Key")
+          if (!field.label) {
+            setError("Alle Felder benötigen einen Label")
             setLoading(false)
             return
           }
         }
       }
 
-      // Prepare data
+      // Prepare data - Generate keys automatically from labels
       const templateData = {
         name,
         category,
@@ -445,7 +500,7 @@ Hinweise:
           name: block.name,
           fields: block.fields.map(field => ({
             label: field.label,
-            key: field.key,
+            key: field.key || generateKeyFromLabel(field.label), // Auto-generate if missing
             type: field.type,
             required: field.required,
             config: field.config
@@ -1087,56 +1142,125 @@ Hinweise:
                   backgroundColor: "transparent"
                 }}
               />
-              {blocks.length > 1 && (
-                <div className="new-template-block-delete">
-                  <button
-                    type="button"
-                    onClick={() => deleteBlock(block.id)}
-                    disabled={loading}
-                    title="Block entfernen"
-                    className="new-template-block-delete-button"
-                    style={{
-                      padding: "0.5rem",
-                      backgroundColor: "transparent",
-                      color: "#7A7A7A",
-                      border: "1px solid #CDCDCD",
-                      borderRadius: "6px",
-                      cursor: loading ? "not-allowed" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "32px",
-                      height: "32px",
-                      opacity: loading ? 0.5 : 1,
-                      flexShrink: 0
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!loading) {
-                        e.currentTarget.style.backgroundColor = "#F5F5F5"
-                        e.currentTarget.style.borderColor = "#7A7A7A"
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!loading) {
-                        e.currentTarget.style.backgroundColor = "transparent"
-                        e.currentTarget.style.borderColor = "#CDCDCD"
-                      }
-                    }}
-                  >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+              {blockIndex === 0 && (
+                <span style={{
+                  padding: "0.5rem",
+                  fontSize: "0.75rem",
+                  color: "#7A7A7A",
+                  fontStyle: "italic",
+                  flexShrink: 0
+                }}>
+                  (Fix)
+                </span>
+              )}
+              {blocks.length > 1 && blockIndex > 0 && (
+                <div className="block-actions" style={{ 
+                  display: "flex", 
+                  alignItems: "center",
+                  gap: "0.75rem"
+                }}>
+                  <div className="block-order-controls" style={{ 
+                    display: "flex", 
+                    gap: "0.5rem",
+                    flexShrink: 0
+                  }}>
+                    {blockIndex > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => moveBlockUp(blockIndex)}
+                        disabled={loading}
+                        title="Block nach oben verschieben"
+                        style={{
+                          padding: "0.5rem",
+                          backgroundColor: "#F5F5F5",
+                          color: "#0A0A0A",
+                          border: "1px solid #CDCDCD",
+                          borderRadius: "6px",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          fontSize: "1rem",
+                          width: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        ↑
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => moveBlockDown(blockIndex)}
+                      disabled={loading || blockIndex === blocks.length - 1}
+                      title="Block nach unten verschieben"
+                      style={{
+                        padding: "0.5rem",
+                        backgroundColor: "#F5F5F5",
+                        color: "#0A0A0A",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "6px",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        fontSize: "1rem",
+                        width: "32px",
+                        height: "32px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
                     >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
+                      ↓
+                    </button>
+                  </div>
+                  <div className="new-template-block-delete">
+                    <button
+                      type="button"
+                      onClick={() => deleteBlock(block.id)}
+                      disabled={loading}
+                      title="Block entfernen"
+                      className="new-template-block-delete-button"
+                      style={{
+                        padding: "0.5rem",
+                        backgroundColor: "transparent",
+                        color: "#7A7A7A",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "6px",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "32px",
+                        height: "32px",
+                        opacity: loading ? 0.5 : 1,
+                        flexShrink: 0
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!loading) {
+                          e.currentTarget.style.backgroundColor = "#F5F5F5"
+                          e.currentTarget.style.borderColor = "#7A7A7A"
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!loading) {
+                          e.currentTarget.style.backgroundColor = "transparent"
+                          e.currentTarget.style.borderColor = "#CDCDCD"
+                        }
+                      }}
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1155,39 +1279,24 @@ Hinweise:
                 >
                   <div style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 2fr 1fr auto 32px",
+                    gridTemplateColumns: "2fr 1fr auto 32px",
                     gap: "1rem",
                     alignItems: "center"
                   }}>
-                    <input
-                      type="text"
-                      value={field.label}
-                      onChange={(e) => updateField(block.id, field.id, { label: e.target.value })}
-                      placeholder="Label"
-                      disabled={loading}
-                      style={{
-                        padding: "0.5rem",
-                        border: "1px solid #CDCDCD",
-                        borderRadius: "6px",
-                        fontSize: "0.95rem",
-                        boxSizing: "border-box"
-                      }}
-                    />
-                    <input
-                      type="text"
-                      value={field.key}
-                      onChange={(e) => updateField(block.id, field.id, { key: e.target.value })}
-                      placeholder="Key (z.B. productName)"
-                      disabled={loading}
-                      style={{
-                        padding: "0.5rem",
-                        border: "1px solid #CDCDCD",
-                        borderRadius: "6px",
-                        fontSize: "0.95rem",
-                        fontFamily: "monospace",
-                        boxSizing: "border-box"
-                      }}
-                    />
+              <input
+                type="text"
+                value={field.label}
+                onChange={(e) => updateField(block.id, field.id, { label: e.target.value })}
+                placeholder="Label"
+                disabled={loading}
+                style={{
+                  padding: "0.5rem",
+                  border: "1px solid #CDCDCD",
+                  borderRadius: "6px",
+                  fontSize: "0.95rem",
+                  boxSizing: "border-box"
+                }}
+              />
                     <select
                       value={field.type}
                       onChange={(e) => updateField(block.id, field.id, { type: e.target.value })}
@@ -1272,6 +1381,194 @@ Hinweise:
                       </svg>
                     </button>
                   </div>
+                  {/* Select/Multi-select Options */}
+                  {(field.type === "select" || field.type === "multi-select") && (
+                    <div style={{
+                      marginTop: "0.75rem",
+                      padding: "0.75rem",
+                      backgroundColor: "#F9F9F9",
+                      border: "1px solid #E5E5E5",
+                      borderRadius: "6px"
+                    }}>
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "0.5rem"
+                      }}>
+                        <label style={{
+                          fontSize: "0.875rem",
+                          fontWeight: "500",
+                          color: "#0A0A0A"
+                        }}>
+                          Auswahloptionen:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingFieldOptions(editingFieldOptions === field.id ? null : field.id)
+                          }}
+                          style={{
+                            padding: "0.375rem 0.75rem",
+                            backgroundColor: editingFieldOptions === field.id ? "#7A7A7A" : "#E20074",
+                            color: "#FFFFFF",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            cursor: "pointer"
+                          }}
+                        >
+                          {editingFieldOptions === field.id ? "▼ Ausblenden" : "▶ Optionen"}
+                        </button>
+                      </div>
+                      {editingFieldOptions === field.id && (
+                        <>
+                          <p style={{
+                            fontSize: "0.75rem",
+                            color: "#7A7A7A",
+                            marginBottom: "0.75rem",
+                            fontStyle: "italic"
+                          }}>
+                            Diese Optionen werden bei DPP-Erstellung und CSV-Import validiert.
+                          </p>
+                          <div style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            marginBottom: "0.75rem"
+                          }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const options = getSelectOptions(field.config)
+                                updateSelectOptions(block.id, field.id, [...options, { value: "", label: "", esprReference: "" }])
+                              }}
+                              disabled={loading}
+                              style={{
+                                padding: "0.375rem 0.75rem",
+                                backgroundColor: "#E20074",
+                                color: "#FFFFFF",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                                cursor: loading ? "not-allowed" : "pointer"
+                              }}
+                            >
+                              + Option hinzufügen
+                            </button>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                            {getSelectOptions(field.config).map((option, optIndex) => (
+                              <div key={optIndex} style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr 1fr auto",
+                                gap: "0.5rem",
+                                alignItems: "center"
+                              }}>
+                                <input
+                                  type="text"
+                                  value={option.value}
+                                  placeholder="Value (technisch)"
+                                  onChange={(e) => {
+                                    const options = getSelectOptions(field.config)
+                                    options[optIndex] = { ...option, value: e.target.value }
+                                    updateSelectOptions(block.id, field.id, options)
+                                  }}
+                                  disabled={loading}
+                                  style={{
+                                    padding: "0.5rem",
+                                    border: "1px solid #CDCDCD",
+                                    borderRadius: "6px",
+                                    fontSize: "0.875rem",
+                                    fontFamily: "monospace"
+                                  }}
+                                />
+                                <input
+                                  type="text"
+                                  value={option.label}
+                                  placeholder="Label (Anzeige)"
+                                  onChange={(e) => {
+                                    const options = getSelectOptions(field.config)
+                                    options[optIndex] = { ...option, label: e.target.value }
+                                    updateSelectOptions(block.id, field.id, options)
+                                  }}
+                                  disabled={loading}
+                                  style={{
+                                    padding: "0.5rem",
+                                    border: "1px solid #CDCDCD",
+                                    borderRadius: "6px",
+                                    fontSize: "0.875rem"
+                                  }}
+                                />
+                                <input
+                                  type="text"
+                                  value={option.esprReference || ""}
+                                  placeholder="ESPR-Referenz (optional)"
+                                  onChange={(e) => {
+                                    const options = getSelectOptions(field.config)
+                                    options[optIndex] = { ...option, esprReference: e.target.value || undefined }
+                                    updateSelectOptions(block.id, field.id, options)
+                                  }}
+                                  disabled={loading}
+                                  style={{
+                                    padding: "0.5rem",
+                                    border: "1px solid #CDCDCD",
+                                    borderRadius: "6px",
+                                    fontSize: "0.875rem"
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const options = getSelectOptions(field.config)
+                                    options.splice(optIndex, 1)
+                                    updateSelectOptions(block.id, field.id, options)
+                                  }}
+                                  disabled={loading}
+                                  style={{
+                                    padding: "0.5rem",
+                                    backgroundColor: "transparent",
+                                    color: "#DC2626",
+                                    border: "1px solid #DC2626",
+                                    borderRadius: "6px",
+                                    fontSize: "0.875rem",
+                                    cursor: loading ? "not-allowed" : "pointer"
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                            {getSelectOptions(field.config).length === 0 && (
+                              <p style={{
+                                fontSize: "0.75rem",
+                                color: "#7A7A7A",
+                                fontStyle: "italic",
+                                padding: "0.5rem"
+                              }}>
+                                Noch keine Optionen definiert. Klicken Sie auf "+ Option hinzufügen".
+                              </p>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {/* Country field info */}
+                  {field.type === "country" && (
+                    <div style={{
+                      marginTop: "0.75rem",
+                      padding: "0.75rem",
+                      backgroundColor: "#F0F9FF",
+                      border: "1px solid #B3E5FC",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      color: "#0277BD"
+                    }}>
+                      ℹ️ Eine vollständige Liste aller Länder (ISO-3166-1 Alpha-2, ~249 Länder) steht den Nutzern bei der DPP-Erstellung zur Auswahl. Länder werden als ISO-Codes (z. B. DE, FR) gespeichert. Das Land wird basierend auf der IP-Adresse des Nutzers an erster Stelle vorgeschlagen.
+                    </div>
+                  )}
                 </div>
               ))}
 

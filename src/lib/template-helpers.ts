@@ -227,17 +227,18 @@ export const CATEGORY_LABELS: Record<string, string> = {
  * Gibt das Label für eine Kategorie zurück
  * 
  * Priorität:
- * 1. customLabel (aus Datenbank)
- * 2. CATEGORY_LABELS (Fallback)
- * 3. categoryKey (wenn nichts gefunden)
+ * 1. customLabel (aus Datenbank) - wenn vorhanden, wird es immer verwendet
+ * 2. categoryKey (wenn kein customLabel vorhanden)
+ * 
+ * KEIN hardcoded Fallback mehr - Labels müssen in der DB gesetzt werden
  */
 export function getCategoryLabel(categoryKey: string, customLabel?: string | null): string {
   // Wenn ein customLabel vorhanden ist, verwende es
   if (customLabel && customLabel.trim()) {
     return customLabel
   }
-  // Sonst Fallback zu Standard-Labels
-  return CATEGORY_LABELS[categoryKey] || categoryKey
+  // Sonst verwende die Kategorie selbst (kein hardcoded Fallback)
+  return categoryKey
 }
 
 /**

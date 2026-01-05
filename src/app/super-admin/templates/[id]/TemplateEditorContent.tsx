@@ -120,6 +120,21 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
     return () => clearInterval(interval)
   }, [])
 
+  // Helper: Generate key from label
+  const generateKeyFromLabel = (label: string): string => {
+    if (!label) return ""
+    return label
+      .toLowerCase()
+      .trim()
+      .replace(/[äöü]/g, (char) => {
+        const map: Record<string, string> = { ä: "ae", ö: "oe", ü: "ue" }
+        return map[char] || char
+      })
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/_+/g, "_")
+  }
+
   const addBlock = () => {
     setBlocks([...blocks, {
       id: `new-${Date.now()}`,
@@ -218,7 +233,8 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
   // Block reordering functions
   const moveBlockUp = (blockIndex: number) => {
-    if (blockIndex === 0 || blockIndex >= blocks.length) return // Block 1 is fixed
+    // Block 0 (Basis- & Produktdaten) is always fixed, block 1 can only move down
+    if (blockIndex <= 1 || blockIndex >= blocks.length) return
     const newBlocks = [...blocks]
     const temp = newBlocks[blockIndex]
     newBlocks[blockIndex] = newBlocks[blockIndex - 1]
@@ -231,7 +247,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   }
 
   const moveBlockDown = (blockIndex: number) => {
-    if (blockIndex === 0 || blockIndex >= blocks.length - 1) return // Block 1 is fixed
+    if (blockIndex >= blocks.length - 1) return
     const newBlocks = [...blocks]
     const temp = newBlocks[blockIndex]
     newBlocks[blockIndex] = newBlocks[blockIndex + 1]
@@ -269,8 +285,8 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       // Validate fields
       for (const block of blocks) {
         for (const field of block.fields) {
-          if (!field.label || !field.key) {
-            setError("Alle Felder benötigen einen Label und Key")
+          if (!field.label) {
+            setError("Alle Felder benötigen einen Label")
             setLoading(false)
             return
           }
@@ -278,6 +294,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       }
 
       // Prepare data - Filter out any category fields (safety check)
+      // Generate keys automatically from labels if missing
       // Verwende IMMER den aktuellen Status-State (nicht template.status als Fallback!)
       console.log("[Template Save] ===== START SAVE =====")
       console.log("[Template Save] Status-State:", status, "Type:", typeof status)
@@ -312,7 +329,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             })
             .map((field, fieldIndex) => ({
               label: field.label,
-              key: field.key,
+              key: field.key || generateKeyFromLabel(field.label), // Auto-generate if missing
               type: field.type,
               required: field.required,
               config: field.config ? JSON.parse(field.config) : null
@@ -590,14 +607,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                             *
                           </span>
                         )}
-                      </div>
-                      <div style={{
-                        fontSize: "0.75rem",
-                        color: "#7A7A7A",
-                        fontFamily: "monospace",
-                        marginBottom: "0.5rem"
-                      }}>
-                        {field.key}
                       </div>
                       <div style={{
                         display: "inline-block",
@@ -1024,28 +1033,30 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                       gap: "0.5rem",
                       flexShrink: 0
                     }}>
-                      <button
-                        type="button"
-                        onClick={() => moveBlockUp(blockIndex)}
-                        disabled={loading}
-                        title="Block nach oben verschieben"
-                        style={{
-                          padding: "0.5rem",
-                          backgroundColor: "#F5F5F5",
-                          color: "#0A0A0A",
-                          border: "1px solid #CDCDCD",
-                          borderRadius: "6px",
-                          cursor: loading ? "not-allowed" : "pointer",
-                          fontSize: "1rem",
-                          width: "32px",
-                          height: "32px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        ↑
-                      </button>
+                      {blockIndex > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => moveBlockUp(blockIndex)}
+                          disabled={loading}
+                          title="Block nach oben verschieben"
+                          style={{
+                            padding: "0.5rem",
+                            backgroundColor: "#F5F5F5",
+                            color: "#0A0A0A",
+                            border: "1px solid #CDCDCD",
+                            borderRadius: "6px",
+                            cursor: loading ? "not-allowed" : "pointer",
+                            fontSize: "1rem",
+                            width: "32px",
+                            height: "32px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          ↑
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => moveBlockDown(blockIndex)}
@@ -1167,29 +1178,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                           border: "1px solid #CDCDCD",
                           borderRadius: "6px",
                           fontSize: "0.95rem",
-                          boxSizing: "border-box"
-                        }}
-                      />
-                      <input
-                        type="text"
-                        value={field.key}
-                        onChange={(e) => {
-                          const newKey = e.target.value
-                          if (validateFieldKey(newKey)) {
-                            updateField(block.id, field.id, { key: newKey })
-                          } else {
-                            setError("Der Schlüssel 'category' oder 'kategorie' ist nicht erlaubt. Die Kategorie ist ein Template-Merkmal und kein Feld.")
-                            setTimeout(() => setError(null), 5000)
-                          }
-                        }}
-                        placeholder="Key (z.B. productName)"
-                        disabled={loading || !isEditable}
-                        style={{
-                          padding: "0.5rem",
-                          border: "1px solid #CDCDCD",
-                          borderRadius: "6px",
-                          fontSize: "0.95rem",
-                          fontFamily: "monospace",
                           boxSizing: "border-box"
                         }}
                       />
@@ -1726,16 +1714,16 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 }
               }
 
-              // Validate fields
-              for (const block of blocks) {
-                for (const field of block.fields) {
-                  if (!field.label || !field.key) {
-                    setError("Alle Felder benötigen einen Label und Key")
-                    setLoading(false)
-                    return
-                  }
-                }
-              }
+      // Validate fields
+      for (const block of blocks) {
+        for (const field of block.fields) {
+          if (!field.label) {
+            setError("Alle Felder benötigen einen Label")
+            setLoading(false)
+            return
+          }
+        }
+      }
 
               // Prepare data mit explizitem Status "active"
               const templateData = {
@@ -1755,7 +1743,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                     })
                     .map((field) => ({
                       label: field.label,
-                      key: field.key,
+                      key: field.key || generateKeyFromLabel(field.label), // Auto-generate if missing
                       type: field.type,
                       required: field.required,
                       config: field.config ? JSON.parse(field.config) : null
