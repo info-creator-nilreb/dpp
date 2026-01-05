@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { getBaseUrl } from "@/lib/getBaseUrl"
+import { headers } from "next/headers"
 
 /**
  * AuthGate - Server Component
@@ -23,7 +23,12 @@ export default async function AuthGate({
   let needsOnboarding = false
   
   try {
-    const baseUrl = getBaseUrl()
+    // Get base URL from request headers (works in all environments)
+    const headersList = await headers()
+    const host = headersList.get("host") || "localhost:3000"
+    const protocol = headersList.get("x-forwarded-proto") || (process.env.NODE_ENV === "production" ? "https" : "http")
+    const baseUrl = `${protocol}://${host}`
+    
     const response = await fetch(`${baseUrl}/api/app/onboarding/check`, {
       cache: "no-store",
     })
