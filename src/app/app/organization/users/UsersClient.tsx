@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
+import { getRoleLabel, PHASE1_ROLES, ROLE_LABELS } from "@/lib/phase1/roles"
 
 interface User {
   id: string
@@ -11,6 +13,7 @@ interface User {
   lastName: string | null
   status: string
   role: string | null
+  isCurrentUser?: boolean
 }
 
 interface Invitation {
@@ -36,6 +39,7 @@ interface JoinRequest {
 }
 
 export default function UsersClient() {
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState<"users" | "invitations" | "join-requests">("users")
   const [users, setUsers] = useState<User[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
@@ -62,7 +66,12 @@ export default function UsersClient() {
         })
         if (response.ok) {
           const data = await response.json()
-          setUsers(data.users || [])
+          // Markiere aktuellen Benutzer, falls isCurrentUser nicht bereits gesetzt ist
+          const usersWithCurrentUser = (data.users || []).map((user: User) => ({
+            ...user,
+            isCurrentUser: user.isCurrentUser ?? (session?.user?.id === user.id),
+          }))
+          setUsers(usersWithCurrentUser)
         }
       } else if (activeTab === "invitations") {
         const response = await fetch("/api/app/organization/invitations", {
@@ -334,28 +343,44 @@ export default function UsersClient() {
                         alignItems: "center",
                       }}
                     >
-                      <div>
-                        <p style={{ margin: 0, fontWeight: "500", color: "#0A0A0A" }}>
-                          {user.firstName} {user.lastName}
-                        </p>
-                        <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.9rem", color: "#7A7A7A" }}>
-                          {user.email} • {user.role || "VIEWER"}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                          <p style={{ margin: 0, fontWeight: "500", color: "#0A0A0A" }}>
+                            {user.firstName} {user.lastName}
+                          </p>
+                          {user.isCurrentUser && (
+                            <span style={{
+                              padding: "0.125rem 0.5rem",
+                              backgroundColor: "#E20074",
+                              color: "#FFFFFF",
+                              borderRadius: "4px",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                            }}>
+                              Ich
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ margin: 0, fontSize: "0.9rem", color: "#7A7A7A" }}>
+                          {user.email} • {getRoleLabel(user.role)}
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleRemoveUser(user.id)}
-                        style={{
-                          padding: "0.5rem 1rem",
-                          backgroundColor: "transparent",
-                          border: "1px solid #CDCDCD",
-                          borderRadius: "6px",
-                          color: "#C33",
-                          fontSize: "0.9rem",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Entfernen
-                      </button>
+                      {!user.isCurrentUser && (
+                        <button
+                          onClick={() => handleRemoveUser(user.id)}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            backgroundColor: "transparent",
+                            border: "1px solid #CDCDCD",
+                            borderRadius: "6px",
+                            color: "#C33",
+                            fontSize: "0.9rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Entfernen
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -429,9 +454,9 @@ export default function UsersClient() {
                         boxSizing: "border-box",
                       }}
                     >
-                      <option value="VIEWER">VIEWER</option>
-                      <option value="EDITOR">EDITOR</option>
-                      <option value="ORG_ADMIN">ORG_ADMIN</option>
+                      <option value={PHASE1_ROLES.VIEWER}>{ROLE_LABELS[PHASE1_ROLES.VIEWER]}</option>
+                      <option value={PHASE1_ROLES.EDITOR}>{ROLE_LABELS[PHASE1_ROLES.EDITOR]}</option>
+                      <option value={PHASE1_ROLES.ORG_ADMIN}>{ROLE_LABELS[PHASE1_ROLES.ORG_ADMIN]}</option>
                     </select>
                   </div>
                 </div>

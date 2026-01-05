@@ -32,7 +32,9 @@ model User {
   preferredLanguage String    @default("en")
   timeZone          String?
 
-  // Phase 1: One organization per user (N:1 relationship - many users to one org)
+  // Phase 1: DEPRECATED - Nur für Cache/Performance, NICHT als Quelle der Wahrheit verwenden!
+  // Die einzige Quelle der Wahrheit für Organisationsmitgliedschaften ist das Membership-Modell.
+  // organizationId wird automatisch aus der ersten Membership abgeleitet (siehe Migration).
   organizationId String?
   organization   Organization? @relation("OrganizationUsers", fields: [organizationId], references: [id], onDelete: SetNull)
 
@@ -42,7 +44,7 @@ model User {
   // Relations
   dppPermissions    DppPermission[]
   publishedVersions DppVersion[]
-  memberships       Membership[] // Legacy: kept for migration compatibility
+  memberships       Membership[] // EINZIGE QUELLE DER WAHRHEIT für Organisationsmitgliedschaften und Rollen
   auditLogs         PlatformAuditLog[]
   invitations       Invitation[] // Invitations sent by this user
   notifications     Notification[]
@@ -83,8 +85,8 @@ model Organization {
 
   // Relations
   dpps         Dpp[]
-  memberships  Membership[] // Legacy: kept for migration compatibility
-  users        User[]             @relation("OrganizationUsers") // Phase 1: Users belonging to this organization
+  memberships  Membership[] // EINZIGE QUELLE DER WAHRHEIT für Organisationsmitgliedschaften
+  users        User[]             @relation("OrganizationUsers") // DEPRECATED: Nur für Cache, verwende memberships statt users
   subscription Subscription?
   auditLogs    PlatformAuditLog[]
   invitations  Invitation[]
@@ -104,8 +106,13 @@ model Membership {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // EINZIGE QUELLE DER WAHRHEIT: Jede Organisationsmitgliedschaft MUSS hier existieren
+  // Ein Nutzer kann mehrere Organisationsmitgliedschaften haben (Multi-Tenant)
+  // Pro Nutzer und Organisation darf es nur EINE Mitgliedschaft geben
+  
   @@unique([userId, organizationId])
   @@index([role])
+  @@index([organizationId]) // Für schnelle Abfragen der Team-Mitglieder
   @@map("memberships")
 }
 

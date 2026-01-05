@@ -39,13 +39,15 @@ export async function signupUser(data: SignupData): Promise<{
   email: string
   name: string
 }> {
-  // Prüfe ob E-Mail bereits existiert
-  const existingUser = await prisma.user.findUnique({
-    where: { email: data.email.toLowerCase().trim() },
-  })
+  // Prüfe ob E-Mail bereits existiert (nur bei Join Request, bei create_new_organization wird User in createOrganizationWithFirstUser erstellt)
+  if (data.organizationAction === "request_to_join_organization") {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email.toLowerCase().trim() },
+    })
 
-  if (existingUser) {
-    throw new Error("Email already registered")
+    if (existingUser) {
+      throw new Error("Email already registered")
+    }
   }
 
   // Hash Passwort
@@ -57,24 +59,9 @@ export async function signupUser(data: SignupData): Promise<{
   verificationTokenExpires.setDate(verificationTokenExpires.getDate() + 1) // 24 Stunden
 
   return await prisma.$transaction(async (tx) => {
-    // 1. User erstellen
-    const user = await tx.user.create({
-      data: {
-        email: data.email.toLowerCase().trim(),
-        password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        name: `${data.firstName} ${data.lastName}`, // Legacy-Feld
-        status: "invited", // Wird auf "active" gesetzt, wenn Organisation erstellt/Join akzeptiert
-        emailVerified: false,
-        verificationToken,
-        verificationTokenExpires,
-        preferredLanguage: "en",
-      },
-    })
-
     let organizationId: string
     let role: string
+    let userId: string
 
     // 2. Organisation erstellen ODER Join Request erstellen
     if (data.organizationAction === "create_new_organization") {
@@ -82,21 +69,52 @@ export async function signupUser(data: SignupData): Promise<{
         throw new Error("Organization name required")
       }
 
-      // Erstelle Organisation mit User als ORG_ADMIN (innerhalb der gleichen Transaction)
+      // Erstelle Organisation mit E-Mail als erstem Nutzer (innerhalb der gleichen Transaction)
+      // createOrganizationWithFirstUser erstellt den User automatisch oder verwendet existierenden
       const result = await createOrganizationWithFirstUser(
-        user.id,
+        data.email,
         data.organizationName,
+        {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          password: hashedPassword,
+        },
         tx // Wichtig: Transaction weitergeben
       )
       organizationId = result.organizationId
+      userId = result.userId
       role = "ORG_ADMIN"
       
       // User-Status wird bereits in createOrganizationWithFirstUser auf "active" gesetzt
+      // Setze Verifizierungs-Token für den User
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          verificationToken,
+          verificationTokenExpires,
+        },
+      })
     } else if (data.organizationAction === "request_to_join_organization") {
       // Beitritt nur über Einladung möglich
       if (!data.invitationToken) {
         throw new Error("Invitation token required to join an organization")
       }
+
+      // 1. User erstellen (für Join Request)
+      const user = await tx.user.create({
+        data: {
+          email: data.email.toLowerCase().trim(),
+          password: hashedPassword,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          name: `${data.firstName} ${data.lastName}`, // Legacy-Feld
+          status: "invited", // Wird auf "active" gesetzt, wenn Einladung akzeptiert
+          emailVerified: false,
+          verificationToken,
+          verificationTokenExpires,
+          preferredLanguage: "en",
+        },
+      })
 
       // Akzeptiere Einladung (innerhalb der gleichen Transaction)
       const invitationResult = await acceptInvitation(
@@ -109,6 +127,7 @@ export async function signupUser(data: SignupData): Promise<{
       }
 
       organizationId = invitationResult.organizationId
+      userId = user.id
       role = invitationResult.role
       
       // User-Status wird bereits in acceptInvitation auf "active" gesetzt
@@ -116,13 +135,21 @@ export async function signupUser(data: SignupData): Promise<{
       throw new Error("Invalid organization action")
     }
 
+    // Lade User-Daten für Rückgabe
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { email: true, firstName: true, lastName: true },
+    })
+
     return {
-      userId: user.id,
+      userId,
       organizationId,
       role,
       verificationToken,
-      email: user.email,
-      name: `${data.firstName} ${data.lastName}`,
+      email: user?.email || data.email,
+      name: user?.firstName && user?.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : `${data.firstName} ${data.lastName}`,
     }
   })
 }

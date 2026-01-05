@@ -42,32 +42,40 @@ export default async function PasswordProtectionWrapper({
     pathname === "/password" ||
     pathname.startsWith("/api/password") ||
     pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/auth") ||
     pathname === ""
   ) {
     return <>{children}</>
   }
 
-  // Check if password protection is active (requires Prisma - Node.js Runtime only)
-  const protectionActive = await isPasswordProtectionActive()
+  try {
+    // Check if password protection is active (requires Prisma - Node.js Runtime only)
+    const protectionActive = await isPasswordProtectionActive()
 
-  if (protectionActive) {
-    // Check if user has valid access
-    const hasAccess = await hasPasswordProtectionAccess()
-    
-    // Debug: Log access check (server-side - appears in terminal, not browser console)
-    if (!hasAccess) {
-      console.log("[PasswordProtectionWrapper] No access - pathname:", pathname, "protectionActive:", protectionActive)
+    if (protectionActive) {
+      // Check if user has valid access
+      const hasAccess = await hasPasswordProtectionAccess()
       
-      // Only redirect if not already on password page (prevent loop)
-      if (pathname !== "/password" && !pathname.startsWith("/api")) {
-        // Use the current pathname or "/" as callbackUrl
-        const currentPath = pathname || "/"
-        console.log("[PasswordProtectionWrapper] Redirecting to password page:", currentPath)
-        redirect(`/password?callbackUrl=${encodeURIComponent(currentPath)}`)
+      // Debug: Log access check (server-side - appears in terminal, not browser console)
+      if (!hasAccess) {
+        console.log("[PasswordProtectionWrapper] No access - pathname:", pathname, "protectionActive:", protectionActive)
+        
+        // Only redirect if not already on password page (prevent loop)
+        if (pathname !== "/password" && !pathname.startsWith("/api")) {
+          // Use the current pathname or "/" as callbackUrl
+          const currentPath = pathname || "/"
+          console.log("[PasswordProtectionWrapper] Redirecting to password page:", currentPath)
+          redirect(`/password?callbackUrl=${encodeURIComponent(currentPath)}`)
+        }
+      } else {
+        console.log("[PasswordProtectionWrapper] Access granted - pathname:", pathname)
       }
-    } else {
-      console.log("[PasswordProtectionWrapper] Access granted - pathname:", pathname)
     }
+  } catch (error) {
+    // If password protection check fails, log error but don't block access
+    // This prevents the entire app from breaking if there's a DB issue
+    console.error("[PasswordProtectionWrapper] Error checking password protection:", error)
+    // Continue rendering - don't block access on error
   }
 
   return <>{children}</>

@@ -6,6 +6,7 @@ import { useState, useMemo } from "react"
 import { signOut } from "next-auth/react"
 import TPassLogo from "@/app/super-admin/components/TPassLogo"
 import { AuditLogsIcon } from "@/app/super-admin/components/Icons"
+import { getRoleLabel } from "@/lib/phase1/roles"
 
 interface NavigationItem {
   href: string
@@ -122,7 +123,7 @@ export default function AppSidebar({
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
       ),
-      requiredRoles: ["ORG_ADMIN", "ORG_OWNER"],
+      requiredRoles: ["ORG_ADMIN"], // ORG_OWNER wird automatisch zu ORG_ADMIN gemappt
     },
     {
       href: "/app/account",
@@ -158,7 +159,12 @@ export default function AppSidebar({
     return navigationItems.filter((item) => {
       // Check required roles
       if (item.requiredRoles && item.requiredRoles.length > 0) {
-        if (!userRole || !item.requiredRoles.includes(userRole)) {
+        if (!userRole) {
+          return false
+        }
+        // Legacy-Rollen-Mapping: ORG_OWNER → ORG_ADMIN
+        const normalizedRole = userRole === "ORG_OWNER" ? "ORG_ADMIN" : userRole
+        if (!item.requiredRoles.includes(normalizedRole)) {
           return false
         }
       }
@@ -462,9 +468,8 @@ function SidebarContent({
                     fontSize: "0.75rem", 
                     color: "#E20074",
                     margin: "0.25rem 0 0 0",
-                    textTransform: "capitalize",
                   }}>
-                    {userRole.replace("_", " ")}
+                    {getRoleLabel(userRole)}
                   </p>
                 )}
               </div>

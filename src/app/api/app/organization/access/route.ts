@@ -21,20 +21,23 @@ export async function GET(request: Request) {
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
+    // Hole Organisation über Membership (EINZIGE QUELLE DER WAHRHEIT)
+    const membership = await prisma.membership.findFirst({
+      where: { userId: session.user.id },
+      select: { organizationId: true, role: true },
+      orderBy: { createdAt: "asc" }, // Älteste Membership zuerst
     })
 
-    if (!user?.organizationId) {
+    if (!membership) {
       return NextResponse.json(
         { error: "Keine Organisation zugeordnet" },
         { status: 400 }
       )
     }
 
-    const role = await getUserRole(session.user.id, user.organizationId)
-    const canManage = await isOrgAdmin(session.user.id, user.organizationId)
+    const organizationId = membership.organizationId
+    const role = await getUserRole(session.user.id, organizationId)
+    const canManage = await isOrgAdmin(session.user.id, organizationId)
 
     return NextResponse.json({
       canManage,

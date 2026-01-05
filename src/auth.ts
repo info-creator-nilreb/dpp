@@ -200,18 +200,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (dbUser) {
           token.firstName = dbUser.firstName ?? null
           token.lastName = dbUser.lastName ?? null
-          // Rolle aus Membership laden
-          if (dbUser.organizationId) {
-            const membership = await prisma.membership.findFirst({
-              where: {
-                userId: user.id,
-                organizationId: dbUser.organizationId,
-              },
-              select: { role: true },
+          // Rolle aus Membership laden (EINZIGE QUELLE DER WAHRHEIT)
+          // Lade die erste Membership (kann später erweitert werden für Multi-Tenant)
+          const membership = await prisma.membership.findFirst({
+            where: {
+              userId: user.id,
+            },
+            select: { role: true, organizationId: true },
+            orderBy: { createdAt: "asc" }, // Älteste Membership zuerst
+          })
+          token.role = membership?.role ?? null
+          // Aktualisiere Cache-Feld organizationId falls nötig
+          if (membership?.organizationId && dbUser.organizationId !== membership.organizationId) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { organizationId: membership.organizationId },
             })
-            token.role = membership?.role ?? null
-          } else {
-            token.role = null
           }
         }
       }
@@ -228,17 +232,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (dbUser) {
           token.firstName = dbUser.firstName ?? null
           token.lastName = dbUser.lastName ?? null
-          if (dbUser.organizationId) {
-            const membership = await prisma.membership.findFirst({
-              where: {
-                userId: token.sub,
-                organizationId: dbUser.organizationId,
-              },
-              select: { role: true },
+          // Rolle aus Membership laden (EINZIGE QUELLE DER WAHRHEIT)
+          const membership = await prisma.membership.findFirst({
+            where: {
+              userId: token.sub,
+            },
+            select: { role: true, organizationId: true },
+            orderBy: { createdAt: "asc" }, // Älteste Membership zuerst
+          })
+          token.role = membership?.role ?? null
+          // Aktualisiere Cache-Feld organizationId falls nötig
+          if (membership?.organizationId && dbUser.organizationId !== membership.organizationId) {
+            await prisma.user.update({
+              where: { id: token.sub },
+              data: { organizationId: membership.organizationId },
             })
-            token.role = membership?.role ?? null
-          } else {
-            token.role = null
           }
         }
       }
@@ -316,7 +324,7 @@ export async function createUser(email: string, password: string, name?: string)
         data: {
           userId: user.id,
           organizationId: organization.id,
-          role: "ORG_OWNER" // Neuer User wird automatisch OWNER seiner Organisation
+          role: "ORG_ADMIN" // Neuer User wird automatisch ORG_ADMIN seiner Organisation
         }
       })
       

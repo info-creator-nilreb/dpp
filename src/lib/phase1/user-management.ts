@@ -19,13 +19,22 @@ export async function removeUserFromOrganization(
   organizationId: string,
   removedById: string
 ): Promise<void> {
-  // Prüfe ob User zur Organisation gehört
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { organizationId: true, email: true },
+  // Prüfe ob User zur Organisation gehört (über Membership)
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_organizationId: {
+        userId,
+        organizationId,
+      },
+    },
+    include: {
+      user: {
+        select: { email: true },
+      },
+    },
   })
 
-  if (!user || user.organizationId !== organizationId) {
+  if (!membership) {
     throw new Error("User does not belong to this organization")
   }
 
@@ -35,22 +44,46 @@ export async function removeUserFromOrganization(
   }
 
   await prisma.$transaction(async (tx) => {
-    // 1. User-Status auf suspended setzen (Soft-Remove)
-    await tx.user.update({
-      where: { id: userId },
-      data: {
-        status: "suspended",
-        organizationId: null, // Entferne Organisation-Zuordnung
+    // 1. Membership löschen (EINZIGE QUELLE DER WAHRHEIT)
+    await tx.membership.delete({
+      where: {
+        userId_organizationId: {
+          userId,
+          organizationId,
+        },
       },
     })
 
-    // 2. Membership löschen (Cascade würde das automatisch machen, aber explizit für Klarheit)
-    await tx.membership.deleteMany({
-      where: {
-        userId,
-        organizationId,
-      },
+    // 2. Prüfe ob User noch andere Memberships hat
+    const otherMemberships = await tx.membership.findFirst({
+      where: { userId },
     })
+
+    // 3. User-Status auf suspended setzen wenn keine anderen Memberships existieren
+    // Aktualisiere Cache-Feld organizationId
+    if (!otherMemberships) {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          status: "suspended",
+          organizationId: null, // Cache-Feld zurücksetzen
+        },
+      })
+    } else {
+      // User hat noch andere Memberships - aktualisiere Cache-Feld
+      const firstMembership = await tx.membership.findFirst({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+      })
+      if (firstMembership) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            organizationId: firstMembership.organizationId, // Cache aktualisieren
+          },
+        })
+      }
+    }
 
     // 3. Notification für entfernten User erstellen
     await createNotification(
@@ -155,24 +188,33 @@ export async function getUserWithOrganization(userId: string) {
 
 /**
  * Holt alle User einer Organisation
+ * 
+ * WICHTIG: Verwendet Membership als Quelle der Wahrheit, nicht User.organizationId
  */
 export async function getOrganizationUsers(organizationId: string) {
-  return await prisma.user.findMany({
+  const memberships = await prisma.membership.findMany({
     where: { organizationId },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      status: true,
-      lastLoginAt: true,
-      jobTitle: true,
-      phone: true,
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          status: true,
+          lastLoginAt: true,
+          jobTitle: true,
+          phone: true,
+        },
+      },
     },
     orderBy: [
-      { lastName: "asc" },
-      { firstName: "asc" },
+      { user: { lastName: "asc" } },
+      { user: { firstName: "asc" } },
     ],
   })
+
+  // Extrahiere User aus Memberships
+  return memberships.map((membership) => membership.user)
 }
 
