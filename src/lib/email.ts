@@ -1,4 +1,5 @@
 import crypto from "crypto"
+import { getBaseUrl } from "./getBaseUrl"
 
 // Dynamically import nodemailer only on the server
 // This prevents it from being bundled in client-side code
