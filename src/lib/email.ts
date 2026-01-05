@@ -282,10 +282,11 @@ export async function sendVerificationEmail(
   name: string | null,
   verificationToken: string
 ): Promise<void> {
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/verify-email?token=${verificationToken}`
+  // Use getBaseUrl() for better URL resolution (supports VERCEL_URL fallback)
+  const baseUrl = getBaseUrl()
+  const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`
   const appName = process.env.APP_NAME || "T-Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
   const htmlContent = generateEmailTemplate({
     headline: "E-Mail-Adresse verifizieren",
