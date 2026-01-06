@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import React, { useState, useMemo, useEffect, Suspense } from "react"
+import { useState, useMemo, useEffect, Suspense, type FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
@@ -92,7 +92,7 @@ function SignupContent() {
     }
   }, [searchParams])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError("")
     setLoading(true)
