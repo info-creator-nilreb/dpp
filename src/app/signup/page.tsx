@@ -61,7 +61,7 @@ function calculatePasswordStrength(password: string): {
   return { strength, score, feedback: feedbackText }
 }
 
-function SignupContent() {
+export function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [firstName, setFirstName] = useState("")
