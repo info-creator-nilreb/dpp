@@ -181,7 +181,8 @@ export async function getCategoriesWithPublishedTemplates(): Promise<Array<{ cat
     })
     
     // Normalisiere Kategorien und gruppiere
-    const categoriesMap = new Map<string, { category: string; categoryLabel: string | null }>()
+    // WICHTIG: Wir speichern die ursprüngliche Kategorie aus der DB, nicht die normalisierte
+    const categoriesMap = new Map<string, { category: string; originalCategory: string; categoryLabel: string | null }>()
     
     for (const t of activeTemplates) {
       if (t.category) {
@@ -190,6 +191,7 @@ export async function getCategoriesWithPublishedTemplates(): Promise<Array<{ cat
         if (normalizedCategory && !categoriesMap.has(normalizedCategory)) {
           categoriesMap.set(normalizedCategory, {
             category: normalizedCategory,
+            originalCategory: t.category, // Ursprüngliche Kategorie aus DB behalten
             categoryLabel: t.categoryLabel
           })
         }
@@ -199,8 +201,8 @@ export async function getCategoriesWithPublishedTemplates(): Promise<Array<{ cat
     }
     
     const result = Array.from(categoriesMap.values()).map(t => ({
-      categoryKey: t.category,
-      label: getCategoryLabel(t.category, t.categoryLabel)
+      categoryKey: t.category, // Normalisierte Kategorie als Key (für Matching)
+      label: t.categoryLabel || t.originalCategory // Verwende categoryLabel oder ursprüngliche Kategorie aus DB
     }))
     
     console.log("[Template Debug] Finale Kategorien:", JSON.stringify(result, null, 2))
@@ -260,11 +262,18 @@ export async function getCategoriesWithLabels(): Promise<Map<string, { label: st
   const result = new Map<string, { label: string; categoryKey: string }>()
   
   for (const template of templates) {
-    if (!result.has(template.category)) {
-      result.set(template.category, {
-        categoryKey: template.category,
-        label: getCategoryLabel(template.category, template.categoryLabel)
-      })
+    if (template.category) {
+      // Verwende die ursprüngliche Kategorie aus der DB als Label, wenn kein categoryLabel vorhanden ist
+      const label = template.categoryLabel || template.category
+      const normalizedCategory = normalizeCategory(template.category)
+      
+      // Verwende normalisierte Kategorie als Key für Matching, aber ursprüngliche Kategorie als Label
+      if (normalizedCategory && !result.has(normalizedCategory)) {
+        result.set(normalizedCategory, {
+          categoryKey: normalizedCategory,
+          label: label
+        })
+      }
     }
   }
 
