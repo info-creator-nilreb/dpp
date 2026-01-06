@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import { useState, useMemo, useEffect, Suspense, type FormEvent } from "react"
+import React, { useState, useMemo, useEffect, Suspense, type FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
@@ -61,7 +61,7 @@ function calculatePasswordStrength(password: string): {
   return { strength, score, feedback: feedbackText }
 }
 
-export function SignupContent() {
+function SignupContent(): React.JSX.Element {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [firstName, setFirstName] = useState("")
