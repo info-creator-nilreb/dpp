@@ -11,44 +11,134 @@ import { FIRST_USER_ROLE } from "./roles"
 /**
  * Erstellt eine neue Organisation mit Erstnutzer
  * 
- * Regel: Der erste User, der eine Organisation erstellt, erhält automatisch ORG_ADMIN
+ * REGELN:
+ * - Die E-Mail-Adresse, mit der eine Organisation erstellt wird, IST automatisch der erste Nutzer
+ * - Dieser erste Nutzer erhält immer die Rolle "ORG_ADMIN"
+ * - Der Organisationseigentümer ist ein normaler Nutzer und wird in allen Statistiken mitgezählt
+ * - Membership ist die EINZIGE Quelle der Wahrheit für Organisationsmitgliedschaften
+ * 
+ * @param email - E-Mail-Adresse des ersten Nutzers (wird erstellt oder wiederverwendet)
+ * @param organizationName - Name der neuen Organisation
+ * @param userData - Optional: Zusätzliche User-Daten (firstName, lastName, password, verificationToken, verificationTokenExpires)
+ * @param tx - Optional: Prisma Transaction Client. Falls nicht angegeben, wird eine neue Transaction gestartet
  */
 export async function createOrganizationWithFirstUser(
-  userId: string,
-  organizationName: string
-): Promise<{ organizationId: string; membershipId: string }> {
-  return await prisma.$transaction(async (tx) => {
-    // 1. Organisation erstellen
-    const organization = await tx.organization.create({
+  email: string,
+  organizationName: string,
+  userData?: {
+    firstName?: string
+    lastName?: string
+    password?: string
+    verificationToken?: string
+    verificationTokenExpires?: Date
+  },
+  tx?: any // Prisma Transaction Client
+): Promise<{ organizationId: string; membershipId: string; userId: string }> {
+  // Wenn keine Transaction übergeben wurde, starte eine neue
+  if (!tx) {
+    return await prisma.$transaction(async (transactionClient) => {
+      return createOrganizationWithFirstUser(email, organizationName, userData, transactionClient)
+    })
+  }
+
+  const normalizedEmail = email.toLowerCase().trim()
+
+  // 1. Prüfe ob User bereits existiert
+  let user = await tx.user.findUnique({
+    where: { email: normalizedEmail },
+  })
+
+  // 2. User erstellen oder aktualisieren
+  if (!user) {
+    if (!userData?.password) {
+      throw new Error("Password is required when creating a new user")
+    }
+    
+    const bcrypt = await import("bcryptjs")
+    const hashedPassword = await bcrypt.hash(userData.password, 10)
+    
+    user = await tx.user.create({
       data: {
-        name: organizationName,
+        email: normalizedEmail,
+        password: hashedPassword,
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
+        name: userData.firstName && userData.lastName 
+          ? `${userData.firstName} ${userData.lastName}` 
+          : null,
         status: "active",
+        emailVerified: false,
+        verificationToken: userData.verificationToken || null,
+        verificationTokenExpires: userData.verificationTokenExpires || null,
+        preferredLanguage: "en",
       },
     })
+  } else {
+    // User existiert bereits - aktualisiere Status falls nötig
+    if (user.status !== "active") {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { status: "active" },
+      })
+    }
+  }
 
-    // 2. User zur Organisation zuordnen
-    await tx.user.update({
-      where: { id: userId },
-      data: {
+  // 3. Organisation erstellen
+  const organization = await tx.organization.create({
+    data: {
+      name: organizationName,
+      status: "active",
+    },
+  })
+
+  // 4. Prüfe ob bereits eine Membership für diese Organisation existiert
+  const existingMembership = await tx.membership.findUnique({
+    where: {
+      userId_organizationId: {
+        userId: user.id,
         organizationId: organization.id,
-        status: "active",
       },
-    })
+    },
+  })
 
-    // 3. Membership erstellen (Legacy-Support + Phase 1)
-    const membership = await tx.membership.create({
-      data: {
-        userId,
-        organizationId: organization.id,
-        role: FIRST_USER_ROLE, // Automatisch ORG_ADMIN
-      },
-    })
-
+  if (existingMembership) {
+    // Membership existiert bereits - aktualisiere Rolle zu ORG_ADMIN falls nötig
+    if (existingMembership.role !== FIRST_USER_ROLE) {
+      await tx.membership.update({
+        where: { id: existingMembership.id },
+        data: { role: FIRST_USER_ROLE },
+      })
+    }
     return {
       organizationId: organization.id,
-      membershipId: membership.id,
+      membershipId: existingMembership.id,
+      userId: user.id,
     }
+  }
+
+  // 5. Membership erstellen (EINZIGE QUELLE DER WAHRHEIT)
+  const membership = await tx.membership.create({
+    data: {
+      userId: user.id,
+      organizationId: organization.id,
+      role: FIRST_USER_ROLE, // Automatisch ORG_ADMIN
+    },
   })
+
+  // 6. User.organizationId als Cache aktualisieren (optional, für Performance)
+  // WICHTIG: Dies ist NUR ein Cache, Membership ist die Quelle der Wahrheit
+  await tx.user.update({
+    where: { id: user.id },
+    data: {
+      organizationId: organization.id, // Cache-Feld
+    },
+  })
+
+  return {
+    organizationId: organization.id,
+    membershipId: membership.id,
+    userId: user.id,
+  }
 }
 
 /**
@@ -143,4 +233,3 @@ export async function getOrganizationWithDetails(organizationId: string) {
     },
   })
 }
-

@@ -54,24 +54,9 @@ export async function signupUser(data: SignupData): Promise<{
   verificationTokenExpires.setDate(verificationTokenExpires.getDate() + 1) // 24 Stunden
 
   return await prisma.$transaction(async (tx) => {
-    // 1. User erstellen
-    const user = await tx.user.create({
-      data: {
-        email: data.email.toLowerCase().trim(),
-        password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        name: `${data.firstName} ${data.lastName}`, // Legacy-Feld
-        status: "invited", // Wird auf "active" gesetzt, wenn Organisation erstellt/Join akzeptiert
-        emailVerified: false,
-        verificationToken,
-        verificationTokenExpires,
-        preferredLanguage: "en",
-      },
-    })
-
     let organizationId: string
     let role: string
+    let userId: string
 
     // 2. Organisation erstellen ODER Join Request erstellen
     if (data.organizationAction === "create_new_organization") {
@@ -80,23 +65,43 @@ export async function signupUser(data: SignupData): Promise<{
       }
 
       // Erstelle Organisation mit User als ORG_ADMIN
+      // Die Funktion erstellt/verwendet den User basierend auf der E-Mail
       const result = await createOrganizationWithFirstUser(
-        user.id,
-        data.organizationName
+        data.email,
+        data.organizationName,
+        {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          password: data.password,
+          verificationToken,
+          verificationTokenExpires,
+        },
+        tx // Transaction weitergeben
       )
       organizationId = result.organizationId
+      userId = result.userId
       role = "ORG_ADMIN"
-
-      // User-Status auf active setzen
-      await tx.user.update({
-        where: { id: user.id },
-        data: { status: "active" },
-      })
     } else if (data.organizationAction === "request_to_join_organization") {
       // Beitritt nur über Einladung möglich
       if (!data.invitationToken) {
         throw new Error("Invitation token required to join an organization")
       }
+
+      // 1. User erstellen (für Join Request)
+      const user = await tx.user.create({
+        data: {
+          email: data.email.toLowerCase().trim(),
+          password: hashedPassword,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          name: `${data.firstName} ${data.lastName}`, // Legacy-Feld
+          status: "invited", // Wird auf "active" gesetzt, wenn Einladung akzeptiert
+          emailVerified: false,
+          verificationToken,
+          verificationTokenExpires,
+          preferredLanguage: "en",
+        },
+      })
 
       // Akzeptiere Einladung
       const invitationResult = await acceptInvitation(data.invitationToken, user.id)
@@ -105,6 +110,7 @@ export async function signupUser(data: SignupData): Promise<{
       }
 
       organizationId = invitationResult.organizationId
+      userId = user.id
       role = invitationResult.role
 
       // User-Status auf active setzen, da Einladung akzeptiert wurde
@@ -117,7 +123,7 @@ export async function signupUser(data: SignupData): Promise<{
     }
 
     return {
-      userId: user.id,
+      userId,
       organizationId,
       role,
     }
