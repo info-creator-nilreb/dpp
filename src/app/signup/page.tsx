@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import { useState, useMemo, useEffect, Suspense } from "react"
+import React, { useState, useMemo, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
@@ -356,30 +356,30 @@ function SignupContent() {
             )}
 
             <div style={{ marginBottom: "1.5rem" }}>
-            <label style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              color: "#0A0A0A",
-              fontWeight: "500",
-              fontSize: "0.9rem"
-            }}>
-              Vorname *
-            </label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                boxSizing: "border-box"
-              }}
-            />
-          </div>
+              <label style={{
+                display: "block",
+                marginBottom: "0.5rem",
+                color: "#0A0A0A",
+                fontWeight: "500",
+                fontSize: "0.9rem"
+              }}>
+                Vorname *
+              </label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #CDCDCD",
+                  borderRadius: "6px",
+                  fontSize: "1rem",
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
 
           <div style={{ marginBottom: "1.5rem" }}>
             <label style={{
