@@ -205,38 +205,157 @@ function SignupContent() {
           </h1>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {showSuccessMessage && (
+        {showSuccessMessage ? (
+          <div>
             <div style={{
-              padding: "0.75rem",
-              marginBottom: "1rem",
+              padding: "1.5rem",
+              marginBottom: "1.5rem",
               backgroundColor: "#E8F5E9",
               border: "1px solid #C8E6C9",
-              borderRadius: "6px",
-              color: "#2E7D32",
-              fontSize: "0.9rem"
+              borderRadius: "8px",
+              textAlign: "center"
             }}>
-              <strong>Registrierung erfolgreich!</strong>
-              <p style={{ margin: "0.5rem 0 0 0" }}>
-                Bitte prüfen Sie Ihr E-Mail-Postfach ({registeredEmail}) und klicken Sie auf den Verifizierungs-Link, um Ihr Konto zu aktivieren.
+              <div style={{ marginBottom: "1rem" }}>
+                <svg
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style={{ margin: "0 auto" }}
+                >
+                  <circle cx="12" cy="12" r="10" fill="#00A651" />
+                  <path d="M9 12l2 2 4-4" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <h2 style={{
+                fontSize: "1.25rem",
+                fontWeight: "700",
+                color: "#2E7D32",
+                marginBottom: "0.75rem"
+              }}>
+                Registrierung erfolgreich!
+              </h2>
+              <p style={{
+                margin: "0 0 1rem 0",
+                color: "#2E7D32",
+                fontSize: "0.95rem",
+                lineHeight: "1.5"
+              }}>
+                Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihr Konto zu aktivieren.
               </p>
+              <p style={{
+                margin: "0 0 1.5rem 0",
+                color: "#0A0A0A",
+                fontSize: "0.9rem",
+                fontWeight: "500"
+              }}>
+                {registeredEmail}
+              </p>
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem"
+              }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/auth/resend-verification", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email: registeredEmail })
+                      })
+                      const data = await response.json()
+                      if (response.ok) {
+                        setError("")
+                        alert("Verifizierungs-E-Mail wurde erneut gesendet. Bitte prüfen Sie Ihr Postfach.")
+                      } else {
+                        setError(data.error || "Fehler beim Senden der E-Mail")
+                      }
+                    } catch (err) {
+                      setError("Ein Fehler ist aufgetreten")
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    backgroundColor: "#24c598",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Verifizierungs-E-Mail erneut senden
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSuccessMessage(false)
+                    setRegisteredEmail("")
+                    setEmail("")
+                    setFirstName("")
+                    setLastName("")
+                    setPassword("")
+                    setOrganizationName("")
+                    setError("")
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    backgroundColor: "transparent",
+                    color: "#24c598",
+                    border: "1px solid #24c598",
+                    borderRadius: "6px",
+                    fontSize: "0.95rem",
+                    fontWeight: "500",
+                    cursor: "pointer"
+                  }}
+                >
+                  E-Mail-Adresse ändern
+                </button>
+              </div>
             </div>
-          )}
-          {error && (
-            <div style={{
-              padding: "0.75rem",
-              marginBottom: "1rem",
-              backgroundColor: "#FEE",
-              border: "1px solid #FCC",
-              borderRadius: "6px",
-              color: "#C33",
-              fontSize: "0.9rem"
-            }}>
-              {error}
-            </div>
-          )}
+            {error && (
+              <div style={{
+                padding: "0.75rem",
+                marginBottom: "1rem",
+                backgroundColor: "#FEE",
+                border: "1px solid #FCC",
+                borderRadius: "6px",
+                color: "#C33",
+                fontSize: "0.9rem"
+              }}>
+                {error}
+              </div>
+            )}
+            <p style={{ textAlign: "center", color: "#7A7A7A", fontSize: "0.9rem" }}>
+              Bereits ein Konto?{" "}
+              <Link href="/login" style={{ color: "#24c598", textDecoration: "none", fontWeight: "500" }}>
+                Jetzt anmelden →
+              </Link>
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <div style={{
+                padding: "0.75rem",
+                marginBottom: "1rem",
+                backgroundColor: "#FEE",
+                border: "1px solid #FCC",
+                borderRadius: "6px",
+                color: "#C33",
+                fontSize: "0.9rem"
+              }}>
+                {error}
+              </div>
+            )}
 
-          <div style={{ marginBottom: "1.5rem" }}>
+            <div style={{ marginBottom: "1.5rem" }}>
             <label style={{
               display: "block",
               marginBottom: "0.5rem",
@@ -652,37 +771,38 @@ function SignupContent() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              backgroundColor: loading ? "#CDCDCD" : "#24c598",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "1rem",
-              fontWeight: "600",
-              cursor: loading ? "not-allowed" : "pointer",
-              marginBottom: "1rem"
-            }}
-          >
-            {loading 
-              ? (organizationAction === "request_to_join_organization" ? "Wird beigetreten..." : "Wird erstellt...")
-              : (organizationAction === "request_to_join_organization" 
-                  ? (invitationToken ? "Konto erstellen und beitreten" : "Konto erstellen")
-                  : "Konto erstellen")
-            }
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                backgroundColor: loading ? "#CDCDCD" : "#24c598",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "1rem",
+                fontWeight: "600",
+                cursor: loading ? "not-allowed" : "pointer",
+                marginBottom: "1rem"
+              }}
+            >
+              {loading 
+                ? (organizationAction === "request_to_join_organization" ? "Wird beigetreten..." : "Wird erstellt...")
+                : (organizationAction === "request_to_join_organization" 
+                    ? (invitationToken ? "Konto erstellen und beitreten" : "Konto erstellen")
+                    : "Konto erstellen")
+              }
+            </button>
+          </form>
 
-        <p style={{ textAlign: "center", color: "#7A7A7A", fontSize: "0.9rem" }}>
-          Bereits ein Konto?{" "}
-          <Link href="/login" style={{ color: "#24c598", textDecoration: "none", fontWeight: "500" }}>
-            Jetzt anmelden →
-          </Link>
-        </p>
+          <p style={{ textAlign: "center", color: "#7A7A7A", fontSize: "0.9rem" }}>
+            Bereits ein Konto?{" "}
+            <Link href="/login" style={{ color: "#24c598", textDecoration: "none", fontWeight: "500" }}>
+              Jetzt anmelden →
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   )

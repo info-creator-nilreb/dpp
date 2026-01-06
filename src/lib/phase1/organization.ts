@@ -52,8 +52,17 @@ export async function createOrganizationWithFirstUser(
       throw new Error("Password is required when creating a new user")
     }
     
-    const bcrypt = await import("bcryptjs")
-    const hashedPassword = await bcrypt.hash(userData.password, 10)
+    // Prüfe ob Passwort bereits gehasht ist (bcrypt Hashes beginnen mit $2a$, $2b$ oder $2y$)
+    // Wenn nicht, hash es jetzt. Dies verhindert Doppel-Hashing.
+    let hashedPassword: string
+    if (userData.password.startsWith("$2a$") || userData.password.startsWith("$2b$") || userData.password.startsWith("$2y$")) {
+      // Passwort ist bereits gehasht - verwende es direkt
+      hashedPassword = userData.password
+    } else {
+      // Passwort ist noch nicht gehasht - hash es jetzt
+      const bcrypt = await import("bcryptjs")
+      hashedPassword = await bcrypt.hash(userData.password, 10)
+    }
     
     user = await tx.user.create({
       data: {
