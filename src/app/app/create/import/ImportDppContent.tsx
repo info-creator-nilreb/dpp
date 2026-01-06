@@ -581,7 +581,7 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
         <button
           onClick={handleDownloadTemplate}
           style={{
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             border: "none",
             padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
@@ -617,7 +617,7 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           style={{
-            border: `2px dashed ${isDragging ? "#E20074" : "#CDCDCD"}`,
+            border: `2px dashed ${isDragging ? "#24c598" : "#CDCDCD"}`,
             borderRadius: "8px",
             padding: "3rem",
             textAlign: "center",
@@ -766,7 +766,7 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
               onClick={handleImport}
               disabled={!canImport}
               style={{
-                backgroundColor: canImport ? "#E20074" : "#CDCDCD",
+                backgroundColor: canImport ? "#24c598" : "#CDCDCD",
                 color: "#FFFFFF",
                 border: "none",
                 padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
@@ -857,7 +857,7 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
                 }}
                 style={{
                   padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
-                  backgroundColor: "#E20074",
+                  backgroundColor: "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "8px",

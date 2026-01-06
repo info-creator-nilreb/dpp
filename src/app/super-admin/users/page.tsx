@@ -100,7 +100,7 @@ export default async function SuperAdminUsersPage() {
             href="/super-admin/users/new"
             style={{
               padding: "clamp(0.625rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               color: "#FFFFFF",
               textDecoration: "none",
               borderRadius: "6px",

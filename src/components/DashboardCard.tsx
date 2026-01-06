@@ -39,7 +39,7 @@ export default function DashboardCard({ href, icon, title, description, children
       }}
       onMouseEnter={(e) => {
         if (isClickable) {
-          e.currentTarget.style.borderColor = "#E20074"
+          e.currentTarget.style.borderColor = "#24c598"
           e.currentTarget.style.boxShadow = "0 4px 12px rgba(226, 0, 116, 0.1)"
           e.currentTarget.style.transform = "translateY(-2px)"
         }

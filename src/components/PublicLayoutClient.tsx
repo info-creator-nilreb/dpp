@@ -124,26 +124,26 @@ function FloatingBurgerButton({
         top: "2rem",
         right: "1.5rem",
         backgroundColor: "#FFFFFF",
-        border: "1px solid #E20074",
+        border: "1px solid #24c598",
         borderRadius: "6px",
         padding: "0.75rem",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "#E20074",
+        color: "#24c598",
         zIndex: 25,
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
         transition: "all 0.2s ease"
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = "#E20074"
+        e.currentTarget.style.backgroundColor = "#24c598"
         e.currentTarget.style.color = "#FFFFFF"
         e.currentTarget.style.transform = "scale(1.05)"
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.backgroundColor = "#FFFFFF"
-        e.currentTarget.style.color = "#E20074"
+        e.currentTarget.style.color = "#24c598"
         e.currentTarget.style.transform = "scale(1)"
       }}
       aria-label="Menu öffnen"

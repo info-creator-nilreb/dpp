@@ -57,7 +57,7 @@ function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
         href="/pricing"
         style={{
           padding: "0.5rem 1rem",
-          backgroundColor: "#E20074",
+          backgroundColor: "#24c598",
           color: "#FFFFFF",
           textDecoration: "none",
           borderRadius: "6px",
@@ -70,7 +70,7 @@ function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
           e.currentTarget.style.backgroundColor = "#C00060"
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = "#E20074"
+          e.currentTarget.style.backgroundColor = "#24c598"
         }}
       >
         Jetzt upgraden

@@ -1,5 +1,5 @@
 /**
- * T-Pass Logo Component
+ * Easy Pass Logo Component
  * 
  * Reusable logo component for public and admin areas
  */
@@ -13,7 +13,7 @@ interface TPassLogoProps {
 
 export default function TPassLogo({ 
   size = 32, 
-  color = "#E20074",
+  color = "#24c598",
   iconOnly = false,
   textColor = "#0A0A0A"
 }: TPassLogoProps) {
@@ -60,7 +60,7 @@ export default function TPassLogo({
         color: textColor,
         whiteSpace: "nowrap"
       }}>
-        T-Pass
+        Easy Pass
       </span>
     </div>
   )

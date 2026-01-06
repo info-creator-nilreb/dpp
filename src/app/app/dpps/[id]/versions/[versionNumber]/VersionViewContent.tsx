@@ -144,7 +144,7 @@ export default function VersionViewContent({ id, versionNumber }: VersionViewCon
           href={`/app/dpps/${id}/versions`}
           style={{
             display: "inline-block",
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
             borderRadius: "8px",
@@ -205,7 +205,7 @@ export default function VersionViewContent({ id, versionNumber }: VersionViewCon
 
       <div style={{
         backgroundColor: "#FFF5F9",
-        border: "1px solid #E20074",
+        border: "1px solid #24c598",
         borderRadius: "8px",
         padding: "1rem",
         marginBottom: "1.5rem"
@@ -219,7 +219,7 @@ export default function VersionViewContent({ id, versionNumber }: VersionViewCon
           <span style={{
             fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
             fontWeight: "600",
-            color: "#E20074"
+            color: "#24c598"
           }}>
             Veröffentlichte Version (Read-only)
           </span>

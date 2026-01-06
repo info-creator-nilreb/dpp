@@ -212,7 +212,7 @@ export default function DppCard({ id, name, description, organizationName, media
         minHeight: 0
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "#E20074"
+        e.currentTarget.style.borderColor = "#24c598"
         e.currentTarget.style.boxShadow = "0 2px 8px rgba(226, 0, 116, 0.1)"
       }}
       onMouseLeave={(e) => {
@@ -325,8 +325,8 @@ export default function DppCard({ id, name, description, organizationName, media
             target="_blank"
             rel="noopener noreferrer"
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#E20074"
-              e.currentTarget.style.color = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
+              e.currentTarget.style.color = "#24c598"
               e.currentTarget.style.backgroundColor = "#FFF5F9"
             }}
             onMouseLeave={(e) => {
@@ -347,8 +347,8 @@ export default function DppCard({ id, name, description, organizationName, media
             onClick={(e) => e.stopPropagation()}
             style={iconContainerStyle}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#E20074"
-              e.currentTarget.style.color = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
+              e.currentTarget.style.color = "#24c598"
               e.currentTarget.style.backgroundColor = "#FFF5F9"
             }}
             onMouseLeave={(e) => {
@@ -368,8 +368,8 @@ export default function DppCard({ id, name, description, organizationName, media
           onClick={(e) => e.stopPropagation()}
           style={iconContainerStyle}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "#E20074"
-            e.currentTarget.style.color = "#E20074"
+            e.currentTarget.style.borderColor = "#24c598"
+            e.currentTarget.style.color = "#24c598"
             e.currentTarget.style.backgroundColor = "#FFF5F9"
           }}
           onMouseLeave={(e) => {
@@ -395,8 +395,8 @@ export default function DppCard({ id, name, description, organizationName, media
           }}
           onMouseEnter={(e) => {
             if (!publishing && subscriptionCanPublish) {
-              e.currentTarget.style.borderColor = "#E20074"
-              e.currentTarget.style.color = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
+              e.currentTarget.style.color = "#24c598"
               e.currentTarget.style.backgroundColor = "#FFF5F9"
             }
           }}
@@ -416,8 +416,8 @@ export default function DppCard({ id, name, description, organizationName, media
           onClick={(e) => e.stopPropagation()}
           style={iconContainerStyle}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "#E20074"
-            e.currentTarget.style.color = "#E20074"
+            e.currentTarget.style.borderColor = "#24c598"
+            e.currentTarget.style.color = "#24c598"
             e.currentTarget.style.backgroundColor = "#FFF5F9"
           }}
           onMouseLeave={(e) => {

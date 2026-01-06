@@ -83,7 +83,7 @@ export default function CreateDppContent() {
                   width="28"
                   height="28"
                   fill="none"
-                  stroke="#E20074"
+                  stroke="#24c598"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"

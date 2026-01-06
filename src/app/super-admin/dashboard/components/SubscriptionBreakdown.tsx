@@ -25,7 +25,7 @@ export default function SubscriptionBreakdown({
     { label: "Testphase", value: subscriptions.trial, color: "#94A3B8" },
     { label: "Basic", value: subscriptions.basic, color: "#64748B" },
     { label: "Pro", value: subscriptions.pro, color: "#3B82F6" },
-    { label: "Premium", value: subscriptions.premium, color: "#E20074" },
+    { label: "Premium", value: subscriptions.premium, color: "#24c598" },
   ];
 
   return (

@@ -32,7 +32,7 @@ export default function AuditLogTable({
 }: AuditLogTableProps) {
   const getActionBadgeColor = (actionType: string) => {
     if (actionType.startsWith("AI_")) {
-      return "#E20074" // AI actions: pink
+      return "#24c598" // AI actions: pink
     }
     if (["CREATE", "PUBLISH"].includes(actionType)) {
       return "#10B981" // Positive actions: green
@@ -46,7 +46,7 @@ export default function AuditLogTable({
   const getSourceBadgeColor = (source: string) => {
     switch (source) {
       case "AI":
-        return "#E20074"
+        return "#24c598"
       case "SYSTEM":
         return "#6B7280"
       case "API":
@@ -184,7 +184,7 @@ export default function AuditLogTable({
                         fontSize: "0.6875rem",
                         fontWeight: "600",
                         color: "#FFFFFF",
-                        backgroundColor: "#E20074"
+                        backgroundColor: "#24c598"
                       }}>
                         KI-unterstützt
                       </span>

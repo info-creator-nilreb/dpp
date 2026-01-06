@@ -154,11 +154,11 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
       {error && (
         <div style={{
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",
           marginBottom: "2rem",
-          color: "#E20074",
+          color: "#24c598",
           fontSize: "0.95rem"
         }}>
           {error}
@@ -168,11 +168,11 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
       {availableCategories.length === 0 && (
         <div style={{
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",
           marginBottom: "2rem",
-          color: "#E20074",
+          color: "#24c598",
           fontSize: "0.95rem"
         }}>
           Es sind keine Kategorien mit veröffentlichten Templates verfügbar. Bitte kontaktieren Sie einen Administrator.
@@ -362,7 +362,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
             disabled={loading || availableCategories.length === 0}
             style={{
               padding: "0.75rem 1.5rem",
-              backgroundColor: loading || availableCategories.length === 0 ? "#CDCDCD" : "#E20074",
+              backgroundColor: loading || availableCategories.length === 0 ? "#CDCDCD" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "8px",

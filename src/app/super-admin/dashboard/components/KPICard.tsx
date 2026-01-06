@@ -28,7 +28,7 @@ export default function KPICard({ label, value, href, trend }: KPICardProps) {
       }}
       onMouseEnter={(e) => {
         if (href) {
-          e.currentTarget.style.borderColor = "#E20074";
+          e.currentTarget.style.borderColor = "#24c598";
           e.currentTarget.style.boxShadow = "0 2px 8px rgba(226, 0, 116, 0.1)";
         }
       }}

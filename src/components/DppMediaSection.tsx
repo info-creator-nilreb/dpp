@@ -175,7 +175,7 @@ export default function DppMediaSection({
         />
         {error && (
           <p style={{
-            color: "#E20074",
+            color: "#24c598",
             fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
             marginTop: "0.5rem"
           }}>
@@ -304,7 +304,7 @@ export default function DppMediaSection({
                       backgroundColor: "transparent",
                       border: "1px solid #CDCDCD",
                       borderRadius: "6px",
-                      color: "#E20074",
+                      color: "#24c598",
                       fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                       cursor: "pointer",
                       fontWeight: "500"
@@ -409,7 +409,7 @@ export default function DppMediaSection({
                       backgroundColor: "transparent",
                       border: "1px solid #CDCDCD",
                       borderRadius: "6px",
-                      color: "#E20074",
+                      color: "#24c598",
                       fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                       cursor: "pointer",
                       fontWeight: "500"

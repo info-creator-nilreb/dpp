@@ -124,7 +124,7 @@ export default function VersionsContent({ id }: VersionsContentProps) {
           href="/app/dpps"
           style={{
             display: "inline-block",
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
             borderRadius: "8px",
@@ -224,7 +224,7 @@ export default function VersionsContent({ id }: VersionsContentProps) {
             href={`/app/dpps/${id}`}
             style={{
               display: "inline-block",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               color: "#FFFFFF",
               padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
               borderRadius: "8px",

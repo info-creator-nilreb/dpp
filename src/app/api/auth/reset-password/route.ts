@@ -5,7 +5,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
- * POST /api/auth/reset-password
+ * POST /api/auth/reseeasy-password
  * 
  * Setzt das Passwort mit einem Reset-Token zurück
  */
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: result.success ? 200 : 400 })
   } catch (error: any) {
-    console.error("Error in reset-password route:", error)
+    console.error("Error in reseeasy-password route:", error)
     console.error("Error stack:", error?.stack)
     return NextResponse.json(
       { success: false, error: "Ein Fehler ist aufgetreten", message: error?.message || "Ein Fehler ist aufgetreten" },

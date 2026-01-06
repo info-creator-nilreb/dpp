@@ -560,7 +560,7 @@ Hinweise:
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "2rem" }}>
           {/* Option A: From Existing */}
           <div style={{
-            border: creationMode === "from-existing" ? "2px solid #E20074" : "2px solid #E5E5E5",
+            border: creationMode === "from-existing" ? "2px solid #24c598" : "2px solid #E5E5E5",
             borderRadius: "8px",
             padding: "1.5rem",
             cursor: "pointer",
@@ -570,7 +570,7 @@ Hinweise:
           onClick={() => setCreationMode("from-existing")}
           onMouseEnter={(e) => {
             if (creationMode !== "from-existing") {
-              e.currentTarget.style.borderColor = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
             }
           }}
           onMouseLeave={(e) => {
@@ -631,7 +631,7 @@ Hinweise:
 
           {/* Option B: Empty */}
           <div style={{
-            border: creationMode === "empty" ? "2px solid #E20074" : "2px solid #E5E5E5",
+            border: creationMode === "empty" ? "2px solid #24c598" : "2px solid #E5E5E5",
             borderRadius: "8px",
             padding: "1.5rem",
             cursor: "pointer",
@@ -641,7 +641,7 @@ Hinweise:
           onClick={() => setCreationMode("empty")}
           onMouseEnter={(e) => {
             if (creationMode !== "empty") {
-              e.currentTarget.style.borderColor = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
             }
           }}
           onMouseLeave={(e) => {
@@ -667,7 +667,7 @@ Hinweise:
 
           {/* Option C: CSV Import */}
           <div style={{
-            border: creationMode === "csv-import" ? "2px solid #E20074" : "2px solid #E5E5E5",
+            border: creationMode === "csv-import" ? "2px solid #24c598" : "2px solid #E5E5E5",
             borderRadius: "8px",
             padding: "1.5rem",
             cursor: "pointer",
@@ -677,7 +677,7 @@ Hinweise:
           onClick={() => setCreationMode("csv-import")}
           onMouseEnter={(e) => {
             if (creationMode !== "csv-import") {
-              e.currentTarget.style.borderColor = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
             }
           }}
           onMouseLeave={(e) => {
@@ -763,7 +763,7 @@ Hinweise:
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     style={{
-                      border: `2px dashed ${isDragging ? "#E20074" : "#CDCDCD"}`,
+                      border: `2px dashed ${isDragging ? "#24c598" : "#CDCDCD"}`,
                       borderRadius: "8px",
                       padding: "3rem",
                       textAlign: "center",
@@ -815,7 +815,7 @@ Hinweise:
                     {csvParsing && (
                       <p style={{
                         fontSize: "0.875rem",
-                        color: "#E20074",
+                        color: "#24c598",
                         marginTop: "0.5rem",
                         margin: "0.5rem 0 0 0"
                       }}>
@@ -910,7 +910,7 @@ Hinweise:
                 creationMode === "empty" || 
                 (creationMode === "from-existing" && selectedTemplateId) ||
                 (creationMode === "csv-import" && csvFile && csvErrors.length === 0 && !csvParsing)
-              ) ? "#E20074" : "#CDCDCD",
+              ) ? "#24c598" : "#CDCDCD",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "8px",
@@ -930,11 +930,11 @@ Hinweise:
         {error && (
           <div style={{
             backgroundColor: "#FFF5F9",
-            border: "1px solid #E20074",
+            border: "1px solid #24c598",
             borderRadius: "8px",
             padding: "1rem",
             marginTop: "1rem",
-            color: "#E20074",
+            color: "#24c598",
             fontSize: "0.95rem"
           }}>
             {error}
@@ -949,11 +949,11 @@ Hinweise:
       {error && (
         <div style={{
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",
           marginBottom: "2rem",
-          color: "#E20074",
+          color: "#24c598",
           fontSize: "0.95rem"
         }}>
           {error}
@@ -1121,7 +1121,7 @@ Hinweise:
               gap: "0.75rem",
               marginBottom: "1.5rem",
               paddingBottom: "1rem",
-              borderBottom: "2px solid #E20074",
+              borderBottom: "2px solid #24c598",
               flexWrap: "wrap"
             }}>
               <input
@@ -1410,7 +1410,7 @@ Hinweise:
                           }}
                           style={{
                             padding: "0.375rem 0.75rem",
-                            backgroundColor: editingFieldOptions === field.id ? "#7A7A7A" : "#E20074",
+                            backgroundColor: editingFieldOptions === field.id ? "#7A7A7A" : "#24c598",
                             color: "#FFFFFF",
                             border: "none",
                             borderRadius: "6px",
@@ -1446,7 +1446,7 @@ Hinweise:
                               disabled={loading}
                               style={{
                                 padding: "0.375rem 0.75rem",
-                                backgroundColor: "#E20074",
+                                backgroundColor: "#24c598",
                                 color: "#FFFFFF",
                                 border: "none",
                                 borderRadius: "6px",
@@ -1647,7 +1647,7 @@ Hinweise:
           disabled={loading}
           style={{
             padding: "clamp(0.625rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem)",
-            backgroundColor: loading ? "#CDCDCD" : "#E20074",
+            backgroundColor: loading ? "#CDCDCD" : "#24c598",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "8px",

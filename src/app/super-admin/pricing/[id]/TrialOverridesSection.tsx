@@ -306,14 +306,14 @@ export default function TrialOverridesSection({
           {entitlements.map((entitlement) => {
             const override = getEntitlementOverride(entitlement.key)
             const definition = getEntitlementDefinition(entitlement.key)
-            const icon = getEntitlementIcon(definition.icon, 24, "#E20074")
+            const icon = getEntitlementIcon(definition.icon, 24, "#24c598")
 
             return (
               <div
                 key={entitlement.id}
                 style={{
                   padding: "1rem",
-                  border: override ? "2px solid #E20074" : "1px solid #E5E5E5",
+                  border: override ? "2px solid #24c598" : "1px solid #E5E5E5",
                   borderRadius: "8px",
                   backgroundColor: "#FFFFFF",
                   height: "100%",
@@ -337,7 +337,7 @@ export default function TrialOverridesSection({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "#E20074"
+                      color: "#24c598"
                     }}>
                       {icon}
                     </div>

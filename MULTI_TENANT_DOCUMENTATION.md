@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Diese Dokumentation beschreibt die Multi-Tenant-Architektur von T-Pass.
+Diese Dokumentation beschreibt die Multi-Tenant-Architektur von Easy Pass.
 
 ## Architektur
 

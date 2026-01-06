@@ -28,7 +28,7 @@ export default function DashboardCard({ href, title, description }: DashboardCar
         transition: "border-color 0.2s"
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "#E20074"
+        e.currentTarget.style.borderColor = "#24c598"
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = "#CDCDCD"

@@ -213,7 +213,7 @@ export default function AiStartDppContent() {
             width="20"
             height="20"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -282,7 +282,7 @@ export default function AiStartDppContent() {
               width="18"
               height="18"
               fill="none"
-              stroke="#E20074"
+              stroke="#24c598"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -384,7 +384,7 @@ export default function AiStartDppContent() {
                   backgroundColor: "transparent",
                   border: "1px solid #CDCDCD",
                   borderRadius: "6px",
-                  color: "#E20074",
+                  color: "#24c598",
                   fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
                   cursor: "pointer",
                   fontWeight: "500",
@@ -414,7 +414,7 @@ export default function AiStartDppContent() {
               width="18"
               height="18"
               fill="none"
-              stroke="#E20074"
+              stroke="#24c598"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -447,7 +447,7 @@ export default function AiStartDppContent() {
               padding: "clamp(0.75rem, 2vw, 1rem)",
               fontSize: "clamp(0.9rem, 2vw, 1rem)",
               border: "1px solid",
-              borderColor: sourceType === "url" ? "#E20074" : "#CDCDCD",
+              borderColor: sourceType === "url" ? "#24c598" : "#CDCDCD",
               borderRadius: "8px",
               backgroundColor: "#FFFFFF",
               color: "#0A0A0A",
@@ -467,7 +467,7 @@ export default function AiStartDppContent() {
           onClick={handleStartAnalysis}
           disabled={!canStartAnalysis() || isAnalyzing}
           style={{
-            backgroundColor: canStartAnalysis() && !isAnalyzing ? "#E20074" : "#CDCDCD",
+            backgroundColor: canStartAnalysis() && !isAnalyzing ? "#24c598" : "#CDCDCD",
             color: "#FFFFFF",
             border: "none",
             padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
@@ -494,7 +494,7 @@ export default function AiStartDppContent() {
             width="16"
             height="16"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -556,7 +556,7 @@ export default function AiStartDppContent() {
             onClick={handleReset}
             style={{
               padding: "clamp(0.6875rem, 2vw, 0.875rem) clamp(1rem, 2.5vw, 1.5rem)",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",
@@ -653,7 +653,7 @@ export default function AiStartDppContent() {
                 }}
                 style={{
                   padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
-                  backgroundColor: "#E20074",
+                  backgroundColor: "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "8px",
@@ -1304,7 +1304,7 @@ function ResultSection({
           onClick={handleContinueToDppCreation}
           style={{
             padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "8px",
@@ -1391,7 +1391,7 @@ function AiAnalysisLoadingSpinner({ sourceType }: { sourceType: "pdf" | "url" | 
               width: "14px",
               height: "14px",
               borderRadius: "50%",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               animation: `pulse 1.4s ease-in-out ${index * 0.2}s infinite both`,
             }}
           />

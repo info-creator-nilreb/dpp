@@ -137,7 +137,7 @@ export default function FileUploadArea({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         style={{
-          border: `2px dashed ${isDragging ? "#E20074" : "#CDCDCD"}`,
+          border: `2px dashed ${isDragging ? "#24c598" : "#CDCDCD"}`,
           borderRadius: "8px",
           padding: "2rem",
           textAlign: "center",
@@ -152,7 +152,7 @@ export default function FileUploadArea({
           width="48"
           height="48"
           fill="none"
-          stroke={isDragging ? "#E20074" : "#7A7A7A"}
+          stroke={isDragging ? "#24c598" : "#7A7A7A"}
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -168,7 +168,7 @@ export default function FileUploadArea({
         </svg>
         <p
           style={{
-            color: isDragging ? "#E20074" : "#0A0A0A",
+            color: isDragging ? "#24c598" : "#0A0A0A",
             fontSize: "clamp(0.9rem, 2vw, 1rem)",
             fontWeight: "600",
             marginBottom: "0.5rem",

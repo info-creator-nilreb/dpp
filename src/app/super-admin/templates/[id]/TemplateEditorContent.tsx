@@ -401,11 +401,11 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         {error && (
           <div style={{
             backgroundColor: "#FFF5F9",
-            border: "1px solid #E20074",
+            border: "1px solid #24c598",
             borderRadius: "8px",
             padding: "1rem",
             marginBottom: "2rem",
-            color: "#E20074",
+            color: "#24c598",
             fontSize: "0.95rem"
           }}>
             {error}
@@ -414,7 +414,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
         <div style={{
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "12px",
           padding: "1.5rem",
           marginBottom: "2rem"
@@ -422,7 +422,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           <h3 style={{
             fontSize: "1.25rem",
             fontWeight: "600",
-            color: "#E20074",
+            color: "#24c598",
             marginBottom: "0.5rem"
           }}>
             Template ist {isActive ? "aktiv" : "archiviert"}
@@ -444,7 +444,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               disabled={creatingNewVersion}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: creatingNewVersion ? "#CDCDCD" : "#E20074",
+                backgroundColor: creatingNewVersion ? "#CDCDCD" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
@@ -534,10 +534,10 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               marginTop: "1rem",
               padding: "0.75rem",
               backgroundColor: "#FFF5F9",
-              border: "1px solid #E20074",
+              border: "1px solid #24c598",
               borderRadius: "8px",
               fontSize: "0.875rem",
-              color: "#E20074"
+              color: "#24c598"
             }}>
               ⚠️ Änderungen gelten nur für zukünftige Produktpässe.
             </div>
@@ -561,7 +561,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 color: "#0A0A0A",
                 marginBottom: "1.5rem",
                 paddingBottom: "1rem",
-                borderBottom: "2px solid #E20074"
+                borderBottom: "2px solid #24c598"
               }}>
                 {block.name}
               </h3>
@@ -612,7 +612,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                         display: "inline-block",
                         padding: "0.25rem 0.75rem",
                         borderRadius: "6px",
-                        backgroundColor: "#E20074",
+                        backgroundColor: "#24c598",
                         color: "#FFFFFF",
                         fontSize: "0.75rem",
                         fontWeight: "600"
@@ -733,11 +733,11 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       {error && (
         <div style={{
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",
           marginBottom: "2rem",
-          color: "#E20074",
+          color: "#24c598",
           fontSize: "0.95rem"
         }}>
           {error}
@@ -989,7 +989,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 gap: "0.75rem",
                 flexWrap: "wrap",
                 paddingBottom: "1rem",
-                borderBottom: "2px solid #E20074"
+                borderBottom: "2px solid #24c598"
               }}>
                 <input
                   type="text"
@@ -1294,7 +1294,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                             }}
                             style={{
                               padding: "0.375rem 0.75rem",
-                              backgroundColor: editingFieldOptions === field.id ? "#7A7A7A" : "#E20074",
+                              backgroundColor: editingFieldOptions === field.id ? "#7A7A7A" : "#24c598",
                               color: "#FFFFFF",
                               border: "none",
                               borderRadius: "6px",
@@ -1330,7 +1330,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                               disabled={loading || !isEditable}
                               style={{
                                 padding: "0.375rem 0.75rem",
-                                backgroundColor: "#E20074",
+                                backgroundColor: "#24c598",
                                 color: "#FFFFFF",
                                 border: "none",
                                 borderRadius: "6px",
@@ -1636,7 +1636,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               disabled={loading || !isEditable}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: loading || !isEditable ? "#CDCDCD" : "#E20074",
+                backgroundColor: loading || !isEditable ? "#CDCDCD" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",

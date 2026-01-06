@@ -74,7 +74,7 @@ export default async function SuperAdminLimitDefinitionsPage() {
         <Link
           href="/super-admin/pricing"
           style={{
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             padding: "0.75rem 1.5rem",
             borderRadius: "8px",

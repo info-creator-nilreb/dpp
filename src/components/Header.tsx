@@ -102,7 +102,7 @@ export default function Header() {
                 width="24"
                 height="24"
                 fill="none"
-                stroke="#E20074"
+                stroke="#24c598"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -113,7 +113,7 @@ export default function Header() {
                 <path d="M9 12l2 2 4-4" />
               </svg>
             </div>
-            T-Pass
+            Easy Pass
           </Link>
           <div
             style={{
@@ -139,14 +139,14 @@ export default function Header() {
             <Link
               href="/signup"
               style={{
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 padding: "0.625rem 1.25rem",
                 borderRadius: "6px",
                 textDecoration: "none",
                 fontWeight: "600",
                 fontSize: "0.9rem",
-                border: "2px solid #E20074",
+                border: "2px solid #24c598",
                 boxSizing: "border-box",
                 display: "inline-block",
                 whiteSpace: "nowrap"

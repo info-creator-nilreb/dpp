@@ -54,7 +54,7 @@ export default function HeroLogo() {
             width="100%"
             height="100%"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -72,7 +72,7 @@ export default function HeroLogo() {
             color: "#0A0A0A"
           }}
         >
-          T-Pass
+          Easy Pass
         </span>
       </div>
     </div>

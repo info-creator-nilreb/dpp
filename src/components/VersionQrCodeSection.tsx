@@ -92,7 +92,7 @@ export default function VersionQrCodeSection({ publicUrl, dppId, version }: Vers
               onClick={handleCopy}
               style={{
                 padding: "0.75rem 1rem",
-                backgroundColor: copied ? "#00A651" : "#E20074",
+                backgroundColor: copied ? "#00A651" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "6px",
@@ -151,7 +151,7 @@ export default function VersionQrCodeSection({ publicUrl, dppId, version }: Vers
                   style={{
                     display: "inline-block",
                     padding: "0.75rem 1rem",
-                    backgroundColor: "#E20074",
+                    backgroundColor: "#24c598",
                     color: "#FFFFFF",
                     textDecoration: "none",
                     borderRadius: "6px",

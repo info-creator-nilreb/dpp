@@ -48,7 +48,7 @@ function ResetPasswordContent() {
 
     try {
       console.log("Sending password reset for token:", token?.substring(0, 20) + "...")
-      const response = await fetch("/api/auth/reset-password", {
+      const response = await fetch("/api/auth/reseeasy-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
@@ -98,7 +98,7 @@ function ResetPasswordContent() {
           <h1 style={{
             fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
             fontWeight: "700",
-            color: "#E20074",
+            color: "#24c598",
             marginBottom: "0.5rem"
           }}>
             Ungültiger Reset-Link
@@ -107,11 +107,11 @@ function ResetPasswordContent() {
             Der Reset-Link ist ungültig oder abgelaufen.
           </p>
           <Link
-            href="/forgot-password"
+            href="/forgoeasy-password"
             style={{
               display: "inline-block",
               padding: "0.75rem 1.5rem",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               color: "#FFFFFF",
               textDecoration: "none",
               borderRadius: "6px",
@@ -144,7 +144,7 @@ function ResetPasswordContent() {
             width="48"
             height="48"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -160,7 +160,7 @@ function ResetPasswordContent() {
           fontWeight: "700",
           color: "#0A0A0A"
         }}>
-          T-Pass
+          Easy Pass
         </span>
       </Link>
 
@@ -299,7 +299,7 @@ function ResetPasswordContent() {
                 style={{
                   width: "100%",
                   padding: "0.75rem",
-                  backgroundColor: loading ? "#CCCCCC" : "#E20074",
+                  backgroundColor: loading ? "#CCCCCC" : "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "6px",

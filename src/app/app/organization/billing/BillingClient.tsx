@@ -425,7 +425,7 @@ export default function BillingClient() {
             disabled={saving}
             style={{
               padding: "0.75rem 1.5rem",
-              backgroundColor: saving ? "#CDCDCD" : "#E20074",
+              backgroundColor: saving ? "#CDCDCD" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",

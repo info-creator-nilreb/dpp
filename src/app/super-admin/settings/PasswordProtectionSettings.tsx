@@ -308,7 +308,7 @@ export default function PasswordProtectionSettings({
                 border: "none",
                 cursor: "pointer",
                 padding: "0.5rem",
-                color: "#E20074"
+                color: "#24c598"
               }}
             >
               {showPassword ? "👁️" : "👁️‍🗨️"}
@@ -345,7 +345,7 @@ export default function PasswordProtectionSettings({
           disabled={loading}
           style={{
             padding: "0.75rem 1.5rem",
-            backgroundColor: loading ? "#CDCDCD" : "#E20074",
+            backgroundColor: loading ? "#CDCDCD" : "#24c598",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "6px",

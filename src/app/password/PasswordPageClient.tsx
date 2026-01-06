@@ -83,7 +83,7 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
             width="48"
             height="48"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -99,7 +99,7 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
           fontWeight: "700",
           color: "#0A0A0A"
         }}>
-          T-Pass
+          Easy Pass
         </span>
       </Link>
 
@@ -157,7 +157,7 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
             <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
+                autoComplete="curreneasy-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -190,7 +190,7 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#E20074"
+                  color: "#24c598"
                 }}
               >
                 {showPassword ? (
@@ -234,7 +234,7 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
             style={{
               width: "100%",
               padding: "0.75rem",
-              backgroundColor: loading ? "#CDCDCD" : "#E20074",
+              backgroundColor: loading ? "#CDCDCD" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",

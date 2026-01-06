@@ -61,7 +61,7 @@ export function LoadingSpinner({ message }: LoadingSpinnerProps) {
               width: "14px",
               height: "14px",
               borderRadius: "50%",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               animation: `pulse 1.4s ease-in-out ${index * 0.2}s infinite both`,
             }}
           />

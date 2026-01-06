@@ -197,7 +197,7 @@ export default async function PlatformPage() {
                   {user.isPlatformAdmin && (
                     <span style={{
                       padding: "0.25rem 0.75rem",
-                      backgroundColor: "#E20074",
+                      backgroundColor: "#24c598",
                       color: "#FFFFFF",
                       borderRadius: "4px",
                       fontSize: "0.8rem",

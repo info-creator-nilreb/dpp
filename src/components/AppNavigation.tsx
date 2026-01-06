@@ -104,7 +104,7 @@ export default function AppNavigation() {
                 width="24"
                 height="24"
                 fill="none"
-                stroke="#E20074"
+                stroke="#24c598"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -115,7 +115,7 @@ export default function AppNavigation() {
                 <path d="M9 12l2 2 4-4" />
               </svg>
             </div>
-            T-Pass
+            Easy Pass
           </Link>
           <div style={{ display: "flex", gap: "1.5rem" }}>
             <Link href="/app/dashboard" style={{

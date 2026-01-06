@@ -103,7 +103,7 @@ export default function CreateOrganizationContent() {
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Organisationsname <span style={{ color: "#E20074" }}>*</span>
+              Organisationsname <span style={{ color: "#24c598" }}>*</span>
             </label>
             <input
               type="text"
@@ -131,7 +131,7 @@ export default function CreateOrganizationContent() {
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Rechtlicher Name <span style={{ color: "#E20074" }}>*</span>
+              Rechtlicher Name <span style={{ color: "#24c598" }}>*</span>
             </label>
             <input
               type="text"
@@ -159,7 +159,7 @@ export default function CreateOrganizationContent() {
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Land (ISO Code) <span style={{ color: "#E20074" }}>*</span>
+              Land (ISO Code) <span style={{ color: "#24c598" }}>*</span>
             </label>
             <input
               type="text"
@@ -196,7 +196,7 @@ export default function CreateOrganizationContent() {
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Admin-E-Mail <span style={{ color: "#E20074" }}>*</span>
+              Admin-E-Mail <span style={{ color: "#24c598" }}>*</span>
             </label>
             <input
               type="email"
@@ -341,7 +341,7 @@ export default function CreateOrganizationContent() {
             disabled={loading}
             style={{
               padding: "0.75rem 1.5rem",
-              backgroundColor: loading ? "#CDCDCD" : "#E20074",
+              backgroundColor: loading ? "#CDCDCD" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",

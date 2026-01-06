@@ -183,7 +183,7 @@ export default function FilterBar({
               outline: "none"
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
               e.currentTarget.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
             }}
             onBlur={(e) => {
@@ -270,7 +270,7 @@ export default function FilterBar({
               outline: "none"
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
               e.currentTarget.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
             }}
             onBlur={(e) => {
@@ -318,7 +318,7 @@ export default function FilterBar({
               outline: "none"
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
               e.currentTarget.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
             }}
             onBlur={(e) => {
@@ -366,7 +366,7 @@ export default function FilterBar({
               outline: "none"
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
               e.currentTarget.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
             }}
             onBlur={(e) => {

@@ -237,7 +237,7 @@ export function SubscriptionPageContent() {
             </div>
           )}
           {subscription.cancelAtPeriodEnd && (
-            <div style={{ color: "#E20074", fontWeight: "600" }}>
+            <div style={{ color: "#24c598", fontWeight: "600" }}>
               Abonnement wird am Periodenende gekündigt
             </div>
           )}
@@ -269,7 +269,7 @@ export function SubscriptionPageContent() {
                 style={{
                   border:
                     subscription.plan === plan
-                      ? "2px solid #E20074"
+                      ? "2px solid #24c598"
                       : "1px solid #DDD",
                   borderRadius: "8px",
                   padding: "1.5rem",
@@ -284,7 +284,7 @@ export function SubscriptionPageContent() {
                   disabled={upgrading || subscription.plan === plan}
                   style={{
                     backgroundColor:
-                      subscription.plan === plan ? "#CCC" : "#E20074",
+                      subscription.plan === plan ? "#CCC" : "#24c598",
                     color: "white",
                     border: "none",
                     padding: "0.75rem 1.5rem",

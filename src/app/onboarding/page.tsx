@@ -70,7 +70,7 @@ export default function OnboardingPage() {
         color: "#0A0A0A",
         marginBottom: "0.5rem"
       }}>
-        Willkommen bei T-Pass
+        Willkommen bei Easy Pass
       </h1>
       <p style={{
         color: "#7A7A7A",
@@ -102,7 +102,7 @@ export default function OnboardingPage() {
               width: "100%",
               padding: "clamp(0.75rem, 2vw, 1rem)",
               fontSize: "clamp(0.9rem, 2vw, 1rem)",
-              border: error ? "2px solid #E20074" : "1px solid #CDCDCD",
+              border: error ? "2px solid #24c598" : "1px solid #CDCDCD",
               borderRadius: "8px",
               backgroundColor: "#FFFFFF",
               color: "#0A0A0A",
@@ -112,7 +112,7 @@ export default function OnboardingPage() {
           />
           {error && (
             <p style={{
-              color: "#E20074",
+              color: "#24c598",
               fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
               marginTop: "0.5rem"
             }}>
@@ -127,7 +127,7 @@ export default function OnboardingPage() {
           style={{
             width: "100%",
             padding: "clamp(0.875rem, 2.5vw, 1rem)",
-            backgroundColor: loading || !organizationName.trim() ? "#CDCDCD" : "#E20074",
+            backgroundColor: loading || !organizationName.trim() ? "#CDCDCD" : "#24c598",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "8px",

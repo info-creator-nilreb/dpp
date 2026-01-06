@@ -32,7 +32,7 @@ export default function WorkAreaCard({ href, icon, title, description }: WorkAre
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)"
-        e.currentTarget.style.borderColor = "#E20074"
+        e.currentTarget.style.borderColor = "#24c598"
         e.currentTarget.style.transform = "translateY(-2px)"
       }}
       onMouseLeave={(e) => {
@@ -51,14 +51,14 @@ export default function WorkAreaCard({ href, icon, title, description }: WorkAre
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
-          color: "#E20074",
+          color: "#24c598",
         }}>
           <div style={{ width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {icon}
           </div>
         </div>
         <div style={{ 
-          color: "#E20074", 
+          color: "#24c598", 
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

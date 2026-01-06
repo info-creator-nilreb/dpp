@@ -328,9 +328,9 @@ function SidebarContent({
         justifyContent: isCollapsed ? "center" : "flex-start",
       }}>
         {isCollapsed ? (
-          <TPassLogo size={32} color="#E20074" iconOnly={true} />
+          <TPassLogo size={32} color="#24c598" iconOnly={true} />
         ) : (
-          <TPassLogo size={32} color="#E20074" iconOnly={false} textColor="#FFFFFF" />
+          <TPassLogo size={32} color="#24c598" iconOnly={false} textColor="#FFFFFF" />
         )}
       </div>
 
@@ -353,7 +353,7 @@ function SidebarContent({
                 textDecoration: "none",
                 fontSize: "0.95rem",
                 fontWeight: isActive ? "600" : "400",
-                borderLeft: isActive && !isCollapsed ? "3px solid #E20074" : "3px solid transparent",
+                borderLeft: isActive && !isCollapsed ? "3px solid #24c598" : "3px solid transparent",
                 transition: "all 0.15s ease",
                 position: "relative",
                 cursor: "pointer",
@@ -439,7 +439,7 @@ function SidebarContent({
               width: isCollapsed ? "32px" : "40px",
               height: isCollapsed ? "32px" : "40px",
               borderRadius: "50%",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -466,7 +466,7 @@ function SidebarContent({
                 {userRole && (
                   <p style={{ 
                     fontSize: "0.75rem", 
-                    color: "#E20074",
+                    color: "#24c598",
                     margin: "0.25rem 0 0 0",
                   }}>
                     {getRoleLabel(userRole)}

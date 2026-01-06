@@ -113,11 +113,11 @@ function SuperAdminLoginForm() {
         {error && (
           <div style={{
             backgroundColor: "#FFF5F9",
-            border: "1px solid #E20074",
+            border: "1px solid #24c598",
             borderRadius: "8px",
             padding: "1rem",
             marginBottom: "1.5rem",
-            color: "#E20074",
+            color: "#24c598",
             fontSize: "0.9rem"
           }}>
             {error}
@@ -196,7 +196,7 @@ function SuperAdminLoginForm() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#E20074"
+                  color: "#24c598"
                 }}
               >
                 {showPassword ? (
@@ -236,9 +236,9 @@ function SuperAdminLoginForm() {
 
           <div style={{ marginBottom: "1.5rem", textAlign: "right" }}>
             <Link
-              href="/super-admin/forgot-password"
+              href="/super-admin/forgoeasy-password"
               style={{
-                color: "#E20074",
+                color: "#24c598",
                 textDecoration: "none",
                 fontSize: "0.9rem"
               }}
@@ -253,7 +253,7 @@ function SuperAdminLoginForm() {
             style={{
               width: "100%",
               padding: "0.75rem",
-              backgroundColor: loading ? "#CDCDCD" : "#E20074",
+              backgroundColor: loading ? "#CDCDCD" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",

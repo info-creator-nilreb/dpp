@@ -48,7 +48,7 @@ export default function TemplateCard({
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)"
-        e.currentTarget.style.borderColor = "#E20074"
+        e.currentTarget.style.borderColor = "#24c598"
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.boxShadow = "none"

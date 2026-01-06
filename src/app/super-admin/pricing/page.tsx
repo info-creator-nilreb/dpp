@@ -142,7 +142,7 @@ export default async function SuperAdminPricingPage() {
         <Link
           href="/super-admin/pricing/new"
           style={{
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             padding: "clamp(0.625rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem)",
             borderRadius: "8px",

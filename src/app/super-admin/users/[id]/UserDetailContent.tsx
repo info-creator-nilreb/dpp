@@ -276,9 +276,9 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
             padding: "clamp(0.625rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)",
             border: "none",
             backgroundColor: "transparent",
-            color: activeTab === "details" ? "#E20074" : "#7A7A7A",
+            color: activeTab === "details" ? "#24c598" : "#7A7A7A",
             fontWeight: activeTab === "details" ? "600" : "400",
-            borderBottom: activeTab === "details" ? "2px solid #E20074" : "2px solid transparent",
+            borderBottom: activeTab === "details" ? "2px solid #24c598" : "2px solid transparent",
             cursor: "pointer",
             fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
             whiteSpace: "nowrap",
@@ -293,9 +293,9 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
             padding: "clamp(0.625rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)",
             border: "none",
             backgroundColor: "transparent",
-            color: activeTab === "activity" ? "#E20074" : "#7A7A7A",
+            color: activeTab === "activity" ? "#24c598" : "#7A7A7A",
             fontWeight: activeTab === "activity" ? "600" : "400",
-            borderBottom: activeTab === "activity" ? "2px solid #E20074" : "2px solid transparent",
+            borderBottom: activeTab === "activity" ? "2px solid #24c598" : "2px solid transparent",
             cursor: "pointer",
             fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
             whiteSpace: "nowrap",
@@ -349,7 +349,7 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
                   onClick={() => setIsEditing(true)}
                   style={{
                     padding: "0.5rem 1rem",
-                    backgroundColor: "#E20074",
+                    backgroundColor: "#24c598",
                     color: "#FFFFFF",
                     border: "none",
                     borderRadius: "6px",
@@ -423,7 +423,7 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
                       disabled={saving || !editData.firstName || !editData.lastName}
                       style={{
                         padding: "0.75rem 1.5rem",
-                        backgroundColor: "#E20074",
+                        backgroundColor: "#24c598",
                         color: "#FFFFFF",
                         border: "none",
                         borderRadius: "6px",
@@ -592,7 +592,7 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
                     href={`/super-admin/organizations/${user.organizationId}`}
                     style={{
                       fontSize: "1rem",
-                      color: "#E20074",
+                      color: "#24c598",
                       textDecoration: "none",
                       fontWeight: "500"
                     }}
@@ -679,7 +679,7 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
                   disabled={actionLoading}
                   style={{
                     padding: "0.75rem 1.5rem",
-                    backgroundColor: "#E20074",
+                    backgroundColor: "#24c598",
                     color: "#FFFFFF",
                     border: "none",
                     borderRadius: "6px",

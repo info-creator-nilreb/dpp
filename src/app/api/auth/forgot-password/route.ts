@@ -5,7 +5,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
- * POST /api/auth/forgot-password
+ * POST /api/auth/forgoeasy-password
  * 
  * Sendet einen Passwort-Reset-Link an die angegebene E-Mail-Adresse
  */
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: 200 })
   } catch (error: any) {
-    console.error("Error in forgot-password route:", error)
+    console.error("Error in forgoeasy-password route:", error)
     console.error("Error type:", typeof error)
     console.error("Error message:", error?.message)
     console.error("Error stack:", error?.stack)

@@ -356,7 +356,7 @@ export function SecurityPageContent() {
                 color: "#0A0A0A",
                 marginBottom: "0.5rem"
               }}>
-                Aktuelles Passwort <span style={{ color: "#E20074" }}>*</span>
+                Aktuelles Passwort <span style={{ color: "#24c598" }}>*</span>
               </label>
               <input
                 type="password"
@@ -384,7 +384,7 @@ export function SecurityPageContent() {
                 color: "#0A0A0A",
                 marginBottom: "0.5rem"
               }}>
-                Neues Passwort <span style={{ color: "#E20074" }}>*</span>
+                Neues Passwort <span style={{ color: "#24c598" }}>*</span>
               </label>
               <input
                 type="password"
@@ -420,7 +420,7 @@ export function SecurityPageContent() {
                 color: "#0A0A0A",
                 marginBottom: "0.5rem"
               }}>
-                Neues Passwort bestätigen <span style={{ color: "#E20074" }}>*</span>
+                Neues Passwort bestätigen <span style={{ color: "#24c598" }}>*</span>
               </label>
               <input
                 type="password"
@@ -445,7 +445,7 @@ export function SecurityPageContent() {
             onClick={handleChangePassword}
             disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
             style={{
-              backgroundColor: changingPassword || !currentPassword || !newPassword || !confirmPassword ? "#7A7A7A" : "#E20074",
+              backgroundColor: changingPassword || !currentPassword || !newPassword || !confirmPassword ? "#7A7A7A" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
@@ -490,7 +490,7 @@ export function SecurityPageContent() {
               {isSuperAdmin ? (
                 <>
                   <span style={{
-                    backgroundColor: "#E20074",
+                    backgroundColor: "#24c598",
                     color: "#FFFFFF",
                     padding: "0.25rem 0.75rem",
                     borderRadius: "6px",
@@ -571,7 +571,7 @@ export function SecurityPageContent() {
                 <button
                   onClick={handleStart2FASetup}
                   style={{
-                    backgroundColor: "#E20074",
+                    backgroundColor: "#24c598",
                     color: "#FFFFFF",
                     border: "none",
                     padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
@@ -698,7 +698,7 @@ export function SecurityPageContent() {
                         disabled={activating || verificationCode.trim().replace(/\D/g, "").length !== 6}
                         style={{
                           flex: 1,
-                          backgroundColor: activating || verificationCode.length !== 6 ? "#7A7A7A" : "#E20074",
+                          backgroundColor: activating || verificationCode.length !== 6 ? "#7A7A7A" : "#24c598",
                           color: "#FFFFFF",
                           border: "none",
                           padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",

@@ -81,7 +81,7 @@ export default function NotificationsIcon() {
             position: "absolute",
             top: "0.25rem",
             right: "0.25rem",
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             borderRadius: "50%",
             width: "18px",

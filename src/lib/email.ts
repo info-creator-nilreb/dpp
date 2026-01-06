@@ -34,14 +34,14 @@ interface EmailTemplateOptions {
  * Entspricht den B2B SaaS Design-Prinzipien: clean, minimal, produktorientiert
  */
 function generateEmailTemplate(options: EmailTemplateOptions): string {
-  const appName = options.appName || process.env.APP_NAME || "T-Pass"
+  const appName = options.appName || process.env.APP_NAME || "Easy Pass"
   const baseUrl = options.baseUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
-  // Logo SVG (T-Pass Logo)
+  // Logo SVG (Easy Pass Logo)
   const logoSvg = `
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#E20074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M9 12l2 2 4-4" stroke="#E20074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="10" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9 12l2 2 4-4" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `
   
@@ -124,7 +124,7 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
           .cta-button {
             display: inline-block;
             padding: 12px 24px;
-            background-color: #E20074;
+            background-color: #24c598;
             color: #FFFFFF;
             text-decoration: none;
             border-radius: 4px;
@@ -154,7 +154,7 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
             margin-bottom: 16px;
           }
           .footer-links a {
-            color: #E20074;
+            color: #24c598;
             text-decoration: none;
             margin: 0 12px;
           }
@@ -286,7 +286,7 @@ export async function sendVerificationEmail(
   // Use getBaseUrl() for better URL resolution (supports VERCEL_URL fallback)
   const baseUrl = getBaseUrl()
   const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`
-  const appName = process.env.APP_NAME || "T-Pass"
+  const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   
   const htmlContent = generateEmailTemplate({
@@ -361,8 +361,8 @@ export async function sendPasswordResetEmail(
   name: string | null,
   resetToken: string
 ): Promise<void> {
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/reset-password?token=${resetToken}`
-  const appName = process.env.APP_NAME || "T-Pass"
+  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/reseeasy-password?token=${resetToken}`
+  const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
 
@@ -442,7 +442,7 @@ export async function sendInvitationEmail(
   organizationId: string,
   invitationToken: string
 ): Promise<void> {
-  const appName = process.env.APP_NAME || "T-Pass"
+  const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
@@ -530,7 +530,7 @@ export async function sendSupplierDataRequestEmail(
     contributeUrl: string
   }
 ): Promise<void> {
-  const appName = process.env.APP_NAME || "T-Pass"
+  const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
