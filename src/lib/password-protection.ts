@@ -9,7 +9,6 @@
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 import { cookies } from "next/headers"
-import type { PrismaClient } from "@prisma/client"
 
 const ACCESS_COOKIE_NAME = "password_protection_access"
 const SESSION_TIMEOUT_MINUTES = 60
@@ -27,7 +26,7 @@ export interface PasswordProtectionConfig {
  */
 export async function getPasswordProtectionConfig(): Promise<PasswordProtectionConfig | null> {
   try {
-    // @ts-expect-error - passwordProtectionConfig exists in Prisma schema but TypeScript may not recognize it until client is regenerated
+    // @ts-ignore - passwordProtectionConfig exists in Prisma schema
     const config = await prisma.passwordProtectionConfig.findFirst({
       orderBy: { updatedAt: "desc" },
     })
@@ -45,7 +44,6 @@ export async function getPasswordProtectionConfig(): Promise<PasswordProtectionC
     }
   } catch (error) {
     // Wenn Datenbank nicht erreichbar ist, gebe null zurück (kein Password Protection)
-    console.error("[getPasswordProtectionConfig] Database error:", error)
     return null
   }
 }
@@ -124,7 +122,6 @@ export async function hasPasswordProtectionAccess(): Promise<boolean> {
   const cookie = cookieStore.get(ACCESS_COOKIE_NAME)
 
   if (!cookie?.value) {
-    console.log("[hasPasswordProtectionAccess] No cookie found")
     return false
   }
 
@@ -132,7 +129,6 @@ export async function hasPasswordProtectionAccess(): Promise<boolean> {
     const data = JSON.parse(cookie.value)
     
     if (!data.accessGranted || !data.lastActivityTimestamp) {
-      console.log("[hasPasswordProtectionAccess] Cookie data invalid:", { hasAccessGranted: !!data.accessGranted, hasTimestamp: !!data.lastActivityTimestamp })
       return false
     }
 
@@ -146,7 +142,6 @@ export async function hasPasswordProtectionAccess(): Promise<boolean> {
 
     if (minutesSinceActivity > timeoutMinutes) {
       // Session expired - delete cookie
-      console.log("[hasPasswordProtectionAccess] Session expired:", minutesSinceActivity, "minutes")
       cookieStore.set(ACCESS_COOKIE_NAME, "", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -161,10 +156,8 @@ export async function hasPasswordProtectionAccess(): Promise<boolean> {
     // Cookie updates should only happen in API routes
     // The cookie is already valid, just return true
 
-    console.log("[hasPasswordProtectionAccess] ✅ Access granted - minutes since activity:", minutesSinceActivity.toFixed(2))
     return true
   } catch (error) {
-    console.log("[hasPasswordProtectionAccess] Error parsing cookie:", error)
     return false
   }
 }
@@ -191,7 +184,7 @@ export async function updatePasswordProtectionConfig(
   updatedBy: string
 ): Promise<void> {
   // Get existing config or create new one
-  // @ts-expect-error - passwordProtectionConfig exists in Prisma schema but TypeScript may not recognize it until client is regenerated
+  // @ts-ignore - passwordProtectionConfig exists in Prisma schema
   const existing = await prisma.passwordProtectionConfig.findFirst({
     orderBy: { updatedAt: "desc" },
   })
@@ -209,7 +202,7 @@ export async function updatePasswordProtectionConfig(
   }
 
   if (existing) {
-    // @ts-expect-error - passwordProtectionConfig exists in Prisma schema but TypeScript may not recognize it until client is regenerated
+    // @ts-ignore - passwordProtectionConfig exists in Prisma schema
     await prisma.passwordProtectionConfig.update({
       where: { id: existing.id },
       data: {
@@ -222,7 +215,7 @@ export async function updatePasswordProtectionConfig(
       },
     })
   } else {
-    // @ts-expect-error - passwordProtectionConfig exists in Prisma schema but TypeScript may not recognize it until client is regenerated
+    // @ts-ignore - passwordProtectionConfig exists in Prisma schema
     await prisma.passwordProtectionConfig.create({
       data: {
         passwordProtectionEnabled: config.passwordProtectionEnabled ?? false,

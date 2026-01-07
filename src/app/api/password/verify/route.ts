@@ -49,20 +49,16 @@ export async function POST(request: Request) {
     })
 
     const SESSION_TIMEOUT_MINUTES = 60
-    
-    // Return JSON response with success and cookie
-    // Client will handle redirect after cookie is set
-    const response = NextResponse.json({
-      success: true,
-      message: "Zugriff gewährt",
-      callbackUrl: callbackUrlParam || "/"
-    })
-
-    // Set cookie in response headers (for API routes, use response.cookies)
-    // Important: Use sameSite: "lax" and path: "/" to ensure cookie is available everywhere
-    // In development, secure must be false (cookies won't work over http://)
     const isProduction = process.env.NODE_ENV === "production"
-    response.cookies.set("password_protection_access", cookieValue, {
+    
+    // Server-Side Redirect mit Cookie im Response-Header
+    // Das stellt sicher, dass das Cookie gesetzt ist, bevor der Redirect passiert
+    const redirectUrl = callbackUrlParam || "/"
+    const redirectResponse = NextResponse.redirect(new URL(redirectUrl, request.url))
+    
+    // Set cookie in redirect response headers
+    // Important: Use sameSite: "lax" and path: "/" to ensure cookie is available everywhere
+    redirectResponse.cookies.set("password_protection_access", cookieValue, {
       httpOnly: true,
       secure: isProduction, // false in dev (http://), true in prod (https://)
       sameSite: "lax",
@@ -70,20 +66,8 @@ export async function POST(request: Request) {
       path: "/",
     })
     
-    // Debug: Log cookie setting
-    console.log("[Password Verify] Cookie set:", {
-      name: "password_protection_access",
-      hasValue: !!cookieValue,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/",
-      maxAge: SESSION_TIMEOUT_MINUTES * 60,
-      callbackUrl: callbackUrlParam || "/"
-    })
-
-    return response
+    return redirectResponse
   } catch (error: any) {
-    console.error("Error verifying password:", error)
     return NextResponse.json(
       { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }

@@ -60,26 +60,19 @@ export default async function PasswordProtectionWrapper({
       // Check if user has valid access
       const hasAccess = await hasPasswordProtectionAccess()
       
-      // Debug: Log access check (server-side - appears in terminal, not browser console)
       if (!hasAccess) {
-        console.log("[PasswordProtectionWrapper] No access - pathname:", pathname, "protectionActive:", protectionActive)
-        
         // Only redirect if not already on password page (prevent loop)
         if (pathname !== "/password" && !pathname.startsWith("/api")) {
           // Use the current pathname or "/" as callbackUrl
           const currentPath = pathname || "/"
-          console.log("[PasswordProtectionWrapper] Redirecting to password page:", currentPath)
           shouldRedirectToPassword = true
           redirectToPath = currentPath
         }
-      } else {
-        console.log("[PasswordProtectionWrapper] Access granted - pathname:", pathname)
       }
     }
   } catch (error) {
-    // If password protection check fails, log error but don't block access
+    // If password protection check fails, don't block access
     // This prevents the entire app from breaking if there's a DB issue
-    console.error("[PasswordProtectionWrapper] Error checking password protection:", error)
     // Continue rendering - don't block access on error
   }
 

@@ -33,8 +33,19 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password, callbackUrl }),
         credentials: "include", // Wichtig: Cookies werden mitgesendet
+        redirect: "follow" // Folge Redirects automatisch
       })
 
+      // Bei Erfolg macht der Server einen Redirect (Status 302/307)
+      // Das Cookie ist bereits im Response-Header gesetzt
+      // Wenn response.redirected true ist, folgt der Browser automatisch
+      if (response.redirected || response.ok) {
+        // Server hat bereits einen Redirect gemacht - Browser folgt automatisch
+        // Keine weitere Aktion nötig
+        return
+      }
+
+      // Fehlerfall: Kein Redirect, also Response prüfen
       const data = await response.json()
 
       if (!response.ok) {
@@ -43,24 +54,10 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
         return
       }
 
-      // Erfolg - Cookie wurde vom Server im Response-Header gesetzt
-      // Warte etwas länger, damit der Browser das Cookie definitiv verarbeitet hat
-      // Dann redirecten zur ursprünglichen Seite oder Startseite
+      // Fallback: Wenn Response OK aber kein Redirect
       const redirectUrl = data.callbackUrl || callbackUrl || "/"
-      
-      // Debug: Log in browser console (visible in DevTools)
-      console.log("[PasswordPageClient] ✅ Password verified successfully!")
-      console.log("[PasswordPageClient] Cookie should be set in response headers")
-      console.log("[PasswordPageClient] Redirecting to:", redirectUrl)
-      
-      // Use setTimeout to ensure cookie is processed by browser
-      setTimeout(() => {
-        // Use window.location.replace to avoid back button issues
-        console.log("[PasswordPageClient] Executing redirect now...")
-        window.location.replace(redirectUrl)
-      }, 200)
+      window.location.href = redirectUrl
     } catch (err: any) {
-      console.error("Password verification error:", err)
       setError("Ein Fehler ist aufgetreten")
       setLoading(false)
     }
