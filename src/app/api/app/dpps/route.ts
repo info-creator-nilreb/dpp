@@ -18,6 +18,11 @@ import { prisma } from "@/lib/prisma"
  * - category: Filter by category (TEXTILE, FURNITURE, OTHER)
  */
 export async function GET(request: NextRequest) {
+  // Parse query parameters außerhalb des try-Blocks, damit sie im catch-Block verfügbar sind
+  const searchParams = request.nextUrl.searchParams
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12", 10)))
+  
   try {
     const session = await auth()
 
@@ -27,11 +32,6 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       )
     }
-
-    // Parse query parameters
-    const searchParams = request.nextUrl.searchParams
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12", 10)))
     const search = searchParams.get("search")?.trim() || ""
     const status = searchParams.get("status")?.trim() || ""
     const category = searchParams.get("category")?.trim() || ""
