@@ -69,7 +69,7 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
   return (
     <LoginSplitLayout
       title="Zugriff geschützt"
-      subtitle="Diese Anwendung ist derzeit im Closed Alpha / Pre-Launch Modus."
+      subtitle="Diese Anwendung ist derzeit im geschützten Modus."
       quote={{
         text: "Sicherheit ist kein Zustand, sondern ein Prozess.",
         author: "Bruce Schneier"

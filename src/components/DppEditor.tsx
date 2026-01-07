@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Fragment } from "react"
+import React, { useState, useEffect, Fragment } from "react"
 import { useRouter } from "next/navigation"
 import DppMediaSection from "@/components/DppMediaSection"
 import CountrySelect from "@/components/CountrySelect"
@@ -10,6 +10,8 @@ import StickySaveBar from "@/components/StickySaveBar"
 import { TrialBanner } from "@/components/TrialBanner"
 import { useCapabilities } from "@/hooks/useCapabilities"
 import { DPP_SECTIONS } from "@/lib/permissions-constants"
+import TemplateBlocksSection from "@/components/TemplateBlocksSection"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface PendingFile {
   id: string
@@ -88,7 +90,8 @@ function AccordionSection({
       borderRadius: "12px",
       border: "1px solid #CDCDCD",
       marginBottom: "1.5rem",
-      overflow: "visible",
+      // Clippt die Header-Hintergrundfarbe sauber in die abgerundeten Ecken
+      overflow: "hidden",
       position: "relative"
     }}>
       <button
@@ -101,6 +104,7 @@ function AccordionSection({
           backgroundColor: alwaysOpen ? "#F5F5F5" : "transparent",
           border: "none",
           borderBottom: isOpen && !alwaysOpen ? "1px solid #CDCDCD" : "none",
+          borderRadius: alwaysOpen ? "12px 12px 0px 0px" : "0px",
           cursor: alwaysOpen ? "default" : "pointer",
           display: "flex",
           justifyContent: "space-between",
@@ -133,7 +137,9 @@ function AccordionSection({
         <div style={{
           padding: "clamp(1.5rem, 4vw, 2rem)",
           position: "relative",
-          zIndex: 1
+          zIndex: 1,
+          // Stelle sicher, dass der Content-Bereich unten keine Rundung hat
+          borderRadius: alwaysOpen ? "0px 0px 0px 0px" : "0px"
         }}>
           {children}
         </div>
@@ -181,6 +187,28 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   const [showCategoryChangeWarning, setShowCategoryChangeWarning] = useState(false)
   const [pendingCategoryChange, setPendingCategoryChange] = useState<string | null>(null)
 
+  // Template State
+  interface TemplateBlock {
+    id: string
+    name: string
+    order: number
+    fields: Array<{
+      id: string
+      label: string
+      key: string
+      type: string
+      required: boolean
+      config: any
+      order: number
+    }>
+  }
+  const [template, setTemplate] = useState<{
+    id: string
+    name: string
+    blocks: TemplateBlock[]
+  } | null>(null)
+  const [templateLoading, setTemplateLoading] = useState(false)
+
   // Accordion State (Sektion 1 immer offen)
   const [section2Open, setSection2Open] = useState(false)
   const [section3Open, setSection3Open] = useState(false)
@@ -223,13 +251,77 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           setSubscriptionCanPublish(data.canPublish ?? false)
         }
       } catch (error) {
-        console.error("Error loading subscription context:", error)
         // Default to false on error (fail-safe)
         setSubscriptionCanPublish(false)
       }
     }
     loadSubscriptionContext()
   }, [])
+
+  // Load template for DPP (auch für neue DPPs basierend auf Kategorie)
+  // Optimiert: Lädt Template sofort parallel, wenn Kategorie vorhanden ist
+  useEffect(() => {
+    if (!category) {
+      setTemplate(null)
+      setTemplateLoading(false)
+      return
+    }
+
+    // Sofort mit dem Laden beginnen (nicht blockieren)
+    let cancelled = false
+    
+    async function loadTemplate() {
+      setTemplateLoading(true)
+      try {
+        if (isNew) {
+          // Für neue DPPs: Template basierend auf Kategorie laden
+          const response = await fetch(`/api/app/dpp/template-by-category?category=${encodeURIComponent(category)}`, {
+            cache: "force-cache" // Cache für bessere Performance
+          })
+          if (cancelled) return
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (cancelled) return
+            
+            if (data.template) {
+              setTemplate(data.template)
+            } else {
+              setTemplate(null)
+            }
+          } else {
+            setTemplate(null)
+          }
+        } else {
+          // Für bestehende DPPs: Template über DPP-ID laden
+          const response = await fetch(`/api/app/dpp/${dpp.id}/template`)
+          if (cancelled) return
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (cancelled) return
+            setTemplate(data.template)
+          } else {
+            setTemplate(null)
+          }
+        }
+      } catch (error) {
+        if (cancelled) return
+        setTemplate(null)
+      } finally {
+        if (!cancelled) {
+          setTemplateLoading(false)
+        }
+      }
+    }
+    
+    loadTemplate()
+    
+    // Cleanup: verhindere State-Updates wenn Component unmounted oder category sich ändert
+    return () => {
+      cancelled = true
+    }
+  }, [dpp.id, category, isNew])
 
   // Load data requests
   useEffect(() => {
@@ -243,7 +335,6 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           setDataRequests(data.requests || [])
         }
       } catch (error) {
-        console.error("Error loading data requests:", error)
       }
     }
     loadDataRequests()
@@ -353,12 +444,10 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
             setPreviousCategory(categoryOptions[0].value)
           }
         } else {
-          console.error("Error loading categories: API returned", response.status)
           // Kein Fallback mehr - wenn keine Kategorien geladen werden können, bleibt die Liste leer
           setAvailableCategories([])
         }
       } catch (error) {
-        console.error("Error loading categories:", error)
         // Kein Fallback mehr - wenn keine Kategorien geladen werden können, bleibt die Liste leer
         setAvailableCategories([])
       }
@@ -385,7 +474,6 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           sessionStorage.removeItem("preflightPrefilledFields")
         }
       } catch (error) {
-        console.error("Error loading prefilled fields:", error)
         sessionStorage.removeItem("preflightPrefilledFields")
       }
     }
@@ -436,7 +524,6 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         setDpp(prev => ({ ...prev, media: data.media }))
       }
     } catch (error) {
-      console.error("Error refreshing media:", error)
     }
   }
 
@@ -652,14 +739,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
               })
               
               if (!uploadResponse.ok) {
-                console.error(`Fehler beim Hochladen von ${pendingFile.file.name}`)
               }
             })
             
             await Promise.all(uploadPromises)
             setPendingFiles([])
           } catch (uploadError) {
-            console.error("Fehler beim Hochladen der zwischengespeicherten Dateien:", uploadError)
           }
         }
       } else {
@@ -863,7 +948,7 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   }
 
   return (
-    <Fragment>
+    <>
     <div>
       <h1 style={{
         fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
@@ -882,41 +967,41 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         />
       )}
 
-      {/* 1. Basis- & Produktdaten (immer offen, Pflichtfelder) */}
-      <AccordionSection
-        title="Basis- & Produktdaten"
-        isOpen={true}
-        onToggle={() => {}}
-        alwaysOpen={true}
-      >
-        <div>
-          <SelectField
-            id="dpp-category"
-            label="Produktkategorie"
-            value={category}
-            onChange={(e) => {
-              const newCategory = e.target.value
-              
-              // ESPR: Kategorie ist unveränderbar ab Veröffentlichung
-              if (dpp.status === "PUBLISHED") {
-                return // Ignoriere Änderungsversuch
-              }
-              
-              // Im Draft: Warnung beim Kategorienwechsel
-              if (!isNew && previousCategory && newCategory !== previousCategory) {
-                setPendingCategoryChange(newCategory)
-                setShowCategoryChangeWarning(true)
-              } else {
-                handleCategoryChange(newCategory)
-              }
-            }}
-            required
-            disabled={
-              dpp.status === "PUBLISHED" || // ESPR: Unveränderbar nach Veröffentlichung
-              (!isNew && availableCategories.length === 0)
+      {/* Kategorie-Auswahl (immer sichtbar, für Template-Auswahl benötigt) */}
+      <div style={{
+        backgroundColor: "#FFFFFF",
+        padding: "clamp(1.5rem, 4vw, 2rem)",
+        borderRadius: "12px",
+        border: "1px solid #CDCDCD",
+        marginBottom: "1.5rem"
+      }}>
+        <SelectField
+          id="dpp-category"
+          label="Produktkategorie"
+          value={category}
+          onChange={(e) => {
+            const newCategory = e.target.value
+            
+            // ESPR: Kategorie ist unveränderbar ab Veröffentlichung
+            if (dpp.status === "PUBLISHED") {
+              return // Ignoriere Änderungsversuch
             }
-            options={availableCategories}
-          />
+            
+            // Im Draft: Warnung beim Kategorienwechsel
+            if (!isNew && previousCategory && newCategory !== previousCategory) {
+              setPendingCategoryChange(newCategory)
+              setShowCategoryChangeWarning(true)
+            } else {
+              handleCategoryChange(newCategory)
+            }
+          }}
+          required
+          disabled={
+            dpp.status === "PUBLISHED" || // ESPR: Unveränderbar nach Veröffentlichung
+            (!isNew && availableCategories.length === 0)
+          }
+          options={availableCategories}
+        />
           {dpp.status === "PUBLISHED" && (
             <p style={{
               fontSize: "0.75rem",
@@ -927,631 +1012,167 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
               Die Kategorie kann nach Veröffentlichung nicht mehr geändert werden (ESPR-konform).
             </p>
           )}
-        </div>
         
-        {/* Warnung beim Kategorienwechsel */}
-        {showCategoryChangeWarning && (
-          <div style={{
-            marginTop: "1rem",
-            padding: "1rem",
-            backgroundColor: "#FFF5F5",
-            border: "1px solid #24c598",
-            borderRadius: "8px"
-          }}>
-            <p style={{
-              fontSize: "0.95rem",
-              color: "#0A0A0A",
-              marginBottom: "1rem",
-              fontWeight: "600"
-            }}>
-              ⚠️ Kategorienwechsel bestätigen
-            </p>
-            <p style={{
-              fontSize: "0.875rem",
-              color: "#7A7A7A",
-              marginBottom: "1rem"
-            }}>
-              Beim Wechsel der Kategorie können bestehende Eingaben verloren gehen, da ein anderes Template angewendet wird.
-            </p>
+          {/* Warnung beim Kategorienwechsel */}
+          {showCategoryChangeWarning && (
             <div style={{
-              display: "flex",
-              gap: "0.75rem"
+              marginTop: "1rem",
+              padding: "1rem",
+              backgroundColor: "#FFF5F5",
+              border: "1px solid #24c598",
+              borderRadius: "8px"
             }}>
-              <button
-                type="button"
-                onClick={() => {
-                  handleCategoryChange(pendingCategoryChange!)
-                  setShowCategoryChangeWarning(false)
-                  setPendingCategoryChange(null)
-                }}
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "#24c598",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  cursor: "pointer"
-                }}
-              >
-                Kategorienwechsel bestätigen
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCategory(previousCategory) // Zurücksetzen
-                  setShowCategoryChangeWarning(false)
-                  setPendingCategoryChange(null)
-                }}
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "#F5F5F5",
-                  color: "#0A0A0A",
-                  border: "1px solid #CDCDCD",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  cursor: "pointer"
-                }}
-              >
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        )}
-        <InputField
-          id="dpp-name"
-          label="Produktname"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value)
-            markFieldAsEdited("name")
-          }}
-          required
-          helperText={shouldShowPrefillHint("name") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <InputField
-          id="dpp-description"
-          label="Beschreibung"
-          value={description}
-          onChange={(e) => {
-            setDescription(e.target.value)
-            markFieldAsEdited("description")
-          }}
-          rows={4}
-          helperText={shouldShowPrefillHint("description") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <InputField
-          id="dpp-sku"
-          label="SKU / Interne ID"
-          value={sku}
-          onChange={(e) => {
-            setSku(e.target.value)
-            markFieldAsEdited("sku")
-          }}
-          required
-          helperText={shouldShowPrefillHint("sku") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <InputField
-          id="dpp-gtin"
-          label="GTIN / EAN"
-          value={gtin}
-          onChange={(e) => {
-            setGtin(e.target.value)
-            markFieldAsEdited("gtin")
-          }}
-          helperText={shouldShowPrefillHint("gtin") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <InputField
-          id="dpp-brand"
-          label="Marke / Hersteller"
-          value={brand}
-          onChange={(e) => {
-            setBrand(e.target.value)
-            markFieldAsEdited("brand")
-          }}
-          required
-          helperText={shouldShowPrefillHint("brand") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <CountrySelect
-          id="dpp-country-of-origin"
-          label="Herstellungsland"
-          value={countryOfOrigin}
-          onChange={(value) => {
-            setCountryOfOrigin(value)
-            markFieldAsEdited("countryOfOrigin")
-          }}
-          required
-          helperText={shouldShowPrefillHint("countryOfOrigin") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-      </AccordionSection>
-
-      {/* 2. Materialien & Zusammensetzung */}
-      <AccordionSection
-        title="Materialien & Zusammensetzung"
-        isOpen={section2Open}
-        onToggle={() => setSection2Open(!section2Open)}
-        statusBadge={getMaterialsSectionStatusBadge()}
-      >
-        {/* Action CTAs */}
-        <div style={{ marginBottom: "2rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={() => setShowRequestForm(false)}
-            style={{
-              padding: "0.75rem 1.5rem",
-              backgroundColor: showRequestForm ? "transparent" : "#24c598",
-              color: showRequestForm ? "#0A0A0A" : "#FFFFFF",
-              border: "1px solid #CDCDCD",
-              borderRadius: "8px",
-              fontSize: "0.95rem",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            Daten manuell eingeben
-          </button>
-          {!isNew && (
-            <button
-              type="button"
-              onClick={() => setShowRequestForm(true)}
-              style={{
-                padding: "0.75rem 1.5rem",
-                backgroundColor: showRequestForm ? "#24c598" : "transparent",
-                color: showRequestForm ? "#FFFFFF" : "#0A0A0A",
-                border: "1px solid #CDCDCD",
-                borderRadius: "8px",
+              <p style={{
                 fontSize: "0.95rem",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-            >
-              Daten von Partner anfordern
-            </button>
-          )}
-        </div>
-
-        {/* Summary Cards for existing requests */}
-        {!isNew && dataRequests.filter(req => 
-          req.sections.includes(DPP_SECTIONS.MATERIALS) || 
-          req.sections.includes(DPP_SECTIONS.MATERIAL_SOURCE)
-        ).length > 0 && (
-          <div style={{ marginBottom: "2rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {dataRequests.filter(req => 
-              req.sections.includes(DPP_SECTIONS.MATERIALS) || 
-              req.sections.includes(DPP_SECTIONS.MATERIAL_SOURCE)
-            ).map((req) => (
-              <div
-                key={req.id}
-                style={{
-                  padding: "1rem",
-                  backgroundColor: "#F5F5F5",
-                  border: "1px solid #CDCDCD",
-                  borderRadius: "8px"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#0A0A0A", marginBottom: "0.25rem" }}>
-                      {req.email}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#7A7A7A", marginBottom: "0.5rem" }}>
-                      {getPartnerRoleLabel(req.partnerRole)}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#0A0A0A" }}>
-                      <strong>Sektionen:</strong> {req.sections.map(s => getSectionLabel(s)).join(", ")}
-                    </div>
-                  </div>
-                  <span style={{
-                    padding: "0.25rem 0.75rem",
-                    backgroundColor: req.status === "submitted" ? "#E6F7E6" : req.status === "pending" ? "#FFF5E6" : "#F5F5F5",
-                    color: req.status === "submitted" ? "#00A651" : req.status === "pending" ? "#B8860B" : "#7A7A7A",
-                    borderRadius: "12px",
-                    fontSize: "0.75rem",
-                    fontWeight: "600"
-                  }}>
-                    {req.status === "submitted" ? "Übermittelt" : req.status === "pending" ? "Ausstehend" : req.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Manual Entry Fields */}
-        {!showRequestForm && (
-          <>
-            <InputField
-              id="dpp-materials"
-              label="Materialliste"
-              value={materials}
-              onChange={(e) => {
-                setMaterials(e.target.value)
-                markFieldAsEdited("materials")
-              }}
-              rows={4}
-              readOnly={isFieldRequested(DPP_SECTIONS.MATERIALS)}
-              helperText={
-                isFieldRequested(DPP_SECTIONS.MATERIALS)
-                  ? "Warte auf Eingabe vom Partner"
-                  : shouldShowPrefillHint("materials")
-                  ? "Aus KI-Vorprüfung übernommen"
-                  : undefined
-              }
-            />
-            <InputField
-              id="dpp-material-source"
-              label="Datenquelle (z. B. Lieferant)"
-              value={materialSource}
-              onChange={(e) => {
-                setMaterialSource(e.target.value)
-                markFieldAsEdited("materialSource")
-              }}
-              readOnly={isFieldRequested(DPP_SECTIONS.MATERIAL_SOURCE)}
-              helperText={
-                isFieldRequested(DPP_SECTIONS.MATERIAL_SOURCE)
-                  ? "Warte auf Eingabe vom Partner"
-                  : shouldShowPrefillHint("materialSource")
-                  ? "Aus KI-Vorprüfung übernommen"
-                  : undefined
-              }
-            />
-          </>
-        )}
-
-        {/* Request Form */}
-        {showRequestForm && !isNew && (
-          <>
-            {/* Prominent "No Account Required" notice */}
-            <div style={{
-              marginBottom: "1.5rem",
-              padding: "0.75rem 1rem",
-              backgroundColor: "#E6F7FF",
-              border: "1px solid #B3E0FF",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem"
-            }}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#0066CC"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-              </svg>
-              <span style={{ fontSize: "0.9rem", color: "#0066CC", fontWeight: "600" }}>
-                Kein Konto erforderlich
-              </span>
-            </div>
-
-            <SelectField
-              id="request-partner-role"
-              label="Art des Partners"
-              value={requestRole}
-              onChange={(e) => setRequestRole(e.target.value)}
-              options={[
-                { value: "", label: "Bitte wählen" },
-                { value: "Material supplier", label: "Materiallieferant" },
-                { value: "Manufacturer", label: "Hersteller" },
-                { value: "Processor / Finisher", label: "Verarbeiter / Veredler" },
-                { value: "Recycler", label: "Recycler" },
-                { value: "Other", label: "Sonstiges" },
-              ]}
-              required
-            />
-            <div style={{ marginBottom: "0.5rem", fontSize: "0.85rem", color: "#7A7A7A" }}>
-              Hilft uns, die Anfrage korrekt zuzuordnen.
-            </div>
-            <InputField
-              id="request-email"
-              label="E-Mail-Adresse"
-              type="email"
-              value={requestEmail}
-              onChange={(e) => setRequestEmail(e.target.value)}
-              required
-            />
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label style={{
-                display: "block",
-                fontSize: "0.95rem",
-                fontWeight: "600",
                 color: "#0A0A0A",
-                marginBottom: "0.5rem"
+                marginBottom: "1rem",
+                fontWeight: "600"
               }}>
-                Welche Informationen soll der Partner befüllen? <span style={{ color: "#24c598" }}>*</span>
-              </label>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {[
-                  { value: DPP_SECTIONS.MATERIALS, label: "Materialien" },
-                  { value: DPP_SECTIONS.MATERIAL_SOURCE, label: "Materialherkunft" },
-                ].map((section) => (
-                  <label key={section.value} style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={requestSections.includes(section.value)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setRequestSections([...requestSections, section.value])
-                        } else {
-                          setRequestSections(requestSections.filter((s) => s !== section.value))
-                        }
-                      }}
-                      style={{ width: "18px", height: "18px", cursor: "pointer" }}
-                    />
-                    <span style={{ fontSize: "0.9rem", color: "#0A0A0A" }}>{section.label}</span>
-                  </label>
-                ))}
+                ⚠️ Kategorienwechsel bestätigen
+              </p>
+              <p style={{
+                fontSize: "0.875rem",
+                color: "#7A7A7A",
+                marginBottom: "1rem"
+              }}>
+                Beim Wechsel der Kategorie können bestehende Eingaben verloren gehen, da ein anderes Template angewendet wird.
+              </p>
+              <div style={{
+                display: "flex",
+                gap: "0.75rem"
+              }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCategoryChange(pendingCategoryChange!)
+                    setShowCategoryChangeWarning(false)
+                    setPendingCategoryChange(null)
+                  }}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    backgroundColor: "#24c598",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Kategorienwechsel bestätigen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategory(previousCategory) // Zurücksetzen
+                    setShowCategoryChangeWarning(false)
+                    setPendingCategoryChange(null)
+                  }}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    backgroundColor: "#F5F5F5",
+                    color: "#0A0A0A",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Abbrechen
+                </button>
               </div>
             </div>
-            <InputField
-              id="request-message"
-              label="Optionale Nachricht"
-              value={requestMessage}
-              onChange={(e) => setRequestMessage(e.target.value)}
-              rows={3}
-            />
-            <button
-              type="button"
-              onClick={async () => {
-                if (!requestEmail || !requestRole || requestSections.length === 0) {
-                  showNotification("Bitte füllen Sie alle Pflichtfelder aus", "error")
-                  return
-                }
-
-                setRequestLoading(true)
-                try {
-                  const response = await fetch(`/api/app/dpp/${dpp.id}/data-requests`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      email: requestEmail,
-                      partnerRole: requestRole,
-                      sections: requestSections,
-                      message: requestMessage || null,
-                    }),
-                  })
-
-                  const data = await response.json()
-
-                  if (!response.ok) {
-                    showNotification(data.error || "Fehler beim Senden der Anfrage", "error")
-                    return
-                  }
-
-                  showNotification("Datenanfrage erfolgreich gesendet", "success")
-                  setShowRequestForm(false)
-                  setRequestEmail("")
-                  setRequestRole("")
-                  setRequestSections([])
-                  setRequestMessage("")
-                  
-                  // Reload data requests
-                  const requestsResponse = await fetch(`/api/app/dpp/${dpp.id}/data-requests`)
-                  if (requestsResponse.ok) {
-                    const requestsData = await requestsResponse.json()
-                    setDataRequests(requestsData.requests || [])
-                  }
-                } catch (error) {
-                  showNotification("Fehler beim Senden der Anfrage", "error")
-                } finally {
-                  setRequestLoading(false)
-                }
-              }}
-              disabled={requestLoading}
-              style={{
-                padding: "0.75rem 1.5rem",
-                backgroundColor: requestLoading ? "#7A7A7A" : "#24c598",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "1rem",
-                fontWeight: "600",
-                cursor: requestLoading ? "not-allowed" : "pointer",
-                width: "100%",
-              }}
-            >
-              {requestLoading ? "Wird gesendet..." : "Datenanfrage senden"}
-            </button>
-          </>
-        )}
-
-        {isNew && (
-          <div style={{
-            padding: "1rem",
-            backgroundColor: "#FFF5F5",
-            border: "1px solid #FEB2B2",
-            borderRadius: "8px",
-            marginBottom: "1.5rem",
-          }}>
-            <p style={{ color: "#C53030", margin: 0, fontSize: "0.9rem" }}>
-              Bitte speichern Sie den DPP zuerst, bevor Sie Daten von Partnern anfordern können.
-            </p>
-          </div>
-        )}
-      </AccordionSection>
-
-      {/* 3. Nutzung, Pflege & Lebensdauer */}
-      <AccordionSection
-        title="Nutzung, Pflege & Lebensdauer"
-        isOpen={section3Open}
-        onToggle={() => setSection3Open(!section3Open)}
-      >
-        <InputField
-          id="dpp-care-instructions"
-          label="Pflegehinweise"
-          value={careInstructions}
-          onChange={(e) => {
-            setCareInstructions(e.target.value)
-            markFieldAsEdited("careInstructions")
-          }}
-          rows={3}
-          helperText={shouldShowPrefillHint("careInstructions") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <SelectField
-          id="dpp-is-repairable"
-          label="Reparierbarkeit"
-          value={isRepairable}
-          onChange={(e) => setIsRepairable(e.target.value)}
-          options={[
-            { value: "", label: "Bitte wählen" },
-            { value: "YES", label: "Ja" },
-            { value: "NO", label: "Nein" }
-          ]}
-        />
-        <SelectField
-          id="dpp-spare-parts"
-          label="Ersatzteile verfügbar"
-          value={sparePartsAvailable}
-          onChange={(e) => setSparePartsAvailable(e.target.value)}
-          options={[
-            { value: "", label: "Bitte wählen" },
-            { value: "YES", label: "Ja" },
-            { value: "NO", label: "Nein" }
-          ]}
-        />
-        <InputField
-          id="dpp-lifespan"
-          label="Lebensdauer"
-          value={lifespan}
-          onChange={(e) => {
-            setLifespan(e.target.value)
-            markFieldAsEdited("lifespan")
-          }}
-          helperText={shouldShowPrefillHint("lifespan") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-      </AccordionSection>
-
-      {/* 4. Rechtliches & Konformität */}
-      <AccordionSection
-        title="Rechtliches & Konformität"
-        isOpen={section4Open}
-        onToggle={() => setSection4Open(!section4Open)}
-      >
-        <InputField
-          id="dpp-conformity"
-          label="Konformitätserklärung"
-          value={conformityDeclaration}
-          onChange={(e) => {
-            setConformityDeclaration(e.target.value)
-            markFieldAsEdited("conformityDeclaration")
-          }}
-          rows={4}
-          helperText={shouldShowPrefillHint("conformityDeclaration") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <InputField
-          id="dpp-disposal"
-          label="Hinweise zu Entsorgung / Recycling"
-          value={disposalInfo}
-          onChange={(e) => {
-            setDisposalInfo(e.target.value)
-            markFieldAsEdited("disposalInfo")
-          }}
-          rows={3}
-          helperText={shouldShowPrefillHint("disposalInfo") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-        <div style={{ marginTop: "1.5rem" }}>
-          <p style={{
-            fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
-            color: "#7A7A7A",
-            marginBottom: "1rem"
-          }}>
-            Zertifikate können über den Medien-Upload hochgeladen werden.
-          </p>
-        </div>
-      </AccordionSection>
-
-      {/* 5. Rücknahme & Second Life */}
-      <AccordionSection
-        title="Rücknahme & Second Life"
-        isOpen={section5Open}
-        onToggle={() => setSection5Open(!section5Open)}
-      >
-        <SelectField
-          id="dpp-takeback"
-          label="Rücknahme angeboten"
-          value={takebackOffered}
-          onChange={(e) => setTakebackOffered(e.target.value)}
-          options={[
-            { value: "", label: "Bitte wählen" },
-            { value: "YES", label: "Ja" },
-            { value: "NO", label: "Nein" }
-          ]}
-        />
-        {takebackOffered === "YES" && (
-          <InputField
-            id="dpp-takeback-contact"
-            label="Kontakt / URL"
-            value={takebackContact}
-            onChange={(e) => {
-              setTakebackContact(e.target.value)
-              markFieldAsEdited("takebackContact")
-            }}
-            helperText={shouldShowPrefillHint("takebackContact") ? "Aus KI-Vorprüfung übernommen" : undefined}
-          />
-        )}
-        <InputField
-          id="dpp-second-life"
-          label="Second-Life-Informationen"
-          value={secondLifeInfo}
-          onChange={(e) => {
-            setSecondLifeInfo(e.target.value)
-            markFieldAsEdited("secondLifeInfo")
-          }}
-          rows={3}
-          helperText={shouldShowPrefillHint("secondLifeInfo") ? "Aus KI-Vorprüfung übernommen" : undefined}
-        />
-      </AccordionSection>
-
-      {/* Medien & Dokumente */}
-      <div style={{
-        backgroundColor: "#FFFFFF",
-        padding: "clamp(1.5rem, 4vw, 2rem)",
-        borderRadius: "12px",
-        border: "1px solid #CDCDCD",
-        marginBottom: "2rem"
-      }}>
-        <h2 style={{
-          fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
-          fontWeight: "700",
-          color: "#0A0A0A",
-          marginBottom: "1rem"
-        }}>
-          Medien & Dokumente
-        </h2>
-        <DppMediaSection 
-          dppId={dpp.id && dpp.id !== "new" ? dpp.id : null} 
-          media={dpp.media} 
-          onMediaChange={refreshMedia}
-          pendingFiles={pendingFiles}
-          onPendingFilesChange={setPendingFiles}
-        />
+          )}
       </div>
 
+      {/* Template-Blöcke (dynamisch basierend auf Template) */}
+      {template && !templateLoading && (
+        <TemplateBlocksSection
+          template={template}
+          dppId={dpp.id && dpp.id !== "new" ? dpp.id : null}
+          media={dpp.media}
+          onMediaChange={refreshMedia}
+        />
+      )}
+
+      {/* Hinweis wenn gar kein Template vorhanden (nur wenn wirklich keine Templates existieren) */}
+      {!template && !templateLoading && category && propCategories && propCategories.length === 0 && (
+        <div style={{
+          backgroundColor: "#FFFFFF",
+          padding: "clamp(2rem, 5vw, 4rem)",
+          borderRadius: "12px",
+          border: "1px solid #CDCDCD",
+          textAlign: "center",
+          marginBottom: "2rem"
+        }}>
+          <p style={{
+            color: "#0A0A0A",
+            fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
+            fontWeight: "600",
+            marginBottom: "1rem"
+          }}>
+            Keine Vorlage verfügbar
+          </p>
+          <p style={{
+            color: "#7A7A7A",
+            fontSize: "clamp(0.95rem, 2vw, 1.1rem)",
+            marginBottom: "1.5rem"
+          }}>
+            Es gibt noch keine Vorlage zur Erstellung eines Digitalen Produktpasses.
+          </p>
+          <p style={{
+            color: "#7A7A7A",
+            fontSize: "clamp(0.9rem, 2vw, 1rem)"
+          }}>
+            Bitte kontaktieren Sie einen Administrator, um eine Vorlage zu erstellen.
+          </p>
+        </div>
+      )}
+
+      {/* Lade-Zustand */}
+      {templateLoading && (
+        <div style={{
+          backgroundColor: "#FFFFFF",
+          padding: "clamp(2rem, 5vw, 4rem)",
+          borderRadius: "12px",
+          border: "1px solid #CDCDCD",
+          textAlign: "center",
+          marginBottom: "2rem"
+        }}>
+          <LoadingSpinner message="Vorlage wird geladen..." />
+        </div>
+      )}
+
+      {/* Alte feste Sektionen - ENTFERNT: Nur Templates bilden die Basis
+      Die folgenden Sektionen wurden entfernt, da nur Templates die Basis für die Befüllung bilden.
+      Falls benötigt, können sie aus der Git-Historie wiederhergestellt werden.
+      Alle alten AccordionSection-Komponenten (Basis- & Produktdaten, Materialien, Nutzung, Rechtliches, Rücknahme)
+      wurden entfernt und durch TemplateBlocksSection ersetzt.
+      */}
+
+      {/* Medien & Dokumente (Legacy - ENTFERNT: Nur Templates bilden die Basis)
+      Die folgenden Sektionen wurden entfernt, da nur Templates die Basis für die Befüllung bilden.
+      Falls benötigt, können sie aus der Git-Historie wiederhergestellt werden.
+      */}
+
       {/* Bottom padding für Sticky Save Bar */}
-      <div style={{ height: "100px" }} />
+      <div style={{ height: "120px" }} />
     </div>
 
-    {/* Sticky Save Bar */}
-    <StickySaveBar
-      status={saveStatus}
-      lastSaved={lastSaved}
-      onSave={handleSave}
-      onPublish={handlePublish}
-      isNew={isNew}
-      canPublish={!!name.trim()}
-      subscriptionCanPublish={subscriptionCanPublish}
-      error={saveError}
-    />
+    {/* Sticky Save Bar - nur anzeigen wenn Vorlage geladen ist */}
+    {!templateLoading && (template || !isNew) && (
+      <StickySaveBar
+        status={saveStatus}
+        lastSaved={lastSaved}
+        onSave={handleSave}
+        onPublish={handlePublish}
+        isNew={isNew}
+        canPublish={!!name.trim()}
+        subscriptionCanPublish={subscriptionCanPublish}
+        error={saveError}
+      />
+    )}
     
     {/* Warnung beim Verlassen (nur für neue DPPs) */}
     {isNew && showLeaveWarning && (
@@ -1643,6 +1264,6 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         </div>
       </div>
     )}
-    </Fragment>
+    </>
   )
 }

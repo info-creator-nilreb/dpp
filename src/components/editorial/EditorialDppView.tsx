@@ -33,7 +33,10 @@ interface EditorialDppData {
     id: string
     storageUrl: string
     fileType: string
+    blockId?: string | null
+    fieldId?: string | null
   }>
+  produktdatenBlockId?: string | null
   versionInfo?: {
     version: number
     createdAt: Date
@@ -45,7 +48,14 @@ interface EditorialDppViewProps {
 }
 
 export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
-  const heroImage = dpp.media.find(m => m.fileType.startsWith('image/'))
+  // Herobild: Erstes Bild im Produktdaten-Block (oder erstes Bild insgesamt als Fallback)
+  const produktdatenImages = dpp.media.filter(m => 
+    m.fileType.startsWith('image/') && 
+    (dpp.produktdatenBlockId ? m.blockId === dpp.produktdatenBlockId : true)
+  )
+  const heroImage = produktdatenImages[0] || dpp.media.find(m => m.fileType.startsWith('image/'))
+  const galleryImages = produktdatenImages.slice(1) // Weitere Bilder im Produktdaten-Block = Galerie
+  
   const brandName = dpp.brand || dpp.organization.name
 
   const formatDate = (date: Date) => {
@@ -512,8 +522,8 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
         </>
       )}
 
-      {/* Additional Media Gallery - Nur wenn weitere Bilder vorhanden */}
-      {dpp.media.length > 1 && (
+      {/* Additional Media Gallery - Nur wenn weitere Bilder im Produktdaten-Block vorhanden */}
+      {galleryImages.length > 0 && (
         <>
           <Accent type="divider" style={{ margin: '4rem auto 3rem' }} />
           
@@ -534,15 +544,13 @@ export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
               gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
               gap: '1.5rem',
             }}>
-              {dpp.media.slice(1).map((media) => (
-                media.fileType.startsWith('image/') && (
-                  <Image
-                    key={media.id}
-                    src={media.storageUrl}
-                    alt={`${dpp.name} - Bild ${media.id}`}
-                    aspectRatio="4:3"
-                  />
-                )
+              {galleryImages.map((media) => (
+                <Image
+                  key={media.id}
+                  src={media.storageUrl}
+                  alt={`${dpp.name} - Bild ${media.id}`}
+                  aspectRatio="4:3"
+                />
               ))}
             </div>
           </Section>

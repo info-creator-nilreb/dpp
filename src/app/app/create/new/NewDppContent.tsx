@@ -8,6 +8,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface NewDppContentProps {
   availableCategories: Array<{ categoryKey: string; label: string }>
+  initialOrganizations?: Array<{ id: string; name: string }>
 }
 
 // Lade Prefill-Daten von KI-Assist (falls vorhanden)
@@ -32,11 +33,11 @@ interface PrefillData {
   secondLifeInfo?: string
 }
 
-export default function NewDppContent({ availableCategories }: NewDppContentProps) {
+export default function NewDppContent({ availableCategories, initialOrganizations = [] }: NewDppContentProps) {
   const router = useRouter()
   const backLinkRef = useRef<HTMLAnchorElement>(null)
-  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([])
-  const [loading, setLoading] = useState(true)
+  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>(initialOrganizations)
+  const [loading, setLoading] = useState(initialOrganizations.length === 0)
   const [prefillData, setPrefillData] = useState<PrefillData | null>(null)
   const [showLeaveWarning, setShowLeaveWarning] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
@@ -45,8 +46,13 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
   // Wir können dies nur durch einen Callback vom DppEditor erfahren
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  // Lade Organizations des Users via API (clientseitig)
+  // Lade Organizations nur wenn nicht bereits vom Server geladen
   useEffect(() => {
+    if (initialOrganizations.length > 0) {
+      setLoading(false)
+      return
+    }
+    
     async function loadOrganizations() {
       try {
         const response = await fetch("/api/app/organizations", {
@@ -57,13 +63,13 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
           setOrganizations(data.organizations || [])
         }
       } catch (error) {
-        console.error("Error loading organizations:", error)
+        // Silent fail - organizations bleiben leer
       } finally {
         setLoading(false)
       }
     }
     loadOrganizations()
-  }, [])
+  }, [initialOrganizations.length])
 
   // Load prefilled data from preflight analysis (if available)
   useEffect(() => {

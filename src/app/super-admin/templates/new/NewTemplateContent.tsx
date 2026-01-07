@@ -35,7 +35,10 @@ const fieldTypes = [
   { value: "boolean", label: "Ja/Nein" },
   { value: "date", label: "Datum" },
   { value: "url", label: "URL" },
-  { value: "file", label: "Datei" },
+  { value: "file", label: "Datei (alle Typen)" },
+  { value: "file-image", label: "Bild (JPG, PNG, WebP)" },
+  { value: "file-document", label: "Dokument (PDF)" },
+  { value: "file-video", label: "Video" },
   { value: "country", label: "Land (ISO-3166)" },
   { value: "reference", label: "Referenz" }
 ]
@@ -101,6 +104,7 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
   const [csvParsing, setCsvParsing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [editingFieldOptions, setEditingFieldOptions] = useState<string | null>(null)
+  const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null)
 
   // Helper: Generate key from label
   const generateKeyFromLabel = (label: string): string => {
@@ -187,8 +191,63 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
 
   // Helper: Update select options in config
   const updateSelectOptions = (blockId: string, fieldId: string, options: Array<{ value: string; label: string; esprReference?: string }>) => {
-    const config = JSON.stringify({ options })
-    updateField(blockId, fieldId, { config: JSON.parse(config) })
+    const field = blocks.find(b => b.id === blockId)?.fields.find(f => f.id === fieldId)
+    const currentConfig = field?.config || {}
+    const newConfig = { ...currentConfig, options }
+    updateField(blockId, fieldId, { config: newConfig })
+  }
+
+  // Drag & Drop für Felder
+  const handleFieldDragStart = (e: React.DragEvent, blockId: string, fieldId: string) => {
+    setDraggedFieldId(fieldId)
+    e.dataTransfer.effectAllowed = "move"
+  }
+
+  const handleFieldDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const handleFieldDrop = (e: React.DragEvent, targetBlockId: string, targetFieldId: string) => {
+    e.preventDefault()
+    if (!draggedFieldId) return
+
+    const sourceBlock = blocks.find(b => b.fields.some(f => f.id === draggedFieldId))
+    if (!sourceBlock) return
+
+    const sourceField = sourceBlock.fields.find(f => f.id === draggedFieldId)
+    if (!sourceField) return
+
+    // Nur innerhalb desselben Blocks verschieben
+    if (sourceBlock.id !== targetBlockId) {
+      setDraggedFieldId(null)
+      return
+    }
+
+    const targetFieldIndex = sourceBlock.fields.findIndex(f => f.id === targetFieldId)
+    const sourceFieldIndex = sourceBlock.fields.findIndex(f => f.id === draggedFieldId)
+
+    if (targetFieldIndex === -1 || sourceFieldIndex === -1) {
+      setDraggedFieldId(null)
+      return
+    }
+
+    // Felder neu anordnen
+    const newFields = [...sourceBlock.fields]
+    newFields.splice(sourceFieldIndex, 1)
+    newFields.splice(targetFieldIndex, 0, sourceField)
+
+    setBlocks(blocks.map(block =>
+      block.id === targetBlockId
+        ? { ...block, fields: newFields }
+        : block
+    ))
+
+    setDraggedFieldId(null)
+  }
+
+  const handleFieldDragEnd = () => {
+    setDraggedFieldId(null)
   }
 
   // Block reordering functions
@@ -1270,33 +1329,65 @@ Hinweise:
               {block.fields.map((field, fieldIndex) => (
                 <div
                   key={field.id}
+                  draggable
+                  onDragStart={(e) => handleFieldDragStart(e, block.id, field.id)}
+                  onDragOver={handleFieldDragOver}
+                  onDrop={(e) => handleFieldDrop(e, block.id, field.id)}
+                  onDragEnd={handleFieldDragEnd}
                   style={{
                     padding: "1rem",
-                    backgroundColor: "#F9F9F9",
-                    border: "1px solid #E5E5E5",
-                    borderRadius: "8px"
+                    backgroundColor: draggedFieldId === field.id ? "#E5F3FF" : "#F9F9F9",
+                    border: draggedFieldId === field.id ? "2px solid #24c598" : "1px solid #E5E5E5",
+                    borderRadius: "8px",
+                    cursor: "move",
+                    opacity: draggedFieldId === field.id ? 0.5 : 1,
+                    transition: "all 0.2s"
                   }}
                 >
                   <div style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 1fr auto 32px",
-                    gap: "1rem",
+                    gridTemplateColumns: "16px 1fr 200px auto 32px",
+                    gap: "0.25rem 3.5rem",
                     alignItems: "center"
                   }}>
-              <input
-                type="text"
-                value={field.label}
-                onChange={(e) => updateField(block.id, field.id, { label: e.target.value })}
-                placeholder="Label"
-                disabled={loading}
-                style={{
-                  padding: "0.5rem",
-                  border: "1px solid #CDCDCD",
-                  borderRadius: "6px",
-                  fontSize: "0.95rem",
-                  boxSizing: "border-box"
-                }}
-              />
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "move",
+                      padding: "0",
+                      marginLeft: "-0.25rem"
+                    }}>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ color: "#7A7A7A", flexShrink: 0 }}
+                      >
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      value={field.label}
+                      onChange={(e) => updateField(block.id, field.id, { label: e.target.value })}
+                      placeholder="Label"
+                      disabled={loading}
+                      style={{
+                        padding: "0.5rem",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "6px",
+                        fontSize: "0.95rem",
+                        boxSizing: "border-box"
+                      }}
+                    />
                     <select
                       value={field.type}
                       onChange={(e) => updateField(block.id, field.id, { type: e.target.value })}

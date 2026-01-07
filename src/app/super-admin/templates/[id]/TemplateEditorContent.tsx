@@ -59,7 +59,10 @@ const fieldTypes = [
   { value: "boolean", label: "Ja/Nein" },
   { value: "date", label: "Datum" },
   { value: "url", label: "URL" },
-  { value: "file", label: "Datei" },
+  { value: "file", label: "Datei (alle Typen)" },
+  { value: "file-image", label: "Bild (JPG, PNG, WebP)" },
+  { value: "file-document", label: "Dokument (PDF)" },
+  { value: "file-video", label: "Video" },
   { value: "country", label: "Land (ISO-3166)" },
   { value: "reference", label: "Referenz" }
 ]
@@ -79,6 +82,8 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   const [creatingNewVersion, setCreatingNewVersion] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showPublishDialog, setShowPublishDialog] = useState(false)
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
+  const [archiving, setArchiving] = useState(false)
 
   // CRITICAL: Only drafts can be edited
   const isEditable = template.status === "draft" && canEdit
@@ -104,6 +109,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   
   const [blocks, setBlocks] = useState<TemplateBlock[]>(filteredBlocks)
   const [editingFieldOptions, setEditingFieldOptions] = useState<string | null>(null) // fieldId that is currently editing options
+  const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   
   // Listen for sidebar collapse state changes
@@ -227,8 +233,68 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
   // Helper: Update select options in config
   const updateSelectOptions = (blockId: string, fieldId: string, options: Array<{ value: string; label: string; esprReference?: string }>) => {
-    const config = JSON.stringify({ options })
-    updateField(blockId, fieldId, { config })
+    const field = blocks.find(b => b.id === blockId)?.fields.find(f => f.id === fieldId)
+    const currentConfig = field?.config ? (typeof field.config === "string" ? JSON.parse(field.config) : field.config) : {}
+    const newConfig = { ...currentConfig, options }
+    updateField(blockId, fieldId, { config: JSON.stringify(newConfig) })
+  }
+
+  // Drag & Drop für Felder
+  const handleFieldDragStart = (e: React.DragEvent, blockId: string, fieldId: string) => {
+    setDraggedFieldId(fieldId)
+    e.dataTransfer.effectAllowed = "move"
+  }
+
+  const handleFieldDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const handleFieldDrop = (e: React.DragEvent, targetBlockId: string, targetFieldId: string) => {
+    e.preventDefault()
+    if (!draggedFieldId) return
+
+    const sourceBlock = blocks.find(b => b.fields.some(f => f.id === draggedFieldId))
+    if (!sourceBlock) return
+
+    const sourceField = sourceBlock.fields.find(f => f.id === draggedFieldId)
+    if (!sourceField) return
+
+    // Nur innerhalb desselben Blocks verschieben
+    if (sourceBlock.id !== targetBlockId) {
+      setDraggedFieldId(null)
+      return
+    }
+
+    const targetFieldIndex = sourceBlock.fields.findIndex(f => f.id === targetFieldId)
+    const sourceFieldIndex = sourceBlock.fields.findIndex(f => f.id === draggedFieldId)
+
+    if (targetFieldIndex === -1 || sourceFieldIndex === -1) {
+      setDraggedFieldId(null)
+      return
+    }
+
+    // Felder neu anordnen und order aktualisieren
+    const newFields = [...sourceBlock.fields]
+    newFields.splice(sourceFieldIndex, 1)
+    newFields.splice(targetFieldIndex, 0, sourceField)
+    
+    // Order-Werte aktualisieren
+    newFields.forEach((field, index) => {
+      field.order = index
+    })
+
+    setBlocks(blocks.map(block =>
+      block.id === targetBlockId
+        ? { ...block, fields: newFields }
+        : block
+    ))
+
+    setDraggedFieldId(null)
+  }
+
+  const handleFieldDragEnd = () => {
+    setDraggedFieldId(null)
   }
 
   // Block reordering functions
@@ -296,17 +362,9 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       // Prepare data - Filter out any category fields (safety check)
       // Generate keys automatically from labels if missing
       // Verwende IMMER den aktuellen Status-State (nicht template.status als Fallback!)
-      console.log("[Template Save] ===== START SAVE =====")
-      console.log("[Template Save] Status-State:", status, "Type:", typeof status)
-      console.log("[Template Save] Template-Status (DB):", template.status, "Type:", typeof template.status)
-      console.log("[Template Save] Status-State === 'active':", status === "active")
-      console.log("[Template Save] Status-State === 'draft':", status === "draft")
-      
       const currentStatus = status || template.status // Fallback zu template.status nur wenn status undefined/null
-      console.log("[Template Save] Finaler Status zum Speichern:", currentStatus)
       
       if (!currentStatus) {
-        console.error("[Template Save] FEHLER: Kein Status vorhanden!")
         setError("Status ist erforderlich")
         setLoading(false)
         return
@@ -337,9 +395,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         }))
       }
 
-      console.log("[Template Save] Sende Request mit Daten:", JSON.stringify(templateData, null, 2))
-      console.log("[Template Save] Status im Request-Body:", templateData.status)
-
       const response = await fetch(`/api/super-admin/templates/${template.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -347,17 +402,13 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       })
 
       const data = await response.json()
-      console.log("[Template Save] Response Status:", response.status)
-      console.log("[Template Save] Response Data:", JSON.stringify(data, null, 2))
 
       if (!response.ok) {
-        console.error("[Template Save] FEHLER:", data.error)
         setError(data.error || "Fehler beim Aktualisieren des Templates")
         setLoading(false)
         return
       }
       
-      console.log("[Template Save] ===== SAVE ERFOLGREICH =====")
 
       setSaved(true)
       setLoading(false)
@@ -375,7 +426,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
   const handleCreateNewVersion = async () => {
     if (!isActive) {
-      console.log("Cannot create new version: template is not active", { status: template.status })
       return
     }
 
@@ -384,13 +434,55 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
     try {
       const result = await createNewTemplateVersion(template.id)
+      
+      if (result?.templateId) {
       // Redirect to new template editor
-      router.push(`/super-admin/templates/${result.templateId}`)
-      router.refresh() // Ensure fresh data
+        showNotification("Neue Version erfolgreich erstellt", "success")
+        // Use window.location for a full page reload to ensure fresh data
+        window.location.href = `/super-admin/templates/${result.templateId}`
+      } else {
+        throw new Error("Keine Template-ID zurückgegeben")
+      }
     } catch (err: any) {
-      console.error("Error creating new version:", err)
       setError(err.message || "Ein Fehler ist aufgetreten")
       setCreatingNewVersion(false)
+      showNotification(err.message || "Fehler beim Erstellen der neuen Version", "error")
+    }
+  }
+
+  const handleArchive = async () => {
+    setArchiving(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/super-admin/templates/${template.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: template.name,
+          description: template.description,
+          status: "archived"
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Fehler beim Archivieren")
+      }
+
+      showNotification("Template erfolgreich archiviert", "success")
+      setShowArchiveDialog(false)
+      
+      // Refresh page to show updated status
+      setTimeout(() => {
+        router.refresh()
+      }, 1000)
+    } catch (err: any) {
+      setError(err.message || "Ein Fehler ist aufgetreten")
+      showNotification(err.message || "Fehler beim Archivieren", "error")
+    } finally {
+      setArchiving(false)
     }
   }
 
@@ -438,13 +530,14 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             }
           </p>
           {isActive && canEdit && (
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={handleCreateNewVersion}
               disabled={creatingNewVersion}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: creatingNewVersion ? "#CDCDCD" : "#24c598",
+                  backgroundColor: creatingNewVersion ? "#CDCDCD" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
@@ -455,6 +548,24 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             >
               {creatingNewVersion ? "Wird erstellt..." : "Neue Version erstellen"}
             </button>
+              <button
+                type="button"
+                onClick={() => setShowArchiveDialog(true)}
+                disabled={archiving}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  backgroundColor: archiving ? "#CDCDCD" : "#7A7A7A",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.95rem",
+                  fontWeight: "600",
+                  cursor: archiving ? "not-allowed" : "pointer"
+                }}
+              >
+                {archiving ? "Wird archiviert..." : "Archivieren"}
+              </button>
+            </div>
           )}
         </div>
 
@@ -580,21 +691,60 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                   gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
                   gap: "1rem"
                 }}>
-                  {block.fields.map((field) => (
+                  {block.fields.map((field, fieldIndex) => (
                     <div
                       key={field.id}
+                      draggable={isEditable}
+                      onDragStart={(e) => isEditable && handleFieldDragStart(e, block.id, field.id)}
+                      onDragOver={handleFieldDragOver}
+                      onDrop={(e) => isEditable && handleFieldDrop(e, block.id, field.id)}
+                      onDragEnd={handleFieldDragEnd}
                       style={{
                         padding: "1rem",
-                        backgroundColor: "#F9F9F9",
-                        border: "1px solid #E5E5E5",
-                        borderRadius: "8px"
+                        backgroundColor: draggedFieldId === field.id ? "#E5F3FF" : "#F9F9F9",
+                        border: draggedFieldId === field.id ? "2px solid #24c598" : "1px solid #E5E5E5",
+                        borderRadius: "8px",
+                        cursor: isEditable ? "move" : "default",
+                        opacity: draggedFieldId === field.id ? 0.5 : 1,
+                        transition: "all 0.2s"
                       }}
                     >
                       <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.25rem",
+                        marginBottom: "0.25rem"
+                      }}>
+                        {isEditable && (
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "move",
+                            padding: "0",
+                            marginLeft: "-0.25rem"
+                          }}>
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{ color: "#7A7A7A", flexShrink: 0 }}
+                            >
+                              <line x1="3" y1="12" x2="21" y2="12" />
+                              <line x1="3" y1="6" x2="21" y2="6" />
+                              <line x1="3" y1="18" x2="21" y2="18" />
+                            </svg>
+                          </div>
+                        )}
+                      <div style={{
                         fontSize: "0.95rem",
                         fontWeight: "600",
-                        color: "#0A0A0A",
-                        marginBottom: "0.25rem"
+                          color: "#0A0A0A"
                       }}>
                         {field.label}
                         {field.required && (
@@ -607,6 +757,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                             *
                           </span>
                         )}
+                      </div>
                       </div>
                       <div style={{
                         display: "inline-block",
@@ -724,7 +875,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         }
         @media (min-width: 1400px) {
           .template-editor-field-grid {
-            grid-template-columns: 2fr 2fr 1.5fr auto auto !important;
+            grid-template-columns: 1fr 4fr 1.5fr auto auto !important;
           }
         }
       `
@@ -805,16 +956,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               fontWeight: "600",
               color: "#0A0A0A"
             }}>
-              {template.category || "Keine"}
-              {template.categoryLabel && (
-                <span style={{
-                  marginLeft: "0.5rem",
-                  fontWeight: "400",
-                  color: "#7A7A7A"
-                }}>
-                  – {template.categoryLabel}
-                </span>
-              )}
+              {template.categoryLabel || template.category || "Keine"}
             </div>
           </div>
           <div style={{
@@ -847,7 +989,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           fontStyle: "italic",
           lineHeight: "1.4"
         }}>
-          Die Kategorie ist Teil der regulatorischen Template-Identität und kann nach Erstellung nicht mehr geändert werden.
+          Die Kategorie kann nicht mehr verändert werden, wenn ein Template für eine Kategorie veröffentlicht worden ist.
         </p>
       </div>
 
@@ -940,7 +1082,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               value={status}
               onChange={(e) => {
                 const newStatus = e.target.value
-                console.log("[Template Editor] Status geändert von", status, "zu", newStatus)
                 setStatus(newStatus)
               }}
               disabled={loading || (!isEditable && template.status !== "draft")}
@@ -1034,28 +1175,28 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                       flexShrink: 0
                     }}>
                       {blockIndex > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => moveBlockUp(blockIndex)}
-                          disabled={loading}
-                          title="Block nach oben verschieben"
-                          style={{
-                            padding: "0.5rem",
-                            backgroundColor: "#F5F5F5",
-                            color: "#0A0A0A",
-                            border: "1px solid #CDCDCD",
-                            borderRadius: "6px",
-                            cursor: loading ? "not-allowed" : "pointer",
-                            fontSize: "1rem",
-                            width: "32px",
-                            height: "32px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
-                        >
-                          ↑
-                        </button>
+                      <button
+                        type="button"
+                        onClick={() => moveBlockUp(blockIndex)}
+                        disabled={loading}
+                        title="Block nach oben verschieben"
+                        style={{
+                          padding: "0.5rem",
+                          backgroundColor: "#F5F5F5",
+                          color: "#0A0A0A",
+                          border: "1px solid #CDCDCD",
+                          borderRadius: "6px",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          fontSize: "1rem",
+                          width: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        ↑
+                      </button>
                       )}
                       <button
                         type="button"
@@ -1136,22 +1277,30 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
             {/* Fields */}
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {block.fields.map((field) => (
+              {block.fields.map((field, fieldIndex) => (
                   <div
                     key={field.id}
+                    draggable={isEditable}
+                    onDragStart={(e) => isEditable && handleFieldDragStart(e, block.id, field.id)}
+                    onDragOver={handleFieldDragOver}
+                    onDrop={(e) => isEditable && handleFieldDrop(e, block.id, field.id)}
+                    onDragEnd={handleFieldDragEnd}
                     style={{
                       padding: "1rem",
-                      backgroundColor: "#F9F9F9",
-                      border: "1px solid #E5E5E5",
-                      borderRadius: "8px"
+                      backgroundColor: draggedFieldId === field.id ? "#E5F3FF" : "#F9F9F9",
+                      border: draggedFieldId === field.id ? "2px solid #24c598" : "1px solid #E5E5E5",
+                      borderRadius: "8px",
+                      cursor: isEditable ? "move" : "default",
+                      opacity: draggedFieldId === field.id ? 0.5 : 1,
+                      transition: "all 0.2s"
                     }}
                   >
                     <div 
                       className="template-editor-field-grid"
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "minmax(120px, 2fr) minmax(100px, 2fr) minmax(120px, 1fr) auto 32px",
-                        gap: "0.75rem",
+                        gridTemplateColumns: isEditable ? "16px 1fr 200px 120px auto 32px" : "minmax(120px, 2fr) minmax(100px, 2fr) minmax(120px, 1fr) auto 32px",
+                        gap: isEditable ? "0.25rem 3.5rem" : "0.75rem",
                         alignItems: "center",
                         width: "100%",
                         boxSizing: "border-box",
@@ -1159,6 +1308,32 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                         overflow: "hidden"
                       }}
                     >
+                      {isEditable && (
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "move",
+                          padding: "0",
+                          marginLeft: "-0.25rem"
+                        }}>
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ color: "#7A7A7A", flexShrink: 0 }}
+                          >
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                          </svg>
+                        </div>
+                      )}
                       <input
                         type="text"
                         value={field.label}
@@ -1617,7 +1792,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 disabled={loading || !isEditable}
                 style={{
                   padding: "0.75rem 1.5rem",
-                  backgroundColor: loading ? "#CDCDCD" : "#00A651",
+                  backgroundColor: loading ? "#CDCDCD" : "#10B981",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "8px",
@@ -1636,7 +1811,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               disabled={loading || !isEditable}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: loading || !isEditable ? "#CDCDCD" : "#24c598",
+                backgroundColor: loading || !isEditable ? "#CDCDCD" : "#3B82F6",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
@@ -1684,7 +1859,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       <ConfirmDialog
         isOpen={showPublishDialog}
         title="Template veröffentlichen"
-        message="Möchten Sie dieses Template wirklich veröffentlichen? Nur ein aktives Template pro Kategorie ist erlaubt."
+        message="Möchten Sie dieses Template wirklich veröffentlichen? Die bisher aktive Version wird automatisch archiviert."
         confirmLabel="Veröffentlichen"
         cancelLabel="Abbrechen"
         onConfirm={async () => {
@@ -1714,16 +1889,16 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 }
               }
 
-      // Validate fields
-      for (const block of blocks) {
-        for (const field of block.fields) {
+              // Validate fields
+              for (const block of blocks) {
+                for (const field of block.fields) {
           if (!field.label) {
             setError("Alle Felder benötigen einen Label")
-            setLoading(false)
-            return
-          }
-        }
-      }
+                    setLoading(false)
+                    return
+                  }
+                }
+              }
 
               // Prepare data mit explizitem Status "active"
               const templateData = {
@@ -1751,7 +1926,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 }))
               }
 
-              console.log("[Template Publish] Sende Template mit Status 'active':", templateData.status)
 
               const response = await fetch(`/api/super-admin/templates/${template.id}`, {
                 method: "PUT",
@@ -1784,6 +1958,17 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           await publishTemplate()
         }}
         onCancel={() => setShowPublishDialog(false)}
+      />
+      
+      {/* Archive Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showArchiveDialog}
+        title="Template archivieren"
+        message="Möchten Sie dieses Template wirklich archivieren? Es wird nicht mehr für neue DPPs verfügbar sein."
+        confirmLabel="Archivieren"
+        cancelLabel="Abbrechen"
+        onConfirm={handleArchive}
+        onCancel={() => setShowArchiveDialog(false)}
       />
     </div>
   )

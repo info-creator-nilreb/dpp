@@ -80,7 +80,7 @@ export async function PUT(
       )
     }
 
-    // If status is being changed to active, check if another active template exists for this category
+    // If status is being changed to active, automatically archive the previous active template
     if (status === "active" && existing.status !== "active") {
       const existingActive = await prisma.template.findFirst({
         where: {
@@ -91,10 +91,14 @@ export async function PUT(
       })
 
       if (existingActive) {
-        return NextResponse.json(
-          { error: "Es existiert bereits ein aktives Template für diese Kategorie. Bitte archivieren Sie das bestehende Template zuerst." },
-          { status: 400 }
-        )
+        // Automatisch die vorherige aktive Version archivieren
+        await prisma.template.update({
+          where: { id: existingActive.id },
+          data: {
+            status: "archived"
+          }
+        })
+        console.log(`[Template API] Vorherige aktive Version ${existingActive.id} (v${existingActive.version}) wurde automatisch archiviert`)
       }
     }
 

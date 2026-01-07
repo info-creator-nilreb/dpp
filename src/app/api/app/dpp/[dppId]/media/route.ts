@@ -41,6 +41,8 @@ export async function POST(
     // Parse FormData
     const formData = await request.formData()
     const file = formData.get("file") as File | null
+    const blockId = formData.get("blockId") as string | null
+    const fieldId = formData.get("fieldId") as string | null
 
     if (!file) {
       return NextResponse.json(
@@ -90,7 +92,9 @@ export async function POST(
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
-        storageUrl
+        storageUrl,
+        blockId: blockId || null,
+        fieldId: fieldId || null
       }
     })
 

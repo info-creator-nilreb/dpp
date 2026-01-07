@@ -106,7 +106,8 @@ export default function StickySaveBar({
           @media (min-width: 768px) {
             .sticky-save-bar {
               left: var(--sidebar-width, 280px) !important;
-              transition: left 0.3s ease;
+              width: calc(100vw - var(--sidebar-width, 280px)) !important;
+              transition: left 0.3s ease, width 0.3s ease;
             }
           }
         `
@@ -122,10 +123,11 @@ export default function StickySaveBar({
           borderTop: "1px solid #CDCDCD",
           padding: "1rem clamp(1rem, 3vw, 2rem)",
           boxShadow: "0 -2px 8px rgba(0, 0, 0, 0.1)",
-          zIndex: 1000,
+          zIndex: 999,
           display: "flex",
           flexDirection: "column",
-          gap: "0.75rem"
+          gap: "0.75rem",
+          boxSizing: "border-box"
         }}
       >
       {/* Main Content Row */}

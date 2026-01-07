@@ -3,8 +3,6 @@ const nextConfig = {
     eslint: {
       ignoreDuringBuilds: true,
     },
-    // Turbopack configuration (empty for now - using webpack instead)
-    turbopack: {},
     webpack: (config, { isServer }) => {
       // Exclude Node.js modules from client-side bundle
       if (!isServer) {
@@ -29,6 +27,16 @@ const nextConfig = {
         config.externals = config.externals || []
         config.externals.push('nodemailer')
       }
+      
+      // Fix for Next.js 14.2+ route modules path resolution
+      if (isServer) {
+        config.resolve.alias = {
+          ...config.resolve.alias,
+          'next/dist/server/route-modules/pages/module.compiled': 
+            require.resolve('next/dist/server/future/route-modules/pages/module.compiled'),
+        }
+      }
+      
       return config
     },
   }

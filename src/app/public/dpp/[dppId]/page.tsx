@@ -11,6 +11,7 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import EditorialDppView from '@/components/editorial/EditorialDppView'
+import { latestPublishedTemplate } from '@/lib/template-helpers'
 
 interface PublicDppPageProps {
   params: Promise<{ dppId: string }>
@@ -32,7 +33,7 @@ export default async function PublicDppPage({ params }: PublicDppPageProps) {
       },
       media: {
         orderBy: { uploadedAt: 'asc' },
-        take: 10,
+        take: 50, // Mehr Medien für Block-basierte Zuordnung
       },
       versions: {
         where: {
@@ -53,6 +54,12 @@ export default async function PublicDppPage({ params }: PublicDppPageProps) {
   }
 
   const latestVersion = dpp.versions[0]
+
+  // Lade Template, um den Produktdaten-Block zu identifizieren
+  const template = await latestPublishedTemplate(dpp.category)
+  const produktdatenBlockId = template?.blocks.find(
+    block => block.name === "Basis- & Produktdaten" || block.order === 0
+  )?.id || null
 
   // Transform Dpp data to EditorialDppData format
   const editorialData = {
@@ -79,7 +86,10 @@ export default async function PublicDppPage({ params }: PublicDppPageProps) {
       id: m.id,
       storageUrl: m.storageUrl,
       fileType: m.fileType,
+      blockId: m.blockId || null,
+      fieldId: m.fieldId || null,
     })),
+    produktdatenBlockId, // Block-ID für Herobild/Galerie-Logik
     versionInfo: latestVersion ? {
       version: latestVersion.version,
       createdAt: latestVersion.createdAt,

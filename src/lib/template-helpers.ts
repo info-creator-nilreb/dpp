@@ -13,113 +13,106 @@ import { prisma } from "@/lib/prisma"
  * @returns Das Template oder null, wenn kein veröffentlichtes Template existiert
  */
 export async function latestPublishedTemplate(categoryKey: string) {
-  console.log(`[latestPublishedTemplate] Suche Template für Kategorie: "${categoryKey}"`)
-  
-  // Normalisiere die Kategorie
-  const normalizedCategory = normalizeCategory(categoryKey) || categoryKey
-  console.log(`[latestPublishedTemplate] Normalisierte Kategorie: "${normalizedCategory}"`)
-  
-  // Lade ALLE aktiven Templates und filtere nach normalisierter Kategorie
-  // Das ist notwendig, weil wir "FURNITURE" suchen könnten, aber das Template "MÖBEL" hat
-  const allActiveTemplates = await prisma.template.findMany({
-    where: {
-      status: "active"
-    },
-    include: {
-      blocks: {
-        orderBy: { order: "asc" },
-        include: {
-          fields: {
-            where: {
-              deprecatedInVersion: null
-            },
-            orderBy: { order: "asc" }
+  try {
+    // Normalisiere die Kategorie
+    const normalizedCategory = normalizeCategory(categoryKey) || categoryKey
+    
+    // Lade ALLE aktiven Templates und filtere nach normalisierter Kategorie
+    // Das ist notwendig, weil wir "FURNITURE" suchen könnten, aber das Template "MÖBEL" hat
+    const allActiveTemplates = await prisma.template.findMany({
+      where: {
+        status: "active"
+      },
+      include: {
+        blocks: {
+          orderBy: { order: "asc" },
+          include: {
+            fields: {
+              where: {
+                deprecatedInVersion: null
+              },
+              orderBy: { order: "asc" }
+            }
           }
         }
       }
-    }
-  })
-  
-  console.log(`[latestPublishedTemplate] Gefundene aktive Templates:`, allActiveTemplates.length)
-  
-  // Filtere Templates, deren Kategorie (normalisiert) zur gesuchten Kategorie passt
-  const matchingTemplates = allActiveTemplates.filter(t => {
-    if (!t.category) return false
+    })
     
-    // Normalisiere die Template-Kategorie
-    const normalizedTemplateCategory = normalizeCategory(t.category)
+    // Filtere Templates, deren Kategorie (normalisiert) zur gesuchten Kategorie passt
+    const matchingTemplates = allActiveTemplates.filter(t => {
+      if (!t.category) return false
+      
+      // Normalisiere die Template-Kategorie
+      const normalizedTemplateCategory = normalizeCategory(t.category)
+      
+      // Prüfe ob die normalisierten Kategorien übereinstimmen
+      const matches = normalizedTemplateCategory === normalizedCategory || 
+                      normalizedTemplateCategory === categoryKey ||
+                      t.category === categoryKey ||
+                      t.category === normalizedCategory
+      
+      return matches
+    })
     
-    // Prüfe ob die normalisierten Kategorien übereinstimmen
-    const matches = normalizedTemplateCategory === normalizedCategory || 
-                    normalizedTemplateCategory === categoryKey ||
-                    t.category === categoryKey ||
-                    t.category === normalizedCategory
-    
-    if (matches) {
-      console.log(`[latestPublishedTemplate] Passendes Template gefunden: "${t.name}" (Kategorie: "${t.category}" -> normalisiert: "${normalizedTemplateCategory}")`)
-    }
-    
-    return matches
-  })
-  
-  console.log(`[latestPublishedTemplate] Passende Templates:`, matchingTemplates.length)
-  
-  // Sortiere nach Version (neueste zuerst) und nimm das erste
-  const template = matchingTemplates.sort((a, b) => b.version - a.version)[0] || null
+    // Sortiere nach Version (neueste zuerst) und nimm das erste
+    const template = matchingTemplates.sort((a, b) => b.version - a.version)[0] || null
 
-  console.log(`[latestPublishedTemplate] Gefundenes Template für "${categoryKey}":`, template ? { id: template.id, name: template.name, category: template.category, version: template.version, status: template.status } : "null")
-
-  return template
+    return template
+  } catch (error: any) {
+    // Datenbankverbindungsfehler abfangen
+    if (error?.message?.includes("Can't reach database server") || error?.code === "P1001") {
+      return null
+    }
+    // Andere Fehler weiterwerfen
+    throw error
+  }
 }
 
 /**
  * Prüft, ob für eine Kategorie mindestens eine veröffentlichte Template-Version existiert
  */
 export async function hasPublishedTemplate(categoryKey: string): Promise<boolean> {
-  console.log(`[hasPublishedTemplate] Prüfe Kategorie: "${categoryKey}"`)
-  
-  // Normalisiere die Kategorie
-  const normalizedCategory = normalizeCategory(categoryKey) || categoryKey
-  console.log(`[hasPublishedTemplate] Normalisierte Kategorie: "${normalizedCategory}"`)
-  
-  // Lade ALLE aktiven Templates und filtere nach normalisierter Kategorie
-  // Das ist notwendig, weil wir "FURNITURE" suchen könnten, aber das Template "MÖBEL" hat
-  const allActiveTemplates = await prisma.template.findMany({
-    where: {
-      status: "active"
-    },
-    select: {
-      category: true,
-      status: true
+  try {
+    // Normalisiere die Kategorie
+    const normalizedCategory = normalizeCategory(categoryKey) || categoryKey
+    
+    // Lade ALLE aktiven Templates und filtere nach normalisierter Kategorie
+    // Das ist notwendig, weil wir "FURNITURE" suchen könnten, aber das Template "MÖBEL" hat
+    const allActiveTemplates = await prisma.template.findMany({
+      where: {
+        status: "active"
+      },
+      select: {
+        category: true,
+        status: true
+      }
+    })
+    
+    // Filtere Templates, deren Kategorie (normalisiert) zur gesuchten Kategorie passt
+    const matchingTemplates = allActiveTemplates.filter(t => {
+      if (!t.category) return false
+      
+      // Normalisiere die Template-Kategorie
+      const normalizedTemplateCategory = normalizeCategory(t.category)
+      
+      // Prüfe ob die normalisierten Kategorien übereinstimmen
+      const matches = normalizedTemplateCategory === normalizedCategory || 
+                      normalizedTemplateCategory === categoryKey ||
+                      t.category === categoryKey ||
+                      t.category === normalizedCategory
+      
+      return matches
+    })
+    
+    return matchingTemplates.length > 0
+  } catch (error: any) {
+    // Datenbankverbindungsfehler abfangen
+    if (error?.message?.includes("Can't reach database server") || error?.code === "P1001") {
+      return false
     }
-  })
-  
-  console.log(`[hasPublishedTemplate] Gefundene aktive Templates:`, allActiveTemplates.length)
-  
-  // Filtere Templates, deren Kategorie (normalisiert) zur gesuchten Kategorie passt
-  const matchingTemplates = allActiveTemplates.filter(t => {
-    if (!t.category) return false
-    
-    // Normalisiere die Template-Kategorie
-    const normalizedTemplateCategory = normalizeCategory(t.category)
-    
-    // Prüfe ob die normalisierten Kategorien übereinstimmen
-    const matches = normalizedTemplateCategory === normalizedCategory || 
-                    normalizedTemplateCategory === categoryKey ||
-                    t.category === categoryKey ||
-                    t.category === normalizedCategory
-    
-    if (matches) {
-      console.log(`[hasPublishedTemplate] Passendes Template gefunden: Kategorie "${t.category}" -> normalisiert: "${normalizedTemplateCategory}"`)
-    }
-    
-    return matches
-  })
-  
-  const hasTemplate = matchingTemplates.length > 0
-  console.log(`[hasPublishedTemplate] Ergebnis für "${categoryKey}":`, hasTemplate)
-  
-  return hasTemplate
+    // Andere Fehler weiterwerfen
+    throw error
+  }
 }
 
 /**
@@ -152,7 +145,7 @@ export function normalizeCategory(category: string | null): string | null {
  */
 export async function getCategoriesWithPublishedTemplates(): Promise<Array<{ categoryKey: string; label: string }>> {
   try {
-    // Debug: Prüfe alle Templates
+    // Prüfe alle Templates
     const allTemplates = await prisma.template.findMany({
       select: {
         id: true,
@@ -164,20 +157,10 @@ export async function getCategoriesWithPublishedTemplates(): Promise<Array<{ cat
       }
     })
     
-    console.log("[Template Debug] === getCategoriesWithPublishedTemplates ===")
-    console.log("[Template Debug] Alle Templates in DB:", JSON.stringify(allTemplates, null, 2))
-    
     // Suche nach Templates mit Status "active" (case-insensitive)
     const activeTemplates = allTemplates.filter(t => {
       const statusLower = t.status?.toLowerCase()
-      const isActive = statusLower === "active"
-      console.log(`[Template Debug] Template "${t.name}" (${t.id}): status="${t.status}", statusLower="${statusLower}", isActive=${isActive}`)
-      return isActive
-    })
-    
-    console.log("[Template Debug] Aktive Templates (gefiltert):", activeTemplates.length)
-    activeTemplates.forEach(t => {
-      console.log(`[Template Debug]   - ${t.name} (${t.id}): category="${t.category}", status="${t.status}"`)
+      return statusLower === "active"
     })
     
     // Normalisiere Kategorien und gruppiere
@@ -187,7 +170,6 @@ export async function getCategoriesWithPublishedTemplates(): Promise<Array<{ cat
     for (const t of activeTemplates) {
       if (t.category) {
         const normalizedCategory = normalizeCategory(t.category)
-        console.log(`[Template Debug] Kategorie "${t.category}" -> normalisiert: "${normalizedCategory}"`)
         if (normalizedCategory && !categoriesMap.has(normalizedCategory)) {
           categoriesMap.set(normalizedCategory, {
             category: normalizedCategory,
@@ -195,8 +177,6 @@ export async function getCategoriesWithPublishedTemplates(): Promise<Array<{ cat
             categoryLabel: t.categoryLabel
           })
         }
-      } else {
-        console.log(`[Template Debug] WARNUNG: Template "${t.name}" hat keine Kategorie!`)
       }
     }
     
@@ -205,12 +185,13 @@ export async function getCategoriesWithPublishedTemplates(): Promise<Array<{ cat
       label: t.categoryLabel || t.originalCategory // Verwende categoryLabel oder ursprüngliche Kategorie aus DB
     }))
     
-    console.log("[Template Debug] Finale Kategorien:", JSON.stringify(result, null, 2))
-    console.log("[Template Debug] === Ende getCategoriesWithPublishedTemplates ===")
-    
     return result
-  } catch (error) {
-    console.error("[Template Debug] FEHLER in getCategoriesWithPublishedTemplates:", error)
+  } catch (error: any) {
+    // Datenbankverbindungsfehler abfangen
+    if (error?.message?.includes("Can't reach database server") || error?.code === "P1001") {
+      return []
+    }
+    // Andere Fehler weiterwerfen
     throw error
   }
 }
@@ -248,36 +229,45 @@ export function getCategoryLabel(categoryKey: string, customLabel?: string | nul
  * Gibt eine Map zurück: categoryKey -> { label, categoryKey }
  */
 export async function getCategoriesWithLabels(): Promise<Map<string, { label: string; categoryKey: string }>> {
-  const templates = await prisma.template.findMany({
-    where: {
-      status: "active"
-    },
-    select: {
-      category: true,
-      categoryLabel: true
-    },
-    distinct: ["category"]
-  })
+  try {
+    const templates = await prisma.template.findMany({
+      where: {
+        status: "active"
+      },
+      select: {
+        category: true,
+        categoryLabel: true
+      },
+      distinct: ["category"]
+    })
 
-  const result = new Map<string, { label: string; categoryKey: string }>()
-  
-  for (const template of templates) {
-    if (template.category) {
-      // Verwende die ursprüngliche Kategorie aus der DB als Label, wenn kein categoryLabel vorhanden ist
-      const label = template.categoryLabel || template.category
-      const normalizedCategory = normalizeCategory(template.category)
-      
-      // Verwende normalisierte Kategorie als Key für Matching, aber ursprüngliche Kategorie als Label
-      if (normalizedCategory && !result.has(normalizedCategory)) {
-        result.set(normalizedCategory, {
-          categoryKey: normalizedCategory,
-          label: label
-        })
+    const result = new Map<string, { label: string; categoryKey: string }>()
+    
+    for (const template of templates) {
+      if (template.category) {
+        // Verwende die ursprüngliche Kategorie aus der DB als Label, wenn kein categoryLabel vorhanden ist
+        const label = template.categoryLabel || template.category
+        const normalizedCategory = normalizeCategory(template.category)
+        
+        // Verwende normalisierte Kategorie als Key für Matching, aber ursprüngliche Kategorie als Label
+        if (normalizedCategory && !result.has(normalizedCategory)) {
+          result.set(normalizedCategory, {
+            categoryKey: normalizedCategory,
+            label: label
+          })
+        }
       }
     }
-  }
 
-  return result
+    return result
+  } catch (error: any) {
+    // Datenbankverbindungsfehler abfangen
+    if (error?.message?.includes("Can't reach database server") || error?.code === "P1001") {
+      return new Map()
+    }
+    // Andere Fehler weiterwerfen
+    throw error
+  }
 }
 
 /**
@@ -294,67 +284,72 @@ export async function getAllPublishedTemplates(): Promise<Array<{
   categoryLabel: string | null
   label: string // Kombiniertes Label für UI
 }>> {
-  // Debug: Prüfe alle Templates mit Status
-  const allTemplatesDebug = await prisma.template.findMany({
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      status: true,
-      version: true,
-      categoryLabel: true
-    }
-  })
-  console.log("[Template Debug] Alle Templates (getAllPublishedTemplates):", JSON.stringify(allTemplatesDebug, null, 2))
-  
-  // Suche mit verschiedenen Status-Werten
-  let templates = await prisma.template.findMany({
-    where: {
-      status: {
-        in: ["active", "Active", "ACTIVE"]
+  try {
+    // Prüfe alle Templates mit Status
+    const allTemplatesDebug = await prisma.template.findMany({
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        status: true,
+        version: true,
+        categoryLabel: true
       }
-    },
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      version: true,
-      categoryLabel: true
-    },
-    orderBy: [
-      { category: "asc" },
-      { version: "desc" }
-    ]
-  })
-  
-  // Filtere Templates ohne Kategorie heraus (nach dem Laden, da Prisma TypeScript-Probleme mit null-Checks hat)
-  templates = templates.filter(t => t.category !== null)
+    })
+    
+    // Suche mit verschiedenen Status-Werten
+    let templates = await prisma.template.findMany({
+      where: {
+        status: {
+          in: ["active", "Active", "ACTIVE"]
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        version: true,
+        categoryLabel: true
+      },
+      orderBy: [
+        { category: "asc" },
+        { version: "desc" }
+      ]
+    })
+    
+    // Filtere Templates ohne Kategorie heraus (nach dem Laden, da Prisma TypeScript-Probleme mit null-Checks hat)
+    templates = templates.filter(t => t.category !== null)
 
-  // Fallback: Wenn nichts gefunden, filtere manuell
-  if (templates.length === 0) {
-    const activeTemplates = allTemplatesDebug.filter(t => 
-      t.status && t.status.toLowerCase() === "active" && t.category
-    )
-    templates = activeTemplates.map(t => ({
+    // Fallback: Wenn nichts gefunden, filtere manuell
+    if (templates.length === 0) {
+      const activeTemplates = allTemplatesDebug.filter(t => 
+        t.status && t.status.toLowerCase() === "active" && t.category
+      )
+      templates = activeTemplates.map(t => ({
+        id: t.id,
+        name: t.name,
+        category: t.category!,
+        version: t.version,
+        categoryLabel: t.categoryLabel
+      }))
+    }
+
+    return templates.map(t => ({
       id: t.id,
       name: t.name,
-      category: t.category!,
+      category: t.category,
       version: t.version,
-      categoryLabel: t.categoryLabel
+      categoryLabel: t.categoryLabel,
+      label: `${getCategoryLabel(t.category, t.categoryLabel)} - ${t.name} (v${t.version})`
     }))
-    console.log("[Template Debug] Fallback: Manuell gefilterte aktive Templates:", templates.length)
+  } catch (error: any) {
+    // Datenbankverbindungsfehler abfangen
+    if (error?.message?.includes("Can't reach database server") || error?.code === "P1001") {
+      return []
+    }
+    // Andere Fehler weiterwerfen
+    throw error
   }
-
-  console.log("[Template Debug] Aktive Templates gefunden (getAllPublishedTemplates):", templates.length, templates.map(t => ({ id: t.id, name: t.name, category: t.category, version: t.version, status: "active" })))
-
-  return templates.map(t => ({
-    id: t.id,
-    name: t.name,
-    category: t.category,
-    version: t.version,
-    categoryLabel: t.categoryLabel,
-    label: `${getCategoryLabel(t.category, t.categoryLabel)} - ${t.name} (v${t.version})`
-  }))
 }
 
 /**
