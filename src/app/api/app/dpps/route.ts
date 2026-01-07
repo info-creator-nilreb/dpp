@@ -169,8 +169,25 @@ export async function GET(request: NextRequest) {
         totalPages
       }
     }, { status: 200 })
-  } catch (error) {
-    console.error("Error fetching DPPs:", error)
+  } catch (error: any) {
+    // Connection Pool Overflow oder andere DB-Fehler abfangen
+    if (
+      error?.message?.includes("MaxClientsInSessionMode") ||
+      error?.message?.includes("max clients reached") ||
+      error?.code === "P1001"
+    ) {
+      return NextResponse.json({
+        dpps: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+        },
+        error: "Datenbankverbindung überlastet. Bitte versuchen Sie es später erneut.",
+      }, { status: 503 })
+    }
+    
     return NextResponse.json(
       { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }
