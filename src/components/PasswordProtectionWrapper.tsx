@@ -48,6 +48,10 @@ export default async function PasswordProtectionWrapper({
     return <>{children}</>
   }
 
+  // FIX: redirect() muss außerhalb von try-catch sein, da es eine spezielle Exception wirft
+  let shouldRedirectToPassword = false
+  let redirectToPath = ""
+
   try {
     // Check if password protection is active (requires Prisma - Node.js Runtime only)
     const protectionActive = await isPasswordProtectionActive()
@@ -65,7 +69,8 @@ export default async function PasswordProtectionWrapper({
           // Use the current pathname or "/" as callbackUrl
           const currentPath = pathname || "/"
           console.log("[PasswordProtectionWrapper] Redirecting to password page:", currentPath)
-          redirect(`/password?callbackUrl=${encodeURIComponent(currentPath)}`)
+          shouldRedirectToPassword = true
+          redirectToPath = currentPath
         }
       } else {
         console.log("[PasswordProtectionWrapper] Access granted - pathname:", pathname)
@@ -76,6 +81,11 @@ export default async function PasswordProtectionWrapper({
     // This prevents the entire app from breaking if there's a DB issue
     console.error("[PasswordProtectionWrapper] Error checking password protection:", error)
     // Continue rendering - don't block access on error
+  }
+
+  // FIX: redirect() außerhalb von try-catch, damit NEXT_REDIRECT Exception nicht gefangen wird
+  if (shouldRedirectToPassword) {
+    redirect(`/password?callbackUrl=${encodeURIComponent(redirectToPath)}`)
   }
 
   return <>{children}</>
