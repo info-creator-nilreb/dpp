@@ -393,7 +393,7 @@ export default function TemplateBlockField({
         }}>
           <input
             type="checkbox"
-            checked={value === "true" || value === true}
+            checked={typeof value === "string" && value === "true"}
             onChange={(e) => {
               onChange?.(e.target.checked ? "true" : "false")
             }}
