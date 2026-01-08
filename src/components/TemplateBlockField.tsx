@@ -125,8 +125,8 @@ export default function TemplateBlockField({
               : field.type === "file-video"
               ? "Videos (MP4, WebM, OGG). Maximale Dateigröße: 100 MB"
               : field.type === "file"
-              ? "Alle Dateitypen. Maximale Dateigröße: 10 MB (Videos: 100 MB)"
-              : "Dateien hochladen. Maximale Dateigröße: 10 MB (Videos: 100 MB)"
+              ? "Alle Dateitypen. Maximale Dateigröße: 10 MB"
+              : "Dateien hochladen. Maximale Dateigröße: 10 MB"
           }
         />
 
@@ -159,16 +159,18 @@ export default function TemplateBlockField({
                     }}
                   />
                 ) : mediaItem.fileType.startsWith("video/") ? (
-                  <div style={{
-                    width: "100%",
-                    height: "150px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "#F5F5F5"
-                  }}>
-                    <span style={{ fontSize: "2rem" }}>🎥</span>
-                  </div>
+                  <video
+                    src={mediaItem.storageUrl}
+                    style={{
+                      width: "100%",
+                      height: "150px",
+                      objectFit: "cover"
+                    }}
+                    muted
+                    playsInline
+                  >
+                    <track kind="captions" />
+                  </video>
                 ) : (
                   <div style={{
                     width: "100%",

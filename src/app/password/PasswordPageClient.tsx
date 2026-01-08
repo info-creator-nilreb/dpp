@@ -33,30 +33,32 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password, callbackUrl }),
         credentials: "include", // Wichtig: Cookies werden mitgesendet
-        redirect: "follow" // Folge Redirects automatisch
+        redirect: "manual" // Manuelles Handling von Redirects
       })
 
-      // Bei Erfolg macht der Server einen Redirect (Status 302/307)
-      // Das Cookie ist bereits im Response-Header gesetzt
-      // Wenn response.redirected true ist, folgt der Browser automatisch
-      if (response.redirected || response.ok) {
-        // Server hat bereits einen Redirect gemacht - Browser folgt automatisch
-        // Keine weitere Aktion nötig
+      // Server-Side Redirect (Status 302/307/308)
+      if (response.status >= 300 && response.status < 400) {
+        // Server hat einen Redirect gemacht - Cookie ist im Response-Header
+        // Hole die Redirect-URL aus dem Location-Header
+        const redirectUrl = response.headers.get("Location") || callbackUrl || "/"
+        // Navigiere explizit - das Cookie ist bereits gesetzt
+        window.location.href = redirectUrl
         return
       }
 
-      // Fehlerfall: Kein Redirect, also Response prüfen
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Ungültiges Passwort")
-        setLoading(false)
+      // Erfolgreiche Response (Status 200-299)
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}))
+        // Cookie ist bereits gesetzt, navigiere zur callbackUrl
+        const redirectUrl = data.callbackUrl || callbackUrl || "/"
+        window.location.href = redirectUrl
         return
       }
 
-      // Fallback: Wenn Response OK aber kein Redirect
-      const redirectUrl = data.callbackUrl || callbackUrl || "/"
-      window.location.href = redirectUrl
+      // Fehlerfall: Response prüfen
+      const data = await response.json().catch(() => ({ error: "Ungültiges Passwort" }))
+      setError(data.error || "Ungültiges Passwort")
+      setLoading(false)
     } catch (err: any) {
       setError("Ein Fehler ist aufgetreten")
       setLoading(false)

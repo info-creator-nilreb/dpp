@@ -32,7 +32,15 @@ export async function POST(request: Request) {
     }
 
     // Verify password
-    const isValid = await verifyPasswordProtectionPassword(password)
+    let isValid = false
+    try {
+      isValid = await verifyPasswordProtectionPassword(password)
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: "Fehler bei der Passwortprüfung" },
+        { status: 500 }
+      )
+    }
 
     if (!isValid) {
       return NextResponse.json(

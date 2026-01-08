@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { saveFile, isAllowedFileType, MAX_FILE_SIZE } from "@/lib/storage"
+import { saveFile, isAllowedFileType, getMaxFileSize } from "@/lib/storage"
 import { requireEditDPP, requireViewDPP } from "@/lib/api-permissions"
 import { DPP_SECTIONS } from "@/lib/permissions"
 import { scanFile } from "@/lib/virus-scanner"
@@ -54,15 +54,16 @@ export async function POST(
     // Validierung: Dateityp
     if (!isAllowedFileType(file.type)) {
       return NextResponse.json(
-        { error: "Dateityp nicht erlaubt. Erlaubt: Bilder (JPEG, PNG, GIF, WebP) und PDFs" },
+        { error: "Dateityp nicht erlaubt. Erlaubt: Bilder (JPEG, PNG, GIF, WebP), PDFs und Videos (MP4, WebM, OGG)" },
         { status: 400 }
       )
     }
 
-    // Validierung: Dateigröße
-    if (file.size > MAX_FILE_SIZE) {
+    // Validierung: Dateigröße (dynamisch basierend auf Dateityp)
+    const maxSize = getMaxFileSize(file.type)
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { error: `Datei zu groß. Maximum: ${MAX_FILE_SIZE / 1024 / 1024} MB` },
+        { error: `Datei zu groß. Maximum: ${maxSize / 1024 / 1024} MB` },
         { status: 400 }
       )
     }

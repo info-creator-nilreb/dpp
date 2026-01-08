@@ -105,7 +105,11 @@ function getContentType(fileName: string): string {
     webp: "image/webp",
     pdf: "application/pdf",
     doc: "application/msword",
-    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    ogg: "video/ogg",
+    mov: "video/quicktime"
   }
   return contentTypes[ext || ""] || "application/octet-stream"
 }
@@ -128,13 +132,30 @@ export function isAllowedFileType(mimeType: string): boolean {
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+    // Videos
+    "video/mp4",
+    "video/webm",
+    "video/ogg",
+    "video/quicktime", // .mov
   ]
   
   return allowedTypes.includes(mimeType.toLowerCase())
 }
 
 /**
- * Maximale Dateigröße: 10 MB
+ * Maximale Dateigröße: 10 MB (Standard)
+ * Videos: 100 MB
  */
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+export const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100 MB
+
+/**
+ * Ermittelt die maximale Dateigröße basierend auf Dateityp
+ */
+export function getMaxFileSize(mimeType: string): number {
+  if (mimeType.startsWith("video/")) {
+    return MAX_VIDEO_SIZE
+  }
+  return MAX_FILE_SIZE
+}
 

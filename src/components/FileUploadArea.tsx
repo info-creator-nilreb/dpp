@@ -204,6 +204,14 @@ export default function FileUploadArea({
               } else {
                 formatList.push(ext)
               }
+            } else if (part.startsWith("video/")) {
+              // Spezifische Videoformate
+              const ext = part.split("/")[1]
+              if (ext === "quicktime") {
+                formatList.push("mov")
+              } else {
+                formatList.push(ext)
+              }
             } else if (part.startsWith(".")) {
               // Dateiendung ohne Punkt
               formatList.push(part.substring(1))

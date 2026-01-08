@@ -84,13 +84,32 @@ export async function isPasswordProtectionActive(): Promise<boolean> {
  * Verify password against stored hash
  */
 export async function verifyPasswordProtectionPassword(password: string): Promise<boolean> {
-  const config = await getPasswordProtectionConfig()
+  try {
+    const config = await getPasswordProtectionConfig()
 
-  if (!config || !config.passwordProtectionPasswordHash) {
+    if (!config) {
+      return false
+    }
+
+    if (!config.passwordProtectionPasswordHash) {
+      return false
+    }
+
+    // Prüfe ob Hash gültig ist (bcrypt Hashes haben typischerweise 60 Zeichen)
+    const hash = config.passwordProtectionPasswordHash.trim()
+    if (!hash || hash.length < 10) {
+      return false
+    }
+
+    // Vergleiche Passwort mit Hash
+    // bcrypt.compare() wirft keinen Fehler, auch wenn der Hash ungültig ist
+    // Es gibt einfach false zurück
+    const isValid = await bcrypt.compare(password, hash)
+    return isValid
+  } catch (error: any) {
+    // Bei Fehlern (z.B. ungültiger Hash-Format) false zurückgeben
     return false
   }
-
-  return bcrypt.compare(password, config.passwordProtectionPasswordHash)
 }
 
 /**
@@ -193,11 +212,23 @@ export async function updatePasswordProtectionConfig(
   let passwordHash = config.passwordProtectionPasswordHash || existing?.passwordProtectionPasswordHash || null
   if (config.passwordProtectionPasswordHash && config.passwordProtectionPasswordHash !== existing?.passwordProtectionPasswordHash) {
     // Only hash if it's a new password (not already hashed)
-    // Simple check: if it's 60 chars, it's likely already hashed (bcrypt hash length)
-    if (config.passwordProtectionPasswordHash.length !== 60) {
-      passwordHash = await bcrypt.hash(config.passwordProtectionPasswordHash, 10)
+    // Bcrypt hashes start with $2a$, $2b$, or $2y$ and are typically 60 chars
+    const providedPassword = String(config.passwordProtectionPasswordHash).trim()
+    
+    // Prüfe ob es bereits ein bcrypt Hash ist
+    // Bcrypt Hashes haben das Format: $2a$10$... (mindestens 60 Zeichen)
+    const isBcryptHash = providedPassword.startsWith("$2") && 
+                         (providedPassword.startsWith("$2a$") || 
+                          providedPassword.startsWith("$2b$") || 
+                          providedPassword.startsWith("$2y$")) &&
+                         providedPassword.length >= 60
+    
+    if (isBcryptHash) {
+      // Already hashed - use as is
+      passwordHash = providedPassword
     } else {
-      passwordHash = config.passwordProtectionPasswordHash
+      // Plain text password - hash it
+      passwordHash = await bcrypt.hash(providedPassword, 10)
     }
   }
 
