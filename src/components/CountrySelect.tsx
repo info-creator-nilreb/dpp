@@ -321,11 +321,11 @@ export default function CountrySelect({ id, label, value, onChange, required = f
   }
 
   return (
-    <div style={{ marginBottom: "1.5rem", position: "relative", zIndex: 1000 }}>
+    <div style={{ marginBottom: "0", position: "relative", zIndex: 1000 }}>
       <label htmlFor={id} style={{
         display: "block",
-        fontSize: "clamp(0.9rem, 2vw, 1rem)",
-        fontWeight: "600",
+        fontSize: "0.9rem",
+        fontWeight: "500",
         color: "#0A0A0A",
         marginBottom: "0.5rem"
       }}>
@@ -343,14 +343,16 @@ export default function CountrySelect({ id, label, value, onChange, required = f
           placeholder="Land suchen oder eingeben..."
           style={{
             width: "100%",
-            padding: "clamp(0.75rem, 2vw, 1rem)",
+            padding: "0.75rem",
             paddingRight: "2.5rem",
-            fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            fontSize: "1rem",
             border: "1px solid #CDCDCD",
-            borderRadius: "8px",
+            borderRadius: "6px",
             backgroundColor: "#FFFFFF",
             color: "#0A0A0A",
-            boxSizing: "border-box"
+            boxSizing: "border-box",
+            height: "auto",
+            minHeight: "auto"
           }}
         />
         <button

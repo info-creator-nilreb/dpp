@@ -6,6 +6,7 @@ import SubscriptionChangeModal from "@/components/super-admin/SubscriptionChange
 import { getFieldSensitivity, getHighestSensitivityLevel, requiresConfirmation, requiresReason } from "@/lib/phase1.5/organization-sensitivity"
 import { getDisplayTier, isFreeTier } from "@/lib/phase1.7/subscription-state"
 import { Tooltip, TooltipIcon } from "@/components/Tooltip"
+import CountrySelect from "@/components/CountrySelect"
 
 interface User {
   id: string
@@ -424,68 +425,82 @@ export default function OrganizationDetailContent({
     value: string | null | undefined,
     fieldName: string,
     section: "basic" | "company" | "billing",
-    type: "text" | "select" = "text",
+    type: "text" | "select" | "country" = "text",
     options?: { value: string; label: string }[]
   ) => {
     const isEditing = editing === section
     const fieldValue = formData[fieldName as keyof typeof formData] || ""
 
+    // Prüfe ob es ein Länderfeld ist (country, addressCountry, invoiceAddressCountry, billingCountry)
+    const isCountryField = fieldName === "country" || fieldName === "addressCountry" || fieldName === "invoiceAddressCountry" || fieldName === "billingCountry"
+
     return (
       <div>
-        <div style={{
-          fontSize: "0.85rem",
-          color: "#7A7A7A",
-          marginBottom: "0.25rem"
-        }}>
-          {label}
-        </div>
-        {isEditing ? (
-          type === "select" ? (
-            <select
-              value={fieldValue}
-              onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "4px",
-                fontSize: "0.9rem"
-              }}
-            >
-              {options?.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type={type}
-              value={fieldValue}
-              onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "4px",
-                fontSize: "0.9rem"
-              }}
-            />
-          )
+        {isEditing && (type === "country" || isCountryField) ? (
+          <CountrySelect
+            id={fieldName}
+            label={label}
+            value={fieldValue}
+            onChange={(newValue) => setFormData({ ...formData, [fieldName]: newValue })}
+          />
         ) : (
-          <div style={{
-            fontSize: "1rem",
-            color: value ? "#0A0A0A" : "#7A7A7A",
-            fontWeight: value ? "500" : "400",
-            fontStyle: value ? "normal" : "italic"
-          }}>
-            {(() => {
-              // If this is a select field with options, translate the value using the options
-              if (type === "select" && options && value) {
-                const option = options.find(opt => opt.value === value)
-                return option ? option.label : value
-              }
-              return value || "Nicht gesetzt"
-            })()}
-          </div>
+          <>
+            <div style={{
+              fontSize: "0.85rem",
+              color: "#7A7A7A",
+              marginBottom: "0.25rem"
+            }}>
+              {label}
+            </div>
+            {isEditing ? (
+              type === "select" ? (
+                <select
+                  value={fieldValue}
+                  onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "4px",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  {options?.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={type}
+                  value={fieldValue}
+                  onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "4px",
+                    fontSize: "0.9rem"
+                  }}
+                />
+              )
+            ) : (
+              <div style={{
+                fontSize: "1rem",
+                color: value ? "#0A0A0A" : "#7A7A7A",
+                fontWeight: value ? "500" : "400",
+                fontStyle: value ? "normal" : "italic"
+              }}>
+                {(() => {
+                  // If this is a select field with options, translate the value using the options
+                  if (type === "select" && options && value) {
+                    const option = options.find(opt => opt.value === value)
+                    return option ? option.label : value
+                  }
+                  return value || "Nicht gesetzt"
+                })()}
+              </div>
+            )}
+          </>
         )}
       </div>
     )
@@ -839,8 +854,7 @@ export default function OrganizationDetailContent({
           {renderField("Straße", organization.addressStreet, "addressStreet", "company")}
           {renderField("PLZ", organization.addressZip, "addressZip", "company")}
           {renderField("Stadt", organization.addressCity, "addressCity", "company")}
-          {renderField("Land (Adresse)", organization.addressCountry, "addressCountry", "company")}
-          {renderField("Land (ISO)", organization.country, "country", "company")}
+          {renderField("Land", organization.country, "country", "company", "country")}
           {editing === "company" && (
             <button
               onClick={() => handleSaveClick("company")}
@@ -927,8 +941,7 @@ export default function OrganizationDetailContent({
           {renderField("Rechnungsadresse: Straße", organization.invoiceAddressStreet, "invoiceAddressStreet", "billing")}
           {renderField("Rechnungsadresse: PLZ", organization.invoiceAddressZip, "invoiceAddressZip", "billing")}
           {renderField("Rechnungsadresse: Stadt", organization.invoiceAddressCity, "invoiceAddressCity", "billing")}
-          {renderField("Rechnungsadresse: Land", organization.invoiceAddressCountry, "invoiceAddressCountry", "billing")}
-          {renderField("Rechnungsland (ISO)", organization.billingCountry, "billingCountry", "billing")}
+          {renderField("Rechnungsland", organization.billingCountry, "billingCountry", "billing", "country")}
           {editing === "billing" && (
             <button
               onClick={() => handleSaveClick("billing")}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
+import CountrySelect from "@/components/CountrySelect"
 
 interface BillingInfo {
   billingEmail: string | null
@@ -34,7 +35,6 @@ export default function BillingClient() {
   const [invoiceAddressStreet, setInvoiceAddressStreet] = useState("")
   const [invoiceAddressZip, setInvoiceAddressZip] = useState("")
   const [invoiceAddressCity, setInvoiceAddressCity] = useState("")
-  const [invoiceAddressCountry, setInvoiceAddressCountry] = useState("")
   const [billingCountry, setBillingCountry] = useState("")
 
   useEffect(() => {
@@ -57,7 +57,6 @@ export default function BillingClient() {
         setInvoiceAddressStreet(data.billing.invoiceAddressStreet || "")
         setInvoiceAddressZip(data.billing.invoiceAddressZip || "")
         setInvoiceAddressCity(data.billing.invoiceAddressCity || "")
-        setInvoiceAddressCountry(data.billing.invoiceAddressCountry || "")
         setBillingCountry(data.billing.billingCountry || "")
       }
     } catch (err) {
@@ -99,7 +98,6 @@ export default function BillingClient() {
           invoiceAddressStreet: invoiceAddressStreet.trim() || null,
           invoiceAddressZip: invoiceAddressZip.trim() || null,
           invoiceAddressCity: invoiceAddressCity.trim() || null,
-          invoiceAddressCountry: invoiceAddressCountry.trim() || null,
           billingCountry: billingCountry.trim() || null,
         }),
       })
@@ -366,55 +364,11 @@ export default function BillingClient() {
           </div>
 
           <div>
-            <label style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              color: "#0A0A0A",
-              fontWeight: "500",
-              fontSize: "0.9rem",
-            }}>
-              Land
-            </label>
-            <input
-              type="text"
-              value={invoiceAddressCountry}
-              onChange={(e) => setInvoiceAddressCountry(e.target.value)}
-              placeholder="z.B. Deutschland"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              color: "#0A0A0A",
-              fontWeight: "500",
-              fontSize: "0.9rem",
-            }}>
-              ISO-Ländercode (für Steuern)
-            </label>
-            <input
-              type="text"
+            <CountrySelect
+              id="billingCountry"
+              label="Rechnungsland"
               value={billingCountry}
-              onChange={(e) => setBillingCountry(e.target.value)}
-              placeholder="z.B. DE"
-              maxLength={2}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                boxSizing: "border-box",
-              }}
+              onChange={setBillingCountry}
             />
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
+import CountrySelect from "@/components/CountrySelect"
 
 interface CompanyDetails {
   legalName: string | null
@@ -31,7 +32,6 @@ export default function CompanyDetailsClient() {
   const [addressStreet, setAddressStreet] = useState("")
   const [addressZip, setAddressZip] = useState("")
   const [addressCity, setAddressCity] = useState("")
-  const [addressCountry, setAddressCountry] = useState("")
   const [country, setCountry] = useState("")
 
   useEffect(() => {
@@ -55,7 +55,6 @@ export default function CompanyDetailsClient() {
         setAddressStreet(companyDetails.addressStreet || "")
         setAddressZip(companyDetails.addressZip || "")
         setAddressCity(companyDetails.addressCity || "")
-        setAddressCountry(companyDetails.addressCountry || "")
         setCountry(companyDetails.country || "")
       }
     } catch (err) {
@@ -85,7 +84,6 @@ export default function CompanyDetailsClient() {
           addressStreet: addressStreet.trim() || null,
           addressZip: addressZip.trim() || null,
           addressCity: addressCity.trim() || null,
-          addressCountry: addressCountry.trim() || null,
           country: country.trim() || null,
         }),
       })
@@ -374,55 +372,11 @@ export default function CompanyDetailsClient() {
           </div>
 
           <div>
-            <label style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              color: "#0A0A0A",
-              fontWeight: "500",
-              fontSize: "0.9rem",
-            }}>
-              Land
-            </label>
-            <input
-              type="text"
-              value={addressCountry}
-              onChange={(e) => setAddressCountry(e.target.value)}
-              placeholder="z.B. Deutschland"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              color: "#0A0A0A",
-              fontWeight: "500",
-              fontSize: "0.9rem",
-            }}>
-              ISO-Ländercode
-            </label>
-            <input
-              type="text"
+            <CountrySelect
+              id="country"
+              label="Land"
               value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              placeholder="z.B. DE"
-              maxLength={2}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                boxSizing: "border-box",
-              }}
+              onChange={setCountry}
             />
           </div>
         </div>
