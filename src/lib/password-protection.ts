@@ -91,9 +91,17 @@ export async function verifyPasswordProtectionPassword(password: string): Promis
       return false
     }
 
+    // Trim password (wie in anderen Teilen des Codes)
+    const trimmedPassword = password.trim()
+    
+    // Prüfe ob Hash vorhanden ist
+    if (!config.passwordProtectionPasswordHash || config.passwordProtectionPasswordHash.length === 0) {
+      return false
+    }
+
     // Direkter Vergleich wie in anderen Teilen des Codes (auth.ts, super-admin-auth.ts)
     // bcrypt.compare() behandelt ungültige Hashes selbst und gibt false zurück
-    const isValid = await bcrypt.compare(password, config.passwordProtectionPasswordHash)
+    const isValid = await bcrypt.compare(trimmedPassword, config.passwordProtectionPasswordHash)
     return isValid
   } catch (error: any) {
     // Bei Fehlern false zurückgeben

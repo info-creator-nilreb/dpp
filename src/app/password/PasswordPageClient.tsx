@@ -47,20 +47,26 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
         
         // WICHTIG: Cookie ist bereits gesetzt, navigiere sofort
         // Kein setLoading(false) nötig, da wir navigieren
-        window.location.href = redirectUrl
+        // Verwende window.location.replace() für sauberen Redirect ohne Browser-History
+        window.location.replace(redirectUrl)
         return
       }
 
       // Erfolgreiche Response (Status 200-299) - sollte eigentlich nicht vorkommen bei NextResponse.redirect
+      // Aber falls doch, behandle es als Erfolg
       if (response.ok) {
         try {
           const data = await response.json()
-          const redirectUrl = data.callbackUrl || callbackUrl || "/"
-          window.location.href = redirectUrl
-          return
+          // Wenn data.success oder data.callbackUrl vorhanden ist, war es erfolgreich
+          if (data.success !== false) {
+            const redirectUrl = data.callbackUrl || callbackUrl || "/"
+            window.location.replace(redirectUrl)
+            return
+          }
         } catch {
           // Wenn JSON-Parsing fehlschlägt, aber Status OK ist, war es wahrscheinlich ein Redirect
-          window.location.href = callbackUrl || "/"
+          // Versuche trotzdem zu navigieren
+          window.location.replace(callbackUrl || "/")
           return
         }
       }

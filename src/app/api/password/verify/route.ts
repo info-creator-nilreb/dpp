@@ -24,7 +24,17 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { password, callbackUrl: callbackUrlParam } = body
 
-    if (!password) {
+    if (!password || typeof password !== 'string') {
+      return NextResponse.json(
+        { error: "Passwort ist erforderlich" },
+        { status: 400 }
+      )
+    }
+
+    // Trim password (konsistent mit anderen Auth-Funktionen)
+    const trimmedPassword = password.trim()
+
+    if (!trimmedPassword) {
       return NextResponse.json(
         { error: "Passwort ist erforderlich" },
         { status: 400 }
@@ -34,7 +44,7 @@ export async function POST(request: Request) {
     // Verify password
     let isValid = false
     try {
-      isValid = await verifyPasswordProtectionPassword(password)
+      isValid = await verifyPasswordProtectionPassword(trimmedPassword)
     } catch (error: any) {
       return NextResponse.json(
         { error: "Fehler bei der Passwortprüfung" },
@@ -70,19 +80,24 @@ export async function POST(request: Request) {
       absoluteRedirectUrl = new URL(redirectUrl)
     } catch {
       // Relative URL - mache sie absolut
-      absoluteRedirectUrl = new URL(redirectUrl, request.url)
+      // Verwende request.url als Base, aber extrahiere nur die Origin
+      const requestUrl = new URL(request.url)
+      absoluteRedirectUrl = new URL(redirectUrl, `${requestUrl.protocol}//${requestUrl.host}`)
     }
     
-    const redirectResponse = NextResponse.redirect(absoluteRedirectUrl)
+    // Erstelle Redirect-Response
+    const redirectResponse = NextResponse.redirect(absoluteRedirectUrl, { status: 307 })
     
     // Set cookie in redirect response headers
     // Important: Use sameSite: "lax" and path: "/" to ensure cookie is available everywhere
+    // In Produktion: secure muss true sein für HTTPS
     redirectResponse.cookies.set("password_protection_access", cookieValue, {
       httpOnly: true,
       secure: isProduction, // false in dev (http://), true in prod (https://)
       sameSite: "lax",
       maxAge: SESSION_TIMEOUT_MINUTES * 60,
       path: "/",
+      // Domain wird automatisch gesetzt, aber wir können es explizit setzen falls nötig
     })
     
     return redirectResponse
