@@ -53,12 +53,23 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
       }
 
       // Erfolgreiche Response (Status 200-299) - sollte eigentlich nicht vorkommen bei NextResponse.redirect
-      // Aber falls doch, behandle es als Erfolg
+      // Aber falls doch, behandle es als Erfolg (z.B. wenn Redirect nicht erkannt wird)
       if (response.ok) {
+        // Prüfe ob es ein Redirect-Header gibt (manchmal wird Redirect als 200 behandelt)
+        const locationHeader = response.headers.get("Location")
+        if (locationHeader) {
+          const redirectUrl = locationHeader.startsWith("http") 
+            ? locationHeader 
+            : new URL(locationHeader, window.location.origin).href
+          window.location.replace(redirectUrl)
+          return
+        }
+        
+        // Versuche JSON zu parsen
         try {
           const data = await response.json()
           // Wenn data.success oder data.callbackUrl vorhanden ist, war es erfolgreich
-          if (data.success !== false) {
+          if (data.success !== false && !data.error) {
             const redirectUrl = data.callbackUrl || callbackUrl || "/"
             window.location.replace(redirectUrl)
             return

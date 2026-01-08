@@ -88,6 +88,9 @@ export async function verifyPasswordProtectionPassword(password: string): Promis
     const config = await getPasswordProtectionConfig()
 
     if (!config || !config.passwordProtectionPasswordHash) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[PASSWORD_VERIFY] No config or hash found")
+      }
       return false
     }
 
@@ -96,15 +99,38 @@ export async function verifyPasswordProtectionPassword(password: string): Promis
     
     // Prüfe ob Hash vorhanden ist
     if (!config.passwordProtectionPasswordHash || config.passwordProtectionPasswordHash.length === 0) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[PASSWORD_VERIFY] Hash is empty")
+      }
+      return false
+    }
+
+    // Prüfe Hash-Format (bcrypt Hashes beginnen mit $2a$, $2b$ oder $2y$)
+    if (!config.passwordProtectionPasswordHash.startsWith('$2')) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[PASSWORD_VERIFY] Invalid hash format:", config.passwordProtectionPasswordHash.substring(0, 10))
+      }
       return false
     }
 
     // Direkter Vergleich wie in anderen Teilen des Codes (auth.ts, super-admin-auth.ts)
     // bcrypt.compare() behandelt ungültige Hashes selbst und gibt false zurück
     const isValid = await bcrypt.compare(trimmedPassword, config.passwordProtectionPasswordHash)
+    
+    if (process.env.NODE_ENV !== "production" && !isValid) {
+      console.warn("[PASSWORD_VERIFY] Password comparison failed", {
+        passwordLength: trimmedPassword.length,
+        hashLength: config.passwordProtectionPasswordHash.length,
+        hashPrefix: config.passwordProtectionPasswordHash.substring(0, 10)
+      })
+    }
+    
     return isValid
   } catch (error: any) {
     // Bei Fehlern false zurückgeben
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[PASSWORD_VERIFY] Error in verifyPasswordProtectionPassword:", error)
+    }
     return false
   }
 }

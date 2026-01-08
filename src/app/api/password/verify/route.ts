@@ -46,6 +46,10 @@ export async function POST(request: Request) {
     try {
       isValid = await verifyPasswordProtectionPassword(trimmedPassword)
     } catch (error: any) {
+      // Log error for debugging (nur in Development)
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[PASSWORD_VERIFY] Error verifying password:", error)
+      }
       return NextResponse.json(
         { error: "Fehler bei der Passwortprüfung" },
         { status: 500 }
@@ -53,6 +57,10 @@ export async function POST(request: Request) {
     }
 
     if (!isValid) {
+      // In Development: Mehr Debug-Info
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[PASSWORD_VERIFY] Password invalid for length:", trimmedPassword.length)
+      }
       return NextResponse.json(
         { error: "Ungültiges Passwort" },
         { status: 401 }
@@ -67,7 +75,12 @@ export async function POST(request: Request) {
     })
 
     const SESSION_TIMEOUT_MINUTES = 60
-    const isProduction = process.env.NODE_ENV === "production"
+    
+    // Prüfe ob wir in Produktion sind (Vercel setzt VERCEL=1)
+    // Oder prüfe ob die Request-URL HTTPS ist
+    const requestUrl = new URL(request.url)
+    const isHttps = requestUrl.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https"
+    const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1" || isHttps
     
     // Server-Side Redirect mit Cookie im Response-Header
     // Das stellt sicher, dass das Cookie gesetzt ist, bevor der Redirect passiert
@@ -81,7 +94,6 @@ export async function POST(request: Request) {
     } catch {
       // Relative URL - mache sie absolut
       // Verwende request.url als Base, aber extrahiere nur die Origin
-      const requestUrl = new URL(request.url)
       absoluteRedirectUrl = new URL(redirectUrl, `${requestUrl.protocol}//${requestUrl.host}`)
     }
     
@@ -93,11 +105,10 @@ export async function POST(request: Request) {
     // In Produktion: secure muss true sein für HTTPS
     redirectResponse.cookies.set("password_protection_access", cookieValue, {
       httpOnly: true,
-      secure: isProduction, // false in dev (http://), true in prod (https://)
+      secure: isProduction, // true wenn HTTPS oder in Produktion
       sameSite: "lax",
       maxAge: SESSION_TIMEOUT_MINUTES * 60,
       path: "/",
-      // Domain wird automatisch gesetzt, aber wir können es explizit setzen falls nötig
     })
     
     return redirectResponse
