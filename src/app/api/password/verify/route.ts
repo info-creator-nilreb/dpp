@@ -45,11 +45,14 @@ export async function POST(request: Request) {
     let isValid = false
     try {
       isValid = await verifyPasswordProtectionPassword(trimmedPassword)
+      // Debug-Logging auch in Produktion (für Troubleshooting)
+      console.log("[PASSWORD_VERIFY] Password verification result:", {
+        isValid,
+        passwordLength: trimmedPassword.length,
+        isProduction: process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
+      })
     } catch (error: any) {
-      // Log error for debugging (nur in Development)
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[PASSWORD_VERIFY] Error verifying password:", error)
-      }
+      console.error("[PASSWORD_VERIFY] Error verifying password:", error)
       return NextResponse.json(
         { error: "Fehler bei der Passwortprüfung" },
         { status: 500 }
@@ -57,10 +60,10 @@ export async function POST(request: Request) {
     }
 
     if (!isValid) {
-      // In Development: Mehr Debug-Info
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[PASSWORD_VERIFY] Password invalid for length:", trimmedPassword.length)
-      }
+      console.warn("[PASSWORD_VERIFY] Password invalid", {
+        passwordLength: trimmedPassword.length,
+        isProduction: process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
+      })
       return NextResponse.json(
         { error: "Ungültiges Passwort" },
         { status: 401 }
@@ -109,6 +112,18 @@ export async function POST(request: Request) {
       sameSite: "lax",
       maxAge: SESSION_TIMEOUT_MINUTES * 60,
       path: "/",
+      // Domain wird automatisch gesetzt, aber wir können es explizit setzen falls nötig
+      // domain: requestUrl.hostname // Normalerweise nicht nötig, kann Probleme verursachen
+    })
+    
+    // Debug-Logging für Cookie-Setting
+    console.log("[PASSWORD_VERIFY] Cookie set", {
+      cookieName: "password_protection_access",
+      secure: isProduction,
+      sameSite: "lax",
+      maxAge: SESSION_TIMEOUT_MINUTES * 60,
+      redirectUrl: absoluteRedirectUrl.toString(),
+      isProduction: process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
     })
     
     return redirectResponse

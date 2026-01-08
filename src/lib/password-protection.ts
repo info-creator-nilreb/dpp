@@ -88,9 +88,7 @@ export async function verifyPasswordProtectionPassword(password: string): Promis
     const config = await getPasswordProtectionConfig()
 
     if (!config || !config.passwordProtectionPasswordHash) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[PASSWORD_VERIFY] No config or hash found")
-      }
+      console.warn("[PASSWORD_VERIFY] No config or hash found")
       return false
     }
 
@@ -99,17 +97,13 @@ export async function verifyPasswordProtectionPassword(password: string): Promis
     
     // Prüfe ob Hash vorhanden ist
     if (!config.passwordProtectionPasswordHash || config.passwordProtectionPasswordHash.length === 0) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[PASSWORD_VERIFY] Hash is empty")
-      }
+      console.warn("[PASSWORD_VERIFY] Hash is empty")
       return false
     }
 
     // Prüfe Hash-Format (bcrypt Hashes beginnen mit $2a$, $2b$ oder $2y$)
     if (!config.passwordProtectionPasswordHash.startsWith('$2')) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[PASSWORD_VERIFY] Invalid hash format:", config.passwordProtectionPasswordHash.substring(0, 10))
-      }
+      console.warn("[PASSWORD_VERIFY] Invalid hash format:", config.passwordProtectionPasswordHash.substring(0, 10))
       return false
     }
 
@@ -117,20 +111,17 @@ export async function verifyPasswordProtectionPassword(password: string): Promis
     // bcrypt.compare() behandelt ungültige Hashes selbst und gibt false zurück
     const isValid = await bcrypt.compare(trimmedPassword, config.passwordProtectionPasswordHash)
     
-    if (process.env.NODE_ENV !== "production" && !isValid) {
-      console.warn("[PASSWORD_VERIFY] Password comparison failed", {
-        passwordLength: trimmedPassword.length,
-        hashLength: config.passwordProtectionPasswordHash.length,
-        hashPrefix: config.passwordProtectionPasswordHash.substring(0, 10)
-      })
-    }
+    console.log("[PASSWORD_VERIFY] Password comparison result", {
+      isValid,
+      passwordLength: trimmedPassword.length,
+      hashLength: config.passwordProtectionPasswordHash.length,
+      hashPrefix: config.passwordProtectionPasswordHash.substring(0, 10)
+    })
     
     return isValid
   } catch (error: any) {
     // Bei Fehlern false zurückgeben
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[PASSWORD_VERIFY] Error in verifyPasswordProtectionPassword:", error)
-    }
+    console.error("[PASSWORD_VERIFY] Error in verifyPasswordProtectionPassword:", error)
     return false
   }
 }
@@ -164,6 +155,7 @@ export async function hasPasswordProtectionAccess(): Promise<boolean> {
   const cookie = cookieStore.get(ACCESS_COOKIE_NAME)
 
   if (!cookie?.value) {
+    console.log("[PASSWORD_ACCESS] No cookie found")
     return false
   }
 
@@ -171,6 +163,10 @@ export async function hasPasswordProtectionAccess(): Promise<boolean> {
     const data = JSON.parse(cookie.value)
     
     if (!data.accessGranted || !data.lastActivityTimestamp) {
+      console.log("[PASSWORD_ACCESS] Cookie data invalid", {
+        hasAccessGranted: !!data.accessGranted,
+        hasTimestamp: !!data.lastActivityTimestamp
+      })
       return false
     }
 
@@ -183,10 +179,14 @@ export async function hasPasswordProtectionAccess(): Promise<boolean> {
     const timeoutMinutes = config?.passwordProtectionSessionTimeoutMinutes || SESSION_TIMEOUT_MINUTES
 
     if (minutesSinceActivity > timeoutMinutes) {
+      console.log("[PASSWORD_ACCESS] Session expired", {
+        minutesSinceActivity,
+        timeoutMinutes
+      })
       // Session expired - delete cookie
       cookieStore.set(ACCESS_COOKIE_NAME, "", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: process.env.NODE_ENV === "production" || process.env.VERCEL === "1",
         sameSite: "lax",
         maxAge: 0,
         path: "/",
@@ -194,12 +194,18 @@ export async function hasPasswordProtectionAccess(): Promise<boolean> {
       return false
     }
 
+    console.log("[PASSWORD_ACCESS] Access granted", {
+      minutesSinceActivity,
+      timeoutMinutes
+    })
+
     // DON'T update cookie here - it causes issues with Server Components
     // Cookie updates should only happen in API routes
     // The cookie is already valid, just return true
 
     return true
   } catch (error) {
+    console.error("[PASSWORD_ACCESS] Error parsing cookie:", error)
     return false
   }
 }
@@ -211,7 +217,7 @@ export async function clearPasswordProtectionAccessCookie(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.set(ACCESS_COOKIE_NAME, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production" || process.env.VERCEL === "1",
     sameSite: "lax",
     maxAge: 0,
     path: "/",
