@@ -79,54 +79,31 @@ export async function POST(request: Request) {
 
     const SESSION_TIMEOUT_MINUTES = 60
     
-    // Prüfe ob wir in Produktion sind (Vercel setzt VERCEL=1)
-    // Oder prüfe ob die Request-URL HTTPS ist
-    const requestUrl = new URL(request.url)
-    const isHttps = requestUrl.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https"
-    const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1" || isHttps
+    // Verwende das gleiche Pattern wie Super-Admin Login: JSON Response + Cookie
+    // Statt Server-Side Redirect (was in Produktion Probleme verursachen kann)
+    const response = NextResponse.json({
+      success: true,
+      message: "Passwort erfolgreich verifiziert",
+      callbackUrl: callbackUrlParam || "/"
+    })
     
-    // Server-Side Redirect mit Cookie im Response-Header
-    // Das stellt sicher, dass das Cookie gesetzt ist, bevor der Redirect passiert
-    const redirectUrl = callbackUrlParam || "/"
-    
-    // Erstelle absolute URL für Redirect
-    // Wenn redirectUrl bereits absolut ist, verwende sie direkt, sonst relativ zu request.url
-    let absoluteRedirectUrl: URL
-    try {
-      absoluteRedirectUrl = new URL(redirectUrl)
-    } catch {
-      // Relative URL - mache sie absolut
-      // Verwende request.url als Base, aber extrahiere nur die Origin
-      absoluteRedirectUrl = new URL(redirectUrl, `${requestUrl.protocol}//${requestUrl.host}`)
-    }
-    
-    // Erstelle Redirect-Response
-    const redirectResponse = NextResponse.redirect(absoluteRedirectUrl, { status: 307 })
-    
-    // Set cookie in redirect response headers
-    // Important: Use sameSite: "lax" and path: "/" to ensure cookie is available everywhere
-    // In Produktion: secure muss true sein für HTTPS
-    redirectResponse.cookies.set("password_protection_access", cookieValue, {
+    // Set cookie in response headers (wie Super-Admin Login)
+    response.cookies.set("password_protection_access", cookieValue, {
       httpOnly: true,
-      secure: isProduction, // true wenn HTTPS oder in Produktion
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: SESSION_TIMEOUT_MINUTES * 60,
       path: "/",
-      // Domain wird automatisch gesetzt, aber wir können es explizit setzen falls nötig
-      // domain: requestUrl.hostname // Normalerweise nicht nötig, kann Probleme verursachen
     })
     
-    // Debug-Logging für Cookie-Setting
-    console.log("[PASSWORD_VERIFY] Cookie set", {
+    console.log("[PASSWORD_VERIFY] Cookie set successfully", {
       cookieName: "password_protection_access",
-      secure: isProduction,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: SESSION_TIMEOUT_MINUTES * 60,
-      redirectUrl: absoluteRedirectUrl.toString(),
-      isProduction: process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
+      maxAge: SESSION_TIMEOUT_MINUTES * 60
     })
     
-    return redirectResponse
+    return response
   } catch (error: any) {
     return NextResponse.json(
       { error: "Ein Fehler ist aufgetreten" },

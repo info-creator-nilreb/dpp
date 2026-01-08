@@ -36,48 +36,28 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
         redirect: "manual" // Manuelles Handling von Redirects
       })
 
-      // Server-Side Redirect (Status 302/307/308) = Erfolgreich
-      if (response.status >= 300 && response.status < 400) {
-        // Server hat einen Redirect gemacht - Cookie ist im Response-Header gesetzt
-        // Hole die Redirect-URL aus dem Location-Header
-        const locationHeader = response.headers.get("Location")
-        const redirectUrl = locationHeader 
-          ? (locationHeader.startsWith("http") ? locationHeader : new URL(locationHeader, window.location.origin).href)
-          : (callbackUrl || "/")
-        
-        // WICHTIG: Cookie ist bereits gesetzt, navigiere sofort
-        // Kein setLoading(false) nötig, da wir navigieren
-        // Verwende window.location.replace() für sauberen Redirect ohne Browser-History
-        window.location.replace(redirectUrl)
-        return
-      }
-
-      // Erfolgreiche Response (Status 200-299) - sollte eigentlich nicht vorkommen bei NextResponse.redirect
-      // Aber falls doch, behandle es als Erfolg (z.B. wenn Redirect nicht erkannt wird)
+      // Erfolgreiche Response (Status 200-299) - wie Super-Admin Login
       if (response.ok) {
-        // Prüfe ob es ein Redirect-Header gibt (manchmal wird Redirect als 200 behandelt)
-        const locationHeader = response.headers.get("Location")
-        if (locationHeader) {
-          const redirectUrl = locationHeader.startsWith("http") 
-            ? locationHeader 
-            : new URL(locationHeader, window.location.origin).href
-          window.location.replace(redirectUrl)
-          return
-        }
-        
-        // Versuche JSON zu parsen
         try {
           const data = await response.json()
-          // Wenn data.success oder data.callbackUrl vorhanden ist, war es erfolgreich
-          if (data.success !== false && !data.error) {
+          
+          // Wenn success true ist, war die Verifizierung erfolgreich
+          if (data.success === true) {
+            // Cookie ist bereits im Response-Header gesetzt
+            // Navigiere zur callbackUrl (wie Super-Admin Login)
             const redirectUrl = data.callbackUrl || callbackUrl || "/"
-            window.location.replace(redirectUrl)
+            window.location.href = redirectUrl
             return
           }
+          
+          // Falls success nicht true ist, behandle es als Fehler
+          setError(data.error || "Ungültiges Passwort")
+          setLoading(false)
+          return
         } catch {
-          // Wenn JSON-Parsing fehlschlägt, aber Status OK ist, war es wahrscheinlich ein Redirect
-          // Versuche trotzdem zu navigieren
-          window.location.replace(callbackUrl || "/")
+          // Wenn JSON-Parsing fehlschlägt, aber Status OK ist, war es wahrscheinlich erfolgreich
+          // Navigiere trotzdem (wie Super-Admin Login)
+          window.location.href = callbackUrl || "/"
           return
         }
       }
