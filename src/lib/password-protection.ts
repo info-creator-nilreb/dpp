@@ -87,27 +87,16 @@ export async function verifyPasswordProtectionPassword(password: string): Promis
   try {
     const config = await getPasswordProtectionConfig()
 
-    if (!config) {
+    if (!config || !config.passwordProtectionPasswordHash) {
       return false
     }
 
-    if (!config.passwordProtectionPasswordHash) {
-      return false
-    }
-
-    // Prüfe ob Hash gültig ist (bcrypt Hashes haben typischerweise 60 Zeichen)
-    const hash = config.passwordProtectionPasswordHash.trim()
-    if (!hash || hash.length < 10) {
-      return false
-    }
-
-    // Vergleiche Passwort mit Hash
-    // bcrypt.compare() wirft keinen Fehler, auch wenn der Hash ungültig ist
-    // Es gibt einfach false zurück
-    const isValid = await bcrypt.compare(password, hash)
+    // Direkter Vergleich wie in anderen Teilen des Codes (auth.ts, super-admin-auth.ts)
+    // bcrypt.compare() behandelt ungültige Hashes selbst und gibt false zurück
+    const isValid = await bcrypt.compare(password, config.passwordProtectionPasswordHash)
     return isValid
   } catch (error: any) {
-    // Bei Fehlern (z.B. ungültiger Hash-Format) false zurückgeben
+    // Bei Fehlern false zurückgeben
     return false
   }
 }
@@ -216,12 +205,8 @@ export async function updatePasswordProtectionConfig(
     const providedPassword = String(config.passwordProtectionPasswordHash).trim()
     
     // Prüfe ob es bereits ein bcrypt Hash ist
-    // Bcrypt Hashes haben das Format: $2a$10$... (mindestens 60 Zeichen)
-    const isBcryptHash = providedPassword.startsWith("$2") && 
-                         (providedPassword.startsWith("$2a$") || 
-                          providedPassword.startsWith("$2b$") || 
-                          providedPassword.startsWith("$2y$")) &&
-                         providedPassword.length >= 60
+    // Einfache Prüfung: Wenn es mit $2 beginnt und mindestens 60 Zeichen hat, ist es wahrscheinlich ein Hash
+    const isBcryptHash = providedPassword.startsWith("$2") && providedPassword.length >= 60
     
     if (isBcryptHash) {
       // Already hashed - use as is

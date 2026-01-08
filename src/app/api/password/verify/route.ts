@@ -62,7 +62,18 @@ export async function POST(request: Request) {
     // Server-Side Redirect mit Cookie im Response-Header
     // Das stellt sicher, dass das Cookie gesetzt ist, bevor der Redirect passiert
     const redirectUrl = callbackUrlParam || "/"
-    const redirectResponse = NextResponse.redirect(new URL(redirectUrl, request.url))
+    
+    // Erstelle absolute URL für Redirect
+    // Wenn redirectUrl bereits absolut ist, verwende sie direkt, sonst relativ zu request.url
+    let absoluteRedirectUrl: URL
+    try {
+      absoluteRedirectUrl = new URL(redirectUrl)
+    } catch {
+      // Relative URL - mache sie absolut
+      absoluteRedirectUrl = new URL(redirectUrl, request.url)
+    }
+    
+    const redirectResponse = NextResponse.redirect(absoluteRedirectUrl)
     
     // Set cookie in redirect response headers
     // Important: Use sameSite: "lax" and path: "/" to ensure cookie is available everywhere

@@ -36,28 +36,45 @@ export default function PasswordPageClient({ callbackUrl }: PasswordPageClientPr
         redirect: "manual" // Manuelles Handling von Redirects
       })
 
-      // Server-Side Redirect (Status 302/307/308)
+      // Server-Side Redirect (Status 302/307/308) = Erfolgreich
       if (response.status >= 300 && response.status < 400) {
-        // Server hat einen Redirect gemacht - Cookie ist im Response-Header
+        // Server hat einen Redirect gemacht - Cookie ist im Response-Header gesetzt
         // Hole die Redirect-URL aus dem Location-Header
-        const redirectUrl = response.headers.get("Location") || callbackUrl || "/"
-        // Navigiere explizit - das Cookie ist bereits gesetzt
+        const locationHeader = response.headers.get("Location")
+        const redirectUrl = locationHeader 
+          ? (locationHeader.startsWith("http") ? locationHeader : new URL(locationHeader, window.location.origin).href)
+          : (callbackUrl || "/")
+        
+        // WICHTIG: Cookie ist bereits gesetzt, navigiere sofort
+        // Kein setLoading(false) nötig, da wir navigieren
         window.location.href = redirectUrl
         return
       }
 
-      // Erfolgreiche Response (Status 200-299)
+      // Erfolgreiche Response (Status 200-299) - sollte eigentlich nicht vorkommen bei NextResponse.redirect
       if (response.ok) {
-        const data = await response.json().catch(() => ({}))
-        // Cookie ist bereits gesetzt, navigiere zur callbackUrl
-        const redirectUrl = data.callbackUrl || callbackUrl || "/"
-        window.location.href = redirectUrl
-        return
+        try {
+          const data = await response.json()
+          const redirectUrl = data.callbackUrl || callbackUrl || "/"
+          window.location.href = redirectUrl
+          return
+        } catch {
+          // Wenn JSON-Parsing fehlschlägt, aber Status OK ist, war es wahrscheinlich ein Redirect
+          window.location.href = callbackUrl || "/"
+          return
+        }
       }
 
-      // Fehlerfall: Response prüfen
-      const data = await response.json().catch(() => ({ error: "Ungültiges Passwort" }))
-      setError(data.error || "Ungültiges Passwort")
+      // Fehlerfall: Response prüfen (Status 400, 401, 500, etc.)
+      let errorMessage = "Ungültiges Passwort"
+      try {
+        const data = await response.json()
+        errorMessage = data.error || errorMessage
+      } catch {
+        // Wenn JSON-Parsing fehlschlägt, verwende Standard-Fehlermeldung
+      }
+      
+      setError(errorMessage)
       setLoading(false)
     } catch (err: any) {
       setError("Ein Fehler ist aufgetreten")
