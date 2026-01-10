@@ -75,11 +75,15 @@ export async function createOrganizationWithFirstUser(
           : null,
         status: "active",
         emailVerified: false,
+        // WICHTIG: verificationToken wird nach dem User-Create in signup.ts gesetzt
+        // Hier wird es NICHT gesetzt, da es erst nach createOrganizationWithFirstUser
+        // in der signup-Funktion gesetzt wird
         preferredLanguage: "en",
       },
     })
   } else {
     // User existiert bereits - aktualisiere Status falls nötig
+    // WICHTIG: verificationToken wird NICHT hier überschrieben, da es in signup.ts gesetzt wird
     if (user.status !== "active") {
       await tx.user.update({
         where: { id: user.id },

@@ -87,13 +87,90 @@ export async function signupUser(data: SignupData): Promise<{
       
       // User-Status wird bereits in createOrganizationWithFirstUser auf "active" gesetzt
       // Setze Verifizierungs-Token für den User
-      await tx.user.update({
+      // WICHTIG: Token muss IMMER gesetzt werden, auch wenn User bereits existiert
+      // Prüfe zuerst ob User existiert und ob er bereits einen Token hat
+      const existingUser = await tx.user.findUnique({
         where: { id: userId },
-        data: {
-          verificationToken,
-          verificationTokenExpires,
+        select: {
+          id: true,
+          email: true,
+          verificationToken: true,
+          emailVerified: true,
         },
       })
+      
+      if (!existingUser) {
+        console.error(`[SIGNUP] ERROR: User ${userId} not found after createOrganizationWithFirstUser`)
+        throw new Error("User not found after organization creation")
+      }
+      
+      // Setze Token - überschreibe auch wenn bereits ein Token vorhanden ist
+      // WICHTIG: Wenn ein alter Token existiert, wird dieser überschrieben
+      let updatedUser
+      try {
+        updatedUser = await tx.user.update({
+          where: { id: userId },
+          data: {
+            verificationToken,
+            verificationTokenExpires,
+            emailVerified: false, // Stelle sicher, dass emailVerified auf false ist
+          },
+          select: {
+            id: true,
+            email: true,
+            verificationToken: true,
+            verificationTokenExpires: true,
+            emailVerified: true,
+          },
+        })
+      } catch (updateError: any) {
+        // Falls Update fehlschlägt (z.B. Unique Constraint), versuche es mit expliziter Löschung des alten Tokens
+        if (updateError.code === "P2002" || updateError.message?.includes("Unique constraint")) {
+          console.warn(`[SIGNUP] Unique constraint error when setting token, clearing old token first for user ${userId}`)
+          // Zuerst alten Token löschen (falls vorhanden)
+          await tx.user.updateMany({
+            where: {
+              verificationToken: existingUser.verificationToken || undefined,
+            },
+            data: {
+              verificationToken: null,
+              verificationTokenExpires: null,
+            },
+          })
+          // Dann neuen Token setzen
+          updatedUser = await tx.user.update({
+            where: { id: userId },
+            data: {
+              verificationToken,
+              verificationTokenExpires,
+              emailVerified: false,
+            },
+            select: {
+              id: true,
+              email: true,
+              verificationToken: true,
+              verificationTokenExpires: true,
+              emailVerified: true,
+            },
+          })
+        } else {
+          console.error(`[SIGNUP] Error updating user with verification token:`, updateError)
+          throw updateError
+        }
+      }
+      
+      // Verifiziere dass Token korrekt gesetzt wurde
+      if (!updatedUser.verificationToken || updatedUser.verificationToken !== verificationToken) {
+        console.error(`[SIGNUP] ERROR: Verification token was not set correctly for user ${userId}`)
+        console.error(`[SIGNUP] Expected token: ${verificationToken.substring(0, 8)}...`)
+        console.error(`[SIGNUP] Actual token: ${updatedUser.verificationToken?.substring(0, 8)}...`)
+        throw new Error("Verification token could not be set")
+      }
+      
+      console.log(`[SIGNUP] Verification token set successfully for user ${userId} (${updatedUser.email})`)
+      if (existingUser.verificationToken && existingUser.verificationToken !== verificationToken) {
+        console.log(`[SIGNUP] Previous token was overwritten for user ${userId}`)
+      }
     } else if (data.organizationAction === "request_to_join_organization") {
       // Beitritt nur über Einladung möglich
       if (!data.invitationToken) {
