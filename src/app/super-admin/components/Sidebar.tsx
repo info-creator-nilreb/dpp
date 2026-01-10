@@ -85,6 +85,7 @@ export default function Sidebar({
             userRole={userRole}
             isCollapsed={isCollapsed}
             onToggleCollapse={onToggleCollapse}
+            onMobileClose={onMobileClose}
           />
         </nav>
       </>
@@ -131,6 +132,7 @@ export default function Sidebar({
           userRole={userRole}
           isCollapsed={isCollapsed}
           onToggleCollapse={onToggleCollapse}
+          onMobileClose={undefined}
         />
       </nav>
     </>
@@ -142,13 +144,15 @@ function SidebarContent({
   userEmail, 
   userRole,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  onMobileClose
 }: { 
   pathname: string
   userEmail?: string
   userRole?: string
   isCollapsed?: boolean
   onToggleCollapse?: () => void
+  onMobileClose?: () => void
 }) {
   return (
     <>
@@ -185,6 +189,7 @@ function SidebarContent({
             <Link
               key={item.href}
               href={item.href}
+              onClick={onMobileClose}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -269,6 +274,7 @@ function SidebarContent({
         {/* Settings Link */}
         <Link
           href="/super-admin/settings"
+          onClick={onMobileClose}
           style={{
             display: "flex",
             alignItems: "center",

@@ -216,6 +216,7 @@ export default function AppSidebar({
           isCollapsed={isCollapsed}
           navigationItems={visibleNavigationItems}
           onToggleCollapse={onToggleCollapse}
+          onMobileClose={onMobileClose}
         />
         </nav>
       </>
@@ -265,6 +266,7 @@ export default function AppSidebar({
           isCollapsed={isCollapsed}
           navigationItems={visibleNavigationItems}
           onToggleCollapse={onToggleCollapse}
+          onMobileClose={undefined}
         />
       </nav>
     </>
@@ -280,6 +282,7 @@ function SidebarContent({
   isCollapsed = false,
   navigationItems,
   onToggleCollapse,
+  onMobileClose,
 }: { 
   pathname: string
   userEmail?: string
@@ -289,6 +292,7 @@ function SidebarContent({
   isCollapsed?: boolean
   navigationItems: NavigationItem[]
   onToggleCollapse?: () => void
+  onMobileClose?: () => void
 }) {
   // Get initial from last name, fallback to first name, then email
   const getInitial = () => {
@@ -342,6 +346,7 @@ function SidebarContent({
             <Link
               key={item.href}
               href={item.href}
+              onClick={onMobileClose}
               style={{
                 display: "flex",
                 alignItems: "center",

@@ -57,6 +57,36 @@ export default function UsersClient() {
     loadData()
   }, [activeTab])
 
+  // Initial load: Check if there are any join requests to determine if tab should be shown
+  useEffect(() => {
+    async function checkJoinRequests() {
+      try {
+        const response = await fetch("/api/app/organization/join-requests", {
+          cache: "no-store",
+        })
+        if (response.ok) {
+          const data = await response.json()
+          const requests = data.joinRequests || []
+          setJoinRequests(requests)
+          
+          // If active tab is join-requests but no requests exist, switch to users tab
+          if (activeTab === "join-requests" && requests.filter((r: JoinRequest) => r.status === "pending").length === 0) {
+            setActiveTab("users")
+          }
+        }
+      } catch (err) {
+        console.error("Error checking join requests:", err)
+        // Fail silently - if we can't load join requests, tab won't be shown
+        // Also switch away from join-requests tab if it's active
+        if (activeTab === "join-requests") {
+          setActiveTab("users")
+        }
+      }
+    }
+    checkJoinRequests()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function loadData() {
     setLoading(true)
     try {
@@ -259,24 +289,45 @@ export default function UsersClient() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{
-        display: "flex",
-        gap: "0.5rem",
-        marginBottom: "2rem",
-        borderBottom: "1px solid #CDCDCD",
-      }}>
+      {/* Tabs - Mobile-optimiert mit horizontalem Scroll */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          /* Hide scrollbar for Chrome, Safari and Opera */
+          .users-tabs-scroll::-webkit-scrollbar {
+            display: none;
+          }
+          /* Hide scrollbar for IE, Edge and Firefox */
+          .users-tabs-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `
+      }} />
+      <div 
+        className="users-tabs-scroll"
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "2rem",
+          borderBottom: "1px solid #CDCDCD",
+          overflowX: "auto",
+          overflowY: "hidden",
+          paddingBottom: "2px",
+        }}
+      >
         <button
           onClick={() => setActiveTab("users")}
           style={{
-            padding: "0.75rem 1.5rem",
+            padding: "0.75rem clamp(0.75rem, 2vw, 1.5rem)",
             backgroundColor: "transparent",
             border: "none",
             borderBottom: activeTab === "users" ? "2px solid #24c598" : "2px solid transparent",
             color: activeTab === "users" ? "#24c598" : "#7A7A7A",
-            fontSize: "0.95rem",
+            fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
             fontWeight: activeTab === "users" ? "600" : "400",
             cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
           Benutzer ({users.length})
@@ -284,33 +335,40 @@ export default function UsersClient() {
         <button
           onClick={() => setActiveTab("invitations")}
           style={{
-            padding: "0.75rem 1.5rem",
+            padding: "0.75rem clamp(0.75rem, 2vw, 1.5rem)",
             backgroundColor: "transparent",
             border: "none",
             borderBottom: activeTab === "invitations" ? "2px solid #24c598" : "2px solid transparent",
             color: activeTab === "invitations" ? "#24c598" : "#7A7A7A",
-            fontSize: "0.95rem",
+            fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
             fontWeight: activeTab === "invitations" ? "600" : "400",
             cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
           Einladungen ({invitations.length})
         </button>
-        <button
-          onClick={() => setActiveTab("join-requests")}
-          style={{
-            padding: "0.75rem 1.5rem",
-            backgroundColor: "transparent",
-            border: "none",
-            borderBottom: activeTab === "join-requests" ? "2px solid #24c598" : "2px solid transparent",
-            color: activeTab === "join-requests" ? "#24c598" : "#7A7A7A",
-            fontSize: "0.95rem",
-            fontWeight: activeTab === "join-requests" ? "600" : "400",
-            cursor: "pointer",
-          }}
-        >
-          Beitrittsanfragen ({joinRequests.filter(r => r.status === "pending").length})
-        </button>
+        {/* Tab "Beitrittsanfragen" nur anzeigen, wenn tatsächlich Requests vorhanden sind */}
+        {joinRequests.filter(r => r.status === "pending").length > 0 && (
+          <button
+            onClick={() => setActiveTab("join-requests")}
+            style={{
+              padding: "0.75rem clamp(0.75rem, 2vw, 1.5rem)",
+              backgroundColor: "transparent",
+              border: "none",
+              borderBottom: activeTab === "join-requests" ? "2px solid #24c598" : "2px solid transparent",
+              color: activeTab === "join-requests" ? "#24c598" : "#7A7A7A",
+              fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
+              fontWeight: activeTab === "join-requests" ? "600" : "400",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            Beitrittsanfragen ({joinRequests.filter(r => r.status === "pending").length})
+          </button>
+        )}
       </div>
 
       {loading ? (

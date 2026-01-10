@@ -105,7 +105,13 @@ export default function SelectPlanPage() {
   }
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
+    <div style={{ 
+      maxWidth: "1200px", 
+      margin: "0 auto", 
+      padding: isMobile ? "1rem" : "2rem", 
+      width: "100%",
+      boxSizing: "border-box"
+    }}>
       <div style={{ marginBottom: "3rem", textAlign: "center" }}>
         <h1 style={{
           fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
@@ -126,125 +132,110 @@ export default function SelectPlanPage() {
         </p>
       </div>
 
-      {/* Billing Interval Toggle - zentriert über der mittleren Card */}
+      {/* Billing Interval Toggle - zentriert über den Cards (Sidebar wird durch AppLayout berücksichtigt) */}
+      {/* Layout wie bei /pricing: Toggle bleibt zentriert, Badge erscheint absolut rechts daneben */}
       <div style={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: isMobile ? "0.75rem" : "0",
+        marginBottom: "2rem",
         position: "relative",
-        marginBottom: "2rem"
+        width: "100%",
+        zIndex: 1
       }}>
+        {/* Toggle - immer zentriert */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-          gap: "2rem",
-          marginBottom: "2rem"
+          display: "flex",
+          backgroundColor: "#FFFFFF",
+          borderRadius: "8px",
+          padding: "0.25rem",
+          border: "1px solid #E5E5E5",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)"
         }}>
-          {/* Spacer für erste Card */}
-          <div></div>
-          
-          {/* Toggle zentriert über mittlerer Card mit Badge */}
-          <div style={{
-            display: "flex",
-            flexDirection: isMobile ? "column" : "row",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: isMobile ? "0.75rem" : "0",
-            marginTop: "-1rem",
-            marginBottom: "-1rem",
-            position: "relative",
-            zIndex: 1
-          }}>
-            {/* Toggle - zentriert */}
-            <div style={{
-              display: "flex",
-              backgroundColor: "#FFFFFF",
-              borderRadius: "8px",
-              padding: "0.25rem",
-              border: "1px solid #E5E5E5",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)"
-            }}>
-              <button
-                onClick={() => setBillingInterval("monthly")}
-                style={{
-                  padding: "0.625rem 1.5rem",
-                  borderRadius: "6px",
-                  border: "none",
-                  backgroundColor: billingInterval === "monthly" ? "#24c598" : "transparent",
-                  color: billingInterval === "monthly" ? "#FFFFFF" : "#0A0A0A",
-                  fontSize: "0.875rem",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                Monatlich
-              </button>
-              <button
-                onClick={() => setBillingInterval("yearly")}
-                style={{
-                  padding: "0.625rem 1.5rem",
-                  borderRadius: "6px",
-                  border: "none",
-                  backgroundColor: billingInterval === "yearly" ? "#24c598" : "transparent",
-                  color: billingInterval === "yearly" ? "#FFFFFF" : "#0A0A0A",
-                  fontSize: "0.875rem",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                Jährlich
-              </button>
-            </div>
-            {/* Badge - unter Toggle auf Mobile, rechts auf Desktop */}
-            {(() => {
-              // Calculate max savings across all plans
-              let maxSavings = 0
-              plans.forEach(plan => {
-                const monthlyModel = plan.subscriptionModels.find(m => m.billingInterval === "monthly")
-                const yearlyModel = plan.subscriptionModels.find(m => m.billingInterval === "yearly")
-                if (monthlyModel && yearlyModel) {
-                  const monthlyPrice = monthlyModel.prices[0]?.amount || 0
-                  const yearlyPrice = yearlyModel.prices[0]?.amount || 0
-                  if (monthlyPrice > 0 && yearlyPrice > 0) {
-                    const savings = calculateSavings(monthlyPrice, yearlyPrice)
-                    if (savings > maxSavings) {
-                      maxSavings = savings
-                    }
-                  }
-                }
-              })
-              if (maxSavings > 0) {
-                return (
-                  <span style={{
-                    position: isMobile ? "relative" : "absolute",
-                    left: isMobile ? "auto" : "calc(50% + 120px)",
-                    backgroundColor: "#22C55E",
-                    color: "#FFFFFF",
-                    fontSize: "0.625rem",
-                    fontWeight: "600",
-                    padding: "0.375rem 0.75rem",
-                    borderRadius: "12px",
-                    whiteSpace: "nowrap",
-                    lineHeight: "1.2"
-                  }}>
-                    Sparen Sie bis zu {maxSavings}%
-                  </span>
-                )
-              }
-              return null
-            })()}
-          </div>
-          
-          {/* Spacer für dritte Card */}
-          <div></div>
+          <button
+            onClick={() => setBillingInterval("monthly")}
+            style={{
+              padding: "0.625rem 1.5rem",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: billingInterval === "monthly" ? "#24c598" : "transparent",
+              color: billingInterval === "monthly" ? "#FFFFFF" : "#0A0A0A",
+              fontSize: "0.875rem",
+              fontWeight: "500",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Monatlich
+          </button>
+          <button
+            onClick={() => setBillingInterval("yearly")}
+            style={{
+              padding: "0.625rem 1.5rem",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: billingInterval === "yearly" ? "#24c598" : "transparent",
+              color: billingInterval === "yearly" ? "#FFFFFF" : "#0A0A0A",
+              fontSize: "0.875rem",
+              fontWeight: "500",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Jährlich
+          </button>
         </div>
+        {/* Badge - unter Toggle auf Mobile, absolut rechts auf Desktop - nur bei jährlicher Abrechnung */}
+        {billingInterval === "yearly" && (() => {
+          // Calculate max savings across all plans
+          let maxSavings = 0
+          plans.forEach(plan => {
+            const monthlyModel = plan.subscriptionModels.find(m => m.billingInterval === "monthly")
+            const yearlyModel = plan.subscriptionModels.find(m => m.billingInterval === "yearly")
+            if (monthlyModel && yearlyModel) {
+              const monthlyPrice = monthlyModel.prices[0]?.amount || 0
+              const yearlyPrice = yearlyModel.prices[0]?.amount || 0
+              if (monthlyPrice > 0 && yearlyPrice > 0) {
+                const savings = calculateSavings(monthlyPrice, yearlyPrice)
+                if (savings > maxSavings) {
+                  maxSavings = savings
+                }
+              }
+            }
+          })
+          if (maxSavings > 0) {
+            return (
+              <span style={{
+                position: isMobile ? "relative" : "absolute",
+                left: isMobile ? "auto" : "calc(50% + 120px)",
+                backgroundColor: "#22C55E",
+                color: "#FFFFFF",
+                fontSize: "0.625rem",
+                fontWeight: "600",
+                padding: "0.375rem 0.75rem",
+                borderRadius: "12px",
+                whiteSpace: "nowrap",
+                lineHeight: "1.2"
+              }}>
+                Sparen Sie bis zu {maxSavings}%
+              </span>
+            )
+          }
+          return null
+        })()}
       </div>
 
+      {/* Pricing Plans Grid - zentriert im Content-Bereich (Sidebar wird durch AppLayout berücksichtigt) */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-        gap: "2rem",
-        marginBottom: "3rem", // Mehr Abstand vor dem Link
-        alignItems: "stretch" // Alle Cards haben gleiche Höhe
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(300px, 1fr))",
+        gap: isMobile ? "1.5rem" : "2rem",
+        marginBottom: "3rem",
+        alignItems: "stretch", // Alle Cards haben gleiche Höhe
+        width: "100%",
+        boxSizing: "border-box"
       }}>
         {plans.map((plan) => {
           // Find subscription models for selected billing interval
@@ -289,9 +280,11 @@ export default function SelectPlanPage() {
                 backgroundColor: "#FFFFFF",
                 borderRadius: "12px",
                 border: "1px solid #E5E5E5",
-                padding: "2rem",
+                padding: isMobile ? "1.5rem" : "2rem",
                 display: "flex",
-                flexDirection: "column"
+                flexDirection: "column",
+                width: "100%",
+                boxSizing: "border-box"
               }}
             >
               <div style={{
@@ -342,22 +335,40 @@ export default function SelectPlanPage() {
                     display: "flex",
                     alignItems: "baseline",
                     justifyContent: "center",
-                    marginBottom: savings > 0 ? "0.25rem" : "0"
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
+                    marginBottom: billingInterval === "yearly" && savings > 0 ? "0.25rem" : "0"
                   }}>
-                    <span style={{
-                      fontSize: "2rem",
-                      fontWeight: "700",
-                      color: "#0A0A0A"
+                    <div style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: "0.25rem"
                     }}>
-                      {Math.round(selectedPrice / 100)}€
-                    </span>
-                    <span style={{
-                      fontSize: "0.875rem",
-                      color: "#7A7A7A",
-                      marginLeft: "0.25rem"
-                    }}>
-                      / {billingInterval === "yearly" ? "Jahr" : "Monat"}
-                    </span>
+                      <span style={{
+                        fontSize: "2rem",
+                        fontWeight: "700",
+                        color: "#0A0A0A"
+                      }}>
+                        {Math.round(selectedPrice / 100)}€
+                      </span>
+                      <span style={{
+                        fontSize: "0.875rem",
+                        color: "#7A7A7A"
+                      }}>
+                        / {billingInterval === "yearly" ? "Jahr" : "Monat"}
+                      </span>
+                    </div>
+                    {/* Badge "Sie sparen x%" - nur bei jährlicher Abrechnung (wie bei /pricing) */}
+                    {billingInterval === "yearly" && savings > 0 && (
+                      <span style={{
+                        fontSize: "0.75rem",
+                        color: "#24c598",
+                        fontWeight: "600",
+                        whiteSpace: "nowrap"
+                      }}>
+                        ({savings}% gespart)
+                      </span>
+                    )}
                   </div>
                   {billingInterval === "yearly" && savings > 0 && (
                     <div style={{

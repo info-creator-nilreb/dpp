@@ -7,12 +7,16 @@ interface FilterBarProps {
   initialSearch?: string
   initialStatus?: string
   initialCategory?: string
+  availableCategories?: string[]
+  availableStatuses?: string[]
 }
 
 export default function FilterBar({
   initialSearch = "",
   initialStatus = "",
-  initialCategory = ""
+  initialCategory = "",
+  availableCategories = [],
+  availableStatuses = []
 }: FilterBarProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -157,8 +161,11 @@ export default function FilterBar({
             }}
           >
             <option value="">Alle Status</option>
-            <option value="DRAFT">Entwurf</option>
-            <option value="PUBLISHED">Veröffentlicht</option>
+            {availableStatuses.map((status) => (
+              <option key={status} value={status}>
+                {status === "DRAFT" ? "Entwurf" : status === "PUBLISHED" ? "Veröffentlicht" : status}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -196,9 +203,11 @@ export default function FilterBar({
             }}
           >
             <option value="">Alle Kategorien</option>
-            <option value="TEXTILE">Textil</option>
-            <option value="FURNITURE">Möbel</option>
-            <option value="OTHER">Sonstiges</option>
+            {availableCategories.map((category) => (
+              <option key={category} value={category}>
+                {category === "TEXTILE" ? "Textil" : category === "FURNITURE" ? "Möbel" : category === "OTHER" ? "Sonstiges" : category}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -273,7 +282,7 @@ export default function FilterBar({
                 cursor: "pointer"
               }}
             >
-              Kategorie: {initialCategory === "TEXTILE" ? "Textil" : initialCategory === "FURNITURE" ? "Möbel" : "Sonstiges"}
+              Kategorie: {initialCategory === "TEXTILE" ? "Textil" : initialCategory === "FURNITURE" ? "Möbel" : initialCategory === "OTHER" ? "Sonstiges" : initialCategory}
               <span>×</span>
             </button>
           )}
