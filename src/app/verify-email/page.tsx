@@ -84,11 +84,34 @@ function VerifyEmailContent() {
         // Simuliere eine kleine Verzögerung für bessere UX
         await new Promise(resolve => setTimeout(resolve, 1000))
         
+        // WICHTIG: credentials: 'omit' um Cookies zu vermeiden, die einen 307 Redirect verursachen könnten
         const response = await fetch("/api/auth/verify-email", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+          },
+          credentials: "omit", // Keine Cookies senden - Route ist öffentlich
           body: JSON.stringify({ token })
         })
+
+        // Prüfe ob Response ein Redirect ist (307)
+        if (response.redirected || response.status === 307) {
+          console.error("[VERIFY_EMAIL] Got redirect response:", response.url)
+          setStatus("error")
+          setMessage("Unerwarteter Redirect - bitte versuchen Sie es erneut")
+          return
+        }
+
+        // Prüfe ob Response JSON ist
+        const contentType = response.headers.get("content-type")
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("[VERIFY_EMAIL] Expected JSON but got:", contentType)
+          const text = await response.text()
+          console.error("[VERIFY_EMAIL] Response body:", text.substring(0, 200))
+          setStatus("error")
+          setMessage("Unerwartete Antwort vom Server")
+          return
+        }
 
         const data = await response.json()
 

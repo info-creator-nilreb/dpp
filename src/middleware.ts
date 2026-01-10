@@ -17,6 +17,21 @@ export default auth(async (req) => {
     return superAdminResponse
   }
 
+  // Öffentliche API-Routen (keine Auth erforderlich)
+  const publicApiRoutes = [
+    "/api/auth/verify-email",
+    "/api/auth/check-verification",
+    "/api/auth/signup",
+    "/api/auth/signup-phase1",
+    "/api/auth/verify-password",
+    "/api/auth/forgot-password",
+  ]
+  if (publicApiRoutes.includes(pathname)) {
+    const response = NextResponse.next()
+    response.headers.set("x-pathname", pathname)
+    return response
+  }
+
   // PASSWORD PROTECTION: Skip check in middleware (Edge Runtime can't use Prisma)
   // Full check is done in PasswordProtectionWrapper (Server Component with Prisma access)
   // Set header with pathname so Server Components can access it
@@ -33,7 +48,7 @@ export default auth(async (req) => {
   const baseUrl = `${protocol}//${origin}`
 
   // Öffentliche Routen
-  const publicRoutes = ["/", "/login", "/signup", "/onboarding"]
+  const publicRoutes = ["/", "/login", "/signup", "/onboarding", "/verify-email"]
   const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/contribute")
 
   // Auth-Routen (Login, Signup) - Landingpage "/" ist NICHT dabei
