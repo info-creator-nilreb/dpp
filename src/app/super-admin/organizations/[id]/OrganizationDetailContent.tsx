@@ -7,6 +7,7 @@ import { getFieldSensitivity, getHighestSensitivityLevel, requiresConfirmation, 
 import { getDisplayTier, isFreeTier } from "@/lib/phase1.7/subscription-state"
 import { Tooltip, TooltipIcon } from "@/components/Tooltip"
 import CountrySelect from "@/components/CountrySelect"
+import VatIdInput from "@/components/VatIdInput"
 
 interface User {
   id: string
@@ -433,10 +434,21 @@ export default function OrganizationDetailContent({
 
     // Prüfe ob es ein Länderfeld ist (country, addressCountry, invoiceAddressCountry, billingCountry)
     const isCountryField = fieldName === "country" || fieldName === "addressCountry" || fieldName === "invoiceAddressCountry" || fieldName === "billingCountry"
+    
+    // Prüfe ob es ein VAT-ID-Feld ist
+    const isVatIdField = fieldName === "vatId"
 
     return (
       <div>
-        {isEditing && (type === "country" || isCountryField) ? (
+        {isEditing && isVatIdField ? (
+          <VatIdInput
+            id={fieldName}
+            label={label}
+            value={fieldValue}
+            onChange={(newValue) => setFormData({ ...formData, [fieldName]: newValue })}
+            placeholder="z.B. DE123456789"
+          />
+        ) : isEditing && (type === "country" || isCountryField) ? (
           <CountrySelect
             id={fieldName}
             label={label}

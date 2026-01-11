@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import CountrySelect from "@/components/CountrySelect"
+import VatIdInput from "@/components/VatIdInput"
 
 interface CompanyDetails {
   legalName: string | null
@@ -233,28 +234,12 @@ export default function CompanyDetailsClient() {
           </div>
 
           <div>
-            <label style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              color: "#0A0A0A",
-              fontWeight: "500",
-              fontSize: "0.9rem",
-            }}>
-              USt-IdNr. / VAT ID
-            </label>
-            <input
-              type="text"
+            <VatIdInput
+              id="vatId"
+              label="USt-IdNr. / VAT ID"
               value={vatId}
-              onChange={(e) => setVatId(e.target.value)}
+              onChange={setVatId}
               placeholder="z.B. DE123456789"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                boxSizing: "border-box",
-              }}
             />
           </div>
 
