@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       console.log("======================")
 
       // Prüfe auf SOAP-Fehler (mit verschiedenen Namespace-Präfixen)
-      const faultMatch = xmlText.match(/<(?:soap:|soapenv:)?Fault>(.*?)<\/(?:soap:|soapenv:)?Fault>/is)
+      const faultMatch = xmlText.match(/<(?:soap:|soapenv:)?Fault>([\s\S]*?)<\/(?:soap:|soapenv:)?Fault>/i)
       if (faultMatch) {
         let faultStringMatch = xmlText.match(/<faultstring[^>]*>(.*?)<\/faultstring>/i)
         if (!faultStringMatch) {
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
 
       // Strategie 4: Suche nach valid mit Leerzeichen/Tabs/Newlines
       if (!isValidMatch) {
-        isValidMatch = xmlText.match(/<valid[^>]*>\s*(true|false)\s*<\/valid>/is)
+        isValidMatch = xmlText.match(/<valid[^>]*>\s*(true|false)\s*<\/valid>/i)
         if (isValidMatch) {
           isValidValue = isValidMatch[1]
         }
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
 
       // Strategie 5: Suche im checkVatResponse Block
       if (!isValidMatch) {
-        const responseBlockMatch = xmlText.match(/<checkVatResponse[^>]*>(.*?)<\/checkVatResponse>/is)
+        const responseBlockMatch = xmlText.match(/<checkVatResponse[^>]*>([\s\S]*?)<\/checkVatResponse>/i)
         if (responseBlockMatch) {
           const responseBlock = responseBlockMatch[1]
           isValidMatch = responseBlock.match(/<valid[^>]*>(true|false)<\/valid>/i)
@@ -222,24 +222,24 @@ export async function POST(request: Request) {
 
       // Extrahiere zusätzliche Informationen falls verfügbar
       // Versuche zuerst im checkVatResponse Block zu suchen
-      const responseBlockMatch = xmlText.match(/<checkVatResponse[^>]*>(.*?)<\/checkVatResponse>/is)
+      const responseBlockMatch = xmlText.match(/<checkVatResponse[^>]*>([\s\S]*?)<\/checkVatResponse>/i)
       const searchBlock = responseBlockMatch ? responseBlockMatch[1] : xmlText
       
-      let nameMatch = searchBlock.match(/<name[^>]*>(.*?)<\/name>/is)
+      let nameMatch = searchBlock.match(/<name[^>]*>([\s\S]*?)<\/name>/i)
       if (!nameMatch) {
-        nameMatch = searchBlock.match(/<(?:soapenv:|urn:|tns:|soap:)?name[^>]*>(.*?)<\/(?:soapenv:|urn:|tns:|soap:)?name>/is)
+        nameMatch = searchBlock.match(/<(?:soapenv:|urn:|tns:|soap:)?name[^>]*>([\s\S]*?)<\/(?:soapenv:|urn:|tns:|soap:)?name>/i)
       }
       
-      let addressMatch = searchBlock.match(/<address[^>]*>(.*?)<\/address>/is)
+      let addressMatch = searchBlock.match(/<address[^>]*>([\s\S]*?)<\/address>/i)
       if (!addressMatch) {
-        addressMatch = searchBlock.match(/<(?:soapenv:|urn:|tns:|soap:)?address[^>]*>(.*?)<\/(?:soapenv:|urn:|tns:|soap:)?address>/is)
+        addressMatch = searchBlock.match(/<(?:soapenv:|urn:|tns:|soap:)?address[^>]*>([\s\S]*?)<\/(?:soapenv:|urn:|tns:|soap:)?address>/i)
       }
 
       // Entferne CDATA-Wrapper falls vorhanden
       const cleanText = (text: string) => {
         return text
           .trim()
-          .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
+          .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
           .replace(/\\n/g, ", ")
           .replace(/\n/g, ", ")
           .replace(/\s+/g, " ")
