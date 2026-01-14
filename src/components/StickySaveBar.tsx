@@ -79,7 +79,7 @@ export default function StickySaveBar({
       case "saved":
         return "#00A651"
       case "error":
-        return "#24c598"
+        return "#F87171"
       case "saving":
       case "publishing":
         return "#7A7A7A"
@@ -176,7 +176,7 @@ export default function StickySaveBar({
           {status === "error" && error && (
             <span style={{
               fontSize: "clamp(0.75rem, 1.8vw, 0.85rem)",
-              color: "#24c598"
+              color: "#F87171"
             }}>
               {error}
             </span>

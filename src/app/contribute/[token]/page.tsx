@@ -8,6 +8,7 @@ import Link from "next/link"
 import InputField from "@/components/InputField"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { DPP_SECTIONS } from "@/lib/permissions"
+import TemplateBlockField from "@/components/TemplateBlockField"
 
 interface DppData {
   id: string
@@ -26,12 +27,32 @@ interface DppData {
   secondLifeInfo?: string | null
 }
 
+interface TemplateBlock {
+  id: string
+  name: string
+  fields: Array<{
+    id: string
+    label: string
+    key: string
+    type: string
+    required: boolean
+    config: any
+  }>
+}
+
 interface TokenData {
   token: string
   partnerRole: string
-  allowedSections: string[]
+  allowedSections?: string[] // Legacy
+  supplierMode?: "input" | "declaration"
   message?: string | null
   dpp: DppData
+  template?: {
+    id: string
+    name: string
+    blocks: TemplateBlock[]
+  } | null
+  legacy?: boolean
 }
 
 
@@ -43,7 +64,7 @@ function ContributeContent() {
   const [status, setStatus] = useState<"loading" | "error" | "ready" | "submitting" | "success">("loading")
   const [error, setError] = useState("")
   const [tokenData, setTokenData] = useState<TokenData | null>(null)
-  const [formData, setFormData] = useState<Partial<DppData>>({})
+  const [formData, setFormData] = useState<Record<string, any>>({}) // Template-based: fieldKey -> value
   const [confirmed, setConfirmed] = useState(false)
 
   useEffect(() => {
@@ -65,7 +86,21 @@ function ContributeContent() {
         }
 
         setTokenData(data)
-        setFormData(data.dpp)
+        
+        // Template-based: Initialisiere formData mit Template-Feldwerten
+        if (data.template && !data.legacy) {
+          const initialData: Record<string, any> = {}
+          data.template.blocks.forEach(block => {
+            block.fields.forEach(field => {
+              initialData[field.key] = ""
+            })
+          })
+          setFormData(initialData)
+        } else {
+          // Legacy: Verwende DPP-Daten
+          setFormData(data.dpp)
+        }
+        
         setStatus("ready")
       } catch (err) {
         setStatus("error")
@@ -113,7 +148,26 @@ function ContributeContent() {
   const getProgress = (): number => {
     if (!tokenData) return 0
 
-    const allowedSections = tokenData.allowedSections
+    // Template-based: Zähle Felder aus Template
+    if (tokenData.template && !tokenData.legacy) {
+      let totalFields = 0
+      let filledFields = 0
+
+      tokenData.template.blocks.forEach(block => {
+        block.fields.forEach(field => {
+          totalFields++
+          const value = formData[field.key]
+          if (value !== undefined && value !== null && value !== "") {
+            filledFields++
+          }
+        })
+      })
+
+      return totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0
+    }
+
+    // Legacy: sections-based
+    const allowedSections = tokenData.allowedSections || []
     let totalFields = 0
     let filledFields = 0
 
@@ -420,13 +474,23 @@ function ContributeContent() {
           </div>
           <div style={{ marginTop: "1rem" }}>
             <p style={{ fontSize: "0.85rem", color: "#7A7A7A", margin: 0 }}>
-              Erforderliche Bereiche:
+              {tokenData.template && !tokenData.legacy
+                ? `Erforderliche Blöcke: ${tokenData.template.blocks.length}`
+                : "Erforderliche Bereiche:"}
             </p>
-            <ul style={{ margin: "0.5rem 0 0 0", paddingLeft: "1.5rem", fontSize: "0.85rem", color: "#7A7A7A" }}>
-              {tokenData.allowedSections.map((section) => (
-                <li key={section}>{getSectionLabel(section)}</li>
-              ))}
-            </ul>
+            {tokenData.template && !tokenData.legacy ? (
+              <ul style={{ margin: "0.5rem 0 0 0", paddingLeft: "1.5rem", fontSize: "0.85rem", color: "#7A7A7A" }}>
+                {tokenData.template.blocks.map((block) => (
+                  <li key={block.id}>{block.name}</li>
+                ))}
+              </ul>
+            ) : (
+              <ul style={{ margin: "0.5rem 0 0 0", paddingLeft: "1.5rem", fontSize: "0.85rem", color: "#7A7A7A" }}>
+                {tokenData.allowedSections?.map((section) => (
+                  <li key={section}>{getSectionLabel(section)}</li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -439,7 +503,47 @@ function ContributeContent() {
             border: "1px solid #CDCDCD",
             marginBottom: "1.5rem",
           }}>
-            {tokenData.allowedSections.includes(DPP_SECTIONS.MATERIALS) && (
+            {/* Template-based rendering */}
+            {tokenData.template && !tokenData.legacy ? (
+              tokenData.template.blocks.map((block) => (
+                <div key={block.id} style={{ marginBottom: "2rem" }}>
+                  <h3 style={{
+                    fontSize: "1.1rem",
+                    fontWeight: "600",
+                    color: "#0A0A0A",
+                    marginBottom: "1rem",
+                    paddingBottom: "0.5rem",
+                    borderBottom: "1px solid #E5E5E5"
+                  }}>
+                    {block.name}
+                  </h3>
+                  {block.fields.map((field) => (
+                    <TemplateBlockField
+                      key={field.id}
+                      field={{
+                        id: field.id,
+                        label: field.label,
+                        key: field.key,
+                        type: field.type,
+                        required: field.required,
+                        config: field.config
+                      }}
+                      blockId={block.id}
+                      dppId={tokenData.dpp.id} // Für File-Uploads (falls benötigt)
+                      media={[]}
+                      onMediaChange={() => {}}
+                      value={formData[field.key] || ""}
+                      onChange={(value) => {
+                        setFormData({ ...formData, [field.key]: value })
+                      }}
+                    />
+                  ))}
+                </div>
+              ))
+            ) : (
+              /* Legacy: sections-based rendering */
+              <>
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.MATERIALS) && (
               <InputField
                 id="materials"
                 label="Materialien"
@@ -600,7 +704,7 @@ function ContributeContent() {
               </>
             )}
 
-            {tokenData.allowedSections.includes(DPP_SECTIONS.SECOND_LIFE) && (
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.SECOND_LIFE) && (
               <InputField
                 id="secondLifeInfo"
                 label="Second-Life-Informationen"
@@ -608,6 +712,8 @@ function ContributeContent() {
                 onChange={(e) => setFormData({ ...formData, secondLifeInfo: e.target.value })}
                 rows={3}
               />
+            )}
+              </>
             )}
 
             {error && (
