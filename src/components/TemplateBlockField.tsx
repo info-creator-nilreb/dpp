@@ -6,6 +6,12 @@ import InputField from "@/components/InputField"
 import CountrySelect from "@/components/CountrySelect"
 import { useNotification } from "@/components/NotificationProvider"
 
+interface PendingFile {
+  id: string
+  file: File
+  preview?: string
+}
+
 interface TemplateBlockFieldProps {
   field: {
     id: string
@@ -28,6 +34,10 @@ interface TemplateBlockFieldProps {
     fieldId?: string | null
   }>
   onMediaChange?: () => void
+  pendingFiles?: PendingFile[]
+  onPendingFileAdd?: (file: PendingFile) => void
+  onPendingFileRemove?: (fileId: string) => void
+  hideLabel?: boolean // Für wiederholbare Felder: Label ausblenden
 }
 
 /**
@@ -40,23 +50,68 @@ export default function TemplateBlockField({
   value,
   onChange,
   media = [],
-  onMediaChange
+  onMediaChange,
+  pendingFiles = [],
+  onPendingFileAdd,
+  onPendingFileRemove,
+  hideLabel = false
 }: TemplateBlockFieldProps) {
   const { showNotification } = useNotification()
   const [uploading, setUploading] = useState(false)
+  
+  // Debug: Log value prop
+  console.log(`[TemplateBlockField] Field ${field.key} (${field.label}): value=`, value, "type:", typeof value)
 
   // Filtere Medien für dieses Feld
   const fieldMedia = media.filter(m => 
     m.blockId === blockId && m.fieldId === field.key
   )
+  
+  // Filtere Pending Files für dieses Feld
+  const fieldPendingFiles = pendingFiles.filter(pf => 
+    pf.blockId === blockId && pf.fieldId === field.key
+  )
 
   // Handle file upload
   const handleFileUpload = async (file: File) => {
+    // Für neue DPPs: Datei zwischenspeichern (wird nach dem Speichern hochgeladen)
     if (!dppId || dppId === "new") {
-      showNotification("Bitte speichern Sie den DPP zuerst", "error")
+      if (!onPendingFileAdd) {
+        showNotification("Upload-Funktion nicht verfügbar", "error")
+        return
+      }
+      
+      // Erstelle Preview für Bilder und Videos
+      if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const preview = e.target?.result as string
+          const pendingFile: PendingFile = {
+            id: `pending-${Date.now()}-${Math.random()}`,
+            file,
+            preview,
+            blockId,
+            fieldId: field.key
+          }
+          onPendingFileAdd(pendingFile)
+          showNotification("Datei wird nach dem Speichern hochgeladen", "info")
+        }
+        reader.readAsDataURL(file)
+      } else {
+        // PDF oder andere Dateien ohne Preview
+        const pendingFile: PendingFile = {
+          id: `pending-${Date.now()}-${Math.random()}`,
+          file,
+          blockId,
+          fieldId: field.key
+        }
+        onPendingFileAdd(pendingFile)
+        showNotification("Datei wird nach dem Speichern hochgeladen", "info")
+      }
       return
     }
 
+    // Für bestehende DPPs: Sofort hochladen
     setUploading(true)
     try {
       const formData = new FormData()
@@ -115,7 +170,7 @@ export default function TemplateBlockField({
           }
           maxSize={field.type === "file-video" ? 100 * 1024 * 1024 : 10 * 1024 * 1024} // 100 MB für Videos, 10 MB für andere
           onFileSelect={handleFileUpload}
-          disabled={uploading || !dppId || dppId === "new"}
+          disabled={uploading}
           label="Datei hochladen"
           description={
             field.type === "file-image"
@@ -130,14 +185,148 @@ export default function TemplateBlockField({
           }
         />
 
-        {/* Angezeigte Medien */}
-        {fieldMedia.length > 0 && (
+        {/* Angezeigte Medien (inkl. Pending Files) */}
+        {(fieldMedia.length > 0 || fieldPendingFiles.length > 0) && (
           <div style={{
             marginTop: "1rem",
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
             gap: "1rem"
           }}>
+            {/* Pending Files (mit reduzierter Opacity) */}
+            {fieldPendingFiles.map((pendingFile) => (
+              <div
+                key={pendingFile.id}
+                style={{
+                  position: "relative",
+                  border: "1px solid #CDCDCD",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  opacity: 0.7
+                }}
+              >
+                {pendingFile.file.type.startsWith("image/") && pendingFile.preview ? (
+                  <img
+                    src={pendingFile.preview}
+                    alt={pendingFile.file.name}
+                    style={{
+                      width: "100%",
+                      height: "150px",
+                      objectFit: "cover",
+                      cursor: "pointer"
+                    }}
+                  />
+                ) : pendingFile.file.type.startsWith("video/") && pendingFile.preview ? (
+                  <div style={{ position: "relative", width: "100%", height: "150px" }}>
+                    <video
+                      src={pendingFile.preview}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover"
+                      }}
+                      muted
+                      playsInline
+                      controls
+                      preload="metadata"
+                    >
+                      <track kind="captions" />
+                    </video>
+                  </div>
+                ) : (
+                  <div 
+                    style={{
+                      width: "100%",
+                      height: "150px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#F5F5F5"
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="48"
+                      height="48"
+                      fill="none"
+                      stroke="#7A7A7A"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      viewBox="0 0 24 24"
+                      style={{ marginBottom: "0.5rem" }}
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    <span style={{ 
+                      fontSize: "0.75rem", 
+                      color: "#7A7A7A",
+                      textAlign: "center",
+                      padding: "0 0.5rem"
+                    }}>
+                      PDF
+                    </span>
+                  </div>
+                )}
+                <div style={{
+                  padding: "0.5rem",
+                  fontSize: "0.75rem",
+                  color: "#7A7A7A",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}>
+                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {pendingFile.file.name}
+                  </span>
+                  {onPendingFileRemove && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onPendingFileRemove(pendingFile.id)
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#DC2626",
+                        cursor: "pointer",
+                        padding: "0.25rem 0.5rem",
+                        marginLeft: "0.5rem",
+                        fontSize: "1.2rem",
+                        fontWeight: "bold",
+                        lineHeight: 1
+                      }}
+                      title="Datei entfernen"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <div style={{
+                  position: "absolute",
+                  top: "0.5rem",
+                  right: "0.5rem",
+                  backgroundColor: "#FEF3C7",
+                  color: "#92400E",
+                  padding: "0.25rem 0.5rem",
+                  borderRadius: "4px",
+                  fontSize: "0.7rem",
+                  fontWeight: "600"
+                }}>
+                  Wartend
+                </div>
+              </div>
+            ))}
+            
+            {/* Hochgeladene Medien */}
             {fieldMedia.map((mediaItem) => (
               <div
                 key={mediaItem.id}
@@ -155,32 +344,68 @@ export default function TemplateBlockField({
                     style={{
                       width: "100%",
                       height: "150px",
-                      objectFit: "cover"
+                      objectFit: "cover",
+                      cursor: "pointer"
                     }}
+                    onClick={() => window.open(mediaItem.storageUrl, "_blank")}
                   />
                 ) : mediaItem.fileType.startsWith("video/") ? (
-                  <video
-                    src={mediaItem.storageUrl}
+                  <div style={{ position: "relative", width: "100%", height: "150px" }}>
+                    <video
+                      src={mediaItem.storageUrl}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover"
+                      }}
+                      muted
+                      playsInline
+                      controls
+                      preload="metadata"
+                    >
+                      <track kind="captions" />
+                    </video>
+                  </div>
+                ) : (
+                  <div 
                     style={{
                       width: "100%",
                       height: "150px",
-                      objectFit: "cover"
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#F5F5F5",
+                      cursor: "pointer"
                     }}
-                    muted
-                    playsInline
+                    onClick={() => window.open(mediaItem.storageUrl, "_blank")}
                   >
-                    <track kind="captions" />
-                  </video>
-                ) : (
-                  <div style={{
-                    width: "100%",
-                    height: "150px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "#F5F5F5"
-                  }}>
-                    <span style={{ fontSize: "2rem" }}>📄</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="48"
+                      height="48"
+                      fill="none"
+                      stroke="#7A7A7A"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      viewBox="0 0 24 24"
+                      style={{ marginBottom: "0.5rem" }}
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    <span style={{ 
+                      fontSize: "0.75rem", 
+                      color: "#7A7A7A",
+                      textAlign: "center",
+                      padding: "0 0.5rem"
+                    }}>
+                      PDF
+                    </span>
                   </div>
                 )}
                 <div style={{
@@ -189,9 +414,53 @@ export default function TemplateBlockField({
                   color: "#7A7A7A",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  whiteSpace: "nowrap"
+                  whiteSpace: "nowrap",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
                 }}>
-                  {mediaItem.fileName}
+                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {mediaItem.fileName}
+                  </span>
+                  {dppId && dppId !== "new" && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        if (!confirm("Möchten Sie diese Datei wirklich löschen?")) return
+                        
+                        try {
+                          const response = await fetch(`/api/app/dpp/${dppId}/media/${mediaItem.id}`, {
+                            method: "DELETE"
+                          })
+                          if (response.ok) {
+                            showNotification("Datei gelöscht", "success")
+                            if (onMediaChange) {
+                              onMediaChange()
+                            }
+                          } else {
+                            const data = await response.json()
+                            throw new Error(data.error || "Fehler beim Löschen")
+                          }
+                        } catch (error: any) {
+                          showNotification(error.message || "Fehler beim Löschen", "error")
+                        }
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#DC2626",
+                        cursor: "pointer",
+                        padding: "0.25rem 0.5rem",
+                        marginLeft: "0.5rem",
+                        fontSize: "1.2rem",
+                        fontWeight: "bold",
+                        lineHeight: 1
+                      }}
+                      title="Datei löschen"
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -206,10 +475,15 @@ export default function TemplateBlockField({
     return (
       <InputField
         id={`field-${field.id}`}
-        label={field.label}
+        label={hideLabel ? "" : field.label}
         value={value as string || ""}
         onChange={(e) => {
-          onChange?.(e.target.value)
+          console.log("[TemplateBlockField] Text field onChange:", field.key, e.target.value, "onChange exists:", !!onChange)
+          if (onChange) {
+            onChange(e.target.value)
+          } else {
+            console.warn("[TemplateBlockField] onChange is undefined for field:", field.key)
+          }
         }}
         required={field.required}
         type="text"
@@ -222,10 +496,15 @@ export default function TemplateBlockField({
     return (
       <InputField
         id={`field-${field.id}`}
-        label={field.label}
+        label={hideLabel ? "" : field.label}
         value={value as string || ""}
         onChange={(e) => {
-          onChange?.(e.target.value)
+          console.log("[TemplateBlockField] Textarea field onChange:", field.key, e.target.value, "onChange exists:", !!onChange)
+          if (onChange) {
+            onChange(e.target.value)
+          } else {
+            console.warn("[TemplateBlockField] onChange is undefined for field:", field.key)
+          }
         }}
         required={field.required}
         rows={4}
@@ -238,7 +517,7 @@ export default function TemplateBlockField({
     return (
       <InputField
         id={`field-${field.id}`}
-        label={field.label}
+        label={hideLabel ? "" : field.label}
         value={value as string || ""}
         onChange={(e) => onChange?.(e.target.value)}
         required={field.required}
@@ -252,7 +531,7 @@ export default function TemplateBlockField({
     return (
       <InputField
         id={`field-${field.id}`}
-        label={field.label}
+        label={hideLabel ? "" : field.label}
         value={value as string || ""}
         onChange={(e) => onChange?.(e.target.value)}
         required={field.required}
@@ -266,7 +545,7 @@ export default function TemplateBlockField({
     return (
       <InputField
         id={`field-${field.id}`}
-        label={field.label}
+        label={hideLabel ? "" : field.label}
         value={value as string || ""}
         onChange={(e) => onChange?.(e.target.value)}
         required={field.required}
@@ -280,7 +559,7 @@ export default function TemplateBlockField({
     return (
       <CountrySelect
         id={`field-${field.id}`}
-        label={field.label}
+        label={hideLabel ? "" : field.label}
         value={value as string || ""}
         onChange={(code: string) => onChange?.(code)}
         required={field.required}
@@ -292,19 +571,24 @@ export default function TemplateBlockField({
   if (field.type === "select") {
     const options = field.config?.options || []
     return (
-      <div style={{ marginBottom: "1.5rem" }}>
-        <label htmlFor={`field-${field.id}`} style={{
-          display: "block",
-          fontSize: "clamp(0.9rem, 2vw, 1rem)",
-          fontWeight: "600",
-          color: "#0A0A0A",
-          marginBottom: "0.5rem"
-        }}>
-          {field.label}
-          {field.required && (
-            <span style={{ color: "#DC2626", marginLeft: "0.25rem" }}>*</span>
-          )}
-        </label>
+      <>
+        {!hideLabel && (
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label htmlFor={`field-${field.id}`} style={{
+              display: "block",
+              fontSize: "clamp(0.9rem, 2vw, 1rem)",
+              fontWeight: "600",
+              color: "#0A0A0A",
+              marginBottom: "0.5rem"
+            }}>
+              {field.label}
+              {field.required && (
+                <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>
+              )}
+            </label>
+          </div>
+        )}
+        <div style={{ marginBottom: hideLabel ? "0" : "1.5rem" }}>
         <select
           id={`field-${field.id}`}
           value={value as string || ""}
@@ -334,7 +618,8 @@ export default function TemplateBlockField({
             )
           })}
         </select>
-      </div>
+        </div>
+      </>
     )
   }
 
@@ -343,19 +628,24 @@ export default function TemplateBlockField({
     const options = field.config?.options || []
     const selectedValues = (value as string[] || [])
     return (
-      <div style={{ marginBottom: "1.5rem" }}>
-        <label style={{
-          display: "block",
-          fontSize: "clamp(0.9rem, 2vw, 1rem)",
-          fontWeight: "600",
-          color: "#0A0A0A",
-          marginBottom: "0.5rem"
-        }}>
-          {field.label}
-          {field.required && (
-            <span style={{ color: "#DC2626", marginLeft: "0.25rem" }}>*</span>
-          )}
-        </label>
+      <>
+        {!hideLabel && (
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label style={{
+              display: "block",
+              fontSize: "clamp(0.9rem, 2vw, 1rem)",
+              fontWeight: "600",
+              color: "#0A0A0A",
+              marginBottom: "0.5rem"
+            }}>
+              {field.label}
+              {field.required && (
+                <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>
+              )}
+            </label>
+          </div>
+        )}
+        <div style={{ marginBottom: hideLabel ? "0" : "1.5rem" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {options.map((opt: string | { value: string; label: string }) => {
             const optionValue = typeof opt === "string" ? opt : opt.value
@@ -379,40 +669,45 @@ export default function TemplateBlockField({
             )
           })}
         </div>
-      </div>
+        </div>
+      </>
     )
   }
 
   // Boolean-Feld (Ja/Nein)
   if (field.type === "boolean") {
     return (
-      <div style={{ marginBottom: "1.5rem" }}>
-        <label style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.75rem",
-          cursor: "pointer"
-        }}>
-          <input
-            type="checkbox"
-            checked={typeof value === "string" && value === "true"}
-            onChange={(e) => {
-              onChange?.(e.target.checked ? "true" : "false")
-            }}
-            style={{ width: "18px", height: "18px", cursor: "pointer" }}
-          />
-          <span style={{
-            fontSize: "clamp(0.9rem, 2vw, 1rem)",
-            fontWeight: "600",
-            color: "#0A0A0A"
-          }}>
-            {field.label}
-            {field.required && (
-              <span style={{ color: "#DC2626", marginLeft: "0.25rem" }}>*</span>
-            )}
-          </span>
-        </label>
-      </div>
+      <>
+        {!hideLabel && (
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              cursor: "pointer"
+            }}>
+              <input
+                type="checkbox"
+                checked={typeof value === "string" && value === "true"}
+                onChange={(e) => {
+                  onChange?.(e.target.checked ? "true" : "false")
+                }}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              <span style={{
+                fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                fontWeight: "600",
+                color: "#0A0A0A"
+              }}>
+                {field.label}
+                {field.required && (
+                  <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>
+                )}
+              </span>
+            </label>
+          </div>
+        )}
+      </>
     )
   }
 

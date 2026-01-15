@@ -14,6 +14,7 @@ import Papa from "papaparse"
 interface Block {
   id: string
   name: string
+  // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert, nicht im Template
   fields: Field[]
 }
 
@@ -106,12 +107,112 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
   const [editingFieldOptions, setEditingFieldOptions] = useState<string | null>(null)
   const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null)
 
-  // Helper: Generate key from label
+  // Helper: Generate English key from German label
+  // This ensures consistency with DPP column keys (name, description, countryOfOrigin, etc.)
   const generateKeyFromLabel = (label: string): string => {
     if (!label) return ""
-    return label
-      .toLowerCase()
-      .trim()
+    
+    // Mapping von deutschen Labels zu englischen Standard-Keys
+    // Dies sorgt für Konsistenz mit DPP-Spalten-Keys
+    const labelMapping: Record<string, string> = {
+      // Basis- & Produktdaten
+      "produktname": "name",
+      "produkt name": "name",
+      "name": "name",
+      "beschreibung": "description",
+      "description": "description",
+      "sku": "sku",
+      "sku / interne id": "sku",
+      "interne id": "sku",
+      "gtin": "gtin",
+      "ean": "gtin",
+      "gtin / ean": "gtin",
+      "marke": "brand",
+      "hersteller": "brand",
+      "marke / hersteller": "brand",
+      "brand": "brand",
+      "herstellungsland": "countryOfOrigin",
+      "country of origin": "countryOfOrigin",
+      "countryoforigin": "countryOfOrigin",
+      // Materialien & Zusammensetzung
+      "materialliste": "materials",
+      "materialien": "materials",
+      "materials": "materials",
+      "datenquelle": "materialSource",
+      "materialquelle": "materialSource",
+      "material source": "materialSource",
+      // Nutzung, Pflege & Lebensdauer
+      "pflegehinweise": "careInstructions",
+      "pflege": "careInstructions",
+      "care instructions": "careInstructions",
+      "lebensdauer": "lifespan",
+      "lifespan": "lifespan",
+      "reparierbarkeit": "isRepairable",
+      "reparierbar": "isRepairable",
+      "is repairable": "isRepairable",
+      "ersatzteile verfügbar": "sparePartsAvailable",
+      "spare parts available": "sparePartsAvailable",
+      // Rechtliches & Konformität
+      "konformitätserklärung": "conformityDeclaration",
+      "conformity declaration": "conformityDeclaration",
+      "entsorgungsinformationen": "disposalInfo",
+      "disposal info": "disposalInfo",
+      // Rücknahme & Second Life
+      "rücknahme angeboten": "takebackOffered",
+      "takeback offered": "takebackOffered",
+      "rücknahmekontakt": "takebackContact",
+      "takeback contact": "takebackContact",
+      "second life informationen": "secondLifeInfo",
+      "second life": "secondLifeInfo",
+      "secondlifeinfo": "secondLifeInfo"
+    }
+    
+    // Normalisiere Label für Mapping
+    const normalizedLabel = label.toLowerCase().trim()
+    
+    // Prüfe zuerst direktes Mapping
+    if (labelMapping[normalizedLabel]) {
+      return labelMapping[normalizedLabel]
+    }
+    
+    // Prüfe Teilstring-Matches (z.B. "Produktname" in "Produktname (Lang)")
+    for (const [germanLabel, englishKey] of Object.entries(labelMapping)) {
+      if (normalizedLabel.includes(germanLabel) || germanLabel.includes(normalizedLabel)) {
+        return englishKey
+      }
+    }
+    
+    // Fallback: Generiere Key aus Label (camelCase, englisch-orientiert)
+    // Versuche, deutsche Begriffe zu übersetzen
+    const translationMap: Record<string, string> = {
+      "produkt": "product",
+      "name": "name",
+      "beschreibung": "description",
+      "land": "country",
+      "herstellung": "origin",
+      "material": "material",
+      "quelle": "source",
+      "pflege": "care",
+      "hinweis": "instruction",
+      "lebens": "life",
+      "dauer": "span",
+      "reparier": "repair",
+      "konformität": "conformity",
+      "erklärung": "declaration",
+      "entsorgung": "disposal",
+      "info": "info",
+      "rücknahme": "takeback",
+      "kontakt": "contact"
+    }
+    
+    // Ersetze bekannte deutsche Begriffe
+    let englishKey = normalizedLabel
+    for (const [german, english] of Object.entries(translationMap)) {
+      englishKey = englishKey.replace(new RegExp(german, "g"), english)
+    }
+    
+    // Generiere camelCase Key
+    return englishKey
       .replace(/[äöü]/g, (char) => {
         const map: Record<string, string> = { ä: "ae", ö: "oe", ü: "ue" }
         return map[char] || char
@@ -119,15 +220,20 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^_+|_+$/g, "")
       .replace(/_+/g, "_")
+      .replace(/_([a-z])/g, (_, char) => char.toUpperCase())
+      .replace(/^[a-z]/, (char) => char.toLowerCase())
   }
 
   const addBlock = () => {
     setBlocks([...blocks, {
       id: Date.now().toString(),
       name: "",
+      // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert
       fields: []
     }])
   }
+
+  // ENTFERNT: updateSupplierConfig - Supplier-Config wird jetzt pro DPP konfiguriert
 
   const updateBlockName = (blockId: string, name: string) => {
     setBlocks(blocks.map(block =>
@@ -154,7 +260,8 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
                 key: "",
                 type: "text",
                 required: false,
-                config: null
+                config: null,
+                isRepeatable: false
               }
             ]
           }
@@ -167,9 +274,20 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
       block.id === blockId
         ? {
             ...block,
-            fields: block.fields.map(field =>
-              field.id === fieldId ? { ...field, ...updates } : field
-            )
+            fields: block.fields.map(field => {
+              if (field.id === fieldId) {
+                const updated = { ...field, ...updates }
+                // WICHTIG: Wenn Label geändert wird, generiere Key automatisch neu
+                if (updates.label !== undefined && updates.label !== field.label) {
+                  const newKey = generateKeyFromLabel(updates.label)
+                  if (newKey) {
+                    updated.key = newKey
+                  }
+                }
+                return updated
+              }
+              return field
+            })
           }
         : block
     ))
@@ -289,17 +407,23 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
     setDescription("") // Don't copy description, let user set new one
     
     // Clone blocks and fields
+    // WICHTIG: Generiere Keys neu aus Labels, um sicherzustellen, dass neue Templates englische Keys haben
     const clonedBlocks: Block[] = template.blocks.map(block => ({
       id: `block-${Date.now()}-${Math.random()}`,
       name: block.name,
-      fields: block.fields.map(field => ({
-        id: `field-${Date.now()}-${Math.random()}`,
-        label: field.label,
-        key: field.key,
-        type: field.type,
-        required: field.required,
-        config: field.config ? JSON.parse(field.config) : null
-      }))
+      fields: block.fields.map(field => {
+        // Generiere Key neu aus Label (stellt sicher, dass neue Templates englische Keys haben)
+        const newKey = generateKeyFromLabel(field.label) || field.key
+        return {
+          id: `field-${Date.now()}-${Math.random()}`,
+          label: field.label,
+          key: newKey, // Neu generierter Key aus Label
+          type: field.type,
+          required: field.required,
+          config: field.config ? JSON.parse(field.config) : null,
+          isRepeatable: field.isRepeatable || false
+        }
+      })
     }))
     setBlocks(clonedBlocks)
     setShowDialog(false)
@@ -557,11 +681,13 @@ Hinweise:
         description: description || null,
         blocks: blocks.map(block => ({
           name: block.name,
+          // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert
           fields: block.fields.map(field => ({
             label: field.label,
             key: field.key || generateKeyFromLabel(field.label), // Auto-generate if missing
             type: field.type,
             required: field.required,
+            isRepeatable: field.isRepeatable || false,
             config: field.config
           }))
         }))
@@ -581,8 +707,14 @@ Hinweise:
         return
       }
 
-      // Redirect to template editor
-      router.push(`/super-admin/templates/${data.template.id}`)
+      // Success feedback
+      if (data.template?.id) {
+        // Redirect to template editor
+        router.push(`/super-admin/templates/${data.template.id}`)
+      } else {
+        setError("Template wurde erstellt, aber keine ID zurückgegeben")
+        setLoading(false)
+      }
     } catch (err: any) {
       setError(err.message || "Ein Fehler ist aufgetreten")
       setLoading(false)
@@ -1270,6 +1402,9 @@ Hinweise:
                       ↓
                     </button>
                   </div>
+                  
+                  {/* ENTFERNT: Supplier Config Icon - wird jetzt pro DPP konfiguriert, nicht im Template */}
+                  
                   <div className="new-template-block-delete">
                     <button
                       type="button"
@@ -1324,6 +1459,7 @@ Hinweise:
               )}
             </div>
 
+
             {/* Fields */}
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {block.fields.map((field, fieldIndex) => (
@@ -1341,14 +1477,21 @@ Hinweise:
                     borderRadius: "8px",
                     cursor: "move",
                     opacity: draggedFieldId === field.id ? 0.5 : 1,
-                    transition: "all 0.2s"
+                    transition: "all 0.2s",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    overflow: "visible"
                   }}
                 >
                   <div style={{
                     display: "grid",
-                    gridTemplateColumns: "16px 1fr 200px auto 32px",
-                    gap: "0.25rem 3.5rem",
-                    alignItems: "center"
+                    gridTemplateColumns: "16px minmax(150px, 1fr) 140px max-content max-content 32px",
+                    gap: "0.25rem 0.75rem",
+                    alignItems: "center",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    minWidth: 0,
+                    overflow: "visible"
                   }}>
                     <div style={{
                       display: "flex",
@@ -1410,18 +1553,38 @@ Hinweise:
                     <label style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.5rem",
+                      gap: "0.4rem",
                       fontSize: "0.875rem",
                       cursor: "pointer",
-                      whiteSpace: "nowrap"
+                      whiteSpace: "nowrap",
+                      flexShrink: 0
                     }}>
                       <input
                         type="checkbox"
                         checked={field.required}
                         onChange={(e) => updateField(block.id, field.id, { required: e.target.checked })}
                         disabled={loading}
+                        style={{ flexShrink: 0, width: "16px", height: "16px" }}
                       />
-                      Pflicht
+                      <span style={{ whiteSpace: "nowrap" }}>Pflicht</span>
+                    </label>
+                    <label style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                      fontSize: "0.875rem",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={field.isRepeatable || false}
+                        onChange={(e) => updateField(block.id, field.id, { isRepeatable: e.target.checked })}
+                        disabled={loading}
+                        style={{ flexShrink: 0, width: "16px", height: "16px" }}
+                      />
+                      <span style={{ whiteSpace: "nowrap" }}>Wiederholbar</span>
                     </label>
                     <button
                       type="button"

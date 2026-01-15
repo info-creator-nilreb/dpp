@@ -23,13 +23,21 @@ async function DppEditorContent({
       }
     }
 
-    // Lade DPP mit Medien
+    // Lade DPP mit Medien und Content
     const dppResponse = await fetch(`/api/app/dpp/${params.dppId}`, {
       cache: "no-store",
     })
     if (dppResponse.ok) {
       const data = await dppResponse.json()
       dpp = data.dpp
+      
+      // Füge fieldValues und fieldInstances zum DPP-Objekt hinzu, damit sie später geladen werden können
+      if (data.fieldValues || data.fieldInstances) {
+        (dpp as any)._fieldValues = data.fieldValues || {}
+        ;(dpp as any)._fieldInstances = data.fieldInstances || {}
+        console.log("[DppEditorContent] Loaded field values:", Object.keys(data.fieldValues || {}).length, "fields")
+        console.log("[DppEditorContent] Loaded field instances:", Object.keys(data.fieldInstances || {}).length, "repeatable fields")
+      }
     }
   } catch (error) {
     console.error("Error loading DPP:", error)
@@ -52,7 +60,10 @@ async function DppEditorContent({
     media: dpp.media.map((m: any) => ({
       ...m,
       uploadedAt: new Date(m.uploadedAt)
-    }))
+    })),
+    // Behalte _fieldValues und _fieldInstances
+    _fieldValues: (dpp as any)._fieldValues || {},
+    _fieldInstances: (dpp as any)._fieldInstances || {}
   }
 
   return <DppEditor dpp={normalizedDpp} isNew={false} />

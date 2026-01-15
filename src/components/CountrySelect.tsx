@@ -243,6 +243,7 @@ export default function CountrySelect({ id, label, value, onChange, required = f
   const [sortedCountries, setSortedCountries] = useState(COUNTRIES)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Finde den aktuell ausgewählten Ländernamen basierend auf dem ISO-Code
   const selectedCountry = COUNTRIES.find(c => c.code === value)
@@ -282,14 +283,25 @@ export default function CountrySelect({ id, label, value, onChange, required = f
   // Schließe Dropdown beim Klick außerhalb
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false)
         setSearchTerm("")
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+    if (isOpen) {
+      // Kleine Verzögerung, damit der Click-Event nicht sofort das Dropdown schließt
+      setTimeout(() => {
+        document.addEventListener("mousedown", handleClickOutside)
+      }, 100)
+      return () => document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isOpen])
 
   const handleSelect = (countryCode: string) => {
     onChange(countryCode) // Übergibt ISO-Code
@@ -321,7 +333,7 @@ export default function CountrySelect({ id, label, value, onChange, required = f
   }
 
   return (
-    <div style={{ marginBottom: "0", position: "relative", zIndex: 1000 }}>
+    <div style={{ marginBottom: "0", position: "relative", zIndex: 10001 }}>
       <label htmlFor={id} style={{
         display: "block",
         fontSize: "0.9rem",
@@ -331,7 +343,7 @@ export default function CountrySelect({ id, label, value, onChange, required = f
       }}>
         {label} {required && <span style={{ color: "#24c598" }}>*</span>}
       </label>
-      <div ref={containerRef} style={{ position: "relative" }}>
+      <div ref={containerRef} style={{ position: "relative", zIndex: 10001 }}>
         <input
           ref={inputRef}
           id={id}
@@ -391,20 +403,22 @@ export default function CountrySelect({ id, label, value, onChange, required = f
           </svg>
         </button>
         {isOpen && (
-          <div style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            marginTop: "0.25rem",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid #CDCDCD",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-            maxHeight: "300px",
-            overflowY: "auto",
-            zIndex: 10000
-          }}>
+          <div 
+            ref={dropdownRef}
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              marginTop: "0.25rem",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #CDCDCD",
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+              maxHeight: "300px",
+              overflowY: "auto",
+              zIndex: 10002
+            }}>
             {filteredCountries.length > 0 ? (
               filteredCountries.map((country) => (
                 <button

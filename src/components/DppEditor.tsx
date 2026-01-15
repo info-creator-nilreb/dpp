@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, Fragment } from "react"
+import React, { useState, useEffect, useCallback, Fragment } from "react"
 import { useRouter } from "next/navigation"
 import DppMediaSection from "@/components/DppMediaSection"
 import CountrySelect from "@/components/CountrySelect"
@@ -12,11 +12,16 @@ import { useCapabilities } from "@/hooks/useCapabilities"
 import { DPP_SECTIONS } from "@/lib/permissions-constants"
 import TemplateBlocksSection from "@/components/TemplateBlocksSection"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
+import SupplierInviteButton from "@/components/SupplierInviteButton"
+import SupplierInviteModal from "@/components/SupplierInviteModal"
+import ConfirmDialog from "@/components/ConfirmDialog"
 
 interface PendingFile {
   id: string
   file: File
   preview?: string
+  blockId?: string
+  fieldId?: string
 }
 
 interface DppMedia {
@@ -162,9 +167,19 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   const router = useRouter()
   const { showNotification } = useNotification()
   
+  // Debug: Log initialDpp beim ersten Render
+  console.log("[DppEditor] Component mounted with initialDpp:", {
+    id: initialDpp?.id,
+    name: initialDpp?.name,
+    hasFieldValues: !!(initialDpp as any)?._fieldValues,
+    hasFieldInstances: !!(initialDpp as any)?._fieldInstances,
+    fieldValuesCount: Object.keys((initialDpp as any)?._fieldValues || {}).length,
+    fieldInstancesCount: Object.keys((initialDpp as any)?._fieldInstances || {}).length
+  })
+  
   // State für alle Felder
   const [dpp, setDpp] = useState(initialDpp)
-  const [name, setName] = useState(initialDpp.name)
+  const [name, setName] = useState(initialDpp.name || "")
   const [description, setDescription] = useState(initialDpp.description || "")
   const [category, setCategory] = useState<string>(initialDpp.category || "")
   const [sku, setSku] = useState(initialDpp.sku || "")
@@ -187,11 +202,117 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   const [showCategoryChangeWarning, setShowCategoryChangeWarning] = useState(false)
   const [pendingCategoryChange, setPendingCategoryChange] = useState<string | null>(null)
 
+  // Update state when initialDpp prop changes (z.B. nach asynchronem Laden)
+  // WICHTIG: Dieser useEffect muss auch beim ersten Laden ausgeführt werden
+  useEffect(() => {
+    // Prüfe, ob initialDpp gültig ist
+    if (initialDpp && initialDpp.id) {
+      // Aktualisiere State immer, wenn sich die ID geändert hat ODER beim ersten Laden
+      const isFirstLoad = !dpp.id || dpp.id === "new" || dpp.id !== initialDpp.id
+      
+      if (isFirstLoad) {
+        console.log("[DppEditor] Initializing/updating state from initialDpp:", {
+          id: initialDpp.id,
+          name: initialDpp.name,
+          description: initialDpp.description,
+          hasFieldValues: !!(initialDpp as any)._fieldValues,
+          hasFieldInstances: !!(initialDpp as any)._fieldInstances
+        })
+        setDpp(initialDpp)
+        setName(initialDpp.name || "")
+        setDescription(initialDpp.description || "")
+        setCategory(initialDpp.category || "")
+        setSku(initialDpp.sku || "")
+        setGtin(initialDpp.gtin || "")
+        setBrand(initialDpp.brand || "")
+        setCountryOfOrigin(initialDpp.countryOfOrigin || "")
+        setMaterials(initialDpp.materials || "")
+        setMaterialSource(initialDpp.materialSource || "")
+        setCareInstructions(initialDpp.careInstructions || "")
+        setIsRepairable(initialDpp.isRepairable || "")
+        setSparePartsAvailable(initialDpp.sparePartsAvailable || "")
+        setLifespan(initialDpp.lifespan || "")
+        setConformityDeclaration(initialDpp.conformityDeclaration || "")
+        setDisposalInfo(initialDpp.disposalInfo || "")
+        setTakebackOffered(initialDpp.takebackOffered || "")
+        setTakebackContact(initialDpp.takebackContact || "")
+        setSecondLifeInfo(initialDpp.secondLifeInfo || "")
+        setPreviousCategory(initialDpp.category || "")
+        
+        // Lade Feldwerte aus DppContent, falls vorhanden
+        if ((initialDpp as any)._fieldValues || (initialDpp as any)._fieldInstances) {
+          console.log("[DppEditor] Loading field values from DppContent (initialDpp)")
+          if ((initialDpp as any)._fieldValues) {
+            const loadedFieldValues = (initialDpp as any)._fieldValues
+            setFieldValues(loadedFieldValues)
+            console.log("[DppEditor] Loaded field values:", Object.keys(loadedFieldValues).length, "fields")
+            console.log("[DppEditor] Field value keys:", Object.keys(loadedFieldValues))
+            console.log("[DppEditor] Field values:", loadedFieldValues)
+          }
+          if ((initialDpp as any)._fieldInstances) {
+            setFieldInstances((initialDpp as any)._fieldInstances)
+            console.log("[DppEditor] Loaded field instances:", Object.keys((initialDpp as any)._fieldInstances).length, "repeatable fields", Object.keys((initialDpp as any)._fieldInstances))
+          }
+        } else {
+          console.log("[DppEditor] No _fieldValues or _fieldInstances in initialDpp, will load from API if needed")
+          // Fallback: Lade Feldwerte direkt von der API (nur wenn DPP bereits existiert)
+          if (initialDpp.id && initialDpp.id !== "new") {
+            loadFieldValuesFromContent(initialDpp.id)
+          }
+        }
+      }
+    }
+  }, [initialDpp?.id, dpp.id]) // Reagiere auf ID-Änderung und initiales Laden
+
+  // Lade Feldwerte aus DppContent für bestehende DPPs
+  const loadFieldValuesFromContent = useCallback(async (dppId: string) => {
+    if (!dppId || dppId === "new") return
+    
+    try {
+      console.log("[DppEditor] Loading field values from API for DPP:", dppId)
+      const response = await fetch(`/api/app/dpp/${dppId}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache"
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.fieldValues) {
+          console.log("[DppEditor] Loaded field values from API:", Object.keys(data.fieldValues).length, "fields")
+          setFieldValues(data.fieldValues)
+        }
+        if (data.fieldInstances) {
+          console.log("[DppEditor] Loaded field instances from API:", Object.keys(data.fieldInstances).length, "repeatable fields")
+          setFieldInstances(data.fieldInstances)
+        }
+      }
+    } catch (error) {
+      console.error("[DppEditor] Error loading field values:", error)
+    }
+  }, [])
+
+  // Lade Feldwerte beim ersten Laden eines bestehenden DPPs
+  useEffect(() => {
+    if (dpp.id && dpp.id !== "new" && !isNew) {
+      // Prüfe, ob Werte bereits im initialDpp vorhanden sind
+      if ((initialDpp as any)._fieldValues || (initialDpp as any)._fieldInstances) {
+        // Werte wurden bereits im ersten useEffect geladen
+        return
+      }
+      // Fallback: Lade Werte direkt von der API
+      loadFieldValuesFromContent(dpp.id)
+    }
+  }, [dpp.id, isNew, initialDpp, loadFieldValuesFromContent]) // Nur einmal ausführen, wenn DPP-ID vorhanden ist
+
   // Template State
   interface TemplateBlock {
     id: string
     name: string
     order: number
+    // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert
     fields: Array<{
       id: string
       label: string
@@ -208,6 +329,23 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     blocks: TemplateBlock[]
   } | null>(null)
   const [templateLoading, setTemplateLoading] = useState(false)
+  
+  // Supplier-Config State (pro DPP/Block)
+  const [blockSupplierConfigs, setBlockSupplierConfigs] = useState<Record<string, {
+    enabled: boolean
+    mode: "input" | "declaration" | null
+    allowedRoles?: string[]
+  }>>({})
+  const [supplierConfigLoading, setSupplierConfigLoading] = useState(false)
+  
+  // Field Instances State (für wiederholbare Felder)
+  const [fieldInstances, setFieldInstances] = useState<Record<string, Array<{
+    instanceId: string
+    values: Record<string, string | string[]>
+  }>>>((initialDpp as any)?._fieldInstances || {})
+  
+  // Field Values State (für normale template-basierte Felder)
+  const [fieldValues, setFieldValues] = useState<Record<string, string | string[]>>((initialDpp as any)?._fieldValues || {})
 
   // Accordion State (Sektion 1 immer offen)
   const [section2Open, setSection2Open] = useState(false)
@@ -215,18 +353,19 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   const [section4Open, setSection4Open] = useState(false)
   const [section5Open, setSection5Open] = useState(false)
   
-  // Data Request Form State
-  const [showRequestForm, setShowRequestForm] = useState(false)
-  const [requestEmail, setRequestEmail] = useState("")
-  const [requestRole, setRequestRole] = useState("")
-  const [requestSections, setRequestSections] = useState<string[]>([])
-  const [requestMessage, setRequestMessage] = useState("")
-  const [requestLoading, setRequestLoading] = useState(false)
+  // Supplier Invite Modal State
+  const [showSupplierInviteModal, setShowSupplierInviteModal] = useState(false)
+  const [showSaveRequiredDialog, setShowSaveRequiredDialog] = useState(false)
+  const [supplierInviteLoading, setSupplierInviteLoading] = useState(false)
+  const [isAutoSaving, setIsAutoSaving] = useState(false)
   const [dataRequests, setDataRequests] = useState<Array<{
     id: string
     email: string
     partnerRole: string
-    sections: string[]
+    blockIds?: string | string[] // New template-based (kann String oder Array sein)
+    fieldInstances?: Array<{ fieldId: string; instanceId: string; label: string }> // Field-level assignments
+    supplierMode?: string // "input" | "declaration"
+    sections?: string[] // Legacy support
     status: string
     expiresAt: string
     submittedAt: string | null
@@ -275,8 +414,9 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
       try {
         if (isNew) {
           // Für neue DPPs: Template basierend auf Kategorie laden
+          // WICHTIG: no-store verwenden, um sicherzustellen, dass immer das aktuelle aktive Template geladen wird
           const response = await fetch(`/api/app/dpp/template-by-category?category=${encodeURIComponent(category)}`, {
-            cache: "force-cache" // Cache für bessere Performance
+            cache: "no-store" // Immer neueste Version laden, da Templates sich ändern können
           })
           if (cancelled) return
           
@@ -323,22 +463,84 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     }
   }, [dpp.id, category, isNew])
 
-  // Load data requests
+  // Load supplier configs for existing DPPs
   useEffect(() => {
-    if (isNew) return
+    if (isNew || !dpp.id || dpp.id === "new") return
+
+    async function loadSupplierConfigs() {
+      setSupplierConfigLoading(true)
+      try {
+        const response = await fetch(`/api/app/dpp/${dpp.id}/supplier-config`)
+        if (response.ok) {
+          const data = await response.json()
+          const configs: Record<string, {
+            enabled: boolean
+            mode: "input" | "declaration" | null
+            allowedRoles?: string[]
+          }> = {}
+          
+          if (data.configs && Array.isArray(data.configs)) {
+            data.configs.forEach((config: any) => {
+              configs[config.blockId] = {
+                enabled: config.enabled,
+                mode: config.mode || null,
+                allowedRoles: config.allowedRoles || []
+              }
+            })
+          }
+          
+          setBlockSupplierConfigs(configs)
+        }
+      } catch (error) {
+        console.error("Error loading supplier configs:", error)
+      } finally {
+        setSupplierConfigLoading(false)
+      }
+    }
+    loadSupplierConfigs()
+  }, [dpp.id, isNew])
+
+  // Globaler Check: Sicherstellen, dass body.style.overflow korrekt ist, wenn keine Modals offen sind
+  useEffect(() => {
+    // Wenn beide Modals geschlossen sind, overflow sofort zurücksetzen
+    if (!showSaveRequiredDialog && !showSupplierInviteModal) {
+      if (typeof document !== "undefined") {
+        // Sofort zurücksetzen (ohne Timeout, damit Interaktionen sofort funktionieren)
+        document.body.style.overflow = ""
+      }
+    }
+  }, [showSaveRequiredDialog, showSupplierInviteModal])
+
+  // Load data requests (auch für neue DPPs, wenn dpp.id bereits existiert)
+  useEffect(() => {
+    if (!dpp.id || dpp.id === "new") {
+      console.log("[DppEditor] loadDataRequests skipped - dpp.id:", dpp.id)
+      return
+    }
 
     async function loadDataRequests() {
       try {
-        const response = await fetch(`/api/app/dpp/${dpp.id}/data-requests`)
+        console.log("[DppEditor] Loading data requests for dpp.id:", dpp.id)
+        const response = await fetch(`/api/app/dpp/${dpp.id}/data-requests`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+          }
+        })
         if (response.ok) {
           const data = await response.json()
+          console.log("[DppEditor] Loaded data requests:", data.requests?.length || 0, data.requests)
           setDataRequests(data.requests || [])
+        } else {
+          console.error("[DppEditor] Failed to load data requests:", response.status, response.statusText)
         }
       } catch (error) {
+        console.error("[DppEditor] Error loading data requests:", error)
       }
     }
     loadDataRequests()
-  }, [dpp.id, isNew])
+  }, [dpp.id])
   
   // Warnung beim Verlassen (nur für neue DPPs ohne Speicherung)
   const [showLeaveWarning, setShowLeaveWarning] = useState(false)
@@ -527,6 +729,312 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     }
   }
 
+  // Auto-Save für Supplier-Invite (ohne Redirect)
+  const handleAutoSaveForSupplierInvite = async (): Promise<string | null> => {
+    // Minimale Validierung: name muss vorhanden sein
+    if (!name.trim()) {
+      showNotification("Bitte geben Sie einen Produktnamen ein, bevor Sie Partner einbinden können", "error")
+      return null
+    }
+
+    setIsAutoSaving(true)
+    setSaveError(null)
+    
+    try {
+      const payload = {
+        name,
+        description,
+        category,
+        sku,
+        gtin,
+        brand,
+        countryOfOrigin,
+        materials,
+        materialSource,
+        careInstructions,
+        isRepairable,
+        sparePartsAvailable,
+        lifespan,
+        conformityDeclaration,
+        disposalInfo,
+        takebackOffered,
+        takebackContact,
+        secondLifeInfo,
+        organizationId: dpp.organizationId
+      }
+      
+      const response = await fetch("/api/app/dpp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch (parseError) {
+          const errorMsg = `Fehler beim Speichern (Status: ${response.status})`
+          setSaveError(errorMsg)
+          showNotification(errorMsg, "error")
+          return null
+        }
+
+        const errorMessage = errorData.error === "NO_ORGANIZATION" 
+          ? "Sie benötigen eine Organisation. Bitte erstellen Sie zuerst eine Organisation in Ihren Kontoeinstellungen."
+          : errorData.error || "Fehler beim Speichern"
+        
+        setSaveError(errorMessage)
+        showNotification(errorMessage, "error")
+        return null
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        const errorMsg = "Fehler beim Verarbeiten der Antwort"
+        setSaveError(errorMsg)
+        showNotification(errorMsg, "error")
+        return null
+      }
+
+      if (!data?.dpp?.id) {
+        const errorMsg = "Fehler: DPP-ID fehlt in der Antwort"
+        setSaveError(errorMsg)
+        showNotification(errorMsg, "error")
+        return null
+      }
+      
+      // Erfolgreich gespeichert - Update local state mit neuer DPP-ID
+      const newDppId = data.dpp.id
+      console.log("[DppEditor] Auto-save successful, new ID:", newDppId)
+      setDpp(prev => ({ ...prev, id: newDppId, status: "DRAFT" }))
+      setLastSaved(new Date())
+      setSaveStatus("saved")
+      
+      // Speichere Supplier-Configs, falls vorhanden
+      if (Object.keys(blockSupplierConfigs).length > 0) {
+        try {
+          await Promise.all(
+            Object.entries(blockSupplierConfigs).map(([blockId, config]) =>
+              fetch(`/api/app/dpp/${newDppId}/supplier-config`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  blockId,
+                  enabled: config.enabled,
+                  mode: config.mode || "input",
+                  allowedRoles: config.allowedRoles || []
+                })
+              })
+            )
+          )
+        } catch (error) {
+          console.error("Error saving supplier configs:", error)
+        }
+      }
+      
+      // Lade data requests nach dem Auto-Save
+      try {
+        const requestsResponse = await fetch(`/api/app/dpp/${newDppId}/data-requests`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+          }
+        })
+        if (requestsResponse.ok) {
+          const requestsData = await requestsResponse.json()
+          console.log("[DppEditor] After auto-save - Loaded data requests:", requestsData.requests?.length || 0, requestsData.requests)
+          setDataRequests(requestsData.requests || [])
+        }
+      } catch (error) {
+        console.error("[DppEditor] Error loading data requests after auto-save:", error)
+      }
+
+      showNotification("DPP gespeichert. Partner können jetzt eingebunden werden.", "success")
+      return newDppId
+    } catch (error) {
+      const errorMsg = "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+      setSaveError(errorMsg)
+      showNotification(errorMsg, "error")
+      return null
+    } finally {
+      setIsAutoSaving(false)
+    }
+  }
+
+  // Globaler Check: Sicherstellen, dass body.style.overflow korrekt ist, wenn keine Modals offen sind
+  useEffect(() => {
+    // Wenn beide Modals geschlossen sind, overflow zurücksetzen
+    if (!showSaveRequiredDialog && !showSupplierInviteModal) {
+      if (typeof document !== "undefined") {
+        // Sofort zurücksetzen (ohne Timeout, damit Interaktionen sofort funktionieren)
+        document.body.style.overflow = ""
+      }
+    }
+  }, [showSaveRequiredDialog, showSupplierInviteModal])
+
+  // Handler für Supplier-Invite-Button Click
+  const handleSupplierInviteClick = () => {
+    // Sicherstellen, dass kein anderes Modal offen ist
+    if (showSaveRequiredDialog || showSupplierInviteModal) {
+      return
+    }
+
+    // Prüfe ob DPP bereits gespeichert ist
+    if (isNew || !dpp.id || dpp.id === "new") {
+      // DPP muss zuerst gespeichert werden
+      setShowSaveRequiredDialog(true)
+    } else {
+      // DPP bereits gespeichert → Modal direkt öffnen
+      setShowSupplierInviteModal(true)
+    }
+  }
+
+  // Handler für Auto-Save-Bestätigung
+  const handleConfirmAutoSave = async () => {
+    // Dialog erst schließen, wenn Auto-Save erfolgreich ist
+    // (sonst könnte der Dialog zu früh geschlossen werden und overflow bleibt hängen)
+    const newDppId = await handleAutoSaveForSupplierInvite()
+    
+    if (newDppId) {
+      // Auto-Save erfolgreich → Dialog schließen und Modal öffnen
+      setShowSaveRequiredDialog(false)
+      setShowSupplierInviteModal(true)
+    } else {
+      // Bei Fehler Dialog offen lassen, damit Benutzer es erneut versuchen kann
+      // showSaveRequiredDialog bleibt true
+    }
+  }
+
+  // Generische Funktion: Mappt Template-Feld-Keys auf DPP-Felder
+  // Unterstützt verschiedene Varianten (z.B. "produktname" -> "name", "ean" -> "gtin")
+  const mapTemplateKeyToDppField = (templateKey: string): string | null => {
+    const normalizedKey = templateKey.toLowerCase().trim()
+    
+    // Mapping von Template-Keys zu DPP-Feldnamen
+    const keyMapping: Record<string, string> = {
+      // Name-Varianten
+      "produktname": "name",
+      "name": "name",
+      "productname": "name",
+      
+      // Beschreibung
+      "beschreibung": "description",
+      "description": "description",
+      
+      // SKU
+      "sku": "sku",
+      
+      // GTIN/EAN
+      "ean": "gtin",
+      "gtin": "gtin",
+      
+      // Brand
+      "brand": "brand",
+      "marke": "brand",
+      "hersteller": "brand",
+      
+      // Country
+      "herstellungsland": "countryOfOrigin",
+      "countryoforigin": "countryOfOrigin",
+      "country": "countryOfOrigin",
+      
+      // Materials
+      "material": "materials",
+      "materials": "materials",
+      "materialien": "materials",
+      
+      // Material Source
+      "materialsource": "materialSource",
+      "materialquelle": "materialSource",
+      "datenquelle": "materialSource",
+      
+      // Care Instructions
+      "careinstructions": "careInstructions",
+      "pflegehinweise": "careInstructions",
+      "pflege": "careInstructions",
+      
+      // Repairability
+      "isrepairable": "isRepairable",
+      "reparierbarkeit": "isRepairable",
+      "reparierbar": "isRepairable",
+      
+      // Spare Parts
+      "sparepartsavailable": "sparePartsAvailable",
+      "ersatzteile": "sparePartsAvailable",
+      
+      // Lifespan
+      "lifespan": "lifespan",
+      "lebensdauer": "lifespan",
+      
+      // Conformity
+      "conformitydeclaration": "conformityDeclaration",
+      "konformiataetserklaerung": "conformityDeclaration",
+      "konformität": "conformityDeclaration",
+      
+      // Disposal
+      "disposalinfo": "disposalInfo",
+      "entsorgung": "disposalInfo",
+      
+      // Takeback
+      "takebackoffered": "takebackOffered",
+      "ruecknahme_angeboten": "takebackOffered",
+      "rücknahme": "takebackOffered",
+      
+      // Takeback Contact
+      "takebackcontact": "takebackContact",
+      "ruecknahme_kontakt": "takebackContact",
+      
+      // Second Life
+      "secondlifeinfo": "secondLifeInfo",
+      "secondlife": "secondLifeInfo",
+    }
+    
+    return keyMapping[normalizedKey] || null
+  }
+  
+  // Extrahiere DPP-Feldwerte aus fieldValues und State
+  // Priorität: fieldValues (Template-Felder) > State (direkte Felder)
+  const extractDppFieldValue = (dppFieldName: string): string => {
+    // 1. Versuche aus fieldValues zu extrahieren (durchsuche alle Template-Keys)
+    if (fieldValues) {
+      for (const [templateKey, value] of Object.entries(fieldValues)) {
+        const mappedField = mapTemplateKeyToDppField(templateKey)
+        if (mappedField === dppFieldName && value) {
+          const stringValue = Array.isArray(value) ? value.join(", ") : String(value)
+          if (stringValue.trim()) {
+            return stringValue.trim()
+          }
+        }
+      }
+    }
+    
+    // 2. Fallback auf State-Werte
+    switch (dppFieldName) {
+      case "name": return name.trim()
+      case "description": return description?.trim() || ""
+      case "sku": return sku.trim()
+      case "gtin": return gtin.trim()
+      case "brand": return brand.trim()
+      case "countryOfOrigin": return countryOfOrigin.trim()
+      case "materials": return materials?.trim() || ""
+      case "materialSource": return materialSource?.trim() || ""
+      case "careInstructions": return careInstructions?.trim() || ""
+      case "isRepairable": return isRepairable?.trim() || ""
+      case "sparePartsAvailable": return sparePartsAvailable?.trim() || ""
+      case "lifespan": return lifespan?.trim() || ""
+      case "conformityDeclaration": return conformityDeclaration?.trim() || ""
+      case "disposalInfo": return disposalInfo?.trim() || ""
+      case "takebackOffered": return takebackOffered?.trim() || ""
+      case "takebackContact": return takebackContact?.trim() || ""
+      case "secondLifeInfo": return secondLifeInfo?.trim() || ""
+      default: return ""
+    }
+  }
+
   // Speichere DPP-Daten (Draft Save)
   const handleSave = async () => {
     setSaveStatus("saving")
@@ -535,26 +1043,50 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     try {
       if (isNew) {
         // Neuer DPP: Erstellen
+        // Template-Version-Binding: Sende templateId (die Template.id wird als templateVersionId gespeichert)
+        if (!template) {
+          const errorMsg = "Kein Template geladen. Bitte wählen Sie eine Kategorie aus."
+          setSaveError(errorMsg)
+          setSaveStatus("error")
+          showNotification(errorMsg, "error")
+          return
+        }
+        
+        // Extrahiere alle DPP-Feldwerte automatisch (aus fieldValues oder State)
+        const extractedName = extractDppFieldValue("name")
+        
+        // Validierung: name muss vorhanden sein
+        if (!extractedName) {
+          const errorMsg = "Produktname ist erforderlich"
+          setSaveError(errorMsg)
+          setSaveStatus("error")
+          showNotification(errorMsg, "error")
+          return
+        }
+        
         const payload = {
-          name,
-          description,
+          name: extractedName,
+          description: extractDppFieldValue("description") || null,
           category,
-          sku,
-          gtin,
-          brand,
-          countryOfOrigin,
-          materials,
-          materialSource,
-          careInstructions,
-          isRepairable,
-          sparePartsAvailable,
-          lifespan,
-          conformityDeclaration,
-          disposalInfo,
-          takebackOffered,
-          takebackContact,
-          secondLifeInfo,
-          organizationId: dpp.organizationId
+          sku: extractDppFieldValue("sku") || null,
+          gtin: extractDppFieldValue("gtin") || null,
+          brand: extractDppFieldValue("brand") || null,
+          countryOfOrigin: extractDppFieldValue("countryOfOrigin") || null,
+          materials: extractDppFieldValue("materials") || null,
+          materialSource: extractDppFieldValue("materialSource") || null,
+          careInstructions: extractDppFieldValue("careInstructions") || null,
+          isRepairable: extractDppFieldValue("isRepairable") || null,
+          sparePartsAvailable: extractDppFieldValue("sparePartsAvailable") || null,
+          lifespan: extractDppFieldValue("lifespan") || null,
+          conformityDeclaration: extractDppFieldValue("conformityDeclaration") || null,
+          disposalInfo: extractDppFieldValue("disposalInfo") || null,
+          takebackOffered: extractDppFieldValue("takebackOffered") || null,
+          takebackContact: extractDppFieldValue("takebackContact") || null,
+          secondLifeInfo: extractDppFieldValue("secondLifeInfo") || null,
+          organizationId: dpp.organizationId,
+          templateId: template.id, // Template-Version-Binding: Speichere Template-ID
+          fieldValues: fieldValues, // Template-basierte Feldwerte mit übergeben
+          fieldInstances: fieldInstances // Wiederholbare Feld-Instanzen mit übergeben
         }
         
         const response = await fetch("/api/app/dpp", {
@@ -606,7 +1138,122 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         
         // Erfolgreich gespeichert - Update local state mit neuer DPP-ID
         const newDppId = data.dpp.id
+        console.log("[DppEditor] DPP saved successfully, new ID:", newDppId)
         setDpp(prev => ({ ...prev, id: newDppId, status: "DRAFT" }))
+        
+        // Speichere template-basierte Feldwerte in dppContent
+        // WICHTIG: Auch wenn fieldValues leer ist, müssen die Blöcke initialisiert werden,
+        // damit sie beim nächsten Laden vorhanden sind
+        try {
+          console.log("[DppEditor] Saving content for new DPP with fieldValues:", Object.keys(fieldValues).length, "fields:", Object.keys(fieldValues))
+          console.log("[DppEditor] New DPP - Field values detail:", JSON.stringify(fieldValues, null, 2))
+          console.log("[DppEditor] New DPP - Field instances:", Object.keys(fieldInstances).length, "repeatable fields:", Object.keys(fieldInstances))
+          
+          const contentPayload = {
+            fieldValues: fieldValues || {},
+            fieldInstances: fieldInstances || {}
+          }
+          console.log("[DppEditor] New DPP - Content payload:", JSON.stringify(contentPayload, null, 2))
+          
+          const contentResponse = await fetch(`/api/app/dpp/${newDppId}/content`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(contentPayload)
+          })
+          
+          console.log("[DppEditor] New DPP - Content API response status:", contentResponse.status)
+          
+          if (!contentResponse.ok) {
+            const errorText = await contentResponse.text()
+            console.error("[DppEditor] Error saving content for new DPP:", errorText)
+            // Fehler beim Speichern von Content ist nicht kritisch, benachrichtige aber
+            showNotification("DPP gespeichert, aber einige Feldwerte konnten nicht gespeichert werden", "warning")
+          } else {
+            const responseData = await contentResponse.json()
+            console.log("[DppEditor] Content saved successfully for new DPP, response:", responseData)
+          }
+        } catch (contentError) {
+          console.error("[DppEditor] Error saving content for new DPP:", contentError)
+          // Fehler beim Speichern von Content ist nicht kritisch
+        }
+        
+        // Lade zwischengespeicherte Dateien hoch (inkl. Template-Feld-Dateien)
+        if (pendingFiles.length > 0) {
+          try {
+            console.log("[DppEditor] Uploading", pendingFiles.length, "pending files after save")
+            const uploadPromises = pendingFiles.map(async (pendingFile) => {
+              const formData = new FormData()
+              formData.append("file", pendingFile.file)
+              // Wenn blockId und fieldId vorhanden, mit übergeben
+              if (pendingFile.blockId) {
+                formData.append("blockId", pendingFile.blockId)
+              }
+              if (pendingFile.fieldId) {
+                formData.append("fieldId", pendingFile.fieldId)
+              }
+              
+              const uploadResponse = await fetch(`/api/app/dpp/${newDppId}/media`, {
+                method: "POST",
+                body: formData
+              })
+              
+              if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json()
+                throw new Error(errorData.error || "Fehler beim Hochladen")
+              }
+            })
+            
+            await Promise.all(uploadPromises)
+            setPendingFiles([])
+            // Lade Medien neu, um hochgeladene Dateien anzuzeigen
+            await refreshMedia()
+            console.log("[DppEditor] All pending files uploaded successfully")
+          } catch (uploadError: any) {
+            console.error("[DppEditor] Error uploading pending files:", uploadError)
+            showNotification("DPP gespeichert, aber einige Dateien konnten nicht hochgeladen werden", "warning")
+          }
+        }
+        
+        // Speichere Supplier-Configs, falls vorhanden (auch für neue DPPs)
+        if (Object.keys(blockSupplierConfigs).length > 0) {
+          try {
+            await Promise.all(
+              Object.entries(blockSupplierConfigs).map(([blockId, config]) =>
+                fetch(`/api/app/dpp/${newDppId}/supplier-config`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    blockId,
+                    enabled: config.enabled,
+                    mode: config.mode || "input",
+                    allowedRoles: config.allowedRoles || []
+                  })
+                })
+              )
+            )
+          } catch (error) {
+            // Fehler beim Speichern der Configs ist nicht kritisch
+            console.error("Error saving supplier configs:", error)
+          }
+        }
+        
+        // Lade data requests nach dem Speichern (wichtig für neue DPPs)
+        try {
+          const requestsResponse = await fetch(`/api/app/dpp/${newDppId}/data-requests`, {
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache"
+            }
+          })
+          if (requestsResponse.ok) {
+            const requestsData = await requestsResponse.json()
+            console.log("[DppEditor] After save - Loaded data requests:", requestsData.requests?.length || 0, requestsData.requests)
+            setDataRequests(requestsData.requests || [])
+          }
+        } catch (error) {
+          console.error("[DppEditor] Error loading data requests after save:", error)
+        }
         
         // NOTE: Media uploads are now handled as first-class field types within blocks.
         // No implicit media upload at the end of save. Media fields in template blocks
@@ -647,6 +1294,42 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         })
 
         if (response.ok) {
+          // Speichere template-basierte Feldwerte in dppContent
+          // WICHTIG: Auch wenn fieldValues leer ist, müssen die Blöcke initialisiert werden,
+          // damit sie beim nächsten Laden vorhanden sind
+          try {
+            console.log("[DppEditor] Saving content with fieldValues:", Object.keys(fieldValues).length, "fields:", Object.keys(fieldValues))
+            console.log("[DppEditor] Field values detail:", JSON.stringify(fieldValues, null, 2))
+            console.log("[DppEditor] Field instances:", Object.keys(fieldInstances).length, "repeatable fields:", Object.keys(fieldInstances))
+            
+            const contentPayload = {
+              fieldValues: fieldValues || {},
+              fieldInstances: fieldInstances || {}
+            }
+            console.log("[DppEditor] Content payload:", JSON.stringify(contentPayload, null, 2))
+            
+            const contentResponse = await fetch(`/api/app/dpp/${dpp.id}/content`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(contentPayload)
+            })
+            
+            console.log("[DppEditor] Content API response status:", contentResponse.status)
+            
+            if (!contentResponse.ok) {
+              const errorText = await contentResponse.text()
+              console.error("[DppEditor] Error saving content:", errorText)
+              // Fehler beim Speichern von Content ist nicht kritisch, benachrichtige aber
+              showNotification("DPP gespeichert, aber einige Feldwerte konnten nicht gespeichert werden", "warning")
+            } else {
+              const responseData = await contentResponse.json()
+              console.log("[DppEditor] Content saved successfully, response:", responseData)
+            }
+          } catch (contentError) {
+            console.error("[DppEditor] Error saving content:", contentError)
+            // Fehler beim Speichern von Content ist nicht kritisch
+          }
+          
           // Erfolgreich gespeichert
           setLastSaved(new Date())
           setSaveStatus("saved")
@@ -675,8 +1358,18 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
 
   // Veröffentliche DPP als neue Version
   const handlePublish = async () => {
-    if (!name.trim()) {
+    // Verwende generische Extraktion auch für Publishing
+    const extractedName = extractDppFieldValue("name")
+    const extractedSku = extractDppFieldValue("sku")
+    
+    // Validierung: name und sku müssen vorhanden sein
+    if (!extractedName) {
       showNotification("Produktname ist erforderlich für die Veröffentlichung", "error")
+      return
+    }
+    
+    if (!extractedSku) {
+      showNotification("SKU / Interne ID ist erforderlich für die Veröffentlichung", "error")
       return
     }
 
@@ -688,29 +1381,38 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
 
       // Wenn neu: Erst erstellen, dann veröffentlichen
       if (isNew) {
+        if (!template) {
+          const errorMsg = "Kein Template geladen. Bitte wählen Sie eine Kategorie aus."
+          setSaveError(errorMsg)
+          setSaveStatus("error")
+          showNotification(errorMsg, "error")
+          return
+        }
+        
         const createResponse = await fetch("/api/app/dpp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name,
-            description,
+            name: extractedName,
+            description: extractDppFieldValue("description") || null,
             category,
-            sku,
-            gtin,
-            brand,
-            countryOfOrigin,
-            materials,
-            materialSource,
-            careInstructions,
-            isRepairable,
-            sparePartsAvailable,
-            lifespan,
-            conformityDeclaration,
-            disposalInfo,
-            takebackOffered,
-            takebackContact,
-            secondLifeInfo,
-            organizationId: dpp.organizationId
+            sku: extractedSku,
+            gtin: extractDppFieldValue("gtin") || null,
+            brand: extractDppFieldValue("brand") || null,
+            countryOfOrigin: extractDppFieldValue("countryOfOrigin") || null,
+            materials: extractDppFieldValue("materials") || null,
+            materialSource: extractDppFieldValue("materialSource") || null,
+            careInstructions: extractDppFieldValue("careInstructions") || null,
+            isRepairable: extractDppFieldValue("isRepairable") || null,
+            sparePartsAvailable: extractDppFieldValue("sparePartsAvailable") || null,
+            lifespan: extractDppFieldValue("lifespan") || null,
+            conformityDeclaration: extractDppFieldValue("conformityDeclaration") || null,
+            disposalInfo: extractDppFieldValue("disposalInfo") || null,
+            takebackOffered: extractDppFieldValue("takebackOffered") || null,
+            takebackContact: extractDppFieldValue("takebackContact") || null,
+            secondLifeInfo: extractDppFieldValue("secondLifeInfo") || null,
+            organizationId: dpp.organizationId,
+            templateId: template.id
           })
         })
 
@@ -749,28 +1451,29 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         }
       } else {
         // Bestehender DPP: Erst speichern
+        // Verwende auch hier die generische Extraktion
         const saveResponse = await fetch(`/api/app/dpp/${dpp.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name,
-            description,
+            name: extractDppFieldValue("name"),
+            description: extractDppFieldValue("description") || null,
             category,
-            sku,
-            gtin,
-            brand,
-            countryOfOrigin,
-            materials,
-            materialSource,
-            careInstructions,
-            isRepairable,
-            sparePartsAvailable,
-            lifespan,
-            conformityDeclaration,
-            disposalInfo,
-            takebackOffered,
-            takebackContact,
-            secondLifeInfo
+            sku: extractDppFieldValue("sku") || null,
+            gtin: extractDppFieldValue("gtin") || null,
+            brand: extractDppFieldValue("brand") || null,
+            countryOfOrigin: extractDppFieldValue("countryOfOrigin") || null,
+            materials: extractDppFieldValue("materials") || null,
+            materialSource: extractDppFieldValue("materialSource") || null,
+            careInstructions: extractDppFieldValue("careInstructions") || null,
+            isRepairable: extractDppFieldValue("isRepairable") || null,
+            sparePartsAvailable: extractDppFieldValue("sparePartsAvailable") || null,
+            lifespan: extractDppFieldValue("lifespan") || null,
+            conformityDeclaration: extractDppFieldValue("conformityDeclaration") || null,
+            disposalInfo: extractDppFieldValue("disposalInfo") || null,
+            takebackOffered: extractDppFieldValue("takebackOffered") || null,
+            takebackContact: extractDppFieldValue("takebackContact") || null,
+            secondLifeInfo: extractDppFieldValue("secondLifeInfo") || null
           })
         })
 
@@ -895,12 +1598,21 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     return labels[section] || section
   }
 
-  // Helper: Determine status badge for materials section
+  // Helper: Determine status badge for materials section (updated for blockIds)
   const getMaterialsSectionStatusBadge = (): React.ReactNode | undefined => {
-    const materialsRequests = dataRequests.filter(req => 
-      req.sections.includes(DPP_SECTIONS.MATERIALS) || 
+    // Filter requests by blockIds or legacy sections
+    const materialsRequests = dataRequests.filter(req => {
+      if (req.blockIds && req.blockIds.length > 0) {
+        // New template-based: Check if any supplier-enabled block is requested
+        return req.blockIds.length > 0
+      }
+      // Legacy sections-based: Check for materials sections
+      if (req.sections && req.sections.length > 0) {
+        return req.sections.includes(DPP_SECTIONS.MATERIALS) || 
       req.sections.includes(DPP_SECTIONS.MATERIAL_SOURCE)
-    )
+      }
+      return false
+    })
     
     if (materialsRequests.length === 0) return undefined
 
@@ -941,10 +1653,17 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   }
 
   // Helper: Check if a field is requested (and should be read-only)
+  // Updated for blockIds-based requests (legacy sections support for backward compatibility)
   const isFieldRequested = (fieldSection: string): boolean => {
-    return dataRequests.some(req => 
-      req.status === "pending" && req.sections.includes(fieldSection)
-    )
+    return dataRequests.some(req => {
+      if (req.status !== "pending") return false
+      // New template-based: blockIds are handled at block level, not field level
+      // Legacy sections-based: Check if field's section is requested
+      if (req.sections && req.sections.length > 0) {
+        return req.sections.includes(fieldSection)
+      }
+      return false
+    })
   }
 
   return (
@@ -961,10 +1680,12 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
 
       {/* Trial Banner */}
       {!isNew && isTrial && subscription?.trialExpiresAt && (
-        <TrialBanner
-          organizationId={dpp.organizationId}
-          trialEndDate={subscription.trialExpiresAt}
-        />
+        <div style={{ marginBottom: "20px" }}>
+          <TrialBanner
+            organizationId={dpp.organizationId}
+            trialEndDate={subscription.trialExpiresAt}
+          />
+        </div>
       )}
 
       {/* Kategorie-Auswahl (immer sichtbar, für Template-Auswahl benötigt) */}
@@ -975,33 +1696,33 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         border: "1px solid #CDCDCD",
         marginBottom: "1.5rem"
       }}>
-        <SelectField
-          id="dpp-category"
-          label="Produktkategorie"
-          value={category}
-          onChange={(e) => {
-            const newCategory = e.target.value
-            
-            // ESPR: Kategorie ist unveränderbar ab Veröffentlichung
-            if (dpp.status === "PUBLISHED") {
-              return // Ignoriere Änderungsversuch
+          <SelectField
+            id="dpp-category"
+            label="Produktkategorie"
+            value={category}
+            onChange={(e) => {
+              const newCategory = e.target.value
+              
+              // ESPR: Kategorie ist unveränderbar ab Veröffentlichung
+              if (dpp.status === "PUBLISHED") {
+                return // Ignoriere Änderungsversuch
+              }
+              
+              // Im Draft: Warnung beim Kategorienwechsel
+              if (!isNew && previousCategory && newCategory !== previousCategory) {
+                setPendingCategoryChange(newCategory)
+                setShowCategoryChangeWarning(true)
+              } else {
+                handleCategoryChange(newCategory)
+              }
+            }}
+            required
+            disabled={
+              dpp.status === "PUBLISHED" || // ESPR: Unveränderbar nach Veröffentlichung
+              (!isNew && availableCategories.length === 0)
             }
-            
-            // Im Draft: Warnung beim Kategorienwechsel
-            if (!isNew && previousCategory && newCategory !== previousCategory) {
-              setPendingCategoryChange(newCategory)
-              setShowCategoryChangeWarning(true)
-            } else {
-              handleCategoryChange(newCategory)
-            }
-          }}
-          required
-          disabled={
-            dpp.status === "PUBLISHED" || // ESPR: Unveränderbar nach Veröffentlichung
-            (!isNew && availableCategories.length === 0)
-          }
-          options={availableCategories}
-        />
+            options={availableCategories}
+          />
           {dpp.status === "PUBLISHED" && (
             <p style={{
               fontSize: "0.75rem",
@@ -1013,78 +1734,106 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
             </p>
           )}
         
-          {/* Warnung beim Kategorienwechsel */}
-          {showCategoryChangeWarning && (
-            <div style={{
-              marginTop: "1rem",
-              padding: "1rem",
-              backgroundColor: "#FFF5F5",
-              border: "1px solid #24c598",
-              borderRadius: "8px"
+        {/* Warnung beim Kategorienwechsel */}
+        {showCategoryChangeWarning && (
+          <div style={{
+            marginTop: "1rem",
+            padding: "1rem",
+            backgroundColor: "#FFF5F5",
+            border: "1px solid #24c598",
+            borderRadius: "8px"
+          }}>
+            <p style={{
+              fontSize: "0.95rem",
+              color: "#0A0A0A",
+              marginBottom: "1rem",
+              fontWeight: "600"
             }}>
-              <p style={{
-                fontSize: "0.95rem",
-                color: "#0A0A0A",
-                marginBottom: "1rem",
-                fontWeight: "600"
-              }}>
-                ⚠️ Kategorienwechsel bestätigen
-              </p>
-              <p style={{
-                fontSize: "0.875rem",
-                color: "#7A7A7A",
-                marginBottom: "1rem"
-              }}>
-                Beim Wechsel der Kategorie können bestehende Eingaben verloren gehen, da ein anderes Template angewendet wird.
-              </p>
-              <div style={{
-                display: "flex",
-                gap: "0.75rem"
-              }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleCategoryChange(pendingCategoryChange!)
-                    setShowCategoryChangeWarning(false)
-                    setPendingCategoryChange(null)
-                  }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    backgroundColor: "#24c598",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  Kategorienwechsel bestätigen
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCategory(previousCategory) // Zurücksetzen
-                    setShowCategoryChangeWarning(false)
-                    setPendingCategoryChange(null)
-                  }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    backgroundColor: "#F5F5F5",
-                    color: "#0A0A0A",
-                    border: "1px solid #CDCDCD",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  Abbrechen
-                </button>
-              </div>
+              ⚠️ Kategorienwechsel bestätigen
+            </p>
+            <p style={{
+              fontSize: "0.875rem",
+              color: "#7A7A7A",
+              marginBottom: "1rem"
+            }}>
+              Beim Wechsel der Kategorie können bestehende Eingaben verloren gehen, da ein anderes Template angewendet wird.
+            </p>
+            <div style={{
+              display: "flex",
+              gap: "0.75rem"
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  handleCategoryChange(pendingCategoryChange!)
+                  setShowCategoryChangeWarning(false)
+                  setPendingCategoryChange(null)
+                }}
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "#24c598",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                Kategorienwechsel bestätigen
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCategory(previousCategory) // Zurücksetzen
+                  setShowCategoryChangeWarning(false)
+                  setPendingCategoryChange(null)
+                }}
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "#F5F5F5",
+                  color: "#0A0A0A",
+                  border: "1px solid #CDCDCD",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                Abbrechen
+              </button>
             </div>
+          </div>
           )}
-      </div>
+        </div>
+
+      {/* Globaler Lieferanten-Button */}
+      {template && !templateLoading && (
+        <SupplierInviteButton
+          onClick={handleSupplierInviteClick}
+          supplierEnabledBlocksCount={template.blocks.filter(
+            block => block.order > 0 && blockSupplierConfigs[block.id]?.enabled === true
+          ).length}
+          existingInvitesCount={dataRequests.length}
+        />
+      )}
+
+      {/* Save-Required Dialog für Supplier-Invite */}
+      <ConfirmDialog
+        isOpen={showSaveRequiredDialog}
+        title="DPP muss zuerst gespeichert werden"
+        message="Um Partner einzubinden, muss der DPP zuerst als Entwurf gespeichert werden. Möchten Sie den DPP jetzt speichern?"
+        confirmLabel={isAutoSaving ? "Wird gespeichert..." : "Jetzt speichern"}
+        cancelLabel="Abbrechen"
+        onConfirm={handleConfirmAutoSave}
+        onCancel={() => {
+          if (!isAutoSaving) {
+            setShowSaveRequiredDialog(false)
+          }
+        }}
+        variant="default"
+        disabled={isAutoSaving}
+      />
 
       {/* Template-Blöcke (dynamisch basierend auf Template) */}
       {template && !templateLoading && (
@@ -1093,12 +1842,127 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           dppId={dpp.id && dpp.id !== "new" ? dpp.id : null}
           media={dpp.media}
           onMediaChange={refreshMedia}
+          blockSupplierConfigs={blockSupplierConfigs}
+          fieldInstances={fieldInstances}
+          onFieldInstancesChange={(fieldKey, instances) => {
+            setFieldInstances(prev => ({
+              ...prev,
+              [fieldKey]: instances
+            }))
+            // TODO: Speichere Instanzen in DppContent
+          }}
+          fieldValues={fieldValues}
+          onFieldValueChange={(templateKey, value) => {
+            // WICHTIG: fieldKey ist der Template-Feld-Key (kann deutsch oder englisch sein)
+            // Wir speichern den Wert mit dem Template-Key
+            // Für Kompatibilität speichern wir auch den englischen Key, falls Mapping existiert
+            
+            // Mapping von Template-Keys zu englischen Keys (für Fallback-Mechanismus)
+            const englishKeyMapping: Record<string, string> = {
+              // Alte deutsche Keys → englische Keys
+              "produktname": "name",
+              "beschreibung": "description",
+              "herstellungsland": "countryOfOrigin",
+              "ean": "gtin",
+              // Neue englische Keys bleiben gleich
+              "name": "name",
+              "description": "description",
+              "countryOfOrigin": "countryOfOrigin",
+              "gtin": "gtin",
+              "sku": "sku",
+              "brand": "brand"
+            }
+            
+            const englishKey = englishKeyMapping[templateKey.toLowerCase()] || templateKey
+            
+            setFieldValues(prev => {
+              // Speichere mit Template-Key (für Content-API)
+              const updated = {
+                ...prev,
+                [templateKey]: value
+              }
+              
+              // Speichere auch mit englischem Key (für Fallback-Mechanismus und Konsistenz)
+              if (englishKey !== templateKey) {
+                updated[englishKey] = value
+              }
+              
+              console.log("[DppEditor] Field value updated in state:", templateKey, "=", value, "| also saved as:", englishKey !== templateKey ? englishKey : "same")
+              console.log("[DppEditor] Updated fieldValues keys:", Object.keys(updated))
+              
+              return updated
+            })
+          }}
+          onEditSupplierConfig={(blockId) => {
+            // Öffne Modal für Bearbeitung/Anzeige (Block-spezifisch)
+            // TODO: Block-Vorselektion im Modal implementieren
+            setShowSupplierInviteModal(true)
+          }}
+          pendingFiles={pendingFiles}
+          onPendingFileAdd={(pendingFile) => {
+            setPendingFiles(prev => [...prev, pendingFile])
+          }}
+          onPendingFileRemove={(fileId) => {
+            setPendingFiles(prev => prev.filter(pf => pf.id !== fileId))
+          }}
+          onSupplierConfigUpdate={async (blockId, enabled, mode) => {
+            // Für neue DPPs: Config im State speichern, wird beim Speichern übernommen
+            if (isNew || !dpp.id || dpp.id === "new") {
+              setBlockSupplierConfigs(prev => ({
+                ...prev,
+                [blockId]: {
+                  enabled,
+                  mode: mode || "input",
+                  allowedRoles: []
+                }
+              }))
+              showNotification(
+                enabled ? "Verantwortung zugewiesen (wird beim Speichern übernommen)" : "Verantwortung entfernt",
+                "success"
+              )
+              return
+            }
+
+            try {
+              const response = await fetch(`/api/app/dpp/${dpp.id}/supplier-config`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  blockId,
+                  enabled,
+                  mode: mode || "input",
+                  allowedRoles: []
+                })
+              })
+
+              if (response.ok) {
+                // API gibt { success: true } zurück, verwende die gesendeten Werte
+                setBlockSupplierConfigs(prev => ({
+                  ...prev,
+                  [blockId]: {
+                    enabled,
+                    mode: mode || "input",
+                    allowedRoles: []
+                  }
+                }))
+                showNotification(
+                  enabled ? "Verantwortung zugewiesen" : "Verantwortung entfernt",
+                  "success"
+                )
+              } else {
+                const errorData = await response.json()
+                showNotification(errorData.error || "Fehler beim Aktualisieren", "error")
+              }
+            } catch (error: any) {
+              showNotification(error.message || "Fehler beim Aktualisieren", "error")
+            }
+          }}
         />
       )}
 
       {/* Hinweis wenn gar kein Template vorhanden (nur wenn wirklich keine Templates existieren) */}
       {!template && !templateLoading && category && propCategories && propCategories.length === 0 && (
-        <div style={{
+          <div style={{
           backgroundColor: "#FFFFFF",
           padding: "clamp(2rem, 5vw, 4rem)",
           borderRadius: "12px",
@@ -1132,16 +1996,16 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
 
       {/* Lade-Zustand */}
       {templateLoading && (
-        <div style={{
-          backgroundColor: "#FFFFFF",
+      <div style={{
+        backgroundColor: "#FFFFFF",
           padding: "clamp(2rem, 5vw, 4rem)",
-          borderRadius: "12px",
-          border: "1px solid #CDCDCD",
+        borderRadius: "12px",
+        border: "1px solid #CDCDCD",
           textAlign: "center",
-          marginBottom: "2rem"
-        }}>
-          <LoadingSpinner message="Vorlage wird geladen..." />
-        </div>
+        marginBottom: "2rem"
+      }}>
+          <LoadingSpinner message={isNew ? "Vorlage wird geladen..." : "Digitaler Produktpass wird geladen..."} />
+      </div>
       )}
 
       {/* Alte feste Sektionen - ENTFERNT: Nur Templates bilden die Basis
@@ -1156,22 +2020,23 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
       Falls benötigt, können sie aus der Git-Historie wiederhergestellt werden.
       */}
 
-      {/* Bottom padding für Sticky Save Bar */}
-      <div style={{ height: "120px" }} />
+      {/* Bottom padding für Sticky Save Bar + Floating Control */}
+      {/* Save Bar: ~140px + Floating Button: ~80px (mit Badge) + Extra: 20px = 240px */}
+      <div style={{ height: "180px" }} />
     </div>
 
     {/* Sticky Save Bar - nur anzeigen wenn Vorlage geladen ist */}
     {!templateLoading && (template || !isNew) && (
-      <StickySaveBar
-        status={saveStatus}
-        lastSaved={lastSaved}
-        onSave={handleSave}
-        onPublish={handlePublish}
-        isNew={isNew}
-        canPublish={!!name.trim()}
-        subscriptionCanPublish={subscriptionCanPublish}
-        error={saveError}
-      />
+    <StickySaveBar
+      status={saveStatus}
+      lastSaved={lastSaved}
+      onSave={handleSave}
+      onPublish={handlePublish}
+      isNew={isNew}
+      canPublish={!!name.trim()}
+      subscriptionCanPublish={subscriptionCanPublish}
+      error={saveError}
+    />
     )}
     
     {/* Warnung beim Verlassen (nur für neue DPPs) */}
@@ -1264,6 +2129,149 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         </div>
       </div>
     )}
+
+    {/* Lieferant einladen Modal */}
+    {/* Supplier Invite Modal */}
+    {template && (
+      <SupplierInviteModal
+        isOpen={showSupplierInviteModal}
+        onClose={() => setShowSupplierInviteModal(false)}
+        template={template}
+        dppId={dpp.id && dpp.id !== "new" ? dpp.id : null}
+        blockSupplierConfigs={blockSupplierConfigs}
+        existingInvites={(() => {
+          const mapped = dataRequests.map(req => {
+            let blockIdsArray: string[] | undefined = undefined
+            if (req.blockIds) {
+              if (Array.isArray(req.blockIds)) {
+                blockIdsArray = req.blockIds
+              } else if (typeof req.blockIds === 'string') {
+                blockIdsArray = req.blockIds.split(",")
+              }
+            }
+            return {
+              id: req.id,
+              email: req.email,
+              partnerRole: req.partnerRole || "Other",
+              blockIds: blockIdsArray,
+              fieldInstances: req.fieldInstances || undefined,
+              supplierMode: (req as any).supplierMode || undefined,
+              status: req.status
+            }
+          })
+          console.log("[DppEditor] Mapping existingInvites - dpp.id:", dpp.id, "dataRequests.length:", dataRequests.length, "mapped.length:", mapped.length)
+          return mapped
+        })()}
+        onSubmit={async (invite) => {
+          if (!dpp.id || dpp.id === "new") {
+            showNotification("Bitte speichern Sie den DPP zuerst, um Partner einbinden zu können", "error")
+            return
+          }
+
+          setSupplierInviteLoading(true)
+          try {
+            const response = await fetch(`/api/app/dpp/${dpp.id}/data-requests`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: invite.email,
+                partnerRole: invite.role || "Other",
+                mode: invite.mode || "contribute", // "contribute" = beisteuern, "review" = prüfen & bestätigen
+                blockIds: invite.selectedBlocks,
+                fieldInstances: invite.selectedFieldInstances,
+                message: invite.message || null
+              })
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+              throw new Error(data.error || "Fehler beim Erstellen der Einladung")
+            }
+
+            // Multi-Invite-Flow: Modal bleibt offen, Notification wird im Modal angezeigt
+            // Notification wird bereits im Modal angezeigt, hier nur für Fallback
+            
+            // Reload data requests für aktualisierte Liste (mit no-cache für neueste Daten)
+            const requestsResponse = await fetch(`/api/app/dpp/${dpp.id}/data-requests`, {
+              cache: "no-store",
+              headers: {
+                "Cache-Control": "no-cache"
+              }
+            })
+            if (requestsResponse.ok) {
+              const requestsData = await requestsResponse.json()
+              console.log("[DppEditor] Reloaded data requests:", requestsData.requests?.length || 0, requestsData.requests)
+              setDataRequests(requestsData.requests || [])
+            }
+          } catch (error: any) {
+            showNotification(error.message || "Fehler beim Erstellen der Einladung", "error")
+          } finally {
+            setSupplierInviteLoading(false)
+          }
+        }}
+        onInviteSuccess={() => {
+          // Reload data requests nach erfolgreicher Einladung (mit no-cache für neueste Daten)
+          if (dpp.id && dpp.id !== "new") {
+            fetch(`/api/app/dpp/${dpp.id}/data-requests`, {
+              cache: "no-store",
+              headers: {
+                "Cache-Control": "no-cache"
+              }
+            })
+              .then(res => res.json())
+              .then(data => {
+                console.log("[DppEditor] onInviteSuccess - Reloaded data requests:", data.requests?.length || 0, data.requests)
+                setDataRequests(data.requests || [])
+              })
+              .catch((err) => {
+                console.error("[DppEditor] Error reloading data requests:", err)
+              })
+          }
+        }}
+        onRemoveInvite={async (inviteId: string) => {
+          if (!dpp.id || dpp.id === "new") {
+            showNotification("Bitte speichern Sie den DPP zuerst", "error")
+            return
+          }
+
+          setSupplierInviteLoading(true)
+          try {
+            const response = await fetch(`/api/app/dpp/${dpp.id}/data-requests?requestId=${inviteId}`, {
+              method: "DELETE"
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+              throw new Error(data.error || "Fehler beim Entfernen des Beteiligten")
+            }
+
+            showNotification("Beteiligter erfolgreich entfernt", "success")
+
+            // Reload data requests (mit no-cache für neueste Daten)
+            const requestsResponse = await fetch(`/api/app/dpp/${dpp.id}/data-requests`, {
+              cache: "no-store",
+              headers: {
+                "Cache-Control": "no-cache"
+              }
+            })
+            if (requestsResponse.ok) {
+              const requestsData = await requestsResponse.json()
+              console.log("[DppEditor] onRemoveInvite - Reloaded data requests:", requestsData.requests?.length || 0, requestsData.requests)
+              setDataRequests(requestsData.requests || [])
+            }
+          } catch (error: any) {
+            showNotification(error.message || "Fehler beim Entfernen des Beteiligten", "error")
+          } finally {
+            setSupplierInviteLoading(false)
+          }
+        }}
+        loading={supplierInviteLoading}
+        fieldInstances={fieldInstances}
+      />
+    )}
+
     </>
   )
 }

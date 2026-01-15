@@ -23,7 +23,7 @@ export default function Notification({ message, type = "success", onClose, durat
     return () => clearTimeout(timer)
   }, [onClose, duration])
 
-  const bgColor = type === "success" ? "#00A651" : type === "error" ? "#24c598" : "#007BFF"
+  const bgColor = type === "success" ? "#00A651" : type === "error" ? "#F87171" : "#007BFF"
   
   return (
     <div

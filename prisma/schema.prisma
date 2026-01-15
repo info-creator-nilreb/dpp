@@ -139,6 +139,9 @@ model Dpp {
   status                String          @default("DRAFT") // DRAFT | PUBLISHED | DEPRECATED
   supersedesDppId       String? // ID des DPPs, der durch diesen DPP ersetzt wurde (für Fehlklassifikationen)
   organizationId        String
+  // Template-Version-Binding (immutable nach Erstellung)
+  templateId            String? // Template logical identifier (e.g. category-based)
+  templateVersionId     String? // Template ID (specific version identifier - the actual Template.id)
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   media                 DppMedia[]
@@ -146,9 +149,28 @@ model Dpp {
   versions              DppVersion[]
   content               DppContent[]
   contributorTokens     ContributorToken[]
+  blockSupplierConfigs DppBlockSupplierConfig[]
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  @@index([templateId])
+  @@index([templateVersionId])
   @@map("dpps")
+}
+
+model DppBlockSupplierConfig {
+  id            String   @id @default(cuid())
+  dppId         String
+  dpp           Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  blockId       String   // TemplateBlock ID (Referenz, keine Foreign Key da TemplateBlock in anderer DB-Struktur)
+  enabled       Boolean  @default(false)
+  mode          String?  // "input" | "declaration"
+  allowedRoles  Json?    // Array von Rollen (optional, als JSON gespeichert)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([dppId, blockId])
+  @@index([dppId])
+  @@map("dpp_block_supplier_configs")
 }
 
 model DppMedia {
@@ -224,15 +246,17 @@ model ContributorToken {
   dpp          Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
   email        String
   partnerRole  String // Material supplier | Manufacturer | Processor | Recycler | Other
-  sections     String // Comma-separated list of allowed sections
+  sections     String? // DEPRECATED: Comma-separated list of allowed sections (legacy, use blockIds instead) - nullable für Backward Compatibility
+  blockIds     String? // Comma-separated list of allowed TemplateBlock IDs (new template-based approach)
+  supplierMode String? // "input" | "declaration" - how supplier should interact with fields
   message      String? // Optional message from DPP owner
-  status       String   @default("pending") // pending | submitted | expired
+  status       String   @default("pending") // pending | submitted | expired | confirmed
   expiresAt    DateTime
   submittedAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   requestedBy  String? // User ID who created the request
-  submittedData Json? // Submitted data as JSON
+  submittedData Json? // Submitted data as JSON (template-based field values)
 
   @@index([token])
   @@index([dppId])
@@ -438,14 +462,15 @@ model Template {
 }
 
 model TemplateBlock {
-  id         String          @id @default(cuid())
-  templateId String
-  name       String
-  order      Int             @default(0)
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  template   Template        @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  fields     TemplateField[]
+  id            String          @id @default(cuid())
+  templateId    String
+  name          String
+  order         Int             @default(0)
+  // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert, nicht im Template
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  template      Template        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fields        TemplateField[]
 
   @@index([templateId])
   @@index([templateId, order])
@@ -462,6 +487,7 @@ model TemplateField {
   required            Boolean       @default(false)
   config              String?
   order               Int           @default(0)
+  isRepeatable        Boolean       @default(false) // Für wiederholbare Gruppen (z.B. Materialien)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   regulatoryRequired  Boolean       @default(false)

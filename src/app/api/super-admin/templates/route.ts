@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
                 key: field.key,
                 type: field.type,
                 required: field.required || false,
+                isRepeatable: field.isRepeatable || false,
                 regulatoryRequired: field.regulatoryRequired || false,
                 config: field.config ? JSON.stringify(field.config) : null,
                 order: fieldIndex,

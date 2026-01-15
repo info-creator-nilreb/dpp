@@ -80,6 +80,7 @@ export async function POST(request: Request) {
       )
     }
 
+    const requestBody = await request.json()
     const {
       name, description, category, organizationId,
       sku, gtin, brand, countryOfOrigin,
@@ -87,8 +88,10 @@ export async function POST(request: Request) {
       careInstructions, isRepairable, sparePartsAvailable, lifespan,
       conformityDeclaration, disposalInfo,
       takebackOffered, takebackContact, secondLifeInfo,
-      templateId
-    } = await request.json()
+      templateId,
+      fieldValues, // Template-basierte Feldwerte (optional)
+      fieldInstances // Wiederholbare Feld-Instanzen (optional)
+    } = requestBody
 
     // Validierung (Pflichtfelder)
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -178,25 +181,161 @@ export async function POST(request: Request) {
       console.log("[DPP Create] Template gefunden:", { id: validatedTemplate.id, name: validatedTemplate.name, category: validatedTemplate.category })
     }
 
-    if (!sku || typeof sku !== "string" || sku.trim().length === 0) {
-      return NextResponse.json(
-        { error: "SKU / Interne ID ist erforderlich" },
-        { status: 400 }
-      )
+    // Validierung basierend auf Template-Definition (nur required fields prüfen)
+    // Lade Template mit Feldern, um required flags zu prüfen
+    const templateWithFields = await prisma.template.findFirst({
+      where: {
+        id: validatedTemplate.id,
+        status: "active"
+      },
+      include: {
+        blocks: {
+          include: {
+            fields: {
+              where: {
+                deprecatedInVersion: null // Nur aktive Felder
+              }
+            }
+          }
+        }
+      }
+    })
+
+    // Map DPP-Feldnamen zu Template-Keys (reverse mapping)
+    const dppFieldToTemplateKey: Record<string, string[]> = {
+      "name": ["name", "produktname", "productname"],
+      "description": ["description", "beschreibung"],
+      "sku": ["sku"],
+      "gtin": ["gtin", "ean"],
+      "brand": ["brand", "marke", "hersteller"],
+      "countryOfOrigin": ["countryOfOrigin", "herstellungsland", "country"],
+      "materials": ["materials", "material", "materialien"],
+      "materialSource": ["materialSource", "materialquelle", "datenquelle"],
+      "careInstructions": ["careInstructions", "pflegehinweise", "pflege"],
+      "isRepairable": ["isRepairable", "reparierbarkeit", "reparierbar"],
+      "sparePartsAvailable": ["sparePartsAvailable", "ersatzteile"],
+      "lifespan": ["lifespan", "lebensdauer"],
+      "conformityDeclaration": ["conformityDeclaration", "konformiataetserklaerung", "konformität"],
+      "disposalInfo": ["disposalInfo", "entsorgung"],
+      "takebackOffered": ["takebackOffered", "ruecknahme_angeboten", "rücknahme"],
+      "takebackContact": ["takebackContact", "ruecknahme_kontakt"],
+      "secondLifeInfo": ["secondLifeInfo", "secondlife"]
     }
 
-    if (!brand || typeof brand !== "string" || brand.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Marke / Hersteller ist erforderlich" },
-        { status: 400 }
-      )
-    }
+    // Validiere nur required fields aus dem Template
+    if (templateWithFields) {
+      const requiredFieldKeys = new Set<string>()
+      templateWithFields.blocks.forEach(block => {
+        block.fields.forEach(field => {
+          if (field.required && field.deprecatedInVersion === null) {
+            requiredFieldKeys.add(field.key.toLowerCase())
+          }
+        })
+      })
 
-    if (!countryOfOrigin || typeof countryOfOrigin !== "string" || countryOfOrigin.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Herstellungsland ist erforderlich" },
-        { status: 400 }
-      )
+      // Prüfe jedes required Template-Feld
+      for (const [dppFieldName, templateKeyVariants] of Object.entries(dppFieldToTemplateKey)) {
+        // Prüfe ob einer der Template-Keys required ist
+        const isRequired = templateKeyVariants.some(key => requiredFieldKeys.has(key.toLowerCase()))
+        
+        if (isRequired) {
+          // Prüfe zuerst, ob es ein repeatable field ist (in fieldInstances)
+          let hasValue = false
+          let fieldValue: string | null | undefined
+          
+          // 1. Prüfe fieldInstances (wiederholbare Felder)
+          if (fieldInstances && typeof fieldInstances === "object") {
+            for (const [templateKey, instances] of Object.entries(fieldInstances)) {
+              const normalizedTemplateKey = templateKey.toLowerCase()
+              if (templateKeyVariants.some(variant => variant.toLowerCase() === normalizedTemplateKey)) {
+                // Prüfe ob mindestens eine Instanz einen Wert hat
+                if (Array.isArray(instances) && instances.length > 0) {
+                  for (const instance of instances) {
+                    if (instance && typeof instance === "object" && instance.values) {
+                      const instanceValue = instance.values[templateKey]
+                      if (instanceValue !== null && instanceValue !== undefined) {
+                        const stringValue = Array.isArray(instanceValue) ? instanceValue.join(", ") : String(instanceValue)
+                        if (stringValue.trim()) {
+                          hasValue = true
+                          fieldValue = stringValue.trim()
+                          break
+                        }
+                      }
+                    }
+                  }
+                  if (hasValue) break
+                }
+              }
+            }
+          }
+          
+          // 2. Prüfe fieldValues (normale Template-Felder)
+          if (!hasValue && fieldValues && typeof fieldValues === "object") {
+            for (const [templateKey, value] of Object.entries(fieldValues)) {
+              const normalizedTemplateKey = templateKey.toLowerCase()
+              if (templateKeyVariants.some(variant => variant.toLowerCase() === normalizedTemplateKey)) {
+                if (value !== null && value !== undefined) {
+                  fieldValue = Array.isArray(value) ? value.join(", ") : String(value)
+                  if (fieldValue.trim()) {
+                    hasValue = true
+                    break
+                  }
+                }
+              }
+            }
+          }
+          
+          // 3. Fallback: Direkte Request-Felder
+          if (!hasValue) {
+            switch (dppFieldName) {
+              case "name": fieldValue = name; break
+              case "description": fieldValue = description; break
+              case "sku": fieldValue = sku; break
+              case "gtin": fieldValue = gtin; break
+              case "brand": fieldValue = brand; break
+              case "countryOfOrigin": fieldValue = countryOfOrigin; break
+              case "materials": fieldValue = materials; break
+              case "materialSource": fieldValue = materialSource; break
+              case "careInstructions": fieldValue = careInstructions; break
+              case "isRepairable": fieldValue = isRepairable; break
+              case "sparePartsAvailable": fieldValue = sparePartsAvailable; break
+              case "lifespan": fieldValue = lifespan; break
+              case "conformityDeclaration": fieldValue = conformityDeclaration; break
+              case "disposalInfo": fieldValue = disposalInfo; break
+              case "takebackOffered": fieldValue = takebackOffered; break
+              case "takebackContact": fieldValue = takebackContact; break
+              case "secondLifeInfo": fieldValue = secondLifeInfo; break
+              default: fieldValue = undefined
+            }
+            hasValue = fieldValue !== null && fieldValue !== undefined && typeof fieldValue === "string" && fieldValue.trim().length > 0
+          }
+
+          // Validiere required field
+          if (!hasValue) {
+            // Finde das erste matching Template-Feld für die Fehlermeldung
+            const matchingField = templateWithFields.blocks
+              .flatMap(block => block.fields)
+              .find(field => 
+                field.required && 
+                templateKeyVariants.includes(field.key.toLowerCase())
+              )
+            
+            const fieldLabel = matchingField?.label || dppFieldName
+            return NextResponse.json(
+              { error: `${fieldLabel} ist erforderlich` },
+              { status: 400 }
+            )
+          }
+        }
+      }
+    } else {
+      // Fallback: Wenn Template nicht geladen werden kann, nur name validieren
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return NextResponse.json(
+          { error: "Produktname ist erforderlich" },
+          { status: 400 }
+        )
+      }
     }
 
     // Verwende die aufgelöste organizationId (ignoriere organizationId aus Request, falls vorhanden)
@@ -211,16 +350,17 @@ export async function POST(request: Request) {
     console.log("[DPP Create]   - Normalisierte Kategorie:", normalizedCategory)
     
     // DPP erstellen - organizationId wird explizit gesetzt
+    // Template-Version-Binding: Speichere templateId (logical) und templateVersionId (specific Template.id)
     const dpp = await prisma.dpp.create({
       data: {
-        name: name.trim(),
-        description: description?.trim() || null,
+        name: (name && typeof name === "string") ? name.trim() : "",
+        description: (description && typeof description === "string") ? description.trim() : null,
         category: normalizedCategory as "TEXTILE" | "FURNITURE" | "OTHER",
-        sku: sku.trim(),
-        gtin: gtin?.trim() || null,
-        brand: brand.trim(),
-        countryOfOrigin: countryOfOrigin.trim(),
-        materials: materials?.trim() || null,
+        sku: (sku && typeof sku === "string") ? sku.trim() : "",
+        gtin: (gtin && typeof gtin === "string") ? gtin.trim() : null,
+        brand: (brand && typeof brand === "string") ? brand.trim() : "",
+        countryOfOrigin: (countryOfOrigin && typeof countryOfOrigin === "string") ? countryOfOrigin.trim() : "",
+        materials: (materials && typeof materials === "string") ? materials.trim() : null,
         materialSource: materialSource?.trim() || null,
         careInstructions: careInstructions?.trim() || null,
         isRepairable: isRepairable || null,
@@ -232,7 +372,10 @@ export async function POST(request: Request) {
         takebackContact: takebackContact?.trim() || null,
         secondLifeInfo: secondLifeInfo?.trim() || null,
         status: "DRAFT",
-        organizationId: resolvedOrganizationId // Explizit gesetzt
+        organizationId: resolvedOrganizationId, // Explizit gesetzt
+        // Template-Version-Binding (immutable nach Erstellung)
+        templateId: normalizedCategory, // Logical identifier (category-based)
+        templateVersionId: validatedTemplate.id // Specific version identifier (Template.id)
       },
       include: {
         organization: {

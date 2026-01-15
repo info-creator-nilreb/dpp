@@ -76,68 +76,6 @@ export async function POST(
       )
     }
 
-    // Parse Sections
-    const allowedSections = contributorToken.sections.split(",")
-
-    // Validiere und filtere Daten basierend auf erlaubten Sektionen
-    const updateData: any = {}
-
-    allowedSections.forEach((section) => {
-      switch (section) {
-        case DPP_SECTIONS.MATERIALS:
-          if (data.materials !== undefined) {
-            updateData.materials = data.materials || null
-          }
-          break
-        case DPP_SECTIONS.MATERIAL_SOURCE:
-          if (data.materialSource !== undefined) {
-            updateData.materialSource = data.materialSource || null
-          }
-          break
-        case DPP_SECTIONS.CARE:
-          if (data.careInstructions !== undefined) {
-            updateData.careInstructions = data.careInstructions || null
-          }
-          break
-        case DPP_SECTIONS.REPAIR:
-          if (data.isRepairable !== undefined) {
-            updateData.isRepairable = data.isRepairable || null
-          }
-          if (data.sparePartsAvailable !== undefined) {
-            updateData.sparePartsAvailable = data.sparePartsAvailable || null
-          }
-          break
-        case DPP_SECTIONS.LIFESPAN:
-          if (data.lifespan !== undefined) {
-            updateData.lifespan = data.lifespan || null
-          }
-          break
-        case DPP_SECTIONS.CONFORMITY:
-          if (data.conformityDeclaration !== undefined) {
-            updateData.conformityDeclaration = data.conformityDeclaration || null
-          }
-          break
-        case DPP_SECTIONS.DISPOSAL:
-          if (data.disposalInfo !== undefined) {
-            updateData.disposalInfo = data.disposalInfo || null
-          }
-          break
-        case DPP_SECTIONS.TAKEBACK:
-          if (data.takebackOffered !== undefined) {
-            updateData.takebackOffered = data.takebackOffered || null
-          }
-          if (data.takebackContact !== undefined) {
-            updateData.takebackContact = data.takebackContact || null
-          }
-          break
-        case DPP_SECTIONS.SECOND_LIFE:
-          if (data.secondLifeInfo !== undefined) {
-            updateData.secondLifeInfo = data.secondLifeInfo || null
-          }
-          break
-      }
-    })
-
     // Prüfe Bestätigung
     if (!data.confirmed) {
       return NextResponse.json(
@@ -146,11 +84,191 @@ export async function POST(
       )
     }
 
-    // Aktualisiere DPP mit den neuen Daten
-    await prisma.dpp.update({
-      where: { id: contributorToken.dppId },
-      data: updateData,
-    })
+    // Template-based: Speichere in DppContent
+    if (contributorToken.blockIds) {
+      const blockIds = contributorToken.blockIds.split(",")
+      
+      // Lade Template
+      const template = await prisma.template.findFirst({
+        where: {
+          category: contributorToken.dpp.category,
+          status: "active"
+        },
+        include: {
+          blocks: {
+            where: { id: { in: blockIds } },
+            include: { fields: true }
+          }
+        }
+      })
+
+      if (!template) {
+        return NextResponse.json(
+          { error: "Template nicht gefunden" },
+          { status: 404 }
+        )
+      }
+
+      // Lade oder erstelle DppContent
+      let dppContent = await prisma.dppContent.findFirst({
+        where: {
+          dppId: contributorToken.dppId,
+          isPublished: false
+        }
+      })
+
+      const blocksData: any[] = template.blocks.map(block => {
+        const blockData: any = {
+          id: block.id,
+          type: "template_block",
+          order: block.order,
+          data: {}
+        }
+
+        // Sammle Feldwerte für diesen Block
+        block.fields.forEach(field => {
+          const fieldKey = field.key
+          if (data[fieldKey] !== undefined) {
+            blockData.data[fieldKey] = data[fieldKey]
+          }
+        })
+
+        return blockData
+      })
+
+      if (dppContent) {
+        // Aktualisiere bestehenden DppContent
+        const existingBlocks = (dppContent.blocks as any) || []
+        const updatedBlocks = [...existingBlocks]
+        
+        // Merge Supplier-Daten in bestehende Blöcke oder füge neue hinzu
+        blocksData.forEach(templateBlock => {
+          const existingBlockIndex = updatedBlocks.findIndex((b: any) => b.id === templateBlock.id)
+          if (existingBlockIndex >= 0) {
+            // Merge: Behalte bestehende Daten, überschreibe nur Supplier-Felder
+            updatedBlocks[existingBlockIndex] = {
+              ...updatedBlocks[existingBlockIndex],
+              data: {
+                ...updatedBlocks[existingBlockIndex].data,
+                ...templateBlock.data
+              }
+            }
+          } else {
+            // Neuer Block: Füge hinzu
+            updatedBlocks.push(templateBlock)
+          }
+        })
+
+        await prisma.dppContent.update({
+          where: { id: dppContent.id },
+          data: {
+            blocks: updatedBlocks,
+            updatedAt: new Date()
+          }
+        })
+      } else {
+        // Erstelle neuen DppContent (lade alle Blöcke vom Template)
+        const fullTemplate = await prisma.template.findFirst({
+          where: {
+            category: contributorToken.dpp.category,
+            status: "active"
+          },
+          include: {
+            blocks: {
+              include: { fields: true },
+              orderBy: { order: "asc" }
+            }
+          }
+        })
+
+        if (fullTemplate) {
+          // Erstelle vollständige Block-Struktur, aber nur Supplier-Blöcke mit Daten füllen
+          const allBlocks = fullTemplate.blocks.map(block => {
+            const supplierBlock = blocksData.find(b => b.id === block.id)
+            return {
+              id: block.id,
+              type: "template_block",
+              order: block.order,
+              data: supplierBlock ? supplierBlock.data : {} // Nur Supplier-Felder befüllt
+            }
+          })
+
+          await prisma.dppContent.create({
+            data: {
+              dppId: contributorToken.dppId,
+              blocks: allBlocks,
+              isPublished: false
+            }
+          })
+        }
+      }
+    } else if (contributorToken.sections) {
+      // Legacy: sections-based approach
+      const allowedSections = contributorToken.sections.split(",")
+      const updateData: any = {}
+
+      allowedSections.forEach((section) => {
+        switch (section) {
+          case DPP_SECTIONS.MATERIALS:
+            if (data.materials !== undefined) {
+              updateData.materials = data.materials || null
+            }
+            break
+          case DPP_SECTIONS.MATERIAL_SOURCE:
+            if (data.materialSource !== undefined) {
+              updateData.materialSource = data.materialSource || null
+            }
+            break
+          case DPP_SECTIONS.CARE:
+            if (data.careInstructions !== undefined) {
+              updateData.careInstructions = data.careInstructions || null
+            }
+            break
+          case DPP_SECTIONS.REPAIR:
+            if (data.isRepairable !== undefined) {
+              updateData.isRepairable = data.isRepairable || null
+            }
+            if (data.sparePartsAvailable !== undefined) {
+              updateData.sparePartsAvailable = data.sparePartsAvailable || null
+            }
+            break
+          case DPP_SECTIONS.LIFESPAN:
+            if (data.lifespan !== undefined) {
+              updateData.lifespan = data.lifespan || null
+            }
+            break
+          case DPP_SECTIONS.CONFORMITY:
+            if (data.conformityDeclaration !== undefined) {
+              updateData.conformityDeclaration = data.conformityDeclaration || null
+            }
+            break
+          case DPP_SECTIONS.DISPOSAL:
+            if (data.disposalInfo !== undefined) {
+              updateData.disposalInfo = data.disposalInfo || null
+            }
+            break
+          case DPP_SECTIONS.TAKEBACK:
+            if (data.takebackOffered !== undefined) {
+              updateData.takebackOffered = data.takebackOffered || null
+            }
+            if (data.takebackContact !== undefined) {
+              updateData.takebackContact = data.takebackContact || null
+            }
+            break
+          case DPP_SECTIONS.SECOND_LIFE:
+            if (data.secondLifeInfo !== undefined) {
+              updateData.secondLifeInfo = data.secondLifeInfo || null
+            }
+            break
+        }
+      })
+
+      // Aktualisiere DPP mit den neuen Daten (Legacy)
+      await prisma.dpp.update({
+        where: { id: contributorToken.dppId },
+        data: updateData,
+      })
+    }
 
     // Aktualisiere Contributor Token
     await prisma.contributorToken.update({
