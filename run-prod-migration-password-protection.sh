@@ -53,3 +53,4 @@ echo "   1. Öffne /super-admin/settings in der Anwendung"
 echo "   2. Konfiguriere das Password Protection"
 echo "   3. Setze das Passwort und aktiviere den Schutz"
 
+
