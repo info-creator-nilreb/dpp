@@ -166,7 +166,7 @@ interface TemplateBlocksSectionProps {
   }> // Pending files für neue DPPs
   onPendingFileAdd?: (file: { id: string; file: File; preview?: string; blockId?: string; fieldId?: string }) => void
   onPendingFileRemove?: (fileId: string) => void
-  supplierFieldInfo?: Record<string, { partnerRole: string }> // fieldKey -> supplierInfo
+  supplierFieldInfo?: Record<string, { partnerRole: string; confirmed?: boolean; mode?: "input" | "declaration" }> // fieldKey -> supplierInfo
 }
 
 /**

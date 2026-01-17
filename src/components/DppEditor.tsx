@@ -1838,8 +1838,8 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
       {template && !templateLoading && (() => {
         // Extrahiere Supplier-Informationen für Felder
         // Prüfe, welche Felder von welchem Beteiligten bereitgestellt wurden
-        // TEIL 6: Erweitert um confirmed Status
-        const supplierFieldInfo: Record<string, { partnerRole: string; confirmed?: boolean }> = {}
+        // TEIL 6: Erweitert um confirmed Status und mode (input/declaration)
+        const supplierFieldInfo: Record<string, { partnerRole: string; confirmed?: boolean; mode?: "input" | "declaration" }> = {}
         
         // Lade Bestätigungsstatus aus localStorage (temporär, später in DB)
         const getConfirmedFields = (): Set<string> => {
@@ -1859,11 +1859,15 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
         console.log("[DppEditor] Supplier Field Info - dataRequests:", dataRequests.length, "submittedRequests:", submittedRequests.length, dataRequests)
         
         submittedRequests.forEach(req => {
-          console.log("[DppEditor] Processing submitted request:", req.id, "partnerRole:", req.partnerRole, "blockIds:", req.blockIds, "fieldInstances:", req.fieldInstances)
+          console.log("[DppEditor] Processing submitted request:", req.id, "partnerRole:", req.partnerRole, "supplierMode:", req.supplierMode, "blockIds:", req.blockIds, "fieldInstances:", req.fieldInstances)
           
           // WICHTIG: Prüfe, welche Felder tatsächlich vom Supplier befüllt wurden
           // Dazu prüfen wir, welche Felder in fieldValues vorhanden sind, die zu den Supplier-Blöcken gehören
           const blockIdsArray = req.blockIds ? (Array.isArray(req.blockIds) ? req.blockIds : req.blockIds.split(",")) : []
+          const isDeclarationMode = req.supplierMode === "declaration"
+          
+          // Helper: Übersetze Rolle ins Deutsche
+          const roleLabel = getPartnerRoleLabel(req.partnerRole)
           
           // Wenn fieldInstances vorhanden sind, markiere nur diese spezifischen Felder
           if (req.fieldInstances && Array.isArray(req.fieldInstances) && req.fieldInstances.length > 0) {
@@ -1873,15 +1877,24 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
               template.blocks.forEach(block => {
                 block.fields.forEach(field => {
                   if (field.id === fi.fieldId) {
-                    // Prüfe, ob dieses Feld tatsächlich einen Wert hat (vom Supplier befüllt)
-                    if (fieldValues[field.key] !== undefined && fieldValues[field.key] !== null && fieldValues[field.key] !== "") {
+                    // Für input mode: Nur wenn Feld tatsächlich einen Wert hat (vom Supplier befüllt)
+                    // Für declaration mode: IMMER anzeigen wenn zugewiesen und submitted (geprüfte Daten sind bereits vorhanden)
+                    const hasValue = fieldValues[field.key] !== undefined && fieldValues[field.key] !== null && fieldValues[field.key] !== ""
+                    const shouldShow = isDeclarationMode ? true : hasValue
+                    
+                    if (shouldShow) {
                       // Nur wenn noch keine Info vorhanden ist (erster Beteiligter hat Vorrang)
                       if (!supplierFieldInfo[field.key]) {
+                        // Für declaration mode: confirmed ist IMMER true wenn submitted
+                        // Für input mode: confirmed kommt aus localStorage
+                        const isConfirmed = isDeclarationMode ? true : confirmedFields.has(field.key)
+                        
                         supplierFieldInfo[field.key] = { 
-                          partnerRole: req.partnerRole,
-                          confirmed: confirmedFields.has(field.key)
+                          partnerRole: roleLabel,
+                          confirmed: isConfirmed,
+                          mode: isDeclarationMode ? "declaration" : "input"
                         }
-                        console.log("[DppEditor] Added supplier info for field (with value):", field.key, "role:", req.partnerRole, "confirmed:", confirmedFields.has(field.key), "value:", fieldValues[field.key])
+                        console.log("[DppEditor] Added supplier info for field:", field.key, "role:", roleLabel, "confirmed:", isConfirmed, "mode:", req.supplierMode, "hasValue:", hasValue, "shouldShow:", shouldShow)
                       }
                     } else {
                       console.log("[DppEditor] Skipping field (no value):", field.key)
@@ -1896,15 +1909,24 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
             template.blocks.forEach(block => {
               if (blockIdsArray.includes(block.id)) {
                 block.fields.forEach(field => {
-                  // WICHTIG: Nur markieren, wenn das Feld tatsächlich einen Wert hat
-                  if (fieldValues[field.key] !== undefined && fieldValues[field.key] !== null && fieldValues[field.key] !== "") {
+                  // Für input mode: Nur wenn Feld tatsächlich einen Wert hat (vom Supplier befüllt)
+                  // Für declaration mode: IMMER anzeigen wenn zugewiesen und submitted (geprüfte Daten sind bereits vorhanden)
+                  const hasValue = fieldValues[field.key] !== undefined && fieldValues[field.key] !== null && fieldValues[field.key] !== ""
+                  const shouldShow = isDeclarationMode ? true : hasValue
+                  
+                  if (shouldShow) {
                     // Nur wenn noch keine Info vorhanden ist (erster Beteiligter hat Vorrang)
                     if (!supplierFieldInfo[field.key]) {
+                      // Für declaration mode: confirmed ist IMMER true wenn submitted
+                      // Für input mode: confirmed kommt aus localStorage
+                      const isConfirmed = isDeclarationMode ? true : confirmedFields.has(field.key)
+                      
                       supplierFieldInfo[field.key] = { 
-                        partnerRole: req.partnerRole,
-                        confirmed: confirmedFields.has(field.key)
+                        partnerRole: roleLabel,
+                        confirmed: isConfirmed,
+                        mode: isDeclarationMode ? "declaration" : "input"
                       }
-                      console.log("[DppEditor] Added supplier info for field (with value):", field.key, "role:", req.partnerRole, "confirmed:", confirmedFields.has(field.key), "from block:", block.id, "value:", fieldValues[field.key])
+                      console.log("[DppEditor] Added supplier info for field:", field.key, "role:", roleLabel, "confirmed:", isConfirmed, "mode:", req.supplierMode, "from block:", block.id, "hasValue:", hasValue, "shouldShow:", shouldShow)
                     }
                   } else {
                     console.log("[DppEditor] Skipping field (no value):", field.key, "from block:", block.id)
@@ -2348,6 +2370,52 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
               .catch((err) => {
                 console.error("[DppEditor] Error reloading data requests:", err)
               })
+          }
+        }}
+        onSendPendingInvites={async () => {
+          if (!dpp.id || dpp.id === "new") {
+            showNotification("Bitte speichern Sie den DPP zuerst", "error")
+            return
+          }
+
+          setSupplierInviteLoading(true)
+          try {
+            const response = await fetch(`/api/app/dpp/${dpp.id}/data-requests/send-pending`, {
+              method: "POST",
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+              throw new Error(data.error || "Fehler beim Versenden der E-Mails")
+            }
+
+            showNotification(
+              data.message || `${data.sentCount} E-Mail${data.sentCount > 1 ? "s" : ""} erfolgreich versendet`,
+              "success"
+            )
+
+            // Reload data requests (mit no-cache für neueste Daten)
+            if (dpp.id && dpp.id !== "new") {
+              fetch(`/api/app/dpp/${dpp.id}/data-requests`, {
+                cache: "no-store",
+                headers: {
+                  "Cache-Control": "no-cache"
+                }
+              })
+                .then(res => res.json())
+                .then(requestsData => {
+                  console.log("[DppEditor] onSendPendingInvites - Reloaded data requests:", requestsData.requests?.length || 0, requestsData.requests)
+                  setDataRequests(requestsData.requests || [])
+                })
+                .catch((err) => {
+                  console.error("[DppEditor] Error reloading data requests:", err)
+                })
+            }
+          } catch (error: any) {
+            showNotification(error.message || "Fehler beim Versenden der E-Mails", "error")
+          } finally {
+            setSupplierInviteLoading(false)
           }
         }}
         onRemoveInvite={async (inviteId: string) => {
