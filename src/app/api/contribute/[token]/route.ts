@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { DPP_SECTIONS } from "@/lib/permissions"
+import { latestPublishedTemplate } from "@/lib/template-helpers"
 
 /**
  * GET /api/contribute/[token]
@@ -77,28 +78,34 @@ export async function GET(
       // Template-based approach
       const blockIds = contributorToken.blockIds.split(",")
       
-      template = await prisma.template.findFirst({
-        where: {
-          category: contributorToken.dpp.category,
-          status: "active"
-        },
-        include: {
-          blocks: {
-            where: {
-              id: { in: blockIds }
-            },
-            include: {
-              fields: {
-                orderBy: { order: "asc" }
-              }
-            },
-            orderBy: { order: "asc" }
-          }
-        }
-      })
+      // Verwende latestPublishedTemplate, um dasselbe Template wie im DppEditor zu verwenden
+      template = await latestPublishedTemplate(contributorToken.dpp.category)
 
       if (template) {
+        // Extrahiere fieldInstances aus submittedData (falls vorhanden)
+        let allowedFieldIds: Set<string> | null = null
+        if (contributorToken.submittedData && typeof contributorToken.submittedData === 'object' && 'assignedFieldInstances' in contributorToken.submittedData) {
+          const data = contributorToken.submittedData as { assignedFieldInstances?: Array<{ fieldId: string; instanceId: string; label: string }> }
+          if (data.assignedFieldInstances && data.assignedFieldInstances.length > 0) {
+            allowedFieldIds = new Set(data.assignedFieldInstances.map(fi => fi.fieldId))
+          }
+        }
+
+        // Filtere nur die erlaubten Blöcke
         allowedBlocks = template.blocks
+          .filter(block => blockIds.includes(block.id))
+          .sort((a, b) => a.order - b.order)
+          .map(block => {
+            // Wenn fieldInstances vorhanden sind, filtere nur die erlaubten Felder
+            if (allowedFieldIds !== null) {
+              return {
+                ...block,
+                fields: block.fields.filter(field => allowedFieldIds!.has(field.id))
+              }
+            }
+            // Sonst alle Felder des Blocks
+            return block
+          })
       }
     } else if (contributorToken.sections) {
       // Legacy: sections-based approach

@@ -38,6 +38,12 @@ interface TemplateBlockFieldProps {
   onPendingFileAdd?: (file: PendingFile) => void
   onPendingFileRemove?: (fileId: string) => void
   hideLabel?: boolean // Für wiederholbare Felder: Label ausblenden
+  supplierInfo?: {
+    partnerRole: string
+    confirmed?: boolean // TEIL 6: Ob die Angaben bereits geprüft und übernommen wurden
+  } | null // Information über den Beteiligten, der dieses Feld bereitgestellt hat
+  onSupplierInfoConfirm?: (fieldKey: string) => void // TEIL 6: Callback für Bestätigung
+  readOnly?: boolean // Felder read-only machen (für Prüf-Modus)
 }
 
 /**
@@ -54,13 +60,92 @@ export default function TemplateBlockField({
   pendingFiles = [],
   onPendingFileAdd,
   onPendingFileRemove,
-  hideLabel = false
+  hideLabel = false,
+  supplierInfo = null,
+  onSupplierInfoConfirm,
+  readOnly = false
 }: TemplateBlockFieldProps) {
   const { showNotification } = useNotification()
   const [uploading, setUploading] = useState(false)
   
   // Debug: Log value prop
-  console.log(`[TemplateBlockField] Field ${field.key} (${field.label}): value=`, value, "type:", typeof value)
+  console.log(`[TemplateBlockField] Field ${field.key} (${field.label}): value=`, value, "type:", typeof value, "supplierInfo:", supplierInfo)
+  
+  // TEIL 6: Wiederverwendbare Komponente für Supplier-Info-Anzeige (minimalistisch, inline)
+  const renderSupplierInfo = () => {
+    if (!supplierInfo) return null
+    
+    return (
+      <span style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        marginLeft: "0.5rem",
+        flexWrap: "wrap"
+      }}>
+        {supplierInfo.confirmed ? (
+          <span style={{
+            fontSize: "0.813rem",
+            padding: "0.125rem 0.5rem",
+            backgroundColor: "#D1FAE5",
+            color: "#065F46",
+            borderRadius: "4px",
+            fontWeight: "400",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.375rem"
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Geprüft und von {supplierInfo.partnerRole} übernommen
+          </span>
+        ) : (
+          <>
+            <span style={{
+              fontSize: "0.813rem",
+              padding: "0.125rem 0.5rem",
+              backgroundColor: "#FEF3C7",
+              color: "#92400E",
+              borderRadius: "4px",
+              fontWeight: "400"
+            }}>
+              Von {supplierInfo.partnerRole} bereitgestellt (ungeprüft)
+            </span>
+            {onSupplierInfoConfirm && (
+              <button
+                type="button"
+                onClick={() => onSupplierInfoConfirm(field.key)}
+                style={{
+                  fontSize: "0.813rem",
+                  padding: "0.25rem 0.75rem",
+                  backgroundColor: "transparent",
+                  color: "#7A7A7A",
+                  border: "1px solid #E5E5E5",
+                  borderRadius: "4px",
+                  fontWeight: "400",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#F5F5F5"
+                  e.currentTarget.style.borderColor = "#CDCDCD"
+                  e.currentTarget.style.color = "#0A0A0A"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent"
+                  e.currentTarget.style.borderColor = "#E5E5E5"
+                  e.currentTarget.style.color = "#7A7A7A"
+                }}
+              >
+                Angaben übernehmen
+              </button>
+            )}
+          </>
+        )}
+      </span>
+    )
+  }
 
   // Filtere Medien für dieses Feld
   const fieldMedia = media.filter(m => 
@@ -156,6 +241,9 @@ export default function TemplateBlockField({
             <span style={{ color: "#DC2626", marginLeft: "0.25rem" }}>*</span>
           )}
         </label>
+        
+        {/* TEIL 6: Bestätigungsfunktion - unter dem Label, nicht inline */}
+        {renderSupplierInfo()}
         
         {/* Upload Area */}
         <FileUploadArea
@@ -473,84 +561,173 @@ export default function TemplateBlockField({
   // Text-Feld
   if (field.type === "text") {
     return (
-      <InputField
-        id={`field-${field.id}`}
-        label={hideLabel ? "" : field.label}
-        value={value as string || ""}
-        onChange={(e) => {
-          console.log("[TemplateBlockField] Text field onChange:", field.key, e.target.value, "onChange exists:", !!onChange)
-          if (onChange) {
-            onChange(e.target.value)
-          } else {
-            console.warn("[TemplateBlockField] onChange is undefined for field:", field.key)
-          }
-        }}
-        required={field.required}
-        type="text"
-      />
+      <div>
+        <InputField
+          id={`field-${field.id}`}
+          label={hideLabel ? "" : field.label}
+          value={value as string || ""}
+          onChange={(e) => {
+            console.log("[TemplateBlockField] Text field onChange:", field.key, e.target.value, "onChange exists:", !!onChange)
+            if (onChange) {
+              onChange(e.target.value)
+            } else {
+              console.warn("[TemplateBlockField] onChange is undefined for field:", field.key)
+            }
+          }}
+          required={field.required}
+          type="text"
+          readOnly={readOnly}
+          disabled={readOnly}
+        />
+        {/* TEIL 6: Bestätigungsfunktion - unter dem InputField */}
+        {renderSupplierInfo()}
+      </div>
     )
   }
 
   // Textarea-Feld
   if (field.type === "textarea") {
     return (
-      <InputField
-        id={`field-${field.id}`}
-        label={hideLabel ? "" : field.label}
-        value={value as string || ""}
-        onChange={(e) => {
-          console.log("[TemplateBlockField] Textarea field onChange:", field.key, e.target.value, "onChange exists:", !!onChange)
-          if (onChange) {
-            onChange(e.target.value)
-          } else {
-            console.warn("[TemplateBlockField] onChange is undefined for field:", field.key)
-          }
-        }}
-        required={field.required}
-        rows={4}
-      />
+      <div style={{ marginBottom: "1.5rem" }}>
+        <label htmlFor={`field-${field.id}`} style={{
+          display: "block",
+          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
+        }}>
+          {hideLabel ? "" : field.label}
+          {field.required && <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>}
+          {/* TEIL 6: Bestätigungsfunktion - direkt hinter dem Feldnamen (inline) */}
+          {renderSupplierInfo()}
+        </label>
+        <textarea
+          id={`field-${field.id}`}
+          value={value as string || ""}
+          onChange={(e) => {
+            if (onChange) {
+              onChange(e.target.value)
+            }
+          }}
+          required={field.required}
+          rows={4}
+          style={{
+            width: "100%",
+            padding: "clamp(0.75rem, 2vw, 1rem)",
+            fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            border: "1px solid #CDCDCD",
+            borderRadius: "8px",
+            boxSizing: "border-box",
+            fontFamily: "inherit",
+            resize: "vertical"
+          }}
+        />
+      </div>
     )
   }
 
   // Number-Feld
   if (field.type === "number") {
     return (
-      <InputField
-        id={`field-${field.id}`}
-        label={hideLabel ? "" : field.label}
-        value={value as string || ""}
-        onChange={(e) => onChange?.(e.target.value)}
-        required={field.required}
-        type="number"
-      />
+      <div style={{ marginBottom: "1.5rem" }}>
+        <label htmlFor={`field-${field.id}`} style={{
+          display: "block",
+          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
+        }}>
+          {hideLabel ? "" : field.label}
+          {field.required && <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>}
+          {/* TEIL 6: Bestätigungsfunktion - direkt hinter dem Feldnamen (inline) */}
+          {renderSupplierInfo()}
+        </label>
+        <input
+          id={`field-${field.id}`}
+          type="number"
+          value={value as string || ""}
+          onChange={(e) => onChange?.(e.target.value)}
+          required={field.required}
+          style={{
+            width: "100%",
+            padding: "clamp(0.75rem, 2vw, 1rem)",
+            fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            border: "1px solid #CDCDCD",
+            borderRadius: "8px",
+            boxSizing: "border-box"
+          }}
+        />
+      </div>
     )
   }
 
   // Date-Feld
   if (field.type === "date") {
     return (
-      <InputField
-        id={`field-${field.id}`}
-        label={hideLabel ? "" : field.label}
-        value={value as string || ""}
-        onChange={(e) => onChange?.(e.target.value)}
-        required={field.required}
-        type="date"
-      />
+      <div style={{ marginBottom: "1.5rem" }}>
+        <label htmlFor={`field-${field.id}`} style={{
+          display: "block",
+          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
+        }}>
+          {hideLabel ? "" : field.label}
+          {field.required && <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>}
+          {/* TEIL 6: Bestätigungsfunktion - direkt hinter dem Feldnamen (inline) */}
+          {renderSupplierInfo()}
+        </label>
+        <input
+          id={`field-${field.id}`}
+          type="date"
+          value={value as string || ""}
+          onChange={(e) => onChange?.(e.target.value)}
+          required={field.required}
+          style={{
+            width: "100%",
+            padding: "clamp(0.75rem, 2vw, 1rem)",
+            fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            border: "1px solid #CDCDCD",
+            borderRadius: "8px",
+            boxSizing: "border-box"
+          }}
+        />
+      </div>
     )
   }
 
   // URL-Feld
   if (field.type === "url") {
     return (
-      <InputField
-        id={`field-${field.id}`}
-        label={hideLabel ? "" : field.label}
-        value={value as string || ""}
-        onChange={(e) => onChange?.(e.target.value)}
-        required={field.required}
-        type="url"
-      />
+      <div style={{ marginBottom: "1.5rem" }}>
+        <label htmlFor={`field-${field.id}`} style={{
+          display: "block",
+          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
+        }}>
+          {hideLabel ? "" : field.label}
+          {field.required && <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>}
+          {/* TEIL 6: Bestätigungsfunktion - direkt hinter dem Feldnamen (inline) */}
+          {renderSupplierInfo()}
+        </label>
+        <input
+          id={`field-${field.id}`}
+          type="url"
+          value={value as string || ""}
+          onChange={(e) => onChange?.(e.target.value)}
+          required={field.required}
+          style={{
+            width: "100%",
+            padding: "clamp(0.75rem, 2vw, 1rem)",
+            fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            border: "1px solid #CDCDCD",
+            borderRadius: "8px",
+            boxSizing: "border-box"
+          }}
+        />
+      </div>
     )
   }
 
@@ -585,6 +762,7 @@ export default function TemplateBlockField({
               {field.required && (
                 <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>
               )}
+              {renderSupplierInfo()}
             </label>
           </div>
         )}
@@ -703,6 +881,7 @@ export default function TemplateBlockField({
                 {field.required && (
                   <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>
                 )}
+                {renderSupplierInfo()}
               </span>
             </label>
           </div>

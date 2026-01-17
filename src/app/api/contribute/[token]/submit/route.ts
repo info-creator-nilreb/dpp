@@ -7,6 +7,7 @@ import { DPP_SECTIONS } from "@/lib/permissions"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
 import { createNotification } from "@/lib/phase1/notifications"
+import { latestPublishedTemplate } from "@/lib/template-helpers"
 
 /**
  * POST /api/contribute/[token]/submit
@@ -76,38 +77,57 @@ export async function POST(
       )
     }
 
-    // Prüfe Bestätigung
-    if (!data.confirmed) {
-      return NextResponse.json(
-        { error: "Bitte bestätigen Sie die Richtigkeit der Daten" },
-        { status: 400 }
-      )
+    // Prüfe Bestätigung/Ablehnung (abhängig vom Modus)
+    if (contributorToken.supplierMode === "declaration") {
+      // Prüf-Modus: Bestätigung ODER Ablehnung mit Kommentar erforderlich
+      if (!data.confirmed && !data.rejected) {
+        return NextResponse.json(
+          { error: "Bitte bestätigen Sie die Angaben oder lehnen Sie diese mit Kommentar ab" },
+          { status: 400 }
+        )
+      }
+      if (data.rejected && (!data.reviewComment || !data.reviewComment.trim())) {
+        return NextResponse.json(
+          { error: "Bitte geben Sie einen Kommentar zur Ablehnung an" },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Beisteuern-Modus: Bestätigung erforderlich
+      if (!data.confirmed) {
+        return NextResponse.json(
+          { error: "Bitte bestätigen Sie die Richtigkeit der Daten" },
+          { status: 400 }
+        )
+      }
     }
 
     // Template-based: Speichere in DppContent
     if (contributorToken.blockIds) {
       const blockIds = contributorToken.blockIds.split(",")
       
-      // Lade Template
-      const template = await prisma.template.findFirst({
-        where: {
-          category: contributorToken.dpp.category,
-          status: "active"
-        },
-        include: {
-          blocks: {
-            where: { id: { in: blockIds } },
-            include: { fields: true }
-          }
-        }
-      })
+      // Verwende latestPublishedTemplate, um dasselbe Template wie im DppEditor zu verwenden
+      const template = await latestPublishedTemplate(contributorToken.dpp.category)
 
       if (!template) {
+        console.error("[CONTRIBUTE_SUBMIT] Template nicht gefunden für Kategorie:", contributorToken.dpp.category)
         return NextResponse.json(
-          { error: "Template nicht gefunden" },
+          { error: `Template nicht gefunden für Kategorie: ${contributorToken.dpp.category}` },
           { status: 404 }
         )
       }
+
+      // Extrahiere fieldInstances aus submittedData (falls vorhanden)
+      let allowedFieldIds: Set<string> | null = null
+      if (contributorToken.submittedData && typeof contributorToken.submittedData === 'object' && 'assignedFieldInstances' in contributorToken.submittedData) {
+        const data = contributorToken.submittedData as { assignedFieldInstances?: Array<{ fieldId: string; instanceId: string; label: string }> }
+        if (data.assignedFieldInstances && data.assignedFieldInstances.length > 0) {
+          allowedFieldIds = new Set(data.assignedFieldInstances.map(fi => fi.fieldId))
+        }
+      }
+
+      // Filtere Blöcke: Nur die ausgewählten Blöcke
+      const allowedBlocks = template.blocks.filter(block => blockIds.includes(block.id))
 
       // Lade oder erstelle DppContent
       let dppContent = await prisma.dppContent.findFirst({
@@ -117,7 +137,7 @@ export async function POST(
         }
       })
 
-      const blocksData: any[] = template.blocks.map(block => {
+      const blocksData: any[] = allowedBlocks.map(block => {
         const blockData: any = {
           id: block.id,
           type: "template_block",
@@ -126,7 +146,16 @@ export async function POST(
         }
 
         // Sammle Feldwerte für diesen Block
+        // Wenn fieldInstances vorhanden sind, nur diese Felder; sonst alle Felder des Blocks
         block.fields.forEach(field => {
+          // Prüfe, ob dieses Feld erlaubt ist
+          if (allowedFieldIds !== null) {
+            // Nur erlaubte Felder
+            if (!allowedFieldIds.has(field.id)) {
+              return // Überspringe dieses Feld
+            }
+          }
+          
           const fieldKey = field.key
           if (data[fieldKey] !== undefined) {
             blockData.data[fieldKey] = data[fieldKey]
@@ -168,22 +197,10 @@ export async function POST(
         })
       } else {
         // Erstelle neuen DppContent (lade alle Blöcke vom Template)
-        const fullTemplate = await prisma.template.findFirst({
-          where: {
-            category: contributorToken.dpp.category,
-            status: "active"
-          },
-          include: {
-            blocks: {
-              include: { fields: true },
-              orderBy: { order: "asc" }
-            }
-          }
-        })
-
-        if (fullTemplate) {
+        // Verwende dasselbe Template wie oben
+        if (template) {
           // Erstelle vollständige Block-Struktur, aber nur Supplier-Blöcke mit Daten füllen
-          const allBlocks = fullTemplate.blocks.map(block => {
+          const allBlocks = template.blocks.map(block => {
             const supplierBlock = blocksData.find(b => b.id === block.id)
             return {
               id: block.id,
@@ -271,12 +288,21 @@ export async function POST(
     }
 
     // Aktualisiere Contributor Token
+    // WICHTIG: Behalte assignedFieldInstances aus dem ursprünglichen submittedData
+    let finalSubmittedData: any = data
+    if (contributorToken.submittedData && typeof contributorToken.submittedData === 'object' && 'assignedFieldInstances' in contributorToken.submittedData) {
+      finalSubmittedData = {
+        ...data,
+        assignedFieldInstances: (contributorToken.submittedData as { assignedFieldInstances?: any }).assignedFieldInstances
+      }
+    }
+    
     await prisma.contributorToken.update({
       where: { id: contributorToken.id },
       data: {
         status: "submitted",
         submittedAt: new Date(),
-        submittedData: data,
+        submittedData: finalSubmittedData,
       },
     })
 
