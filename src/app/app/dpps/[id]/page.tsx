@@ -67,16 +67,23 @@ async function DppEditorContent({
     const dppContent = dpp.content[0]
     const blocks = (dppContent.blocks as any) || []
     
+    console.log("[DppEditorPage] Found dppContent with", blocks.length, "blocks")
+    console.log("[DppEditorPage] DppContent blocks:", JSON.stringify(blocks, null, 2))
+    
     blocks.forEach((block: any) => {
+      console.log("[DppEditorPage] Processing block:", block.id, "type:", block.type, "has data:", !!block.data)
       // Nur template-basierte Blöcke haben block.data
       if (!block.data || typeof block.data !== 'object') {
+        console.log("[DppEditorPage] Skipping block (no data):", block.id)
         return
       }
       
+      console.log("[DppEditorPage] Block data keys:", Object.keys(block.data))
       const blockData = block.data
       if (blockData && typeof blockData === 'object') {
         Object.keys(blockData).forEach(fieldKey => {
           const value = blockData[fieldKey]
+          console.log("[DppEditorPage] Processing field:", fieldKey, "value:", value, "type:", typeof value)
           
           // Prüfe ob es ein wiederholbares Feld ist (Array von Objekten mit instanceId)
           if (Array.isArray(value) && value.length > 0) {
@@ -85,52 +92,64 @@ async function DppEditorContent({
             if (typeof firstElement === 'object' && firstElement !== null && firstElement.instanceId) {
               // Wiederholbares Feld: Speichere in fieldInstances
               fieldInstances[fieldKey] = value
+              console.log("[DppEditorPage] Detected repeatable field:", fieldKey)
             } else {
               // Normales Array-Feld (z.B. Multi-Select): Speichere direkt
               fieldValues[fieldKey] = value
+              console.log("[DppEditorPage] Detected array field (multi-select):", fieldKey)
             }
           } else if (value !== null && value !== undefined) {
             // Normales Feld: Speichere direkt
             fieldValues[fieldKey] = value
+            console.log("[DppEditorPage] Detected normal field:", fieldKey, "=", value)
           }
         })
       }
     })
+    
+    console.log("[DppEditorPage] Extracted field values:", Object.keys(fieldValues).length, "fields:", Object.keys(fieldValues))
+    console.log("[DppEditorPage] Extracted field values detail:", JSON.stringify(fieldValues, null, 2))
+  } else {
+    console.log("[DppEditorPage] No dppContent found for DPP")
   }
 
-  // FALLBACK: Wenn keine template-basierten Felder vorhanden sind, verwende direkte DPP-Spalten
-  // Dies ist für alte DPPs, die noch keine template-basierten Felder haben
-  if (Object.keys(fieldValues).length === 0 && Object.keys(fieldInstances).length === 0) {
-    // Mappe direkte DPP-Spalten zu template-basierten Feld-Keys
-    // Diese Mapping-Logik sollte mit dem Template übereinstimmen
-    const directFieldMapping: Record<string, string> = {
-      "name": "name",
-      "description": "description",
-      "sku": "sku",
-      "gtin": "gtin",
-      "brand": "brand",
-      "countryOfOrigin": "countryOfOrigin",
-      "materials": "materials",
-      "materialSource": "materialSource",
-      "careInstructions": "careInstructions",
-      "isRepairable": "isRepairable",
-      "sparePartsAvailable": "sparePartsAvailable",
-      "lifespan": "lifespan",
-      "conformityDeclaration": "conformityDeclaration",
-      "disposalInfo": "disposalInfo",
-      "takebackOffered": "takebackOffered",
-      "takebackContact": "takebackContact",
-      "secondLifeInfo": "secondLifeInfo"
+  // FALLBACK: Ergänze fieldValues mit direkten DPP-Spalten, wenn sie noch nicht vorhanden sind
+  // Dies ist für alte DPPs und für den Fall, dass einige Felder noch nicht in DppContent gespeichert sind
+  // WICHTIG: Ergänze nur, wenn Werte in DPP-Spalten vorhanden sind, aber nicht in fieldValues
+  const directFieldMapping: Record<string, string> = {
+    "name": "name",
+    "description": "description",
+    "sku": "sku",
+    "gtin": "gtin",
+    "brand": "brand",
+    "countryOfOrigin": "countryOfOrigin",
+    "materials": "materials",
+    "materialSource": "materialSource",
+    "careInstructions": "careInstructions",
+    "isRepairable": "isRepairable",
+    "sparePartsAvailable": "sparePartsAvailable",
+    "lifespan": "lifespan",
+    "conformityDeclaration": "conformityDeclaration",
+    "disposalInfo": "disposalInfo",
+    "takebackOffered": "takebackOffered",
+    "takebackContact": "takebackContact",
+    "secondLifeInfo": "secondLifeInfo"
+  }
+
+  // Ergänze fieldValues mit direkten DPP-Spalten, wenn sie noch nicht vorhanden sind
+  console.log("[DppEditorPage] Checking direct DPP columns for fallback")
+  Object.keys(directFieldMapping).forEach(dppColumn => {
+    const fieldKey = directFieldMapping[dppColumn]
+    const value = (dpp as any)[dppColumn]
+    console.log("[DppEditorPage] Checking column:", dppColumn, "->", fieldKey, "value:", value, "already in fieldValues:", !!fieldValues[fieldKey])
+    // Ergänze nur, wenn Wert vorhanden ist UND noch nicht in fieldValues
+    if (value !== null && value !== undefined && value !== "" && !fieldValues[fieldKey]) {
+      fieldValues[fieldKey] = value
+      console.log("[DppEditorPage] Fallback: Added", dppColumn, "->", fieldKey, "=", value)
     }
-
-    Object.keys(directFieldMapping).forEach(dppColumn => {
-      const fieldKey = directFieldMapping[dppColumn]
-      const value = (dpp as any)[dppColumn]
-      if (value !== null && value !== undefined && value !== "") {
-        fieldValues[fieldKey] = value
-      }
-    })
-  }
+  })
+  
+  console.log("[DppEditorPage] Final fieldValues after fallback:", Object.keys(fieldValues).length, "fields:", Object.keys(fieldValues))
 
   // Normalize category to expected union type for Dpp
   const categoryValues = ["TEXTILE", "FURNITURE", "OTHER"] as const

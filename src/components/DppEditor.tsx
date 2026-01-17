@@ -1814,7 +1814,6 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           supplierEnabledBlocksCount={template.blocks.filter(
             block => block.order > 0 && blockSupplierConfigs[block.id]?.enabled === true
           ).length}
-          existingInvitesCount={dataRequests.length}
         />
       )}
 
@@ -1836,23 +1835,131 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
       />
 
       {/* Template-Blöcke (dynamisch basierend auf Template) */}
-      {template && !templateLoading && (
-        <TemplateBlocksSection
-          template={template}
-          dppId={dpp.id && dpp.id !== "new" ? dpp.id : null}
-          media={dpp.media}
-          onMediaChange={refreshMedia}
-          blockSupplierConfigs={blockSupplierConfigs}
-          fieldInstances={fieldInstances}
-          onFieldInstancesChange={(fieldKey, instances) => {
-            setFieldInstances(prev => ({
-              ...prev,
-              [fieldKey]: instances
-            }))
-            // TODO: Speichere Instanzen in DppContent
-          }}
-          fieldValues={fieldValues}
-          onFieldValueChange={(templateKey, value) => {
+      {template && !templateLoading && (() => {
+        // Extrahiere Supplier-Informationen für Felder
+        // Prüfe, welche Felder von welchem Beteiligten bereitgestellt wurden
+        // TEIL 6: Erweitert um confirmed Status
+        const supplierFieldInfo: Record<string, { partnerRole: string; confirmed?: boolean }> = {}
+        
+        // Lade Bestätigungsstatus aus localStorage (temporär, später in DB)
+        const getConfirmedFields = (): Set<string> => {
+          if (!dpp.id || dpp.id === "new") return new Set()
+          try {
+            const stored = localStorage.getItem(`dpp-${dpp.id}-confirmed-fields`)
+            return stored ? new Set(JSON.parse(stored)) : new Set()
+          } catch {
+            return new Set()
+          }
+        }
+        
+        const confirmedFields = getConfirmedFields()
+        
+        // Durchsuche alle submitted dataRequests
+        const submittedRequests = dataRequests.filter(req => req.status === "submitted")
+        console.log("[DppEditor] Supplier Field Info - dataRequests:", dataRequests.length, "submittedRequests:", submittedRequests.length, dataRequests)
+        
+        submittedRequests.forEach(req => {
+          console.log("[DppEditor] Processing submitted request:", req.id, "partnerRole:", req.partnerRole, "blockIds:", req.blockIds, "fieldInstances:", req.fieldInstances)
+          
+          // WICHTIG: Prüfe, welche Felder tatsächlich vom Supplier befüllt wurden
+          // Dazu prüfen wir, welche Felder in fieldValues vorhanden sind, die zu den Supplier-Blöcken gehören
+          const blockIdsArray = req.blockIds ? (Array.isArray(req.blockIds) ? req.blockIds : req.blockIds.split(",")) : []
+          
+          // Wenn fieldInstances vorhanden sind, markiere nur diese spezifischen Felder
+          if (req.fieldInstances && Array.isArray(req.fieldInstances) && req.fieldInstances.length > 0) {
+            console.log("[DppEditor] Processing fieldInstances:", req.fieldInstances.length)
+            req.fieldInstances.forEach(fi => {
+              // Finde das Feld im Template, um den field.key zu bekommen
+              template.blocks.forEach(block => {
+                block.fields.forEach(field => {
+                  if (field.id === fi.fieldId) {
+                    // Prüfe, ob dieses Feld tatsächlich einen Wert hat (vom Supplier befüllt)
+                    if (fieldValues[field.key] !== undefined && fieldValues[field.key] !== null && fieldValues[field.key] !== "") {
+                      // Nur wenn noch keine Info vorhanden ist (erster Beteiligter hat Vorrang)
+                      if (!supplierFieldInfo[field.key]) {
+                        supplierFieldInfo[field.key] = { 
+                          partnerRole: req.partnerRole,
+                          confirmed: confirmedFields.has(field.key)
+                        }
+                        console.log("[DppEditor] Added supplier info for field (with value):", field.key, "role:", req.partnerRole, "confirmed:", confirmedFields.has(field.key), "value:", fieldValues[field.key])
+                      }
+                    } else {
+                      console.log("[DppEditor] Skipping field (no value):", field.key)
+                    }
+                  }
+                })
+              })
+            })
+          } else if (blockIdsArray.length > 0) {
+            // Wenn blockIds vorhanden sind, prüfe nur Felder, die tatsächlich Werte haben
+            console.log("[DppEditor] Processing blockIds:", blockIdsArray)
+            template.blocks.forEach(block => {
+              if (blockIdsArray.includes(block.id)) {
+                block.fields.forEach(field => {
+                  // WICHTIG: Nur markieren, wenn das Feld tatsächlich einen Wert hat
+                  if (fieldValues[field.key] !== undefined && fieldValues[field.key] !== null && fieldValues[field.key] !== "") {
+                    // Nur wenn noch keine Info vorhanden ist (erster Beteiligter hat Vorrang)
+                    if (!supplierFieldInfo[field.key]) {
+                      supplierFieldInfo[field.key] = { 
+                        partnerRole: req.partnerRole,
+                        confirmed: confirmedFields.has(field.key)
+                      }
+                      console.log("[DppEditor] Added supplier info for field (with value):", field.key, "role:", req.partnerRole, "confirmed:", confirmedFields.has(field.key), "from block:", block.id, "value:", fieldValues[field.key])
+                    }
+                  } else {
+                    console.log("[DppEditor] Skipping field (no value):", field.key, "from block:", block.id)
+                  }
+                })
+              }
+            })
+          }
+        })
+        
+        console.log("[DppEditor] Final supplierFieldInfo:", supplierFieldInfo)
+        const templateFields = template.blocks.flatMap(block => block.fields.map(f => ({ key: f.key, id: f.id, label: f.label, blockId: block.id })))
+        console.log("[DppEditor] Template fields:", templateFields)
+        console.log("[DppEditor] Looking for fields with keys:", Object.keys(supplierFieldInfo))
+        templateFields.forEach(f => {
+          if (supplierFieldInfo[f.key]) {
+            console.log("[DppEditor] MATCH FOUND - Field", f.key, "has supplier info:", supplierFieldInfo[f.key])
+          }
+        })
+        
+        // TEIL 6: Bestätigungsfunktion
+        const handleSupplierInfoConfirm = (fieldKey: string) => {
+          if (!dpp.id || dpp.id === "new") return
+          try {
+            const stored = localStorage.getItem(`dpp-${dpp.id}-confirmed-fields`)
+            const confirmedFields = stored ? new Set(JSON.parse(stored)) : new Set<string>()
+            confirmedFields.add(fieldKey)
+            localStorage.setItem(`dpp-${dpp.id}-confirmed-fields`, JSON.stringify(Array.from(confirmedFields)))
+            // In production: API call to save confirmation status
+            // Trigger re-render by reloading (temporary)
+            window.location.reload()
+          } catch (error) {
+            console.error("[DppEditor] Error confirming supplier info:", error)
+          }
+        }
+        
+        return (
+          <TemplateBlocksSection
+            template={template}
+            dppId={dpp.id && dpp.id !== "new" ? dpp.id : null}
+            media={dpp.media}
+            onMediaChange={refreshMedia}
+            blockSupplierConfigs={blockSupplierConfigs}
+            fieldInstances={fieldInstances}
+            onFieldInstancesChange={(fieldKey, instances) => {
+              setFieldInstances(prev => ({
+                ...prev,
+                [fieldKey]: instances
+              }))
+              // TODO: Speichere Instanzen in DppContent
+            }}
+            fieldValues={fieldValues}
+            supplierFieldInfo={supplierFieldInfo}
+            onSupplierInfoConfirm={handleSupplierInfoConfirm}
+            onFieldValueChange={(templateKey, value) => {
             // WICHTIG: fieldKey ist der Template-Feld-Key (kann deutsch oder englisch sein)
             // Wir speichern den Wert mit dem Template-Key
             // Für Kompatibilität speichern wir auch den englischen Key, falls Mapping existiert
@@ -1958,7 +2065,8 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
             }
           }}
         />
-      )}
+        )
+      })()}
 
       {/* Hinweis wenn gar kein Template vorhanden (nur wenn wirklich keine Templates existieren) */}
       {!template && !templateLoading && category && propCategories && propCategories.length === 0 && (
@@ -2156,7 +2264,8 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
               blockIds: blockIdsArray,
               fieldInstances: req.fieldInstances || undefined,
               supplierMode: (req as any).supplierMode || undefined,
-              status: req.status
+              status: req.status,
+              emailSentAt: (req as any).emailSentAt || null
             }
           })
           console.log("[DppEditor] Mapping existingInvites - dpp.id:", dpp.id, "dataRequests.length:", dataRequests.length, "mapped.length:", mapped.length)
@@ -2179,7 +2288,8 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
                 mode: invite.mode || "contribute", // "contribute" = beisteuern, "review" = prüfen & bestätigen
                 blockIds: invite.selectedBlocks,
                 fieldInstances: invite.selectedFieldInstances,
-                message: invite.message || null
+                message: invite.message || null,
+                sendEmail: invite.sendEmail !== false // Default: true (für Backward Compatibility)
               })
             })
 
@@ -2187,6 +2297,17 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
 
             if (!response.ok) {
               throw new Error(data.error || "Fehler beim Erstellen der Einladung")
+            }
+
+            // Prüfe, ob E-Mail versendet wurde
+            if (data.emailSent === false || data.emailError) {
+              const errorMsg = data.emailError 
+                ? `Einladung erstellt, aber E-Mail konnte nicht versendet werden: ${data.emailError}` 
+                : "Einladung erstellt, aber E-Mail konnte nicht versendet werden"
+              showNotification(errorMsg, "warning")
+            } else {
+              // Nur Erfolgsmeldung anzeigen, wenn E-Mail erfolgreich versendet wurde
+              // (Das Modal zeigt bereits eine Erfolgsmeldung)
             }
 
             // Multi-Invite-Flow: Modal bleibt offen, Notification wird im Modal angezeigt

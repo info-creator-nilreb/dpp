@@ -11,6 +11,7 @@ import { getOrganizationRole } from "@/lib/permissions"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
 import { DPP_SECTIONS } from "@/lib/permissions"
+import { latestPublishedTemplate } from "@/lib/template-helpers"
 
 /**
  * POST /api/app/dpp/[dppId]/data-requests
@@ -35,7 +36,8 @@ export async function POST(
     const permissionError = await requireEditDPP(params.dppId, session.user.id)
     if (permissionError) return permissionError
 
-    const { email, partnerRole, mode, sections, blockIds, fieldInstances, message } = await request.json()
+    const { email, partnerRole, mode, sections, blockIds, fieldInstances, message, sendEmail } = await request.json()
+    const shouldSendEmail = sendEmail !== false // Default: true (für Backward Compatibility)
 
     // Validierung
     if (!email || !email.trim()) {
@@ -114,34 +116,113 @@ export async function POST(
       }
       
       // Validierung: Prüfe, ob alle Blöcke im Template existieren
-      const template = await prisma.template.findFirst({
-        where: {
-          category: dppWithTemplate.category,
-          status: "active"
-        },
-        include: {
-          blocks: {
-            where: {
-              id: { in: blockIds }
-            }
-          }
-        }
-      })
+      // Verwende latestPublishedTemplate, um dasselbe Template wie im DppEditor zu verwenden
+      const template = await latestPublishedTemplate(dppWithTemplate.category)
 
-      if (!template || template.blocks.length !== blockIds.length) {
+      if (!template) {
+        console.error("[DATA_REQUESTS_POST] Template nicht gefunden für Kategorie:", dppWithTemplate.category)
         return NextResponse.json(
-          { error: "Nicht alle ausgewählten Blöcke existieren im Template" },
+          { error: `Template nicht gefunden für Kategorie: ${dppWithTemplate.category}` },
+          { status: 404 }
+        )
+      }
+
+      // Prüfe, ob alle ausgewählten Block-IDs im Template existieren
+      const templateBlockIds = template.blocks.map(b => b.id)
+      const missingBlockIds = blockIds.filter(id => !templateBlockIds.includes(id))
+      
+      if (missingBlockIds.length > 0) {
+        console.error("[DATA_REQUESTS_POST] Fehlende Block-IDs:", missingBlockIds, "Template Block-IDs:", templateBlockIds, "Angeforderte Block-IDs:", blockIds)
+        return NextResponse.json(
+          { error: `Folgende Blöcke existieren nicht im Template: ${missingBlockIds.join(", ")}` },
           { status: 400 }
         )
       }
       
-      // Validierung: Kein Block darf order === 0 sein (Produktidentität)
-      const hasIdentityBlock = template.blocks.some(b => b.order === 0)
+      // Validierung: Kein AUSGEWÄHLTER Block darf order === 0 sein (Produktidentität)
+      // Prüfe nur die ausgewählten Blöcke, nicht alle Blöcke im Template
+      const selectedBlocks = template.blocks.filter(b => blockIds.includes(b.id))
+      const hasIdentityBlock = selectedBlocks.some(b => b.order === 0)
       if (hasIdentityBlock) {
+        const identityBlockNames = selectedBlocks.filter(b => b.order === 0).map(b => b.name).join(", ")
         return NextResponse.json(
-          { error: "Basisdaten-Block kann keine Lieferanten-Konfiguration haben" },
+          { error: `Basisdaten-Block kann keine Lieferanten-Konfiguration haben. Ausgewählter Block: ${identityBlockNames}` },
           { status: 400 }
         )
+      }
+    }
+
+    // Validierung für fieldInstances (falls vorhanden)
+    if (hasFieldInstances) {
+      // Verwende latestPublishedTemplate, um dasselbe Template wie im DppEditor zu verwenden
+      const template = await latestPublishedTemplate(dppWithTemplate.category)
+
+      if (!template) {
+        console.error("[DATA_REQUESTS_POST] Template nicht gefunden für Kategorie:", dppWithTemplate.category)
+        return NextResponse.json(
+          { error: `Template nicht gefunden für Kategorie: ${dppWithTemplate.category}` },
+          { status: 404 }
+        )
+      }
+
+      // Sammle alle Feld-IDs aus dem Template
+      const templateFieldIds = new Set<string>()
+      template.blocks.forEach(block => {
+        block.fields.forEach(field => {
+          templateFieldIds.add(field.id)
+        })
+      })
+
+      // Prüfe, ob alle fieldInstances im Template existieren
+      const invalidFieldInstances = fieldInstances.filter(fi => !templateFieldIds.has(fi.fieldId))
+      
+      if (invalidFieldInstances.length > 0) {
+        console.error("[DATA_REQUESTS_POST] Ungültige Feld-IDs:", invalidFieldInstances.map(fi => fi.fieldId), "Template Feld-IDs:", Array.from(templateFieldIds))
+        return NextResponse.json(
+          { error: `Folgende Felder existieren nicht im Template: ${invalidFieldInstances.map(fi => fi.label || fi.fieldId).join(", ")}` },
+          { status: 400 }
+        )
+      }
+
+      // Prüfe, ob die Felder zu supplier-fähigen Blöcken gehören
+      const fieldBlockMap = new Map<string, string>() // fieldId -> blockId
+      template.blocks.forEach(block => {
+        block.fields.forEach(field => {
+          fieldBlockMap.set(field.id, block.id)
+        })
+      })
+
+      // Lade DPP Supplier-Configs für die Blöcke der ausgewählten Felder
+      const fieldBlockIds = Array.from(new Set(fieldInstances.map(fi => fieldBlockMap.get(fi.fieldId)).filter(Boolean) as string[]))
+      if (fieldBlockIds.length > 0) {
+        // Validierung: Kein ausgewähltes Feld darf zu einem Block mit order === 0 gehören (Basisdatenblock)
+        const selectedBlocks = template.blocks.filter(b => fieldBlockIds.includes(b.id))
+        const hasIdentityBlock = selectedBlocks.some(b => b.order === 0)
+        if (hasIdentityBlock) {
+          const identityBlockNames = selectedBlocks.filter(b => b.order === 0).map(b => b.name).join(", ")
+          return NextResponse.json(
+            { error: `Basisdaten-Block kann keine Lieferanten-Konfiguration haben. Ausgewählte Felder gehören zu: ${identityBlockNames}` },
+            { status: 400 }
+          )
+        }
+
+        const supplierConfigs = await prisma.dppBlockSupplierConfig.findMany({
+          where: {
+            dppId: params.dppId,
+            blockId: { in: fieldBlockIds },
+            enabled: true
+          }
+        })
+
+        const enabledBlockIds = new Set(supplierConfigs.map(sc => sc.blockId))
+        const disabledBlocks = fieldBlockIds.filter(blockId => !enabledBlockIds.has(blockId))
+        
+        if (disabledBlocks.length > 0) {
+          return NextResponse.json(
+            { error: "Nicht alle Blöcke der ausgewählten Felder sind für Lieferanten konfiguriert" },
+            { status: 400 }
+          )
+        }
       }
     }
 
@@ -179,18 +260,31 @@ export async function POST(
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
     const contributeUrl = `${baseUrl}/contribute/${token}`
 
-    // Sende E-Mail
-    try {
-      await sendSupplierDataRequestEmail(email, {
-        organizationName: dppWithTemplate.organization.name,
-        productName: dppWithTemplate.name,
-        partnerRole,
-        contributeUrl,
-      })
-    } catch (emailError) {
-      console.error("Error sending email:", emailError)
-      // Token wurde bereits erstellt, also loggen wir den Fehler, aber löschen den Token nicht
-      // Der User kann den Link manuell kopieren, falls die E-Mail fehlschlägt
+    // Sende E-Mail (nur wenn shouldSendEmail === true)
+    let emailSent = false
+    let emailError: Error | null = null
+    let emailSentAt: Date | null = null
+    if (shouldSendEmail) {
+      try {
+        await sendSupplierDataRequestEmail(email, {
+          organizationName: dppWithTemplate.organization.name,
+          productName: dppWithTemplate.name,
+          partnerRole,
+          contributeUrl,
+        })
+        emailSent = true
+        emailSentAt = new Date()
+        
+        // Aktualisiere ContributorToken mit emailSentAt
+        await prisma.contributorToken.update({
+          where: { id: contributorToken.id },
+          data: { emailSentAt }
+        })
+      } catch (err) {
+        emailError = err instanceof Error ? err : new Error(String(err))
+        console.error("[DATA_REQUESTS_POST] E-Mail-Versand fehlgeschlagen:", emailError)
+        // Token wurde bereits erstellt, aber wir geben den Fehler an das Frontend weiter
+      }
     }
 
     // Audit Log
@@ -217,6 +311,8 @@ export async function POST(
       success: true,
       tokenId: contributorToken.id,
       contributeUrl, // Für Development/Testing
+      emailSent, // Informiere Frontend, ob E-Mail versendet wurde
+      ...(emailError && { emailError: emailError.message }) // Fehlermeldung, falls E-Mail fehlgeschlagen ist
     })
   } catch (error) {
     console.error("Error creating data request:", error)
@@ -264,6 +360,7 @@ export async function GET(
         status: true,
         expiresAt: true,
         submittedAt: true,
+        emailSentAt: true,
         submittedData: true,
         createdAt: true,
       },
@@ -289,6 +386,7 @@ export async function GET(
           status: token.status,
           expiresAt: token.expiresAt,
           submittedAt: token.submittedAt,
+          emailSentAt: token.emailSentAt,
           createdAt: token.createdAt,
         }
       }),
@@ -374,4 +472,5 @@ export async function DELETE(
     )
   }
 }
+
 

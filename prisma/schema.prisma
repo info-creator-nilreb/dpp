@@ -253,6 +253,7 @@ model ContributorToken {
   status       String   @default("pending") // pending | submitted | expired | confirmed
   expiresAt    DateTime
   submittedAt  DateTime?
+  emailSentAt  DateTime? // Timestamp, wenn E-Mail erfolgreich verschickt wurde
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   requestedBy  String? // User ID who created the request

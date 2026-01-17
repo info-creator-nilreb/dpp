@@ -166,6 +166,7 @@ interface TemplateBlocksSectionProps {
   }> // Pending files für neue DPPs
   onPendingFileAdd?: (file: { id: string; file: File; preview?: string; blockId?: string; fieldId?: string }) => void
   onPendingFileRemove?: (fileId: string) => void
+  supplierFieldInfo?: Record<string, { partnerRole: string }> // fieldKey -> supplierInfo
 }
 
 /**
@@ -185,10 +186,13 @@ export default function TemplateBlocksSection({
   onEditSupplierConfig,
   pendingFiles = [],
   onPendingFileAdd,
-  onPendingFileRemove
+  onPendingFileRemove,
+  supplierFieldInfo = {},
+  onSupplierInfoConfirm
 }: TemplateBlocksSectionProps) {
   // Debug: Log fieldValues beim ersten Render
   console.log("[TemplateBlocksSection] Component mounted with fieldValues:", Object.keys(fieldValues).length, "fields", Object.keys(fieldValues))
+  console.log("[TemplateBlocksSection] supplierFieldInfo received:", supplierFieldInfo, "keys:", Object.keys(supplierFieldInfo))
   
   // WICHTIG: Bidirektionales Mapping zwischen englischen Keys (aus fieldValues State) und Template-Feld-Keys
   // 
@@ -475,6 +479,8 @@ export default function TemplateBlocksSection({
               const fieldValue = mappedFieldValues[field.key] || fieldValues[field.key] || (field.type === "boolean" ? "false" : "")
               
               // Debug-Log für alle Felder, um Mapping-Probleme zu identifizieren
+              const supplierInfo = supplierFieldInfo[field.key] || null
+              console.log(`[TemplateBlocksSection] Rendering field ${field.key} (${field.label}): supplierInfo:`, supplierInfo, "available keys:", Object.keys(supplierFieldInfo))
               if (fieldValue && fieldValue !== "" && fieldValue !== "false") {
                 console.log(`[TemplateBlocksSection] Rendering field ${field.key} (${field.label}): found value:`, fieldValue, "| mapped:", !!mappedFieldValues[field.key], "| direct:", !!fieldValues[field.key])
               } else {
@@ -503,6 +509,8 @@ export default function TemplateBlocksSection({
                   pendingFiles={pendingFiles}
                   onPendingFileAdd={onPendingFileAdd}
                   onPendingFileRemove={onPendingFileRemove}
+                  supplierInfo={supplierInfo}
+                  onSupplierInfoConfirm={onSupplierInfoConfirm}
                 />
               )
             })}

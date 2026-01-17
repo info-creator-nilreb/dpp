@@ -9,6 +9,7 @@ import InputField from "@/components/InputField"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { DPP_SECTIONS } from "@/lib/permissions"
 import TemplateBlockField from "@/components/TemplateBlockField"
+import { NotificationProvider } from "@/components/NotificationProvider"
 
 interface DppData {
   id: string
@@ -27,17 +28,19 @@ interface DppData {
   secondLifeInfo?: string | null
 }
 
+interface TemplateField {
+  id: string
+  label: string
+  key: string
+  type: string
+  required: boolean
+  config: any
+}
+
 interface TemplateBlock {
   id: string
   name: string
-  fields: Array<{
-    id: string
-    label: string
-    key: string
-    type: string
-    required: boolean
-    config: any
-  }>
+  fields: Array<TemplateField>
 }
 
 interface TokenData {
@@ -66,6 +69,8 @@ function ContributeContent() {
   const [tokenData, setTokenData] = useState<TokenData | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>({}) // Template-based: fieldKey -> value
   const [confirmed, setConfirmed] = useState(false)
+  const [rejected, setRejected] = useState(false) // Für Prüf-Modus: Ablehnung
+  const [reviewComment, setReviewComment] = useState("") // Kommentar bei Ablehnung
 
   useEffect(() => {
     if (!token) {
@@ -87,14 +92,29 @@ function ContributeContent() {
 
         setTokenData(data)
         
-        // Template-based: Initialisiere formData mit Template-Feldwerten
+        // Template-based: Initialisiere formData
         if (data.template && !data.legacy) {
           const initialData: Record<string, any> = {}
-          data.template.blocks.forEach(block => {
-            block.fields.forEach(field => {
-              initialData[field.key] = ""
+          // Im Prüf-Modus: Lade bestehende Daten aus dem DPP
+          // Im Beisteuern-Modus: Leere Felder
+          if (data.supplierMode === "declaration") {
+            // Prüf-Modus: Lade bestehende DPP-Daten
+            // Die API sollte bereits die bestehenden Werte aus DppContent zurückgeben
+            // Für jetzt: Initialisiere mit leeren Werten (wird später durch API-Daten gefüllt)
+            data.template.blocks.forEach((block: TemplateBlock) => {
+              block.fields.forEach((field: TemplateField) => {
+                // TODO: Lade bestehende Werte aus DPP-Daten (wenn verfügbar)
+                initialData[field.key] = ""
+              })
             })
-          })
+          } else {
+            // Beisteuern-Modus: Leere Felder
+            data.template.blocks.forEach((block: TemplateBlock) => {
+              block.fields.forEach((field: TemplateField) => {
+                initialData[field.key] = ""
+              })
+            })
+          }
           setFormData(initialData)
         } else {
           // Legacy: Verwende DPP-Daten
@@ -112,9 +132,22 @@ function ContributeContent() {
   }, [token])
 
   const handleSubmit = async () => {
-    if (!confirmed) {
-      setError("Bitte bestätigen Sie, dass die Informationen korrekt sind")
-      return
+    // Im Prüf-Modus: Bestätigung oder Ablehnung mit Kommentar erforderlich
+    if (tokenData?.supplierMode === "declaration") {
+      if (!confirmed && !rejected) {
+        setError("Bitte bestätigen Sie die Angaben oder lehnen Sie diese mit Kommentar ab")
+        return
+      }
+      if (rejected && !reviewComment.trim()) {
+        setError("Bitte geben Sie einen Kommentar zur Ablehnung an")
+        return
+      }
+    } else {
+      // Im Beisteuern-Modus: Bestätigung erforderlich
+      if (!confirmed) {
+        setError("Bitte bestätigen Sie, dass die Informationen korrekt sind")
+        return
+      }
     }
 
     setStatus("submitting")
@@ -126,7 +159,9 @@ function ContributeContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          confirmed: true,
+          confirmed: confirmed,
+          rejected: rejected,
+          reviewComment: reviewComment.trim() || null,
         }),
       })
 
@@ -419,13 +454,23 @@ function ContributeContent() {
             color: "#0A0A0A",
             marginBottom: "1rem",
           }}>
-            Produktdaten bereitstellen
+            {tokenData.supplierMode === "declaration" ? "Produktdaten prüfen & bestätigen" : "Produktdaten bereitstellen"}
           </h1>
           <p style={{ color: "#7A7A7A", marginBottom: "1rem" }}>
-            <strong>{tokenData.dpp.organizationName}</strong> benötigt Produktinformationen für <strong>{tokenData.dpp.name}</strong>.
+            {tokenData.supplierMode === "declaration" ? (
+              <>
+                <strong>{tokenData.dpp.organizationName}</strong> bittet Sie, die Produktinformationen für <strong>{tokenData.dpp.name}</strong> zu prüfen und zu bestätigen.
+              </>
+            ) : (
+              <>
+                <strong>{tokenData.dpp.organizationName}</strong> benötigt Produktinformationen für <strong>{tokenData.dpp.name}</strong>.
+              </>
+            )}
           </p>
           <p style={{ color: "#7A7A7A", fontSize: "0.9rem" }}>
-            Diese Daten sind erforderlich, um den Anforderungen des EU Digital Product Passports zu entsprechen.
+            {tokenData.supplierMode === "declaration" 
+              ? "Bitte prüfen Sie die vorhandenen Angaben und bestätigen Sie diese oder geben Sie einen Kommentar bei Ablehnung ab."
+              : "Diese Daten sind erforderlich, um den Anforderungen des EU Digital Product Passports zu entsprechen."}
           </p>
           {tokenData.message && (
             <div style={{
@@ -534,8 +579,12 @@ function ContributeContent() {
                       onMediaChange={() => {}}
                       value={formData[field.key] || ""}
                       onChange={(value) => {
-                        setFormData({ ...formData, [field.key]: value })
+                        // Im Prüf-Modus: Felder sind read-only
+                        if (tokenData.supplierMode !== "declaration") {
+                          setFormData({ ...formData, [field.key]: value })
+                        }
                       }}
+                      readOnly={tokenData.supplierMode === "declaration"} // Prüf-Modus: Felder read-only
                     />
                   ))}
                 </div>
@@ -553,7 +602,7 @@ function ContributeContent() {
               />
             )}
 
-            {tokenData.allowedSections.includes(DPP_SECTIONS.MATERIAL_SOURCE) && (
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.MATERIAL_SOURCE) && (
               <InputField
                 id="materialSource"
                 label="Materialherkunft"
@@ -562,7 +611,7 @@ function ContributeContent() {
               />
             )}
 
-            {tokenData.allowedSections.includes(DPP_SECTIONS.CARE) && (
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.CARE) && (
               <InputField
                 id="careInstructions"
                 label="Pflegehinweise"
@@ -572,7 +621,7 @@ function ContributeContent() {
               />
             )}
 
-            {tokenData.allowedSections.includes(DPP_SECTIONS.REPAIR) && (
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.REPAIR) && (
               <>
                 <div style={{ marginBottom: "1.5rem" }}>
                   <label htmlFor="isRepairable" style={{
@@ -635,7 +684,7 @@ function ContributeContent() {
               </>
             )}
 
-            {tokenData.allowedSections.includes(DPP_SECTIONS.LIFESPAN) && (
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.LIFESPAN) && (
               <InputField
                 id="lifespan"
                 label="Lebensdauer"
@@ -644,7 +693,7 @@ function ContributeContent() {
               />
             )}
 
-            {tokenData.allowedSections.includes(DPP_SECTIONS.CONFORMITY) && (
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.CONFORMITY) && (
               <InputField
                 id="conformityDeclaration"
                 label="Konformitätserklärung"
@@ -654,7 +703,7 @@ function ContributeContent() {
               />
             )}
 
-            {tokenData.allowedSections.includes(DPP_SECTIONS.DISPOSAL) && (
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.DISPOSAL) && (
               <InputField
                 id="disposalInfo"
                 label="Entsorgungsinformationen"
@@ -664,7 +713,7 @@ function ContributeContent() {
               />
             )}
 
-            {tokenData.allowedSections.includes(DPP_SECTIONS.TAKEBACK) && (
+            {tokenData.allowedSections?.includes(DPP_SECTIONS.TAKEBACK) && (
               <>
                 <div style={{ marginBottom: "1.5rem" }}>
                   <label htmlFor="takebackOffered" style={{
@@ -730,29 +779,146 @@ function ContributeContent() {
               </div>
             )}
 
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "0.75rem",
-                cursor: "pointer",
-              }}>
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(e) => setConfirmed(e.target.checked)}
-                  style={{
-                    marginTop: "0.25rem",
-                    width: "20px",
-                    height: "20px",
+            {/* Prüf-Modus: Zwei Optionen - Bestätigung oder Ablehnung */}
+            {tokenData.supplierMode === "declaration" ? (
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: "#0A0A0A",
+                  marginBottom: "0.75rem"
+                }}>
+                  Bewertung der Angaben
+                </div>
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem"
+                }}>
+                  <label style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
                     cursor: "pointer",
-                  }}
-                />
-                <span style={{ fontSize: "0.9rem", color: "#0A0A0A" }}>
-                  Ich bestätige, dass die bereitgestellten Informationen nach bestem Wissen korrekt sind.
-                </span>
-              </label>
-            </div>
+                    padding: "0.75rem",
+                    border: confirmed ? "2px solid #24c598" : "1px solid #E5E5E5",
+                    borderRadius: "8px",
+                    backgroundColor: confirmed ? "#F0FDF4" : "#FFFFFF",
+                    transition: "all 0.2s"
+                  }}>
+                    <input
+                      type="radio"
+                      name="confirmation"
+                      checked={confirmed}
+                      onChange={(e) => {
+                        setConfirmed(e.target.checked)
+                        if (e.target.checked) {
+                          setRejected(false)
+                          setReviewComment("")
+                        }
+                      }}
+                      style={{
+                        marginTop: "0.125rem",
+                        width: "18px",
+                        height: "18px",
+                        cursor: "pointer",
+                      }}
+                    />
+                    <span style={{ fontSize: "0.9rem", color: "#0A0A0A", flex: 1 }}>
+                      Hiermit bestätige ich die Korrektheit der Angaben
+                    </span>
+                  </label>
+                  
+                  <label style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
+                    cursor: "pointer",
+                    padding: "0.75rem",
+                    border: rejected ? "2px solid #DC2626" : "1px solid #E5E5E5",
+                    borderRadius: "8px",
+                    backgroundColor: rejected ? "#FEF2F2" : "#FFFFFF",
+                    transition: "all 0.2s"
+                  }}>
+                    <input
+                      type="radio"
+                      name="confirmation"
+                      checked={rejected}
+                      onChange={(e) => {
+                        setRejected(e.target.checked)
+                        if (e.target.checked) {
+                          setConfirmed(false)
+                        }
+                      }}
+                      style={{
+                        marginTop: "0.125rem",
+                        width: "18px",
+                        height: "18px",
+                        cursor: "pointer",
+                      }}
+                    />
+                    <span style={{ fontSize: "0.9rem", color: "#0A0A0A", flex: 1 }}>
+                      Die Angaben sind nicht oder nicht vollständig korrekt
+                    </span>
+                  </label>
+                </div>
+                
+                {rejected && (
+                  <div style={{ marginTop: "1rem", marginLeft: "2.25rem" }}>
+                    <label style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#0A0A0A",
+                      marginBottom: "0.5rem"
+                    }}>
+                      Kommentar zur Ablehnung *
+                    </label>
+                    <textarea
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      placeholder="Bitte geben Sie einen Kommentar zur Ablehnung an..."
+                      rows={4}
+                      required={rejected}
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        fontSize: "0.9rem",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "8px",
+                        fontFamily: "inherit",
+                        resize: "vertical"
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Beisteuern-Modus: Standard-Bestätigung */
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "0.75rem",
+                  cursor: "pointer",
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    onChange={(e) => setConfirmed(e.target.checked)}
+                    style={{
+                      marginTop: "0.25rem",
+                      width: "20px",
+                      height: "20px",
+                      cursor: "pointer",
+                    }}
+                  />
+                  <span style={{ fontSize: "0.9rem", color: "#0A0A0A" }}>
+                    Ich bestätige, dass die bereitgestellten Informationen nach bestem Wissen korrekt sind.
+                  </span>
+                </label>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -781,19 +947,21 @@ function ContributeContent() {
 
 export default function ContributePage() {
   return (
-    <Suspense fallback={
-      <div style={{
-        minHeight: "100vh",
-        backgroundColor: "#F5F5F5",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        <LoadingSpinner message="Daten werden geladen..." />
-      </div>
-    }>
-      <ContributeContent />
-    </Suspense>
+    <NotificationProvider>
+      <Suspense fallback={
+        <div style={{
+          minHeight: "100vh",
+          backgroundColor: "#F5F5F5",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          <LoadingSpinner message="Daten werden geladen..." />
+        </div>
+      }>
+        <ContributeContent />
+      </Suspense>
+    </NotificationProvider>
   )
 }
 

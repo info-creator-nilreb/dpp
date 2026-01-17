@@ -148,25 +148,40 @@ export default function RepeatableFieldGroup({
                 <span style={{
                   fontSize: "0.875rem",
                   fontWeight: "600",
-                  color: "#7A7A7A"
+                  color: "#0A0A0A"
                 }}>
-                  {index + 1}
+                  {field.label} {index + 1}
                 </span>
                 {instances.length > (field.required ? 1 : 0) && (
                   <button
                     type="button"
                     onClick={() => removeInstance(instance.instanceId)}
+                    title="Entfernen"
                     style={{
-                      padding: "0.25rem 0.5rem",
+                      padding: "0.25rem",
                       backgroundColor: "transparent",
                       color: "#DC2626",
-                      border: "1px solid #DC2626",
+                      border: "none",
                       borderRadius: "4px",
-                      fontSize: "0.75rem",
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "color 0.2s"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "#991B1B"
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = "#DC2626"
                     }}
                   >
-                    Entfernen
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
                   </button>
                 )}
               </div>

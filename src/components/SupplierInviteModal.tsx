@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import ConfirmDialog from "@/components/ConfirmDialog"
 
 interface TemplateBlock {
   id: string
@@ -34,6 +35,7 @@ interface SupplierInvite {
   mode: "contribute" | "review" // "Daten beisteuern" | "Daten prüfen & bestätigen"
   selectedBlocks: string[]
   selectedFieldInstances: FieldInstance[]
+  sendEmail?: boolean // Steuert, ob E-Mail sofort versendet wird (default: true)
 }
 
 interface ExistingInvite {
@@ -44,6 +46,7 @@ interface ExistingInvite {
   fieldInstances?: FieldInstance[]
   supplierMode?: string // "input" | "declaration"
   status: string
+  emailSentAt?: Date | string | null // Timestamp, wenn E-Mail verschickt wurde
 }
 
 interface SupplierInviteModalProps {
@@ -118,6 +121,11 @@ export default function SupplierInviteModal({
   const [modalFieldInstances, setModalFieldInstances] = useState<Record<string, FieldInstance[]>>({})
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
+  const [showExistingInvitesHeader, setShowExistingInvitesHeader] = useState(false) // Nur anzeigen nach "Weiteren Beteiligten hinzufügen"
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [inviteToRemove, setInviteToRemove] = useState<ExistingInvite | null>(null)
+  const [hasVisitedStep5, setHasVisitedStep5] = useState(false) // Track ob Schritt 5 bereits besucht wurde
+  const [showAllFieldsAssignedHint, setShowAllFieldsAssignedHint] = useState(false) // Hinweis, dass alle Felder zugewiesen sind
 
   // Helper: Prüft, ob ein Block supplier-fähig ist
   const isBlockSupplierEnabled = (blockId: string): boolean => {
@@ -128,6 +136,133 @@ export default function SupplierInviteModal({
   const supplierEnabledBlocks = template?.blocks.filter(
     block => block.order > 0 && isBlockSupplierEnabled(block.id)
   ) || []
+
+  // Helper: Prüft, ob ein Feld bereits für "Beisteuern" (exklusiv) zugewiesen wurde
+  // WICHTIG: Nur für Modus "Beisteuern" relevant - Felder dürfen nur einmal zur Befüllung zugewiesen werden
+  // WICHTIG: Berücksichtigt ALLE Invites, auch noch nicht verschickte (pending ohne emailSentAt)
+  const getAssignedSupplierForContribute = (fieldId: string, instanceId: string, blockId: string): string | undefined => {
+    // Prüfe ALLE Invites (inkl. pending ohne emailSentAt), damit Felder auch VOR dem Versenden ausgegraut werden
+    // Prüfe nur Invites mit Modus "Beisteuern" (input/contribute)
+    for (const invite of existingInvites) {
+      // Nur prüfen, wenn Modus "Beisteuern" ist
+      // WICHTIG: Prüfe ALLE invites, unabhängig vom Status oder emailSentAt
+      if (invite.supplierMode !== "input" && invite.supplierMode !== "contribute") {
+        continue
+      }
+      
+      // Prüfe zuerst, ob das Feld explizit zugewiesen wurde
+      if (invite.fieldInstances && invite.fieldInstances.length > 0) {
+        const fieldAssigned = invite.fieldInstances.some(fi => fi.fieldId === fieldId && fi.instanceId === instanceId)
+        if (fieldAssigned) {
+          return invite.email
+        }
+      }
+      
+      // Wenn das Feld nicht explizit zugewiesen wurde, prüfe ob der Block vollständig zugewiesen wurde
+      if (invite.blockIds && invite.blockIds.length > 0 && invite.blockIds.includes(blockId)) {
+        // Wenn KEINE Felder explizit zugewiesen wurden, ist der Block vollständig zugewiesen
+        if (!invite.fieldInstances || invite.fieldInstances.length === 0) {
+          // Block ist vollständig zugewiesen (ohne Felder), daher sind ALLE Felder zugewiesen
+          return invite.email
+        }
+      }
+    }
+    return undefined
+  }
+
+  // Helper: Prüft, ob mindestens ein Feld für einen Modus verfügbar ist
+  // WICHTIG: Berücksichtigt ALLE Invites, auch noch nicht verschickte (pending ohne emailSentAt)
+  const hasAvailableFieldsForMode = (mode: "contribute" | "review"): boolean => {
+    if (!template) return false
+    
+    // Für "Daten prüfen & bestätigen": Alle Felder können geprüft werden (immer verfügbar)
+    if (mode === "review") {
+      return supplierEnabledBlocks.length > 0
+    }
+    
+    // Für "Daten beisteuern": Prüfe, ob mindestens ein Feld NICHT bereits zugewiesen ist
+    // WICHTIG: getAssignedSupplierForContribute prüft bereits ALLE invites (inkl. pending ohne emailSentAt)
+    // und berücksichtigt sowohl explizite Feld-Zuweisungen als auch Block-Zuweisungen
+    
+    // Debug: Log alle Invites mit contribute mode
+    const contributeInvites = existingInvites.filter(inv => inv.supplierMode === "input" || inv.supplierMode === "contribute")
+    console.log("[SupplierInviteModal] hasAvailableFieldsForMode - contributeInvites:", contributeInvites.length, contributeInvites.map(inv => ({
+      email: inv.email,
+      blockIds: inv.blockIds,
+      fieldInstances: inv.fieldInstances?.length || 0
+    })))
+    
+    let availableFieldsFound = 0
+    let totalFieldsChecked = 0
+    
+    for (const block of supplierEnabledBlocks) {
+      // Prüfe, ob Block vollständig zugewiesen ist (ohne explizite Felder)
+      // Direkte Prüfung ohne isBlockAssigned, da diese Funktion später definiert ist
+      const blockAssigned = contributeInvites.some(inv => {
+        // Wenn Felder explizit zugewiesen wurden, ist der Block nicht vollständig zugewiesen
+        if (inv.fieldInstances && inv.fieldInstances.length > 0) {
+          return false
+        }
+        // Wenn Block-IDs vorhanden sind und dieser Block dabei ist
+        return inv.blockIds && inv.blockIds.length > 0 && inv.blockIds.includes(block.id)
+      })
+      
+      if (blockAssigned) {
+        // Block ist vollständig zugewiesen ohne explizite Felder - alle Felder sind zugewiesen
+        console.log("[SupplierInviteModal] Block", block.name, "ist vollständig zugewiesen ohne explizite Felder")
+        continue // Alle Felder dieses Blocks sind zugewiesen
+      }
+      
+      // Prüfe einzelne Felder
+      for (const field of block.fields) {
+        if (field.isRepeatable) {
+          const repeatableInstances = fieldInstances[field.key] || []
+          for (const inst of repeatableInstances) {
+            totalFieldsChecked++
+            const assigned = getAssignedSupplierForContribute(field.id, inst.instanceId, block.id)
+            if (!assigned) {
+              availableFieldsFound++
+              console.log("[SupplierInviteModal] Verfügbares Feld gefunden:", field.label, inst.instanceId, "in Block", block.name)
+              return true // Mindestens ein Feld ist verfügbar
+            }
+          }
+          // Falls keine Instanzen existieren, ist das Feld verfügbar
+          if (repeatableInstances.length === 0) {
+            availableFieldsFound++
+            console.log("[SupplierInviteModal] Verfügbares Feld gefunden (keine Instanzen):", field.label, "in Block", block.name)
+            return true
+          }
+        } else {
+          totalFieldsChecked++
+          const assigned = getAssignedSupplierForContribute(field.id, `${field.id}-0`, block.id)
+          if (!assigned) {
+            availableFieldsFound++
+            console.log("[SupplierInviteModal] Verfügbares Feld gefunden:", field.label, "in Block", block.name)
+            return true // Mindestens ein Feld ist verfügbar
+          }
+        }
+      }
+    }
+    
+    console.log("[SupplierInviteModal] hasAvailableFieldsForMode - Ergebnis: false (keine verfügbaren Felder), totalFieldsChecked:", totalFieldsChecked)
+    return false // Keine verfügbaren Felder
+  }
+
+  // Prüfe Verfügbarkeit für beide Modi
+  const canUseContributeMode = hasAvailableFieldsForMode("contribute")
+  const canUseReviewMode = hasAvailableFieldsForMode("review")
+  
+  // Debug-Logs für Verfügbarkeits-Checks
+  console.log("[SupplierInviteModal] canUseContributeMode:", canUseContributeMode)
+  console.log("[SupplierInviteModal] canUseReviewMode:", canUseReviewMode)
+  console.log("[SupplierInviteModal] currentStep:", currentStep)
+  console.log("[SupplierInviteModal] existingInvites count:", existingInvites.length)
+  console.log("[SupplierInviteModal] supplierEnabledBlocks count:", supplierEnabledBlocks.length)
+  
+  // Prüfe, ob es ausstehende Einladungen gibt (Schritt 5 immer erreichbar)
+  const hasPendingInvites = existingInvites.some(invite => 
+    invite.status === "pending" && !invite.emailSentAt
+  )
 
   // Initialize field instances when modal opens
   useEffect(() => {
@@ -165,7 +300,7 @@ export default function SupplierInviteModal({
       })
       setModalFieldInstances(instances)
     }
-  }, [isOpen, template, fieldInstances])
+  }, [isOpen, template, fieldInstances, existingInvites])
 
   // Body-Overflow-Management für Modal
   useEffect(() => {
@@ -215,12 +350,20 @@ export default function SupplierInviteModal({
         setSelectedFieldInstances(new Set())
         setExpandedBlockFields(new Set())
         setCurrentStep(1)
+        // Header nicht anzeigen beim normalen Öffnen
+        setShowExistingInvitesHeader(false)
+        setHasVisitedStep5(false) // Reset Schritt 5 Besuch-Status
       }
     }
   }, [isOpen])
 
-  // Helper: Prüft, ob ein Feld/Instanz bereits zugewiesen ist
+  // Helper: Prüft, ob ein Feld bereits zugewiesen wurde (für Anzeigezwecke)
+  // Zeigt an, wer das Feld befüllt oder prüft
+  
+  // Helper: Prüft, ob ein Feld bereits zugewiesen wurde (für Anzeigezwecke)
+  // Zeigt an, wer das Feld befüllt oder prüft
   const getAssignedSupplier = (fieldId: string, instanceId: string, blockId: string): string | undefined => {
+    // Prüfe ALLE Invites (nicht nur pending), damit Felder auch VOR dem Versenden ausgegraut werden
     // Prüfe zuerst, ob das Feld explizit zugewiesen wurde
     for (const invite of existingInvites) {
       if (invite.fieldInstances && invite.fieldInstances.length > 0) {
@@ -246,6 +389,29 @@ export default function SupplierInviteModal({
     
     return undefined
   }
+  
+  // Helper: Prüft, ob ein Feld für "Beisteuern" zugewiesen ist (für Deaktivierung)
+  // Wird nur verwendet, wenn aktueller Modus = "Beisteuern"
+  const isFieldAssignedForContribute = (fieldId: string, instanceId: string, blockId: string): boolean => {
+    return !!getAssignedSupplierForContribute(fieldId, instanceId, blockId)
+  }
+  
+  // Helper: Prüft, ob ein Block bereits vollständig zugewiesen ist
+  // WICHTIG: Prüft ALLE Invites (nicht nur pending), damit Blöcke auch VOR dem Versenden ausgegraut werden
+  const isBlockAssigned = (blockId: string): string | undefined => {
+    for (const invite of existingInvites) {
+      // Wenn Felder explizit zugewiesen wurden, ist der Block nicht vollständig zugewiesen
+      if (invite.fieldInstances && invite.fieldInstances.length > 0) {
+        continue
+      }
+      
+      // Wenn Block-IDs vorhanden sind und dieser Block dabei ist
+      if (invite.blockIds && invite.blockIds.length > 0 && invite.blockIds.includes(blockId)) {
+        return invite.email
+      }
+    }
+    return undefined
+  }
 
   // Helper: Zählt zugewiesene Blöcke/Felder für einen Beteiligten
   const getAssignedSummary = (invite: ExistingInvite): { blocks: number; fields: number } => {
@@ -267,6 +433,12 @@ export default function SupplierInviteModal({
   }
 
   const handleBlockSelect = (blockId: string, checked: boolean) => {
+    // Prüfe, ob Block bereits zugewiesen ist
+    const assignedSupplier = isBlockAssigned(blockId)
+    if (assignedSupplier) {
+      return // Block ist bereits zugewiesen, kann nicht ausgewählt werden
+    }
+    
     setSelectedBlocks(prev => {
       const next = new Set(prev)
       if (checked) {
@@ -328,16 +500,60 @@ export default function SupplierInviteModal({
   const handleNext = () => {
     if (currentStep === 1) {
       if (!role) return
+      // Prüfe, ob noch Felder verfügbar sind, bevor man zu Schritt 2 geht
+      if (!canUseContributeMode && !canUseReviewMode) {
+        // Keine Felder mehr verfügbar - springe direkt zu Schritt 5
+        setCurrentStep(5)
+        setHasVisitedStep5(true)
+        return
+      }
       setCurrentStep(2)
     } else if (currentStep === 2) {
       if (!email.trim()) return
+      // Prüfe, ob noch Felder verfügbar sind, bevor man zu Schritt 3 geht
+      if (!canUseContributeMode && !canUseReviewMode) {
+        // Keine Felder mehr verfügbar - springe direkt zu Schritt 5
+        setCurrentStep(5)
+        setHasVisitedStep5(true)
+        return
+      }
       setCurrentStep(3)
     } else if (currentStep === 3) {
       if (!mode) return
+      // Prüfe, ob noch Felder verfügbar sind für den gewählten Modus
+      if (mode === "contribute" && !canUseContributeMode) {
+        // Keine Felder mehr verfügbar für Beisteuern - springe direkt zu Schritt 5
+        setCurrentStep(5)
+        setHasVisitedStep5(true)
+        return
+      }
+      if (mode === "review" && !canUseReviewMode) {
+        // Keine Felder mehr verfügbar für Prüfen - springe direkt zu Schritt 5
+        setCurrentStep(5)
+        setHasVisitedStep5(true)
+        return
+      }
+      // Prüfe erneut, ob noch Felder verfügbar sind, bevor man zu Schritt 4 geht
+      const hasAvailableFields = mode === "contribute" ? canUseContributeMode : canUseReviewMode
+      if (!hasAvailableFields) {
+        // Keine Felder mehr verfügbar - springe direkt zu Schritt 5
+        setCurrentStep(5)
+        setHasVisitedStep5(true)
+        return
+      }
       setCurrentStep(4)
     } else if (currentStep === 4) {
+      // Prüfe, ob noch Felder verfügbar sind für den gewählten Modus
+      const hasAvailableFields = mode === "contribute" ? canUseContributeMode : canUseReviewMode
+      if (!hasAvailableFields && selectedBlocks.size === 0 && selectedFieldInstances.size === 0) {
+        // Keine Felder mehr verfügbar und nichts ausgewählt - springe direkt zu Schritt 5
+        setCurrentStep(5)
+        setHasVisitedStep5(true)
+        return
+      }
       if (selectedBlocks.size === 0 && selectedFieldInstances.size === 0) return
       setCurrentStep(5)
+      setHasVisitedStep5(true) // Markiere Schritt 5 als besucht
     }
   }
 
@@ -347,7 +563,7 @@ export default function SupplierInviteModal({
     }
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (sendEmailNow: boolean = true) => {
     if (!role || !email.trim() || !mode) return
     if (selectedBlocks.size === 0 && selectedFieldInstances.size === 0) return
 
@@ -375,11 +591,12 @@ export default function SupplierInviteModal({
         role: role.trim(),
         mode: mode as "contribute" | "review",
         selectedBlocks: Array.from(selectedBlocks),
-        selectedFieldInstances: instances
+        selectedFieldInstances: instances,
+        sendEmail: sendEmailNow // Steuert, ob E-Mail sofort versendet wird
       })
 
       // Multi-Invite-Flow: Modal bleibt offen, Formular reset
-      setSuccessMessage("Beteiligter erfolgreich eingeladen")
+      setSuccessMessage(sendEmailNow ? "Beteiligter erfolgreich eingeladen" : "Beteiligter erfolgreich gespeichert")
       setShowSuccessToast(true)
       setTimeout(() => setShowSuccessToast(false), 3000)
 
@@ -394,6 +611,7 @@ export default function SupplierInviteModal({
       setSelectedFieldInstances(new Set())
       setExpandedBlockFields(new Set())
       setCurrentStep(1)
+      // Schritt 5 bleibt besucht, damit man zurückkehren kann
 
       // Callback aufrufen NACH erfolgreichem onSubmit (damit dataRequests neu geladen werden)
       if (onInviteSuccess) {
@@ -468,8 +686,11 @@ export default function SupplierInviteModal({
 
   // Debug: Log existingInvites für Debugging
   console.log("[SupplierInviteModal] existingInvites:", existingInvites.length, existingInvites)
+  console.log("[SupplierInviteModal] existingInvites mit Status:", existingInvites.map(i => ({ email: i.email, status: i.status, blockIds: i.blockIds, emailSentAt: i.emailSentAt })))
+  console.log("[SupplierInviteModal] pending invites:", existingInvites.filter(i => i.status === "pending").length)
   console.log("[SupplierInviteModal] isOpen:", isOpen)
   console.log("[SupplierInviteModal] currentStep:", currentStep)
+  console.log("[SupplierInviteModal] Will show overview:", existingInvites.length > 0)
 
   // Bereits eingebundene Beteiligte (für Zusammenfassung)
   const assignedSummary = existingInvites.map(invite => {
@@ -594,7 +815,7 @@ export default function SupplierInviteModal({
           </button>
         </div>
 
-        {/* Minimale Übersicht: Bereits eingebundene Beteiligte (immer sichtbar) */}
+        {/* TEIL 4: Modal als "Beteiligten-Manager" - persistierender Header mit allen konfigurierten Beteiligten */}
         {existingInvites.length > 0 && (
           <div style={{
             marginBottom: "1.5rem",
@@ -604,14 +825,58 @@ export default function SupplierInviteModal({
             border: "1px solid #E5E5E5"
           }}>
             <div style={{
-              fontSize: "0.813rem",
-              fontWeight: "600",
-              color: "#7A7A7A",
-              marginBottom: "0.75rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em"
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "0.75rem"
             }}>
-              Bereits eingebundene Beteiligte
+              <div style={{
+                fontSize: "0.813rem",
+                fontWeight: "600",
+                color: "#7A7A7A",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em"
+              }}>
+                Konfigurierte Beteiligte ({existingInvites.length})
+              </div>
+              {hasPendingInvites && currentStep !== 5 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep(5)
+                    setHasVisitedStep5(true)
+                  }}
+                  disabled={loading}
+                  style={{
+                    padding: "0.375rem 0.75rem",
+                    backgroundColor: "transparent",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "6px",
+                    fontSize: "0.813rem",
+                    fontWeight: "500",
+                    color: "#7A7A7A",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    opacity: loading ? 0.5 : 1
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = "#24c598"
+                      e.currentTarget.style.color = "#24c598"
+                      e.currentTarget.style.backgroundColor = "#F0F9FF"
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = "#CDCDCD"
+                      e.currentTarget.style.color = "#7A7A7A"
+                      e.currentTarget.style.backgroundColor = "transparent"
+                    }
+                  }}
+                >
+                  Zur Übersicht
+                </button>
+              )}
             </div>
             <div style={{
               display: "flex",
@@ -642,26 +907,64 @@ export default function SupplierInviteModal({
                       <div style={{
                         fontWeight: "600",
                         color: "#0A0A0A",
-                        marginBottom: "0.25rem"
+                        marginBottom: "0.25rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        flexWrap: "wrap"
                       }}>
-                        {roleLabel} • {invite.email}
+                        <span>{roleLabel}</span>
+                        <span style={{ color: "#7A7A7A", fontWeight: "400" }}>•</span>
+                        <span style={{ fontSize: "0.875rem", fontWeight: "400", color: "#7A7A7A" }}>{invite.email}</span>
+                        {invite.status === "pending" && !invite.emailSentAt && (
+                          <span style={{
+                            fontSize: "0.75rem",
+                            padding: "0.125rem 0.5rem",
+                            backgroundColor: "#FEF3C7",
+                            color: "#92400E",
+                            borderRadius: "4px",
+                            fontWeight: "600"
+                          }}>
+                            Noch nicht benachrichtigt
+                          </span>
+                        )}
+                        {invite.status === "submitted" && (
+                          <span style={{
+                            fontSize: "0.75rem",
+                            padding: "0.125rem 0.5rem",
+                            backgroundColor: "#D1FAE5",
+                            color: "#065F46",
+                            borderRadius: "4px",
+                            fontWeight: "600"
+                          }}>
+                            Daten eingereicht
+                          </span>
+                        )}
                       </div>
                       <div style={{
                         fontSize: "0.813rem",
-                        color: "#7A7A7A"
+                        color: "#7A7A7A",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        flexWrap: "wrap"
                       }}>
-                        {modeLabel} • {summary.blocks > 0 && `${summary.blocks} Block${summary.blocks > 1 ? "e" : ""}`}
-                        {summary.blocks > 0 && summary.fields > 0 && " / "}
-                        {summary.fields > 0 && `${summary.fields} Feld${summary.fields > 1 ? "er" : ""}`}
+                        <span>{modeLabel}</span>
+                        {summary.blocks > 0 && (
+                          <span>• {summary.blocks} Block{summary.blocks > 1 ? "e" : ""}</span>
+                        )}
+                        {summary.fields > 0 && (
+                          <span>• {summary.fields} Feld{summary.fields > 1 ? "er" : ""}</span>
+                        )}
                       </div>
                     </div>
-                    {onRemoveInvite && (
+                    {/* Entfernen-Button nur für pending invites (keine eingereichten Daten) */}
+                    {onRemoveInvite && invite.status === "pending" && (
                       <button
                         type="button"
-                        onClick={async () => {
-                          if (confirm(`Beteiligten "${invite.email}" wirklich entfernen?`)) {
-                            await onRemoveInvite(invite.id)
-                          }
+                        onClick={() => {
+                          setInviteToRemove(invite)
+                          setShowConfirmDialog(true)
                         }}
                         disabled={loading}
                         title="Beteiligten entfernen"
@@ -711,7 +1014,7 @@ export default function SupplierInviteModal({
           </div>
         )}
 
-        {/* Progress Indicator */}
+        {/* Progress Indicator - Klickbar für Navigation */}
         <div style={{
           display: "flex",
           gap: "0.5rem",
@@ -719,18 +1022,38 @@ export default function SupplierInviteModal({
           paddingBottom: "1rem",
           borderBottom: "1px solid #E5E5E5"
         }}>
-          {[1, 2, 3, 4, 5].map(step => (
-            <div
-              key={step}
-              style={{
-                flex: 1,
-                height: "4px",
-                backgroundColor: step <= currentStep ? "#24c598" : "#E5E5E5",
-                borderRadius: "2px",
-                transition: "background-color 0.2s"
-              }}
-            />
-          ))}
+          {[1, 2, 3, 4, 5].map(step => {
+            // Schritt 5 ist nur aktiv, wenn er bereits besucht wurde oder wenn man gerade dort ist
+            const isStepCompleted = step < currentStep
+            const isCurrentStep = step === currentStep
+            // Schritt 5 ist nur grün, wenn er bereits besucht wurde ODER wenn man gerade dort ist
+            // WICHTIG: Tab 5 ist NICHT klickbar - wurde durch "Zur Übersicht" Button ersetzt
+            const isStep5Active = step === 5 && (isCurrentStep || hasVisitedStep5)
+            const canClick = false // Tab 5 ist nicht klickbar - "Zur Übersicht" Button wird stattdessen verwendet
+            
+            return (
+              <button
+                key={step}
+                type="button"
+                onClick={() => {
+                  // Tab 5 ist nicht klickbar
+                }}
+                disabled={true}
+                title={undefined}
+                style={{
+                  flex: 1,
+                  height: "4px",
+                  backgroundColor: (isStepCompleted || isCurrentStep || isStep5Active) ? "#24c598" : "#E5E5E5",
+                  borderRadius: "2px",
+                  transition: "all 0.2s",
+                  border: "none",
+                  cursor: "default",
+                  padding: 0,
+                  position: "relative"
+                }}
+              />
+            )
+          })}
         </div>
 
         {/* Step 1: Rolle wählen */}
@@ -937,16 +1260,17 @@ export default function SupplierInviteModal({
               <button
                 type="button"
                 onClick={() => setMode("contribute")}
-                disabled={loading}
+                disabled={loading || !canUseContributeMode}
                 style={{
                   padding: "1.25rem",
                   backgroundColor: mode === "contribute" ? "#E6F7E6" : "#FFFFFF",
-                  border: `2px solid ${mode === "contribute" ? "#24c598" : "#CDCDCD"}`,
+                  border: `2px solid ${mode === "contribute" ? "#24c598" : (!canUseContributeMode ? "#F5F5F5" : "#CDCDCD")}`,
                   borderRadius: "8px",
                   fontSize: "0.95rem",
-                  fontWeight: mode === "contribute" ? "600" : "400",
-                  color: "#0A0A0A",
-                  cursor: loading ? "not-allowed" : "pointer",
+                  fontWeight: "400",
+                  color: !canUseContributeMode ? "#CDCDCD" : "#0A0A0A",
+                  cursor: (loading || !canUseContributeMode) ? "not-allowed" : "pointer",
+                  opacity: !canUseContributeMode ? 0.6 : 1,
                   textAlign: "left",
                   transition: "all 0.2s",
                   display: "flex",
@@ -990,7 +1314,7 @@ export default function SupplierInviteModal({
                 <div style={{ flex: 1 }}>
                   <div style={{
                     fontSize: "0.95rem",
-                    fontWeight: mode === "contribute" ? "600" : "400",
+                    fontWeight: "400",
                     color: "#0A0A0A",
                     marginBottom: "0.25rem"
                   }}>
@@ -1002,6 +1326,24 @@ export default function SupplierInviteModal({
                     lineHeight: "1.4"
                   }}>
                     Partner ergänzt oder pflegt Inhalte
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.375rem", marginTop: "0.25rem", fontSize: "0.813rem", color: "#7A7A7A" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: "2px" }}>
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                      </svg>
+                      <span>Exklusive Verantwortung • Jedes Feld nur einmal zuweisbar</span>
+                    </div>
+                    {!canUseContributeMode && (
+                      <div style={{ 
+                        fontSize: "0.813rem", 
+                        color: "#DC2626", 
+                        marginTop: "0.5rem",
+                        fontStyle: "italic"
+                      }}>
+                        Alle Felder sind bereits zugewiesen.
+                      </div>
+                    )}
                   </div>
                 </div>
               </button>
@@ -1009,16 +1351,17 @@ export default function SupplierInviteModal({
               <button
                 type="button"
                 onClick={() => setMode("review")}
-                disabled={loading}
+                disabled={loading || !canUseReviewMode}
                 style={{
                   padding: "1.25rem",
                   backgroundColor: mode === "review" ? "#E6F7E6" : "#FFFFFF",
-                  border: `2px solid ${mode === "review" ? "#24c598" : "#CDCDCD"}`,
+                  border: `2px solid ${mode === "review" ? "#24c598" : (!canUseReviewMode ? "#F5F5F5" : "#CDCDCD")}`,
                   borderRadius: "8px",
                   fontSize: "0.95rem",
-                  fontWeight: mode === "review" ? "600" : "400",
-                  color: "#0A0A0A",
-                  cursor: loading ? "not-allowed" : "pointer",
+                  fontWeight: "400",
+                  color: !canUseReviewMode ? "#CDCDCD" : "#0A0A0A",
+                  cursor: (loading || !canUseReviewMode) ? "not-allowed" : "pointer",
+                  opacity: !canUseReviewMode ? 0.6 : 1,
                   textAlign: "left",
                   transition: "all 0.2s",
                   display: "flex",
@@ -1062,7 +1405,7 @@ export default function SupplierInviteModal({
                 <div style={{ flex: 1 }}>
                   <div style={{
                     fontSize: "0.95rem",
-                    fontWeight: mode === "review" ? "600" : "400",
+                    fontWeight: "400",
                     color: "#0A0A0A",
                     marginBottom: "0.25rem"
                   }}>
@@ -1074,6 +1417,24 @@ export default function SupplierInviteModal({
                     lineHeight: "1.4"
                   }}>
                     Partner prüft vorhandene Angaben und bestätigt diese
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.375rem", marginTop: "0.25rem", fontSize: "0.813rem", color: "#7A7A7A" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: "2px" }}>
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                      </svg>
+                      <span>Schreibgeschützt • Mehrere Prüfer pro Feld möglich</span>
+                    </div>
+                    {!canUseReviewMode && (
+                      <div style={{ 
+                        fontSize: "0.813rem", 
+                        color: "#DC2626", 
+                        marginTop: "0.5rem",
+                        fontStyle: "italic"
+                      }}>
+                        Keine Blöcke verfügbar.
+                      </div>
+                    )}
                   </div>
                 </div>
               </button>
@@ -1118,6 +1479,7 @@ export default function SupplierInviteModal({
                 {supplierEnabledBlocks.map(block => {
                   const isBlockSelected = selectedBlocks.has(block.id)
                   const blockFieldsExpanded = expandedBlockFields.has(block.id)
+                  
                   // Felder für diesen Block (immer laden, auch wenn Block nicht ausgewählt, um zugewiesene Felder zu prüfen)
                   const blockFields: FieldInstance[] = []
                   block.fields.forEach(field => {
@@ -1157,6 +1519,10 @@ export default function SupplierInviteModal({
                     return selectedFieldInstances.has(key)
                   })
                   
+                  // Prüfe, ob ALLE Felder dieses Blocks zugewiesen sind (für Block-Checkbox)
+                  const allFieldsAssigned = blockFields.length > 0 && blockFields.every(fi => !!fi.assignedSupplier)
+                  const blockDisabledByFields = allFieldsAssigned && blockFields.length > 0
+                  
                   return (
                     <div
                       key={block.id}
@@ -1172,23 +1538,25 @@ export default function SupplierInviteModal({
                       <div
                         style={{
                           padding: "1rem",
-                          cursor: loading ? "not-allowed" : "pointer",
+                          cursor: (loading || blockDisabledByFields) ? "not-allowed" : "pointer",
                           display: "flex",
                           alignItems: "center",
                           gap: "0.75rem",
-                          backgroundColor: isBlockSelected ? "#E6F7E6" : "transparent"
+                          backgroundColor: isBlockSelected ? "#E6F7E6" : (blockDisabledByFields ? "#F5F5F5" : "transparent"),
+                          opacity: blockDisabledByFields ? 0.5 : 1
                         }}
-                        onClick={() => !loading && handleBlockSelect(block.id, !isBlockSelected)}
+                        onClick={() => !loading && !blockDisabledByFields && handleBlockSelect(block.id, !isBlockSelected)}
                         onMouseEnter={(e) => {
-                          if (!loading && !isBlockSelected) {
+                          if (!loading && !isBlockSelected && !blockDisabledByFields) {
                             e.currentTarget.style.backgroundColor = "#F0F9FF"
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!isBlockSelected) {
-                            e.currentTarget.style.backgroundColor = "transparent"
+                            e.currentTarget.style.backgroundColor = blockDisabledByFields ? "#F5F5F5" : "transparent"
                           }
                         }}
+                        title={blockDisabledByFields ? `Alle Felder dieses Blocks sind bereits zugewiesen` : undefined}
                       >
                         <div style={{
                           width: "20px",
@@ -1208,11 +1576,21 @@ export default function SupplierInviteModal({
                         <span style={{
                           fontSize: "0.95rem",
                           fontWeight: "600",
-                          color: "#0A0A0A",
-                          flex: 1
+                          color: blockDisabledByFields ? "#7A7A7A" : "#0A0A0A",
+                          flex: 1,
+                          textDecoration: blockDisabledByFields ? "line-through" : "none"
                         }}>
                           {block.name}
                         </span>
+                        {blockDisabledByFields && (
+                          <span style={{
+                            fontSize: "0.75rem",
+                            color: "#7A7A7A",
+                            fontStyle: "italic"
+                          }}>
+                            Bereits zugewiesen
+                          </span>
+                        )}
                       </div>
 
                       {/* Progressive Disclosure: Optionale Felder-Auswahl (nur wenn Block ausgewählt) */}
@@ -1274,7 +1652,24 @@ export default function SupplierInviteModal({
                               {blockFields.map(fi => {
                                 const key = `${fi.fieldId}:${fi.instanceId}`
                                 const isSelected = selectedFieldInstances.has(key)
-                                const isAssigned = !!fi.assignedSupplier
+                                // TEIL 2: Feld-Logik verfeinern
+                                // Nur deaktivieren, wenn Modus = "Beisteuern" UND Feld bereits für "Beisteuern" zugewiesen
+                                const isAssignedForContribute = mode === "contribute" && isFieldAssignedForContribute(fi.fieldId, fi.instanceId, block.id)
+                                const isAssigned = isAssignedForContribute
+                                
+                                // Für Anzeige: Wer hat das Feld befüllt/geprüft (unabhängig vom Modus)
+                                const assignedForContribute = getAssignedSupplierForContribute(fi.fieldId, fi.instanceId, block.id)
+                                const reviewersForField = existingInvites.filter(inv => {
+                                  if (inv.supplierMode !== "declaration" && inv.supplierMode !== "review") return false
+                                  if (inv.fieldInstances && inv.fieldInstances.length > 0) {
+                                    return inv.fieldInstances.some(fi2 => fi2.fieldId === fi.fieldId && fi2.instanceId === fi.instanceId)
+                                  }
+                                  if (inv.blockIds && inv.blockIds.includes(block.id) && (!inv.fieldInstances || inv.fieldInstances.length === 0)) {
+                                    return true
+                                  }
+                                  return false
+                                })
+                                const hasReviewers = reviewersForField.length > 0
 
                                 return (
                                   <label
@@ -1297,7 +1692,7 @@ export default function SupplierInviteModal({
                                       opacity: isAssigned ? 0.5 : 1,
                                       transition: "all 0.2s"
                                     }}
-                                    title={isAssigned ? `Dieses Feld ist bereits zugewiesen (${fi.assignedSupplier})` : undefined}
+                                    title={isAssigned ? (mode === "contribute" && assignedForContribute ? `Dieses Feld ist bereits durch ${existingInvites.find(inv => inv.email === assignedForContribute)?.partnerRole || "einen Beteiligten"} zur Befüllung zugewiesen` : `Dieses Feld ist bereits zugewiesen`) : undefined}
                                   >
                                     <input
                                       type="checkbox"
@@ -1323,14 +1718,36 @@ export default function SupplierInviteModal({
                                         opacity: isAssigned ? 0.5 : 1
                                       }}
                                     />
+                                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                                     <span style={{ 
                                       fontSize: "0.9rem", 
                                       color: isAssigned ? "#7A7A7A" : "#0A0A0A", 
-                                      flex: 1,
                                       textDecoration: isAssigned ? "line-through" : "none"
                                     }}>
                                       {fi.label}
                                     </span>
+                                      {/* TEIL 3: Sichtbarkeit der Verantwortlichkeit */}
+                                      {(assignedForContribute || hasReviewers) && (
+                                        <div style={{
+                                          fontSize: "0.75rem",
+                                          color: "#7A7A7A",
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          gap: "0.125rem"
+                                        }}>
+                                          {assignedForContribute && (
+                                            <span style={{ fontStyle: "italic" }}>
+                                              Befüllt durch {existingInvites.find(inv => inv.email === assignedForContribute)?.partnerRole || "Beteiligten"}
+                                            </span>
+                                          )}
+                                          {hasReviewers && (
+                                            <span style={{ fontStyle: "italic" }}>
+                                              Geprüft durch {reviewersForField.map(inv => inv.partnerRole).join(", ")}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
                                     {isAssigned && (
                                       <span style={{
                                         fontSize: "0.75rem",
@@ -1367,27 +1784,29 @@ export default function SupplierInviteModal({
           </div>
         )}
 
-        {/* Step 5: Zusammenfassung */}
+        {/* Step 5: Zusammenfassung - nur anzeigen wenn Daten eingegeben wurden */}
         {currentStep === 5 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            <div>
-              <h3 style={{
-                fontSize: "1.1rem",
-                fontWeight: "600",
-                color: "#0A0A0A",
-                marginBottom: "1rem"
-              }}>
-                Zusammenfassung
-              </h3>
-              
-              <div style={{
-                padding: "1.25rem",
-                backgroundColor: "#F9F9F9",
-                borderRadius: "8px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem"
-              }}>
+            {/* Zusammenfassung nur anzeigen, wenn in Schritten 1-4 Daten eingegeben wurden */}
+            {(role || email || mode || selectedBlocks.size > 0 || selectedFieldInstances.size > 0) && (
+              <div>
+                <h3 style={{
+                  fontSize: "1.1rem",
+                  fontWeight: "600",
+                  color: "#0A0A0A",
+                  marginBottom: "1rem"
+                }}>
+                  Zusammenfassung
+                </h3>
+                
+                <div style={{
+                  padding: "1.25rem",
+                  backgroundColor: "#F9F9F9",
+                  borderRadius: "8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem"
+                }}>
                 <div>
                   <div style={{
                     fontSize: "0.875rem",
@@ -1492,6 +1911,7 @@ export default function SupplierInviteModal({
                 </div>
               </div>
             </div>
+            )}
 
             {/* Bereits eingebundene Beteiligte */}
             {assignedSummary.length > 0 && (
@@ -1528,6 +1948,24 @@ export default function SupplierInviteModal({
                     </div>
                   ))}
                 </div>
+                {/* Hinweis, wenn alle Felder/Blöcke bereits zugewiesen sind */}
+                {(() => {
+                  const shouldShowHint = !canUseContributeMode && currentStep === 5
+                  console.log("[SupplierInviteModal] Schritt 5 - shouldShowHint:", shouldShowHint, "canUseContributeMode:", canUseContributeMode)
+                  return shouldShowHint ? (
+                    <div style={{
+                      marginTop: "0.75rem",
+                      padding: "0.75rem 1rem",
+                      backgroundColor: "#FEF3C7",
+                      borderRadius: "6px",
+                      fontSize: "0.875rem",
+                      color: "#92400E",
+                      border: "1px solid #FDE68A"
+                    }}>
+                      Alle Felder und Blöcke sind bereits zugewiesen. Eine weitere Zuweisung ist nicht möglich.
+                    </div>
+                  ) : null
+                })()}
               </div>
             )}
           </div>
@@ -1536,35 +1974,41 @@ export default function SupplierInviteModal({
         {/* Actions */}
         <div style={{
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
           marginTop: "2rem",
           paddingTop: "1.5rem",
-          borderTop: "1px solid #E5E5E5"
+          borderTop: "1px solid #E5E5E5",
+          gap: "0.75rem"
         }}>
-          <div>
-            {currentStep > 1 && (
-              <button
-                type="button"
-                onClick={handleBack}
-                disabled={loading}
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  backgroundColor: "transparent",
-                  color: "#0A0A0A",
-                  border: "1px solid #CDCDCD",
-                  borderRadius: "8px",
-                  fontSize: "0.95rem",
-                  fontWeight: "600",
-                  cursor: loading ? "not-allowed" : "pointer"
-                }}
-              >
-                Zurück
-              </button>
-            )}
-          </div>
+          {/* Zurück-Button links - nur anzeigen wenn nicht alle Felder zugewiesen sind */}
+          {currentStep > 1 && canUseContributeMode && (
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={loading}
+              style={{
+                padding: "0.75rem 1.5rem",
+                backgroundColor: "transparent",
+                color: "#0A0A0A",
+                border: "1px solid #CDCDCD",
+                borderRadius: "8px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                cursor: loading ? "not-allowed" : "pointer",
+                height: "42px", // Feste Höhe für Konsistenz
+                boxSizing: "border-box",
+                flexShrink: 0
+              }}
+            >
+              Zurück
+            </button>
+          )}
 
-          <div style={{ display: "flex", gap: "0.75rem" }}>
+          {/* Spacer - schiebt rechte Buttons nach rechts */}
+          <div style={{ flex: 1 }} />
+
+          {/* Alle rechten Buttons in einem Container mit gleichem gap */}
+          <div style={{ display: "flex", gap: "0.75rem", flexShrink: 0, alignItems: "center" }}>
             {currentStep < 5 ? (
               <button
                 type="button"
@@ -1579,7 +2023,9 @@ export default function SupplierInviteModal({
                   fontSize: "0.95rem",
                   fontWeight: "600",
                   cursor: loading || !canProceed() ? "not-allowed" : "pointer",
-                  transition: "background-color 0.2s"
+                  transition: "background-color 0.2s",
+                  height: "42px", // Gleiche Höhe wie Zurück-Button
+                  boxSizing: "border-box"
                 }}
               >
                 Weiter
@@ -1588,55 +2034,227 @@ export default function SupplierInviteModal({
               <>
                 <button
                   type="button"
-                  onClick={handleSubmit}
-                  disabled={loading || !canProceed()}
+                  onClick={() => handleSubmit(true)}
+                  disabled={loading}
                   style={{
                     padding: "0.75rem 1.5rem",
-                    backgroundColor: loading || !canProceed() ? "#CDCDCD" : "#24c598",
+                    backgroundColor: loading ? "#CDCDCD" : "#24c598",
                     color: "#FFFFFF",
                     border: "none",
                     borderRadius: "8px",
                     fontSize: "0.95rem",
                     fontWeight: "600",
-                    cursor: loading || !canProceed() ? "not-allowed" : "pointer"
+                    cursor: loading ? "not-allowed" : "pointer",
+                    transition: "background-color 0.2s ease",
+                    height: "42px", // Gleiche Höhe wie Zurück-Button
+                    boxSizing: "border-box"
                   }}
                 >
-                  {loading ? "Wird gesendet..." : "Beteiligten einladen"}
+                  {loading ? "Wird gesendet..." : hasPendingInvites ? "Nicht benachrichtigte Beteiligte einladen" : "Beteiligten einladen"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Reset für weiteren Beteiligten
-                    setRole("")
-                    setEmail("")
-                    setName("")
-                    setCompany("")
-                    setMessage(DEFAULT_INVITATION_TEXT)
-                    setMode("")
-                    setSelectedBlocks(new Set())
-                    setSelectedFieldInstances(new Set())
-                    setExpandedBlockFields(new Set())
-                    setCurrentStep(1)
-                  }}
-                  disabled={loading}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    backgroundColor: "transparent",
-                    color: "#0A0A0A",
-                    border: "1px solid #CDCDCD",
-                    borderRadius: "8px",
-                    fontSize: "0.95rem",
-                    fontWeight: "600",
-                    cursor: loading ? "not-allowed" : "pointer"
-                  }}
-                >
-                  + Weiteren Beteiligten hinzufügen
-                </button>
+                {/* "Weiteren Beteiligten" - immer anzeigen, aber ausgegraut wenn keine Felder mehr verfügbar für "contribute" */}
+                {(() => {
+                  const isDisabled = loading || !canUseContributeMode
+                  console.log("[SupplierInviteModal] Schritt 5 - '+ Weiteren Beteiligten' Button:", {
+                    isDisabled,
+                    loading,
+                    canUseContributeMode,
+                    backgroundColor: !canUseContributeMode ? "#F5F5F5" : "transparent",
+                    color: !canUseContributeMode ? "#CDCDCD" : "#0A0A0A",
+                    opacity: !canUseContributeMode ? 0.5 : 1
+                  })
+                  return (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        // Wenn keine Felder mehr verfügbar für "contribute", keine Aktion
+                        if (!canUseContributeMode) {
+                          console.log("[SupplierInviteModal] Button geklickt, aber canUseContributeMode ist false")
+                          return
+                        }
+                        // Speichere aktuellen Beteiligten OHNE E-Mail zu versenden
+                        await handleSubmit(false)
+                        // Reset für weiteren Beteiligten erfolgt bereits in handleSubmit
+                        // Header anzeigen, wenn "Weiteren Beteiligten" geklickt wird
+                        setShowExistingInvitesHeader(true)
+                      }}
+                      disabled={isDisabled}
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        backgroundColor: !canUseContributeMode ? "#F5F5F5" : "transparent",
+                        color: !canUseContributeMode ? "#CDCDCD" : "#0A0A0A",
+                        border: `1px solid ${!canUseContributeMode ? "#E5E5E5" : "#CDCDCD"}`,
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: isDisabled ? "not-allowed" : "pointer",
+                        opacity: !canUseContributeMode ? 0.5 : 1,
+                        height: "42px", // Gleiche Höhe wie Zurück-Button
+                        boxSizing: "border-box",
+                        whiteSpace: "nowrap", // Verhindert Zeilenumbruch
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      + Weiteren Beteiligten
+                    </button>
+                  )
+                })()}
               </>
             )}
           </div>
         </div>
       </div>
+
+      {/* Confirm Dialog für Entfernen */}
+      {showConfirmDialog && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          zIndex: 10002,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1rem"
+        }}
+        onClick={() => {
+          if (!loading) {
+            setShowConfirmDialog(false)
+            setInviteToRemove(null)
+          }
+        }}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "12px",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
+              width: "90%",
+              maxWidth: "480px",
+              overflow: "hidden"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: "1.5rem 1.5rem 1rem",
+              borderBottom: "1px solid #F5F5F5"
+            }}>
+              <h2 style={{
+                fontSize: "1.25rem",
+                fontWeight: "700",
+                color: "#0A0A0A",
+                margin: 0
+              }}>
+                Beteiligten entfernen
+              </h2>
+            </div>
+
+            {/* Body */}
+            <div style={{
+              padding: "1.5rem"
+            }}>
+              <p style={{
+                fontSize: "1rem",
+                color: "#7A7A7A",
+                lineHeight: "1.5",
+                margin: 0,
+                marginBottom: "1.5rem"
+              }}>
+                {inviteToRemove ? `Möchten Sie den Beteiligten "${inviteToRemove.email}" wirklich entfernen?` : ""}
+              </p>
+
+              {/* Actions */}
+              <div style={{
+                display: "flex",
+                gap: "0.75rem",
+                justifyContent: "flex-end"
+              }}>
+                <button
+                  onClick={() => {
+                    if (!loading) {
+                      setShowConfirmDialog(false)
+                      setInviteToRemove(null)
+                    }
+                  }}
+                  disabled={loading}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    fontSize: "1rem",
+                    fontWeight: "500",
+                    color: "#7A7A7A",
+                    backgroundColor: "transparent",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "8px",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    minWidth: "120px",
+                    boxSizing: "border-box",
+                    opacity: loading ? 0.5 : 1
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = "#24c598"
+                      e.currentTarget.style.color = "#24c598"
+                      e.currentTarget.style.backgroundColor = "#FFF5F9"
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.borderColor = "#CDCDCD"
+                      e.currentTarget.style.color = "#7A7A7A"
+                      e.currentTarget.style.backgroundColor = "transparent"
+                    }
+                  }}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={async () => {
+                    if (inviteToRemove && onRemoveInvite && !loading) {
+                      await onRemoveInvite(inviteToRemove.id)
+                      setShowConfirmDialog(false)
+                      setInviteToRemove(null)
+                    }
+                  }}
+                  disabled={loading}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    fontSize: "1rem",
+                    fontWeight: "600",
+                    color: "#FFFFFF",
+                    backgroundColor: loading ? "#CDCDCD" : "#DC2626",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    boxShadow: loading ? "none" : "0 2px 8px rgba(220, 38, 38, 0.2)",
+                    minWidth: "120px",
+                    boxSizing: "border-box"
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.backgroundColor = "#991B1B"
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(220, 38, 38, 0.3)"
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.backgroundColor = "#DC2626"
+                      e.currentTarget.style.boxShadow = "0 2px 8px rgba(220, 38, 38, 0.2)"
+                    }
+                  }}
+                >
+                  Entfernen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
