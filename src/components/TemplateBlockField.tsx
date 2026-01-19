@@ -150,9 +150,104 @@ export default function TemplateBlockField({
   }
 
   // Filtere Medien für dieses Feld
-  const fieldMedia = media.filter(m => 
-    m.blockId === blockId && m.fieldId === field.key
-  )
+  // WICHTIG: Zeige Medien an, die zu diesem Feld gehören
+  // 1. Exakte Übereinstimmung: blockId und fieldId passen
+  // 2. Fallback: fieldId passt (auch wenn blockId unterschiedlich ist - für Template-Änderungen)
+  // 3. Fallback: fieldId passt mit alternativer Schreibweise (z.B. 'produktbild' vs 'productbild')
+  // 4. Fallback: Legacy-Medien ohne blockId/fieldId für file-image Felder
+  const fieldMedia = media.filter(m => {
+    // 1. Exakte Übereinstimmung: blockId und fieldId passen
+    if (m.blockId === blockId && m.fieldId === field.key) {
+      return true
+    }
+    
+    // 2. Fallback: fieldId passt (auch wenn blockId unterschiedlich ist)
+    // Dies ist wichtig, wenn das Template geändert wurde und Block-IDs sich geändert haben
+    if (m.fieldId === field.key && field.type === "file-image" && m.fileType && m.fileType.startsWith("image/")) {
+      return true
+    }
+    
+    // 3. Fallback: fieldId passt mit alternativer Schreibweise
+    // Behandle 'produktbild' und 'productbild' als gleichwertig
+    const normalizeFieldId = (id: string | null | undefined) => {
+      if (!id) return null
+      // Normalisiere zu Kleinbuchstaben und ersetze häufige Varianten
+      return id.toLowerCase().replace(/produktbild/g, 'productbild')
+    }
+    const normalizedMediaFieldId = normalizeFieldId(m.fieldId)
+    const normalizedFieldKey = normalizeFieldId(field.key)
+    if (normalizedMediaFieldId === normalizedFieldKey && field.type === "file-image" && m.fileType && m.fileType.startsWith("image/")) {
+      return true
+    }
+    
+    // 4. Fallback für Legacy-Medien: Wenn blockId und fieldId beide null/undefined/leer sind
+    // und es ein Bild ist, zeige es für file-image Felder an
+    // Dies ist wichtig für Medien, die vor der Template-Implementierung hochgeladen wurden
+    const hasNoBlockId = !m.blockId || m.blockId === null || m.blockId === ""
+    const hasNoFieldId = !m.fieldId || m.fieldId === null || m.fieldId === ""
+    
+    if (hasNoBlockId && hasNoFieldId) {
+      // Nur für file-image Felder: Zeige alle Bilder ohne blockId/fieldId
+      if (field.type === "file-image" && m.fileType && m.fileType.startsWith("image/")) {
+        return true
+      }
+    }
+    return false
+  })
+  
+  // Debug: Log gefilterte Medien - erweitert für besseres Debugging
+  const allMediaDetails = media.map(m => {
+    const hasNoBlockId = !m.blockId || m.blockId === null || m.blockId === ""
+    const hasNoFieldId = !m.fieldId || m.fieldId === null || m.fieldId === ""
+    const isImage = m.fileType?.startsWith("image/")
+    const matchesBlockId = m.blockId === blockId
+    const matchesFieldId = m.fieldId === field.key
+    const shouldShowForFileImageLegacy = hasNoBlockId && hasNoFieldId && field.type === "file-image" && isImage
+    const shouldShowForFileImageFieldMatch = matchesFieldId && field.type === "file-image" && isImage
+    
+    return {
+      id: m.id,
+      fileName: m.fileName,
+      fileType: m.fileType,
+      blockId: m.blockId,
+      fieldId: m.fieldId,
+      blockIdType: typeof m.blockId,
+      fieldIdType: typeof m.fieldId,
+      matchesBlockId: matchesBlockId,
+      matchesFieldId: matchesFieldId,
+      isImage: isImage,
+      hasNoBlockId: hasNoBlockId,
+      hasNoFieldId: hasNoFieldId,
+      shouldShowForFileImageLegacy: shouldShowForFileImageLegacy,
+      shouldShowForFileImageFieldMatch: shouldShowForFileImageFieldMatch,
+      willBeFiltered: (matchesBlockId && matchesFieldId) || shouldShowForFileImageFieldMatch || shouldShowForFileImageLegacy
+    }
+  })
+  
+  // Erweitere Logs für besseres Debugging
+  console.log(`[TemplateBlockField] Field ${field.key} (${field.label}): Found ${fieldMedia.length} media items out of ${media.length} total`, {
+    blockId,
+    fieldKey: field.key,
+    fieldType: field.type,
+    allMediaDetails: allMediaDetails,
+    filteredMedia: fieldMedia.map(m => ({ id: m.id, fileName: m.fileName, blockId: m.blockId, fieldId: m.fieldId }))
+  })
+  
+  // Zusätzlicher detaillierter Log für das erste Media-Item
+  if (media.length > 0 && fieldMedia.length === 0) {
+    const firstMedia = media[0]
+    console.log(`[TemplateBlockField] DEBUG - Media not filtered for field ${field.key}:`, {
+      mediaBlockId: firstMedia.blockId,
+      mediaFieldId: firstMedia.fieldId,
+      fieldBlockId: blockId,
+      fieldKey: field.key,
+      blockIdMatch: firstMedia.blockId === blockId,
+      fieldIdMatch: firstMedia.fieldId === field.key,
+      isImage: firstMedia.fileType?.startsWith("image/"),
+      fieldType: field.type,
+      shouldMatchByFieldId: firstMedia.fieldId === field.key && field.type === "file-image" && firstMedia.fileType?.startsWith("image/")
+    })
+  }
   
   // Filtere Pending Files für dieses Feld
   const fieldPendingFiles = pendingFiles.filter(pf => 

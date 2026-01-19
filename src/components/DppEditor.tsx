@@ -720,14 +720,33 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
   const refreshMedia = async () => {
     if (!dpp.id || dpp.id === "new") return
     try {
-      const response = await fetch(`/api/app/dpp/${dpp.id}/media`)
+      const response = await fetch(`/api/app/dpp/${dpp.id}/media`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache"
+        }
+      })
       if (response.ok) {
         const data = await response.json()
-        setDpp(prev => ({ ...prev, media: data.media }))
+        setDpp(prev => ({ ...prev, media: data.media || [] }))
       }
     } catch (error) {
+      console.error("[DppEditor] Error refreshing media:", error)
     }
   }
+
+  // Lade Medien beim ersten Laden eines bestehenden DPPs (falls nicht bereits geladen)
+  useEffect(() => {
+    if (!isNew && dpp.id && dpp.id !== "new") {
+      // Prüfe, ob Medien bereits geladen wurden (aus initialDpp)
+      // Wenn initialDpp.media leer ist oder nicht existiert, lade sie nach
+      if (!initialDpp.media || initialDpp.media.length === 0) {
+        refreshMedia()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dpp.id, isNew]) // Nur beim ersten Laden ausführen
 
   // Auto-Save für Supplier-Invite (ohne Redirect)
   const handleAutoSaveForSupplierInvite = async (): Promise<string | null> => {
@@ -1334,6 +1353,8 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           setLastSaved(new Date())
           setSaveStatus("saved")
           showNotification("Entwurf gespeichert", "success")
+          // Aktualisiere Medienliste, um sicherzustellen, dass alle hochgeladenen Medien angezeigt werden
+          await refreshMedia()
           // Bleibe auf der Seite, kein Redirect
         } else {
           let errorData
@@ -1963,6 +1984,27 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
           }
         }
         
+        // Debug: Log Medien vor Übergabe an TemplateBlocksSection
+        const mediaDetails = dpp.media.map(m => ({
+          id: m.id,
+          fileName: m.fileName,
+          fileType: m.fileType,
+          blockId: m.blockId,
+          fieldId: m.fieldId,
+          storageUrl: m.storageUrl,
+          hasBlockId: !!m.blockId,
+          hasFieldId: !!m.fieldId,
+          blockIdType: typeof m.blockId,
+          fieldIdType: typeof m.fieldId,
+          blockIdValue: m.blockId,
+          fieldIdValue: m.fieldId,
+          isImage: m.fileType?.startsWith("image/")
+        }))
+        console.log("[DppEditor] Passing media to TemplateBlocksSection:", {
+          mediaCount: dpp.media.length,
+          mediaDetails: mediaDetails
+        })
+        
         return (
           <TemplateBlocksSection
             template={template}
@@ -2464,3 +2506,4 @@ export default function DppEditor({ dpp: initialDpp, isNew = false, onUnsavedCha
     </>
   )
 }
+
