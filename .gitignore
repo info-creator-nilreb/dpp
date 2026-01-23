@@ -41,3 +41,7 @@ next-env.d.ts
 
 # uploads
 /public/uploads
+
+# migration documentation (temporary)
+MIGRATION_TEMPLATE_VERSION_BINDING.md
+migrate-template-version-binding.sql
