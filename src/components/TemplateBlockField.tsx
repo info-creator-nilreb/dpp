@@ -41,6 +41,7 @@ interface TemplateBlockFieldProps {
   supplierInfo?: {
     partnerRole: string
     confirmed?: boolean // TEIL 6: Ob die Angaben bereits geprüft und übernommen wurden
+    mode?: "input" | "declaration" // Modus: "input" = beigesteuert, "declaration" = geprüft
   } | null // Information über den Beteiligten, der dieses Feld bereitgestellt hat
   onSupplierInfoConfirm?: (fieldKey: string) => void // TEIL 6: Callback für Bestätigung
   readOnly?: boolean // Felder read-only machen (für Prüf-Modus)
@@ -80,7 +81,6 @@ export default function TemplateBlockField({
         display: "inline-flex",
         alignItems: "center",
         gap: "0.5rem",
-        marginLeft: "0.5rem",
         flexWrap: "wrap"
       }}>
         {supplierInfo.confirmed ? (
@@ -98,7 +98,9 @@ export default function TemplateBlockField({
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <polyline points="20 6 9 17 4 12"/>
             </svg>
-            Geprüft und von {supplierInfo.partnerRole} übernommen
+            {supplierInfo.mode === "declaration" 
+              ? `Daten geprüft und vom ${supplierInfo.partnerRole} bestätigt`
+              : `Geprüft und von ${supplierInfo.partnerRole} übernommen`}
           </span>
         ) : (
           <>
@@ -148,12 +150,107 @@ export default function TemplateBlockField({
   }
 
   // Filtere Medien für dieses Feld
-  const fieldMedia = media.filter(m => 
-    m.blockId === blockId && m.fieldId === field.key
-  )
+  // WICHTIG: Zeige Medien an, die zu diesem Feld gehören
+  // 1. Exakte Übereinstimmung: blockId und fieldId passen
+  // 2. Fallback: fieldId passt (auch wenn blockId unterschiedlich ist - für Template-Änderungen)
+  // 3. Fallback: fieldId passt mit alternativer Schreibweise (z.B. 'produktbild' vs 'productbild')
+  // 4. Fallback: Legacy-Medien ohne blockId/fieldId für file-image Felder
+  const fieldMedia = media.filter(m => {
+    // 1. Exakte Übereinstimmung: blockId und fieldId passen
+    if (m.blockId === blockId && m.fieldId === field.key) {
+      return true
+    }
+    
+    // 2. Fallback: fieldId passt (auch wenn blockId unterschiedlich ist)
+    // Dies ist wichtig, wenn das Template geändert wurde und Block-IDs sich geändert haben
+    if (m.fieldId === field.key && field.type === "file-image" && m.fileType && m.fileType.startsWith("image/")) {
+      return true
+    }
+    
+    // 3. Fallback: fieldId passt mit alternativer Schreibweise
+    // Behandle 'produktbild' und 'productbild' als gleichwertig
+    const normalizeFieldId = (id: string | null | undefined) => {
+      if (!id) return null
+      // Normalisiere zu Kleinbuchstaben und ersetze häufige Varianten
+      return id.toLowerCase().replace(/produktbild/g, 'productbild')
+    }
+    const normalizedMediaFieldId = normalizeFieldId(m.fieldId)
+    const normalizedFieldKey = normalizeFieldId(field.key)
+    if (normalizedMediaFieldId === normalizedFieldKey && field.type === "file-image" && m.fileType && m.fileType.startsWith("image/")) {
+      return true
+    }
+    
+    // 4. Fallback für Legacy-Medien: Wenn blockId und fieldId beide null/undefined/leer sind
+    // und es ein Bild ist, zeige es für file-image Felder an
+    // Dies ist wichtig für Medien, die vor der Template-Implementierung hochgeladen wurden
+    const hasNoBlockId = !m.blockId || m.blockId === null || m.blockId === ""
+    const hasNoFieldId = !m.fieldId || m.fieldId === null || m.fieldId === ""
+    
+    if (hasNoBlockId && hasNoFieldId) {
+      // Nur für file-image Felder: Zeige alle Bilder ohne blockId/fieldId
+      if (field.type === "file-image" && m.fileType && m.fileType.startsWith("image/")) {
+        return true
+      }
+    }
+    return false
+  })
+  
+  // Debug: Log gefilterte Medien - erweitert für besseres Debugging
+  const allMediaDetails = media.map(m => {
+    const hasNoBlockId = !m.blockId || m.blockId === null || m.blockId === ""
+    const hasNoFieldId = !m.fieldId || m.fieldId === null || m.fieldId === ""
+    const isImage = m.fileType?.startsWith("image/")
+    const matchesBlockId = m.blockId === blockId
+    const matchesFieldId = m.fieldId === field.key
+    const shouldShowForFileImageLegacy = hasNoBlockId && hasNoFieldId && field.type === "file-image" && isImage
+    const shouldShowForFileImageFieldMatch = matchesFieldId && field.type === "file-image" && isImage
+    
+    return {
+      id: m.id,
+      fileName: m.fileName,
+      fileType: m.fileType,
+      blockId: m.blockId,
+      fieldId: m.fieldId,
+      blockIdType: typeof m.blockId,
+      fieldIdType: typeof m.fieldId,
+      matchesBlockId: matchesBlockId,
+      matchesFieldId: matchesFieldId,
+      isImage: isImage,
+      hasNoBlockId: hasNoBlockId,
+      hasNoFieldId: hasNoFieldId,
+      shouldShowForFileImageLegacy: shouldShowForFileImageLegacy,
+      shouldShowForFileImageFieldMatch: shouldShowForFileImageFieldMatch,
+      willBeFiltered: (matchesBlockId && matchesFieldId) || shouldShowForFileImageFieldMatch || shouldShowForFileImageLegacy
+    }
+  })
+  
+  // Erweitere Logs für besseres Debugging
+  console.log(`[TemplateBlockField] Field ${field.key} (${field.label}): Found ${fieldMedia.length} media items out of ${media.length} total`, {
+    blockId,
+    fieldKey: field.key,
+    fieldType: field.type,
+    allMediaDetails: allMediaDetails,
+    filteredMedia: fieldMedia.map(m => ({ id: m.id, fileName: m.fileName, blockId: m.blockId, fieldId: m.fieldId }))
+  })
+  
+  // Zusätzlicher detaillierter Log für das erste Media-Item
+  if (media.length > 0 && fieldMedia.length === 0) {
+    const firstMedia = media[0]
+    console.log(`[TemplateBlockField] DEBUG - Media not filtered for field ${field.key}:`, {
+      mediaBlockId: firstMedia.blockId,
+      mediaFieldId: firstMedia.fieldId,
+      fieldBlockId: blockId,
+      fieldKey: field.key,
+      blockIdMatch: firstMedia.blockId === blockId,
+      fieldIdMatch: firstMedia.fieldId === field.key,
+      isImage: firstMedia.fileType?.startsWith("image/"),
+      fieldType: field.type,
+      shouldMatchByFieldId: firstMedia.fieldId === field.key && field.type === "file-image" && firstMedia.fileType?.startsWith("image/")
+    })
+  }
   
   // Filtere Pending Files für dieses Feld
-  const fieldPendingFiles = pendingFiles.filter(pf => 
+  const fieldPendingFiles = pendingFiles.filter((pf: any) => 
     pf.blockId === blockId && pf.fieldId === field.key
   )
 
@@ -171,7 +268,7 @@ export default function TemplateBlockField({
         const reader = new FileReader()
         reader.onload = (e) => {
           const preview = e.target?.result as string
-          const pendingFile: PendingFile = {
+          const pendingFile: any = {
             id: `pending-${Date.now()}-${Math.random()}`,
             file,
             preview,
@@ -184,7 +281,7 @@ export default function TemplateBlockField({
         reader.readAsDataURL(file)
       } else {
         // PDF oder andere Dateien ohne Preview
-        const pendingFile: PendingFile = {
+          const pendingFile: any = {
           id: `pending-${Date.now()}-${Math.random()}`,
           file,
           blockId,
@@ -230,59 +327,90 @@ export default function TemplateBlockField({
     return (
       <div style={{ marginBottom: "1.5rem" }}>
         <label style={{
-          display: "block",
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
           fontSize: "clamp(0.9rem, 2vw, 1rem)",
           fontWeight: "600",
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
-          {field.label}
+          <span>{field.label}</span>
           {field.required && (
-            <span style={{ color: "#DC2626", marginLeft: "0.25rem" }}>*</span>
+            <span style={{ color: "#DC2626" }}>*</span>
           )}
+          {/* TEIL 6: Bestätigungsfunktion - in derselben Zeile wie Label */}
+          {renderSupplierInfo()}
         </label>
         
-        {/* TEIL 6: Bestätigungsfunktion - unter dem Label, nicht inline */}
-        {renderSupplierInfo()}
-        
-        {/* Upload Area */}
-        <FileUploadArea
-          accept={
-            field.type === "file-image" 
-              ? "image/jpeg,image/jpg,image/png,image/gif,image/webp"
-              : field.type === "file-document"
-              ? "application/pdf"
-              : field.type === "file-video"
-              ? "video/mp4,video/webm,video/ogg"
-              : "image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf,video/mp4,video/webm,video/ogg"
-          }
-          maxSize={field.type === "file-video" ? 100 * 1024 * 1024 : 10 * 1024 * 1024} // 100 MB für Videos, 10 MB für andere
-          onFileSelect={handleFileUpload}
-          disabled={uploading}
-          label="Datei hochladen"
-          description={
-            field.type === "file-image"
-              ? "Bilder (JPG, PNG, WebP). Maximale Dateigröße: 10 MB"
-              : field.type === "file-document"
-              ? "Dokumente (PDF). Maximale Dateigröße: 10 MB"
-              : field.type === "file-video"
-              ? "Videos (MP4, WebM, OGG). Maximale Dateigröße: 100 MB"
-              : field.type === "file"
-              ? "Alle Dateitypen. Maximale Dateigröße: 10 MB"
-              : "Dateien hochladen. Maximale Dateigröße: 10 MB"
-          }
-        />
+        {/* Upload Area - nur anzeigen wenn nicht read-only */}
+        {!readOnly && (
+          <FileUploadArea
+            accept={
+              field.type === "file-image" 
+                ? "image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                : field.type === "file-document"
+                ? "application/pdf"
+                : field.type === "file-video"
+                ? "video/mp4,video/webm,video/ogg"
+                : "image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf,video/mp4,video/webm,video/ogg"
+            }
+            maxSize={field.type === "file-video" ? 100 * 1024 * 1024 : 10 * 1024 * 1024} // 100 MB für Videos, 10 MB für andere
+            onFileSelect={handleFileUpload}
+            disabled={uploading}
+            label="Datei hochladen"
+            description={
+              field.type === "file-image"
+                ? "Bilder (JPG, PNG, WebP). Maximale Dateigröße: 10 MB"
+                : field.type === "file-document"
+                ? "Dokumente (PDF). Maximale Dateigröße: 10 MB"
+                : field.type === "file-video"
+                ? "Videos (MP4, WebM, OGG). Maximale Dateigröße: 100 MB"
+                : field.type === "file"
+                ? "Alle Dateitypen. Maximale Dateigröße: 10 MB"
+                : "Dateien hochladen. Maximale Dateigröße: 10 MB"
+            }
+          />
+        )}
 
-        {/* Angezeigte Medien (inkl. Pending Files) */}
-        {(fieldMedia.length > 0 || fieldPendingFiles.length > 0) && (
+        {/* Hinweis wenn im Review-Modus keine Medien vorhanden sind */}
+        {readOnly && fieldMedia.length === 0 && (
+          <div style={{
+            marginTop: "1rem",
+            padding: "1rem",
+            backgroundColor: "#F5F5F5",
+            borderRadius: "8px",
+            border: "1px solid #E5E5E5",
+            textAlign: "center"
+          }}>
+            <p style={{
+              margin: 0,
+              fontSize: "0.875rem",
+              color: "#7A7A7A",
+              fontStyle: "italic"
+            }}>
+              {field.type === "file-image" 
+                ? "Kein Bild hochgeladen"
+                : field.type === "file-document"
+                ? "Kein Dokument hochgeladen"
+                : field.type === "file-video"
+                ? "Kein Video hochgeladen"
+                : "Keine Datei hochgeladen"}
+            </p>
+          </div>
+        )}
+
+        {/* Angezeigte Medien (inkl. Pending Files) - Pending Files nur im Edit-Modus */}
+        {(fieldMedia.length > 0 || (!readOnly && fieldPendingFiles.length > 0)) && (
           <div style={{
             marginTop: "1rem",
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
             gap: "1rem"
           }}>
-            {/* Pending Files (mit reduzierter Opacity) */}
-            {fieldPendingFiles.map((pendingFile) => (
+            {/* Pending Files (mit reduzierter Opacity) - nur im Edit-Modus */}
+            {!readOnly && fieldPendingFiles.map((pendingFile) => (
               <div
                 key={pendingFile.id}
                 style={{
@@ -510,7 +638,8 @@ export default function TemplateBlockField({
                   <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
                     {mediaItem.fileName}
                   </span>
-                  {dppId && dppId !== "new" && (
+                  {/* Delete-Button nur anzeigen wenn nicht read-only */}
+                  {!readOnly && dppId && dppId !== "new" && (
                     <button
                       onClick={async (e) => {
                         e.stopPropagation()
@@ -579,8 +708,6 @@ export default function TemplateBlockField({
           readOnly={readOnly}
           disabled={readOnly}
         />
-        {/* TEIL 6: Bestätigungsfunktion - unter dem InputField */}
-        {renderSupplierInfo()}
       </div>
     )
   }
@@ -590,15 +717,18 @@ export default function TemplateBlockField({
     return (
       <div style={{ marginBottom: "1.5rem" }}>
         <label htmlFor={`field-${field.id}`} style={{
-          display: "block",
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
           fontSize: "clamp(0.9rem, 2vw, 1rem)",
           fontWeight: "600",
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
-          {hideLabel ? "" : field.label}
-          {field.required && <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>}
-          {/* TEIL 6: Bestätigungsfunktion - direkt hinter dem Feldnamen (inline) */}
+          {!hideLabel && <span>{field.label}</span>}
+          {field.required && <span style={{ color: "#24c598" }}>*</span>}
+          {/* TEIL 6: Bestätigungsfunktion - in derselben Zeile wie Label */}
           {renderSupplierInfo()}
         </label>
         <textarea
@@ -631,15 +761,18 @@ export default function TemplateBlockField({
     return (
       <div style={{ marginBottom: "1.5rem" }}>
         <label htmlFor={`field-${field.id}`} style={{
-          display: "block",
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
           fontSize: "clamp(0.9rem, 2vw, 1rem)",
           fontWeight: "600",
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
-          {hideLabel ? "" : field.label}
-          {field.required && <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>}
-          {/* TEIL 6: Bestätigungsfunktion - direkt hinter dem Feldnamen (inline) */}
+          {!hideLabel && <span>{field.label}</span>}
+          {field.required && <span style={{ color: "#24c598" }}>*</span>}
+          {/* TEIL 6: Bestätigungsfunktion - in derselben Zeile wie Label */}
           {renderSupplierInfo()}
         </label>
         <input
@@ -666,15 +799,18 @@ export default function TemplateBlockField({
     return (
       <div style={{ marginBottom: "1.5rem" }}>
         <label htmlFor={`field-${field.id}`} style={{
-          display: "block",
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
           fontSize: "clamp(0.9rem, 2vw, 1rem)",
           fontWeight: "600",
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
-          {hideLabel ? "" : field.label}
-          {field.required && <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>}
-          {/* TEIL 6: Bestätigungsfunktion - direkt hinter dem Feldnamen (inline) */}
+          {!hideLabel && <span>{field.label}</span>}
+          {field.required && <span style={{ color: "#24c598" }}>*</span>}
+          {/* TEIL 6: Bestätigungsfunktion - in derselben Zeile wie Label */}
           {renderSupplierInfo()}
         </label>
         <input
@@ -701,15 +837,18 @@ export default function TemplateBlockField({
     return (
       <div style={{ marginBottom: "1.5rem" }}>
         <label htmlFor={`field-${field.id}`} style={{
-          display: "block",
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
           fontSize: "clamp(0.9rem, 2vw, 1rem)",
           fontWeight: "600",
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
-          {hideLabel ? "" : field.label}
-          {field.required && <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>}
-          {/* TEIL 6: Bestätigungsfunktion - direkt hinter dem Feldnamen (inline) */}
+          {!hideLabel && <span>{field.label}</span>}
+          {field.required && <span style={{ color: "#24c598" }}>*</span>}
+          {/* TEIL 6: Bestätigungsfunktion - in derselben Zeile wie Label */}
           {renderSupplierInfo()}
         </label>
         <input
@@ -734,13 +873,36 @@ export default function TemplateBlockField({
   // Country-Feld
   if (field.type === "country") {
     return (
-      <CountrySelect
-        id={`field-${field.id}`}
-        label={hideLabel ? "" : field.label}
-        value={value as string || ""}
-        onChange={(code: string) => onChange?.(code)}
-        required={field.required}
-      />
+      <div style={{ marginBottom: "1.5rem" }}>
+        {!hideLabel && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+            marginBottom: "0.5rem"
+          }}>
+            <label htmlFor={`field-${field.id}`} style={{
+              fontSize: "clamp(0.9rem, 2vw, 1rem)",
+              fontWeight: "600",
+              color: "#0A0A0A"
+            }}>
+              {field.label}
+            </label>
+            {field.required && (
+              <span style={{ color: "#24c598" }}>*</span>
+            )}
+            {renderSupplierInfo()}
+          </div>
+        )}
+        <CountrySelect
+          id={`field-${field.id}`}
+          label="" // Label wird oben angezeigt
+          value={value as string || ""}
+          onChange={(code: string) => onChange?.(code)}
+          required={field.required}
+        />
+      </div>
     )
   }
 
@@ -752,15 +914,18 @@ export default function TemplateBlockField({
         {!hideLabel && (
           <div style={{ marginBottom: "1.5rem" }}>
             <label htmlFor={`field-${field.id}`} style={{
-              display: "block",
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem",
               fontSize: "clamp(0.9rem, 2vw, 1rem)",
               fontWeight: "600",
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              {field.label}
+              <span>{field.label}</span>
               {field.required && (
-                <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>
+                <span style={{ color: "#24c598" }}>*</span>
               )}
               {renderSupplierInfo()}
             </label>
@@ -810,16 +975,20 @@ export default function TemplateBlockField({
         {!hideLabel && (
           <div style={{ marginBottom: "1.5rem" }}>
             <label style={{
-              display: "block",
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem",
               fontSize: "clamp(0.9rem, 2vw, 1rem)",
               fontWeight: "600",
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              {field.label}
+              <span>{field.label}</span>
               {field.required && (
-                <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>
+                <span style={{ color: "#24c598" }}>*</span>
               )}
+              {renderSupplierInfo()}
             </label>
           </div>
         )}
@@ -861,6 +1030,7 @@ export default function TemplateBlockField({
             <label style={{
               display: "flex",
               alignItems: "center",
+              flexWrap: "wrap",
               gap: "0.75rem",
               cursor: "pointer"
             }}>
@@ -870,16 +1040,21 @@ export default function TemplateBlockField({
                 onChange={(e) => {
                   onChange?.(e.target.checked ? "true" : "false")
                 }}
-                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                style={{ width: "18px", height: "18px", cursor: "pointer", flexShrink: 0 }}
               />
               <span style={{
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.5rem",
                 fontSize: "clamp(0.9rem, 2vw, 1rem)",
                 fontWeight: "600",
-                color: "#0A0A0A"
+                color: "#0A0A0A",
+                flex: 1
               }}>
-                {field.label}
+                <span>{field.label}</span>
                 {field.required && (
-                  <span style={{ color: "#24c598", marginLeft: "0.25rem" }}>*</span>
+                  <span style={{ color: "#24c598" }}>*</span>
                 )}
                 {renderSupplierInfo()}
               </span>

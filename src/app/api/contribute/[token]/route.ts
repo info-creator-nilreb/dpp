@@ -179,7 +179,7 @@ export async function GET(
         blocks: allowedBlocks.map(block => ({
           id: block.id,
           name: block.name,
-          fields: block.fields.map(field => ({
+          fields: block.fields.map((field: any) => ({
             id: field.id,
             label: field.label,
             key: field.key,

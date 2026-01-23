@@ -421,7 +421,7 @@ export default function NewTemplateContent({ existingTemplates }: NewTemplateCon
           type: field.type,
           required: field.required,
           config: field.config ? JSON.parse(field.config) : null,
-          isRepeatable: field.isRepeatable || false
+          isRepeatable: (field as any).isRepeatable || false
         }
       })
     }))
@@ -687,7 +687,7 @@ Hinweise:
             key: field.key || generateKeyFromLabel(field.label), // Auto-generate if missing
             type: field.type,
             required: field.required,
-            isRepeatable: field.isRepeatable || false,
+            isRepeatable: (field as any).isRepeatable || false,
             config: field.config
           }))
         }))
@@ -1579,8 +1579,8 @@ Hinweise:
                     }}>
                       <input
                         type="checkbox"
-                        checked={field.isRepeatable || false}
-                        onChange={(e) => updateField(block.id, field.id, { isRepeatable: e.target.checked })}
+                        checked={(field as any).isRepeatable || false}
+                        onChange={(e) => updateField(block.id, field.id, { isRepeatable: e.target.checked } as any)}
                         disabled={loading}
                         style={{ flexShrink: 0, width: "16px", height: "16px" }}
                       />

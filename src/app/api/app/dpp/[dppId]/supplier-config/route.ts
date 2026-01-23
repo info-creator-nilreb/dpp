@@ -37,8 +37,7 @@ export async function GET(
     }
 
     // Prüfe Berechtigung
-    const hasAccess = dpp.organization.memberships.length > 0 || 
-                     dpp.organization.ownerId === session.user.id
+    const hasAccess = dpp.organization.memberships.length > 0
     if (!hasAccess) {
       return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 })
     }
@@ -51,7 +50,7 @@ export async function GET(
     // Transform zu Record<blockId, config>
     const configMap = configs.reduce((acc, config) => {
       const allowedRoles: string[] = Array.isArray(config.allowedRoles) 
-        ? config.allowedRoles 
+        ? (config.allowedRoles as string[])
         : []
       
       acc[config.blockId] = {
@@ -121,8 +120,7 @@ export async function PUT(
     }
 
     // Prüfe Berechtigung
-    const hasAccess = dpp.organization.memberships.length > 0 || 
-                     dpp.organization.ownerId === session.user.id
+    const hasAccess = dpp.organization.memberships.length > 0
     if (!hasAccess) {
       return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 })
     }
