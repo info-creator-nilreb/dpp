@@ -4,14 +4,14 @@
  * DPP Frontend Preview
  * 
  * Shows preview of how the DPP will look on the public page
- * Uses the same components as the public view for consistency
+ * Uses the new EditorialDppViewRedesign for consistency with public view
  */
 
 import { useState, useEffect } from "react"
-import EditorialDppView from "@/components/editorial/EditorialDppView"
-import { BlocksRenderer } from "@/components/cms/renderers/BlockRenderer"
+import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRedesign"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { Block, StylingConfig } from "@/lib/cms/types"
+import { UnifiedContentBlock } from "@/lib/content-adapter"
 
 interface DppFrontendPreviewProps {
   dpp: any
@@ -92,6 +92,8 @@ export default function DppFrontendPreview({
 }: DppFrontendPreviewProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [unifiedBlocks, setUnifiedBlocks] = useState<UnifiedContentBlock[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   // Mount effect - only run once
   useEffect(() => {
@@ -103,38 +105,43 @@ export default function DppFrontendPreview({
     return () => clearTimeout(timer)
   }, []) // Only run on mount
 
-  // Reset loading when dpp or blocks change (but not styling - styling changes should be instant)
+  // Load UnifiedContentBlocks from API when dpp or blocks change
   useEffect(() => {
-    if (mounted && (dpp || blocks.length > 0)) {
-      setIsLoading(false)
+    async function loadUnifiedBlocks() {
+      if (!dpp?.id) {
+        setUnifiedBlocks([])
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Fetch UnifiedContentBlocks from API (server-side transformation)
+        const response = await fetch(`/api/app/dpp/${dpp.id}/unified-blocks`)
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Fehler beim Laden der Vorschau")
+        }
+        
+        const data = await response.json()
+        setUnifiedBlocks(data.blocks || [])
+        setIsLoading(false)
+      } catch (err: any) {
+        console.error("[DppFrontendPreview] Error loading unified blocks:", err)
+        setError(err.message || "Fehler beim Laden der Vorschau")
+        setIsLoading(false)
+      }
     }
-  }, [dpp, blocks, mounted]) // Exclude styling from this effect - styling changes should update immediately
 
-  // Prepare DPP data for EditorialDppView
-  const dppData = dpp ? {
-    id: dpp.id,
-    name: dpp.name,
-    description: dpp.description,
-    sku: dpp.sku,
-    gtin: dpp.gtin,
-    brand: dpp.brand,
-    countryOfOrigin: dpp.countryOfOrigin,
-    materials: dpp.materials,
-    materialSource: dpp.materialSource,
-    careInstructions: dpp.careInstructions,
-    isRepairable: dpp.isRepairable,
-    sparePartsAvailable: dpp.sparePartsAvailable,
-    lifespan: dpp.lifespan,
-    conformityDeclaration: dpp.conformityDeclaration,
-    disposalInfo: dpp.disposalInfo,
-    takebackOffered: dpp.takebackOffered,
-    takebackContact: dpp.takebackContact,
-    secondLifeInfo: dpp.secondLifeInfo,
-    organization: dpp.organization || { name: "" },
-    media: dpp.media || []
-  } : null
+    if (mounted && dpp?.id) {
+      loadUnifiedBlocks()
+    }
+  }, [dpp?.id, blocks, mounted]) // Re-load when dpp or blocks change
 
-  if (!mounted || !dppData) {
+  if (!mounted || !dpp) {
     return (
       <div style={{
         flex: 1,
@@ -152,8 +159,36 @@ export default function DppFrontendPreview({
     return <PreviewSkeleton />
   }
 
-  // In preview, show all blocks (published and draft) to see what will be published
-  const visibleBlocks = blocks.filter(b => b.status === "published" || b.status === "draft")
+  if (error) {
+    return (
+      <div style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#FFFFFF",
+        padding: "2rem"
+      }}>
+        <div style={{
+          padding: "1.5rem",
+          backgroundColor: "#FFF5F5",
+          border: "1px solid #FECACA",
+          borderRadius: "8px",
+          color: "#991B1B"
+        }}>
+          <p style={{ margin: 0, fontWeight: 600 }}>Fehler</p>
+          <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem" }}>{error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Get organization info
+  const organizationName = dpp.organization?.name || ""
+  const brandName = dpp.brand || ""
+  const heroImage = dpp.media?.find((m: any) => m.role === "hero_image" || m.role === "product_image")?.storageUrl
+  // Get logo from styling config
+  const organizationLogoUrl = styling?.logo?.url || undefined
 
   return (
     <div style={{
@@ -161,22 +196,25 @@ export default function DppFrontendPreview({
       overflowY: "auto",
       backgroundColor: "#FFFFFF"
     }}>
-      {/* Preview Container - matches public view structure */}
-      <div className="dpp-public-view">
-        {/* Compliance Sections (always rendered) */}
-        <EditorialDppView dpp={dppData} styling={styling} />
-
-        {/* CMS Content Blocks (if available) */}
-        {visibleBlocks.length > 0 && (
-          <div className="cms-content-section" style={{ marginTop: "3rem" }}>
-            <BlocksRenderer
-              blocks={blocks}
-              styling={styling}
-              includeDrafts={true}
-            />
-          </div>
-        )}
-      </div>
+      {/* Preview Container - uses new EditorialDppViewRedesign */}
+      <EditorialDppViewRedesign
+        blocks={unifiedBlocks}
+        dppName={dpp.name || ""}
+        dppId={dpp.id}
+        brandName={brandName}
+        organizationName={organizationName}
+        organizationLogoUrl={organizationLogoUrl}
+        heroImageUrl={heroImage}
+        versionInfo={dpp.versions?.[0] ? {
+          version: dpp.versions[0].version,
+          createdAt: new Date(dpp.versions[0].createdAt)
+        } : undefined}
+        basicData={{
+          sku: dpp.sku,
+          gtin: dpp.gtin,
+          countryOfOrigin: dpp.countryOfOrigin
+        }}
+      />
     </div>
   )
 }

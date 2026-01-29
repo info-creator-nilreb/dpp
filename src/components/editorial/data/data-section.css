@@ -1,0 +1,39 @@
+/* Data Section Responsive Styles - Minimalistisch im Apple-Editorial-Style */
+
+.data-section-minimal {
+  /* Keine Border/Unterstreichung - nur subtile Trennung durch Spacing */
+}
+
+.data-section-header-minimal {
+  transition: opacity 0.2s ease;
+}
+
+.data-section-header-minimal:hover {
+  opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .data-section-minimal {
+    padding: 1rem 0 !important;
+  }
+  
+  .data-section-content-minimal {
+    paddingLeft: 1.5rem !important;
+  }
+}
+
+/* Fade-in Animation für Section Content */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.data-section-content-minimal {
+  animation: fadeIn 0.3s ease;
+}

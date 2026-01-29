@@ -1,17 +1,13 @@
 /**
  * DPP Public View
  * 
- * Renders published DPP with:
- * 1. Compliance sections (always, from template)
- * 2. CMS content blocks (if available and allowed)
- * 
- * Strict separation: CMS never replaces or hides compliance data
+ * Renders published DPP using the new EditorialDppViewRedesign
+ * Combines template blocks and CMS blocks into UnifiedContentBlocks
  */
 
 import { prisma } from "@/lib/prisma"
-import { BlocksRenderer } from "@/components/cms/renderers/BlockRenderer"
-import { resolveTheme } from "@/lib/cms/validation"
-import EditorialDppView from "@/components/editorial/EditorialDppView"
+import { transformDppToUnified } from "@/lib/content-adapter/dpp-transformer"
+import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRedesign"
 
 interface DppPublicViewProps {
   dppId: string
@@ -22,148 +18,100 @@ export default async function DppPublicView({
   dppId,
   versionNumber
 }: DppPublicViewProps) {
-  // Load DPP or version
-  let dppData: any = null
-  let cmsContent: any = null
-  let styling: any = null
-
-  if (versionNumber) {
-    // Load specific version with version-bound media
-    const version = await prisma.dppVersion.findUnique({
-      where: {
-        dppId_version: {
-          dppId,
-          version: versionNumber
-        }
+  // Load DPP to verify it exists and is published
+  const dpp = await prisma.dpp.findUnique({
+    where: { id: dppId },
+    include: {
+      organization: {
+        select: { name: true }
       },
-      include: {
-        dpp: {
-          include: {
-            organization: {
-              select: { name: true }
-            }
-          }
+      versions: versionNumber ? {
+        where: { version: versionNumber },
+        take: 1,
+        select: {
+          version: true,
+          createdAt: true
+        }
+      } : {
+        where: {
+          publicUrl: { not: null }
         },
-        media: {
-          orderBy: { uploadedAt: "asc" }
+        orderBy: { version: 'desc' },
+        take: 1,
+        select: {
+          version: true,
+          createdAt: true
         }
       }
-    })
-
-    if (!version) {
-      return null
     }
-
-    dppData = {
-      id: version.id,
-      name: version.name,
-      description: version.description,
-      sku: version.sku,
-      gtin: version.gtin,
-      brand: version.brand,
-      countryOfOrigin: version.countryOfOrigin,
-      materials: version.materials,
-      materialSource: version.materialSource,
-      careInstructions: version.careInstructions,
-      isRepairable: version.isRepairable,
-      sparePartsAvailable: version.sparePartsAvailable,
-      lifespan: version.lifespan,
-      conformityDeclaration: version.conformityDeclaration,
-      disposalInfo: version.disposalInfo,
-      takebackOffered: version.takebackOffered,
-      takebackContact: version.takebackContact,
-      secondLifeInfo: version.secondLifeInfo,
-      organization: version.dpp.organization,
-      // Verwende Version-Medien (versionsgebunden)
-      media: version.media.map((m: any) => ({
-        id: m.id,
-        storageUrl: m.storageUrl,
-        fileType: m.fileType,
-        role: m.role,
-        blockId: m.blockId,
-        fieldKey: m.fieldKey,
-        fileName: m.fileName
-      })),
-      versionInfo: {
-        version: version.version,
-        createdAt: version.createdAt
-      }
-    }
-  } else {
-    // Load latest published DPP
-    const dpp = await prisma.dpp.findUnique({
-      where: { id: dppId },
-      include: {
-        organization: {
-          select: { name: true }
-        },
-        media: {
-          orderBy: { uploadedAt: "asc" },
-          take: 10
-        }
-      }
-    })
-
-    if (!dpp || dpp.status !== "PUBLISHED") {
-      return null
-    }
-
-    dppData = {
-      id: dpp.id,
-      name: dpp.name,
-      description: dpp.description,
-      sku: dpp.sku,
-      gtin: dpp.gtin,
-      brand: dpp.brand,
-      countryOfOrigin: dpp.countryOfOrigin,
-      materials: dpp.materials,
-      materialSource: dpp.materialSource,
-      careInstructions: dpp.careInstructions,
-      isRepairable: dpp.isRepairable,
-      sparePartsAvailable: dpp.sparePartsAvailable,
-      lifespan: dpp.lifespan,
-      conformityDeclaration: dpp.conformityDeclaration,
-      disposalInfo: dpp.disposalInfo,
-      takebackOffered: dpp.takebackOffered,
-      takebackContact: dpp.takebackContact,
-      secondLifeInfo: dpp.secondLifeInfo,
-      organization: dpp.organization,
-      media: dpp.media
-    }
-  }
-
-  // Load CMS content (published only)
-  const content = await prisma.dppContent.findFirst({
-    where: {
-      dppId,
-      isPublished: true
-    },
-    orderBy: { updatedAt: "desc" }
   })
 
-  if (content) {
-    cmsContent = {
-      blocks: content.blocks,
-      styling: content.styling
-    }
+  if (!dpp || dpp.status !== "PUBLISHED") {
+    return null
   }
 
-  // Render: Compliance first, then CMS blocks
-  return (
-    <div className="dpp-public-view">
-      {/* Compliance Sections (always rendered) */}
-      <EditorialDppView dpp={dppData} />
+  // Transform DPP to UnifiedContentBlocks (includes template blocks + CMS blocks)
+  let unifiedBlocks
+  try {
+    unifiedBlocks = await transformDppToUnified(dppId, {
+      includeVersionInfo: true
+    })
+  } catch (error: any) {
+    console.error("[DppPublicView] Error transforming DPP:", error)
+    // Fallback: Return error message or empty state
+    return (
+      <div style={{
+        padding: "2rem",
+        textAlign: "center",
+        color: "#7A7A7A"
+      }}>
+        <p>Fehler beim Laden des Produktpasses</p>
+      </div>
+    )
+  }
 
-      {/* CMS Content Blocks (if available) */}
-      {cmsContent && cmsContent.blocks && cmsContent.blocks.length > 0 && (
-        <div className="cms-content-section mt-12">
-          <BlocksRenderer
-            blocks={cmsContent.blocks}
-            styling={cmsContent.styling}
-          />
-        </div>
-      )}
-    </div>
+  // Get version info
+  const versionInfo = dpp.versions?.[0] ? {
+    version: dpp.versions[0].version,
+    createdAt: dpp.versions[0].createdAt
+  } : undefined
+
+  // Get hero image
+  const heroImage = dpp.media?.find((m: any) => 
+    m.role === "hero_image" || m.role === "product_image"
+  )?.storageUrl
+
+  // Get logo from published content styling
+  const publishedContent = await prisma.dppContent.findFirst({
+    where: {
+      dppId: dppId,
+      isPublished: true
+    },
+    select: {
+      styling: true
+    }
+  })
+  
+  const styling = publishedContent?.styling as any
+  const organizationLogoUrl = styling?.logo?.url || undefined
+
+  // Render using new EditorialDppViewRedesign
+  return (
+    <EditorialDppViewRedesign
+      blocks={unifiedBlocks}
+      dppName={dpp.name || ""}
+      dppId={dppId}
+      brandName={dpp.brand || ""}
+      organizationName={dpp.organization?.name || ""}
+      organizationLogoUrl={organizationLogoUrl}
+      heroImageUrl={heroImage}
+      versionInfo={versionInfo}
+      basicData={{
+        sku: dpp.sku,
+        gtin: dpp.gtin,
+        countryOfOrigin: dpp.countryOfOrigin
+      }}
+    />
   )
 }
 

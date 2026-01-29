@@ -6,6 +6,9 @@
  */
 
 import { Page, Section, TextBlock, QuoteBlock, Image, Accent } from './index'
+import { StylingConfig } from "@/lib/cms/types"
+import { resolveTheme } from "@/lib/cms/theme-resolver"
+import { getHeroImage, getGalleryImages, MediaItem } from "@/lib/media/hero-logic"
 
 interface EditorialDppData {
   id: string
@@ -45,9 +48,11 @@ interface EditorialDppData {
 
 interface EditorialDppViewProps {
   dpp: EditorialDppData
+  styling?: StylingConfig | null
 }
 
-export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
+export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps) {
+  const theme = resolveTheme(styling || undefined)
   // Herobild: Erstes Bild im Produktdaten-Block (oder erstes Bild insgesamt als Fallback)
   const produktdatenImages = dpp.media.filter(m => 
     m.fileType.startsWith('image/') && 
