@@ -35,14 +35,19 @@ export async function signupUser(data: SignupData): Promise<{
   userId: string
   organizationId: string
   role: string
+  verificationToken: string
+  email: string
+  name: string
 }> {
-  // Prüfe ob E-Mail bereits existiert
-  const existingUser = await prisma.user.findUnique({
-    where: { email: data.email.toLowerCase().trim() },
-  })
+  // Prüfe ob E-Mail bereits existiert (nur bei Join Request, bei create_new_organization wird User in createOrganizationWithFirstUser erstellt)
+  if (data.organizationAction === "request_to_join_organization") {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email.toLowerCase().trim() },
+    })
 
-  if (existingUser) {
-    throw new Error("Email already registered")
+    if (existingUser) {
+      throw new Error("Email already registered")
+    }
   }
 
   // Hash Passwort
@@ -64,23 +69,108 @@ export async function signupUser(data: SignupData): Promise<{
         throw new Error("Organization name required")
       }
 
-      // Erstelle Organisation mit User als ORG_ADMIN
-      // Die Funktion erstellt/verwendet den User basierend auf der E-Mail
+      // Erstelle Organisation mit E-Mail als erstem Nutzer (innerhalb der gleichen Transaction)
+      // createOrganizationWithFirstUser erstellt den User automatisch oder verwendet existierenden
       const result = await createOrganizationWithFirstUser(
         data.email,
         data.organizationName,
         {
           firstName: data.firstName,
           lastName: data.lastName,
-          password: data.password,
-          verificationToken,
-          verificationTokenExpires,
+          password: hashedPassword,
         },
-        tx // Transaction weitergeben
+        tx // Wichtig: Transaction weitergeben
       )
       organizationId = result.organizationId
       userId = result.userId
       role = "ORG_ADMIN"
+      
+      // User-Status wird bereits in createOrganizationWithFirstUser auf "active" gesetzt
+      // Setze Verifizierungs-Token für den User
+      // WICHTIG: Token muss IMMER gesetzt werden, auch wenn User bereits existiert
+      // Prüfe zuerst ob User existiert und ob er bereits einen Token hat
+      const existingUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          verificationToken: true,
+          emailVerified: true,
+        },
+      })
+      
+      if (!existingUser) {
+        console.error(`[SIGNUP] ERROR: User ${userId} not found after createOrganizationWithFirstUser`)
+        throw new Error("User not found after organization creation")
+      }
+      
+      // Setze Token - überschreibe auch wenn bereits ein Token vorhanden ist
+      // WICHTIG: Wenn ein alter Token existiert, wird dieser überschrieben
+      let updatedUser
+      try {
+        updatedUser = await tx.user.update({
+          where: { id: userId },
+          data: {
+            verificationToken,
+            verificationTokenExpires,
+            emailVerified: false, // Stelle sicher, dass emailVerified auf false ist
+          },
+          select: {
+            id: true,
+            email: true,
+            verificationToken: true,
+            verificationTokenExpires: true,
+            emailVerified: true,
+          },
+        })
+      } catch (updateError: any) {
+        // Falls Update fehlschlägt (z.B. Unique Constraint), versuche es mit expliziter Löschung des alten Tokens
+        if (updateError.code === "P2002" || updateError.message?.includes("Unique constraint")) {
+          console.warn(`[SIGNUP] Unique constraint error when setting token, clearing old token first for user ${userId}`)
+          // Zuerst alten Token löschen (falls vorhanden)
+          await tx.user.updateMany({
+            where: {
+              verificationToken: existingUser.verificationToken || undefined,
+            },
+            data: {
+              verificationToken: null,
+              verificationTokenExpires: null,
+            },
+          })
+          // Dann neuen Token setzen
+          updatedUser = await tx.user.update({
+            where: { id: userId },
+            data: {
+              verificationToken,
+              verificationTokenExpires,
+              emailVerified: false,
+            },
+            select: {
+              id: true,
+              email: true,
+              verificationToken: true,
+              verificationTokenExpires: true,
+              emailVerified: true,
+            },
+          })
+        } else {
+          console.error(`[SIGNUP] Error updating user with verification token:`, updateError)
+          throw updateError
+        }
+      }
+      
+      // Verifiziere dass Token korrekt gesetzt wurde
+      if (!updatedUser.verificationToken || updatedUser.verificationToken !== verificationToken) {
+        console.error(`[SIGNUP] ERROR: Verification token was not set correctly for user ${userId}`)
+        console.error(`[SIGNUP] Expected token: ${verificationToken.substring(0, 8)}...`)
+        console.error(`[SIGNUP] Actual token: ${updatedUser.verificationToken?.substring(0, 8)}...`)
+        throw new Error("Verification token could not be set")
+      }
+      
+      console.log(`[SIGNUP] Verification token set successfully for user ${userId} (${updatedUser.email})`)
+      if (existingUser.verificationToken && existingUser.verificationToken !== verificationToken) {
+        console.log(`[SIGNUP] Previous token was overwritten for user ${userId}`)
+      }
     } else if (data.organizationAction === "request_to_join_organization") {
       // Beitritt nur über Einladung möglich
       if (!data.invitationToken) {
@@ -103,8 +193,12 @@ export async function signupUser(data: SignupData): Promise<{
         },
       })
 
-      // Akzeptiere Einladung
-      const invitationResult = await acceptInvitation(data.invitationToken, user.id)
+      // Akzeptiere Einladung (innerhalb der gleichen Transaction)
+      const invitationResult = await acceptInvitation(
+        data.invitationToken,
+        user.id,
+        tx // Wichtig: Transaction weitergeben
+      )
       if (!invitationResult) {
         throw new Error("Invalid or expired invitation token")
       }
@@ -112,20 +206,27 @@ export async function signupUser(data: SignupData): Promise<{
       organizationId = invitationResult.organizationId
       userId = user.id
       role = invitationResult.role
-
-      // User-Status auf active setzen, da Einladung akzeptiert wurde
-      await tx.user.update({
-        where: { id: user.id },
-        data: { status: "active" },
-      })
+      
+      // User-Status wird bereits in acceptInvitation auf "active" gesetzt
     } else {
       throw new Error("Invalid organization action")
     }
+
+    // Lade User-Daten für Rückgabe
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { email: true, firstName: true, lastName: true },
+    })
 
     return {
       userId,
       organizationId,
       role,
+      verificationToken,
+      email: user?.email || data.email,
+      name: user?.firstName && user?.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : `${data.firstName} ${data.lastName}`,
     }
   })
 }

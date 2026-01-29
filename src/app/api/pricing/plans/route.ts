@@ -68,6 +68,18 @@ export async function GET() {
     })
   } catch (error: any) {
     console.error("[Pricing Plans API] Error:", error)
+    
+    // Connection Pool Overflow abfangen
+    if (error.message?.includes("MaxClientsInSessionMode") || 
+        error.message?.includes("max clients reached") ||
+        error.code === "P1001") {
+      console.error("[Pricing Plans API] Connection Pool Overflow - returning empty plans")
+      // Bei Connection Pool Overflow: Leere Daten zurückgeben statt Fehler zu werfen
+      return NextResponse.json({
+        plans: []
+      })
+    }
+    
     return NextResponse.json(
       { error: error.message || "Fehler beim Laden der Tarife" },
       { status: 500 }

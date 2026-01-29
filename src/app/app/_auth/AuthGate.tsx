@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 
 /**
  * AuthGate - Server Component
@@ -18,11 +19,17 @@ export default async function AuthGate({
   // AuthGate prüft NUR Business-Logik (Onboarding)
 
   // Prüfe ob Onboarding benötigt wird via API route (Prisma not in render path)
-  // Use relative URL - Next.js fetch automatically forwards cookies for same-origin requests
+  // Use absolute URL - Server Components require absolute URLs for fetch
   let needsOnboarding = false
   
   try {
-    const response = await fetch("/api/app/onboarding/check", {
+    // Get base URL from request headers (works in all environments)
+    const headersList = await headers()
+    const host = headersList.get("host") || "localhost:3000"
+    const protocol = headersList.get("x-forwarded-proto") || (process.env.NODE_ENV === "production" ? "https" : "http")
+    const baseUrl = `${protocol}://${host}`
+    
+    const response = await fetch(`${baseUrl}/api/app/onboarding/check`, {
       cache: "no-store",
     })
 

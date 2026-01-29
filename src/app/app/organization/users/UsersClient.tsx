@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
+import { getRoleLabel, PHASE1_ROLES, ROLE_LABELS } from "@/lib/phase1/roles"
 
 interface User {
   id: string
@@ -11,6 +13,7 @@ interface User {
   lastName: string | null
   status: string
   role: string | null
+  isCurrentUser?: boolean
 }
 
 interface Invitation {
@@ -36,6 +39,7 @@ interface JoinRequest {
 }
 
 export default function UsersClient() {
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState<"users" | "invitations" | "join-requests">("users")
   const [users, setUsers] = useState<User[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
@@ -53,6 +57,36 @@ export default function UsersClient() {
     loadData()
   }, [activeTab])
 
+  // Initial load: Check if there are any join requests to determine if tab should be shown
+  useEffect(() => {
+    async function checkJoinRequests() {
+      try {
+        const response = await fetch("/api/app/organization/join-requests", {
+          cache: "no-store",
+        })
+        if (response.ok) {
+          const data = await response.json()
+          const requests = data.joinRequests || []
+          setJoinRequests(requests)
+          
+          // If active tab is join-requests but no requests exist, switch to users tab
+          if (activeTab === "join-requests" && requests.filter((r: JoinRequest) => r.status === "pending").length === 0) {
+            setActiveTab("users")
+          }
+        }
+      } catch (err) {
+        console.error("Error checking join requests:", err)
+        // Fail silently - if we can't load join requests, tab won't be shown
+        // Also switch away from join-requests tab if it's active
+        if (activeTab === "join-requests") {
+          setActiveTab("users")
+        }
+      }
+    }
+    checkJoinRequests()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function loadData() {
     setLoading(true)
     try {
@@ -62,7 +96,12 @@ export default function UsersClient() {
         })
         if (response.ok) {
           const data = await response.json()
-          setUsers(data.users || [])
+          // Markiere aktuellen Benutzer, falls isCurrentUser nicht bereits gesetzt ist
+          const usersWithCurrentUser = (data.users || []).map((user: User) => ({
+            ...user,
+            isCurrentUser: user.isCurrentUser ?? (session?.user?.id === user.id),
+          }))
+          setUsers(usersWithCurrentUser)
         }
       } else if (activeTab === "invitations") {
         const response = await fetch("/api/app/organization/invitations", {
@@ -250,24 +289,45 @@ export default function UsersClient() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{
-        display: "flex",
-        gap: "0.5rem",
-        marginBottom: "2rem",
-        borderBottom: "1px solid #CDCDCD",
-      }}>
+      {/* Tabs - Mobile-optimiert mit horizontalem Scroll */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          /* Hide scrollbar for Chrome, Safari and Opera */
+          .users-tabs-scroll::-webkit-scrollbar {
+            display: none;
+          }
+          /* Hide scrollbar for IE, Edge and Firefox */
+          .users-tabs-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `
+      }} />
+      <div 
+        className="users-tabs-scroll"
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "2rem",
+          borderBottom: "1px solid #CDCDCD",
+          overflowX: "auto",
+          overflowY: "hidden",
+          paddingBottom: "2px",
+        }}
+      >
         <button
           onClick={() => setActiveTab("users")}
           style={{
-            padding: "0.75rem 1.5rem",
+            padding: "0.75rem clamp(0.75rem, 2vw, 1.5rem)",
             backgroundColor: "transparent",
             border: "none",
             borderBottom: activeTab === "users" ? "2px solid #24c598" : "2px solid transparent",
             color: activeTab === "users" ? "#24c598" : "#7A7A7A",
-            fontSize: "0.95rem",
+            fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
             fontWeight: activeTab === "users" ? "600" : "400",
             cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
           Benutzer ({users.length})
@@ -275,33 +335,40 @@ export default function UsersClient() {
         <button
           onClick={() => setActiveTab("invitations")}
           style={{
-            padding: "0.75rem 1.5rem",
+            padding: "0.75rem clamp(0.75rem, 2vw, 1.5rem)",
             backgroundColor: "transparent",
             border: "none",
             borderBottom: activeTab === "invitations" ? "2px solid #24c598" : "2px solid transparent",
             color: activeTab === "invitations" ? "#24c598" : "#7A7A7A",
-            fontSize: "0.95rem",
+            fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
             fontWeight: activeTab === "invitations" ? "600" : "400",
             cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
           Einladungen ({invitations.length})
         </button>
-        <button
-          onClick={() => setActiveTab("join-requests")}
-          style={{
-            padding: "0.75rem 1.5rem",
-            backgroundColor: "transparent",
-            border: "none",
-            borderBottom: activeTab === "join-requests" ? "2px solid #24c598" : "2px solid transparent",
-            color: activeTab === "join-requests" ? "#24c598" : "#7A7A7A",
-            fontSize: "0.95rem",
-            fontWeight: activeTab === "join-requests" ? "600" : "400",
-            cursor: "pointer",
-          }}
-        >
-          Beitrittsanfragen ({joinRequests.filter(r => r.status === "pending").length})
-        </button>
+        {/* Tab "Beitrittsanfragen" nur anzeigen, wenn tatsächlich Requests vorhanden sind */}
+        {joinRequests.filter(r => r.status === "pending").length > 0 && (
+          <button
+            onClick={() => setActiveTab("join-requests")}
+            style={{
+              padding: "0.75rem clamp(0.75rem, 2vw, 1.5rem)",
+              backgroundColor: "transparent",
+              border: "none",
+              borderBottom: activeTab === "join-requests" ? "2px solid #24c598" : "2px solid transparent",
+              color: activeTab === "join-requests" ? "#24c598" : "#7A7A7A",
+              fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
+              fontWeight: activeTab === "join-requests" ? "600" : "400",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            Beitrittsanfragen ({joinRequests.filter(r => r.status === "pending").length})
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -334,28 +401,44 @@ export default function UsersClient() {
                         alignItems: "center",
                       }}
                     >
-                      <div>
-                        <p style={{ margin: 0, fontWeight: "500", color: "#0A0A0A" }}>
-                          {user.firstName} {user.lastName}
-                        </p>
-                        <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.9rem", color: "#7A7A7A" }}>
-                          {user.email} • {user.role || "VIEWER"}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                          <p style={{ margin: 0, fontWeight: "500", color: "#0A0A0A" }}>
+                            {user.firstName} {user.lastName}
+                          </p>
+                          {user.isCurrentUser && (
+                            <span style={{
+                              padding: "0.125rem 0.5rem",
+                              backgroundColor: "#24c598",
+                              color: "#FFFFFF",
+                              borderRadius: "4px",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                            }}>
+                              Ich
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ margin: 0, fontSize: "0.9rem", color: "#7A7A7A" }}>
+                          {user.email} • {getRoleLabel(user.role)}
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleRemoveUser(user.id)}
-                        style={{
-                          padding: "0.5rem 1rem",
-                          backgroundColor: "transparent",
-                          border: "1px solid #CDCDCD",
-                          borderRadius: "6px",
-                          color: "#C33",
-                          fontSize: "0.9rem",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Entfernen
-                      </button>
+                      {!user.isCurrentUser && (
+                        <button
+                          onClick={() => handleRemoveUser(user.id)}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            backgroundColor: "transparent",
+                            border: "1px solid #CDCDCD",
+                            borderRadius: "6px",
+                            color: "#C33",
+                            fontSize: "0.9rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Entfernen
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -429,9 +512,9 @@ export default function UsersClient() {
                         boxSizing: "border-box",
                       }}
                     >
-                      <option value="VIEWER">VIEWER</option>
-                      <option value="EDITOR">EDITOR</option>
-                      <option value="ORG_ADMIN">ORG_ADMIN</option>
+                      <option value={PHASE1_ROLES.VIEWER}>{ROLE_LABELS[PHASE1_ROLES.VIEWER]}</option>
+                      <option value={PHASE1_ROLES.EDITOR}>{ROLE_LABELS[PHASE1_ROLES.EDITOR]}</option>
+                      <option value={PHASE1_ROLES.ORG_ADMIN}>{ROLE_LABELS[PHASE1_ROLES.ORG_ADMIN]}</option>
                     </select>
                   </div>
                 </div>

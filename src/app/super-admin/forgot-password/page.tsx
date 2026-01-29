@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import EasyPassLogo from "@/components/EasyPassLogo"
+import TPassLogo from "../components/TPassLogo"
 
 /**
  * SUPER ADMIN FORGOT PASSWORD PAGE
@@ -67,7 +67,7 @@ export default function SuperAdminForgotPasswordPage() {
           justifyContent: "center",
           marginBottom: "2rem"
         }}>
-          <EasyPassLogo size={64} color="#24c598" />
+          <TPassLogo size={64} color="#24c598" />
         </div>
         
         <h1 style={{

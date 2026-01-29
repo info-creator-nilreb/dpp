@@ -46,6 +46,29 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
 
   const organizationIds = memberships.map(m => m.organizationId)
 
+  // Get all available categories and statuses from user's DPPs (before filtering)
+  // This ensures filter options only show values that actually exist
+  const allUserDpps = await prisma.dpp.findMany({
+    where: {
+      organizationId: {
+        in: organizationIds
+      }
+    },
+    select: {
+      category: true,
+      status: true
+    }
+  })
+
+  // Extract unique categories and statuses that actually exist
+  const availableCategories = Array.from(
+    new Set(allUserDpps.map(dpp => dpp.category).filter(Boolean))
+  ).sort() as string[]
+  
+  const availableStatuses = Array.from(
+    new Set(allUserDpps.map(dpp => dpp.status || "DRAFT").filter(Boolean))
+  ).sort() as string[]
+
   if (organizationIds.length === 0) {
     return (
       <DppsContent
@@ -56,6 +79,8 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
         searchQuery={searchQuery}
         statusFilter={statusFilter}
         categoryFilter={categoryFilter}
+        availableCategories={[]}
+        availableStatuses={[]}
       />
     )
   }
@@ -160,6 +185,8 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
       searchQuery={searchQuery}
       statusFilter={statusFilter}
       categoryFilter={categoryFilter}
+      availableCategories={availableCategories}
+      availableStatuses={availableStatuses}
     />
   )
 }

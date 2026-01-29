@@ -32,7 +32,9 @@ model User {
   preferredLanguage String    @default("en")
   timeZone          String?
 
-  // Phase 1: One organization per user (N:1 relationship - many users to one org)
+  // Phase 1: DEPRECATED - Nur für Cache/Performance, NICHT als Quelle der Wahrheit verwenden!
+  // Die einzige Quelle der Wahrheit für Organisationsmitgliedschaften ist das Membership-Modell.
+  // organizationId wird automatisch aus der ersten Membership abgeleitet (siehe Migration).
   organizationId String?
   organization   Organization? @relation("OrganizationUsers", fields: [organizationId], references: [id], onDelete: SetNull)
 
@@ -42,7 +44,7 @@ model User {
   // Relations
   dppPermissions    DppPermission[]
   publishedVersions DppVersion[]
-  memberships       Membership[] // Legacy: kept for migration compatibility
+  memberships       Membership[] // EINZIGE QUELLE DER WAHRHEIT für Organisationsmitgliedschaften und Rollen
   auditLogs         PlatformAuditLog[]
   invitations       Invitation[] // Invitations sent by this user
   notifications     Notification[]
@@ -83,8 +85,8 @@ model Organization {
 
   // Relations
   dpps         Dpp[]
-  memberships  Membership[] // Legacy: kept for migration compatibility
-  users        User[]             @relation("OrganizationUsers") // Phase 1: Users belonging to this organization
+  memberships  Membership[] // EINZIGE QUELLE DER WAHRHEIT für Organisationsmitgliedschaften
+  users        User[]             @relation("OrganizationUsers") // DEPRECATED: Nur für Cache, verwende memberships statt users
   subscription Subscription?
   auditLogs    PlatformAuditLog[]
   invitations  Invitation[]
@@ -104,8 +106,13 @@ model Membership {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // EINZIGE QUELLE DER WAHRHEIT: Jede Organisationsmitgliedschaft MUSS hier existieren
+  // Ein Nutzer kann mehrere Organisationsmitgliedschaften haben (Multi-Tenant)
+  // Pro Nutzer und Organisation darf es nur EINE Mitgliedschaft geben
+  
   @@unique([userId, organizationId])
   @@index([role])
+  @@index([organizationId]) // Für schnelle Abfragen der Team-Mitglieder
   @@map("memberships")
 }
 
@@ -132,6 +139,9 @@ model Dpp {
   status                String          @default("DRAFT") // DRAFT | PUBLISHED | DEPRECATED
   supersedesDppId       String? // ID des DPPs, der durch diesen DPP ersetzt wurde (für Fehlklassifikationen)
   organizationId        String
+  // Template-Version-Binding (immutable nach Erstellung)
+  templateId            String? // Template logical identifier (e.g. category-based)
+  templateVersionId     String? // Template ID (specific version identifier - the actual Template.id)
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   media                 DppMedia[]
@@ -139,11 +149,29 @@ model Dpp {
   versions              DppVersion[]
   content               DppContent[]
   contributorTokens     ContributorToken[]
-  blockSupplierConfigs   DppBlockSupplierConfig[]
+  blockSupplierConfigs  DppBlockSupplierConfig[]
   supplierInvites       DppSupplierInvite[]
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  @@index([templateId])
+  @@index([templateVersionId])
   @@map("dpps")
+}
+
+model DppBlockSupplierConfig {
+  id            String   @id @default(cuid())
+  dppId         String
+  dpp           Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  blockId       String   // TemplateBlock ID (Referenz, keine Foreign Key da TemplateBlock in anderer DB-Struktur)
+  enabled       Boolean  @default(false)
+  mode          String?  // "input" | "declaration"
+  allowedRoles  Json?    // Array von Rollen (optional, als JSON gespeichert)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([dppId, blockId])
+  @@index([dppId])
+  @@map("dpp_block_supplier_configs")
 }
 
 model DppMedia {
@@ -156,11 +184,13 @@ model DppMedia {
   role       String?  // Semantische Rolle: primary_product_image, gallery_image, certificate, logo, etc.
   blockId   String?  // Optional: ID des Blocks, dem das Medium zugeordnet ist (für Content-Blöcke)
   fieldKey   String?  // Optional: Key des File-Felds im Block
+  fieldId    String?  // TemplateField ID (key)
   uploadedAt DateTime @default(now())
   dpp        Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
 
   @@index([dppId, role])
   @@index([blockId])
+  @@index([dppId, blockId, fieldId])
   @@map("dpp_media")
 }
 
@@ -240,15 +270,18 @@ model ContributorToken {
   dpp          Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
   email        String
   partnerRole  String // Material supplier | Manufacturer | Processor | Recycler | Other
-  sections     String // Comma-separated list of allowed sections
+  sections     String? // DEPRECATED: Comma-separated list of allowed sections (legacy, use blockIds instead) - nullable für Backward Compatibility
+  blockIds     String? // Comma-separated list of allowed TemplateBlock IDs (new template-based approach)
+  supplierMode String? // "input" | "declaration" - how supplier should interact with fields
   message      String? // Optional message from DPP owner
-  status       String   @default("pending") // pending | submitted | expired
+  status       String   @default("pending") // pending | submitted | expired | confirmed
   expiresAt    DateTime
   submittedAt  DateTime?
+  emailSentAt  DateTime? // Timestamp, wenn E-Mail erfolgreich verschickt wurde
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   requestedBy  String? // User ID who created the request
-  submittedData Json? // Submitted data as JSON
+  submittedData Json? // Submitted data as JSON (template-based field values)
 
   @@index([token])
   @@index([dppId])
@@ -498,14 +531,15 @@ model Template {
 }
 
 model TemplateBlock {
-  id         String          @id @default(cuid())
-  templateId String
-  name       String
-  order      Int             @default(0)
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  template   Template        @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  fields     TemplateField[]
+  id            String          @id @default(cuid())
+  templateId    String
+  name          String
+  order         Int             @default(0)
+  // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert, nicht im Template
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  template      Template        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fields        TemplateField[]
 
   @@index([templateId])
   @@index([templateId, order])
@@ -522,6 +556,7 @@ model TemplateField {
   required            Boolean       @default(false)
   config              String?
   order               Int           @default(0)
+  isRepeatable        Boolean       @default(false) // Für wiederholbare Gruppen (z.B. Materialien)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   regulatoryRequired  Boolean       @default(false)
@@ -830,4 +865,18 @@ model Notification {
   @@index([type])
   @@index([createdAt])
   @@map("notifications")
+}
+
+// Password Protection Config: Global password gate for Closed Alpha / Pre-Launch
+model PasswordProtectionConfig {
+  id                               String    @id @default(cuid())
+  passwordProtectionEnabled        Boolean   @default(false)
+  passwordProtectionStartDate      DateTime?
+  passwordProtectionEndDate        DateTime?
+  passwordProtectionPasswordHash   String?
+  passwordProtectionSessionTimeoutMinutes Int @default(60)
+  updatedAt                        DateTime  @updatedAt
+  updatedBy                        String? // Super Admin ID
+
+  @@map("password_protection_config")
 }

@@ -344,8 +344,8 @@ export default function PricingPageContent({
                   Jährlich
                 </button>
               </div>
-              {/* Badge - unter Toggle auf Mobile, rechts auf Desktop */}
-              {pricingPlans.some(plan => calculateSavings(plan) !== null) && (
+              {/* Badge - unter Toggle auf Mobile, rechts auf Desktop - nur bei jährlicher Abrechnung */}
+              {billingInterval === "yearly" && pricingPlans.some(plan => calculateSavings(plan) !== null) && (
                 <span style={{
                   position: isMobile ? "relative" : "absolute",
                   left: isMobile ? "auto" : "calc(50% + 120px)",
@@ -436,7 +436,7 @@ export default function PricingPageContent({
 
                 {/* Plan Header - Feste Höhe für 3 Zeilen Marketing-Description */}
                 <div style={{ 
-                  marginBottom: "1.5rem",
+                  marginBottom: "3rem",
                   minWidth: 0,
                   wordWrap: "break-word",
                   overflowWrap: "break-word",
@@ -465,31 +465,28 @@ export default function PricingPageContent({
                   )}
                 </div>
 
-                {/* Trial Info und Key Limits - Zusammen in einer Zeile */}
-                <div>
-                  {/* Trial Info - nur wenn vorhanden */}
-                  {subscriptionModel && subscriptionModel.trialDays > 0 && (
-                    <div style={{
-                      padding: "0.75rem",
-                      backgroundColor: "#E6F7E6",
-                      borderRadius: "6px",
-                      marginBottom: "1.5rem",
-                      fontSize: "0.875rem",
-                      color: "#0A0A0A",
-                      textAlign: "center",
-                      wordWrap: "break-word",
-                      overflowWrap: "break-word",
-                      boxSizing: "border-box",
-                      width: "100%"
-                    }}>
-                      <strong>{subscriptionModel.trialDays} Tage</strong> kostenlos testen
-                    </div>
-                  )}
+                {/* Trial Info - mittig zwischen Header und Key Limits */}
+                {subscriptionModel && subscriptionModel.trialDays > 0 && (
+                  <div style={{
+                    padding: "0.75rem",
+                    backgroundColor: "#E6F7E6",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    color: "#0A0A0A",
+                    textAlign: "center",
+                    wordWrap: "break-word",
+                    overflowWrap: "break-word",
+                    boxSizing: "border-box",
+                    width: "100%",
+                    marginBottom: "1.5rem"
+                  }}>
+                    <strong>{subscriptionModel.trialDays} Tage</strong> kostenlos testen
+                  </div>
+                )}
 
-                  {/* Key Limits */}
-                  {plan.entitlements.length > 0 && (
+                {/* Key Limits */}
+                {plan.entitlements.length > 0 && (
                     <div style={{
-                      marginBottom: "1.5rem",
                       padding: "1rem",
                       backgroundColor: "#F9F9F9",
                       borderRadius: "8px",
@@ -577,7 +574,6 @@ export default function PricingPageContent({
                       </div>
                     </div>
                   )}
-                </div>
 
                 {/* Price - Feste Position für Alignment */}
                 {price ? (
@@ -675,7 +671,7 @@ export default function PricingPageContent({
                       transition: "background-color 0.2s"
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#C1005F"
+                      e.currentTarget.style.backgroundColor = isHighlighted ? "#1ea87a" : "#333333"
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = isHighlighted ? "#24c598" : "#0A0A0A"

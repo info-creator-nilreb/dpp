@@ -2,7 +2,7 @@
  * Entitlement Icons
  * 
  * Small, subtle icons for different entitlement types
- * Uses brand mint (#24c598) sparingly
+ * Uses brand magenta (#24c598) sparingly
  */
 
 interface IconProps {

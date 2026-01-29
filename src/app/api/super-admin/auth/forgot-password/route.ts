@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       })
 
       console.log("[SUPER_ADMIN_FORGOT_PASSWORD] Reset token stored for", email)
-      console.log("[SUPER_ADMIN_FORGOT_PASSWORD] Reset link:", `/super-admin/reset-password?token=${resetToken}`)
+      console.log("[SUPER_ADMIN_FORGOT_PASSWORD] Reset link:", `/super-admin/reseeasy-password?token=${resetToken}`)
 
       // TODO: Send email with reset link via email service
       // For now, the token is stored and can be used via the reset link

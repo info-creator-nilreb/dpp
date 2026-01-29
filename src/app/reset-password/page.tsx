@@ -48,7 +48,7 @@ function ResetPasswordContent() {
 
     try {
       console.log("Sending password reset for token:", token?.substring(0, 20) + "...")
-      const response = await fetch("/api/auth/reset-password", {
+      const response = await fetch("/api/auth/reseeasy-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
@@ -107,7 +107,7 @@ function ResetPasswordContent() {
             Der Reset-Link ist ungültig oder abgelaufen.
           </p>
           <Link
-            href="/forgot-password"
+            href="/forgoeasy-password"
             style={{
               display: "inline-block",
               padding: "0.75rem 1.5rem",

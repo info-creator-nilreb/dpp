@@ -13,12 +13,15 @@ interface InputFieldProps {
   helperText?: string
   disabled?: boolean
   readOnly?: boolean
+  supplierInfo?: {
+    partnerRole: string
+  } | null
 }
 
 /**
  * Input-Feld Komponente (separat, um Re-Rendering zu vermeiden)
  */
-export default function InputField({ id, label, value, onChange, required = false, type = "text", rows = 1, helperText, disabled = false, readOnly = false }: InputFieldProps) {
+export default function InputField({ id, label, value, onChange, required = false, type = "text", rows = 1, helperText, disabled = false, readOnly = false, supplierInfo = null }: InputFieldProps) {
   return (
     <div style={{ marginBottom: "1.5rem" }}>
       <label htmlFor={id} style={{
@@ -29,6 +32,16 @@ export default function InputField({ id, label, value, onChange, required = fals
         marginBottom: "0.5rem"
       }}>
         {label} {required && <span style={{ color: "#24c598" }}>*</span>}
+        {supplierInfo && (
+          <span style={{
+            color: "#2563EB",
+            fontSize: "0.85rem",
+            fontWeight: "400",
+            marginLeft: "0.5rem"
+          }}>
+            (Angaben vom {supplierInfo.partnerRole} zur Verfügung gestellt, bitte prüfen)
+          </span>
+        )}
       </label>
       {rows > 1 ? (
         <textarea

@@ -6,9 +6,6 @@
  */
 
 import { Page, Section, TextBlock, QuoteBlock, Image, Accent } from './index'
-import { StylingConfig } from "@/lib/cms/types"
-import { resolveTheme } from "@/lib/cms/validation"
-import { getHeroImage, getGalleryImages, MediaItem } from "@/lib/media/hero-logic"
 
 interface EditorialDppData {
   id: string
@@ -36,11 +33,10 @@ interface EditorialDppData {
     id: string
     storageUrl: string
     fileType: string
-    role?: string | null
     blockId?: string | null
-    fieldKey?: string | null
-    fileName: string
+    fieldId?: string | null
   }>
+  produktdatenBlockId?: string | null
   versionInfo?: {
     version: number
     createdAt: Date
@@ -49,30 +45,17 @@ interface EditorialDppData {
 
 interface EditorialDppViewProps {
   dpp: EditorialDppData
-  styling?: StylingConfig | null
 }
 
-export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps) {
-  // Resolve theme from styling config
-  const theme = resolveTheme(styling || undefined)
-  const accentColor = theme.colors.accent
-  const primaryColor = theme.colors.primary
-  const secondaryColor = theme.colors.secondary
+export default function EditorialDppView({ dpp }: EditorialDppViewProps) {
+  // Herobild: Erstes Bild im Produktdaten-Block (oder erstes Bild insgesamt als Fallback)
+  const produktdatenImages = dpp.media.filter(m => 
+    m.fileType.startsWith('image/') && 
+    (dpp.produktdatenBlockId ? m.blockId === dpp.produktdatenBlockId : true)
+  )
+  const heroImage = produktdatenImages[0] || dpp.media.find(m => m.fileType.startsWith('image/'))
+  const galleryImages = produktdatenImages.slice(1) // Weitere Bilder im Produktdaten-Block = Galerie
   
-  // Hero-Logik: Erstes Bild aus "Basis- & Produktdaten"-Block
-  const mediaItems: MediaItem[] = dpp.media.map(m => ({
-    id: m.id,
-    storageUrl: m.storageUrl,
-    fileType: m.fileType,
-    role: m.role || null,
-    blockId: m.blockId || null,
-    fieldKey: m.fieldKey || null,
-    fileName: m.fileName
-  }))
-  
-  const heroImageItem = getHeroImage(mediaItems, "Basis- & Produktdaten")
-  const heroImage = heroImageItem ? { storageUrl: heroImageItem.storageUrl } : null
-  const galleryImages = getGalleryImages(mediaItems, "Basis- & Produktdaten")
   const brandName = dpp.brand || dpp.organization.name
 
   const formatDate = (date: Date) => {
@@ -84,7 +67,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
   }
 
   return (
-    <Page styling={styling}>
+    <Page>
       {/* Hero Section - Full Bleed, direkt am Seitenbeginn ohne unnötigen Raum */}
       <Section variant="full-bleed" style={{ paddingTop: 0, paddingBottom: 0 }}>
         {heroImage ? (
@@ -164,7 +147,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
             {brandName && (
               <p style={{
                 fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
-                color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                color: '#7A7A7A',
                 fontWeight: 500,
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
@@ -204,7 +187,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
         {/* Product Information Grid - Basis- & Produktdaten */}
         {(dpp.sku || dpp.gtin || dpp.countryOfOrigin) && (
           <>
-            <Accent type="highlight" color={accentColor} style={{ margin: '3rem auto' }} />
+            <Accent type="highlight" style={{ margin: '3rem auto' }} />
             
             <div style={{
               maxWidth: '900px',
@@ -220,7 +203,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
-                    color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                    color: '#7A7A7A',
                     marginBottom: '0.5rem',
                   }}>
                     SKU
@@ -236,7 +219,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
-                    color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                    color: '#7A7A7A',
                     marginBottom: '0.5rem',
                   }}>
                     GTIN/EAN
@@ -252,7 +235,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
-                    color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                    color: '#7A7A7A',
                     marginBottom: '0.5rem',
                   }}>
                     Herkunftsland
@@ -297,7 +280,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                      color: '#7A7A7A',
                     }}>
                       Materialien
                     </h3>
@@ -313,7 +296,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                      color: '#7A7A7A',
                     }}>
                       Materialherkunft
                     </h3>
@@ -358,7 +341,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                      color: '#7A7A7A',
                     }}>
                       Pflegehinweise
                     </h3>
@@ -374,7 +357,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                      color: '#7A7A7A',
                     }}>
                       Lebensdauer
                     </h3>
@@ -390,7 +373,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                      color: '#7A7A7A',
                     }}>
                       Reparaturfähigkeit
                     </h3>
@@ -406,7 +389,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                       marginBottom: '1rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                      color: '#7A7A7A',
                     }}>
                       Ersatzteile
                     </h3>
@@ -520,7 +503,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                       marginBottom: '0.5rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      color: `var(--editorial-text-secondary, ${secondaryColor || '#7A7A7A'})`,
+                      color: '#7A7A7A',
                     }}>
                       Kontakt für Rücknahme
                     </h3>
@@ -539,7 +522,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
         </>
       )}
 
-      {/* Product Gallery - Nur Bilder aus "Basis- & Produktdaten"-Block mit Rolle "gallery_image" */}
+      {/* Additional Media Gallery - Nur wenn weitere Bilder im Produktdaten-Block vorhanden */}
       {galleryImages.length > 0 && (
         <>
           <Accent type="divider" style={{ margin: '4rem auto 3rem' }} />
@@ -553,7 +536,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
               textAlign: 'center',
               letterSpacing: '-0.02em',
             }}>
-              Produktgalerie
+              Galerie
             </h2>
             
             <div style={{
@@ -565,7 +548,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
                 <Image
                   key={media.id}
                   src={media.storageUrl}
-                  alt={`${dpp.name} - ${media.fileName || 'Bild'}`}
+                  alt={`${dpp.name} - Bild ${media.id}`}
                   aspectRatio="4:3"
                 />
               ))}
@@ -576,7 +559,7 @@ export default function EditorialDppView({ dpp, styling }: EditorialDppViewProps
 
       {/* Footer nur wenn Organization Name vorhanden (aus DPP-Daten) */}
       {dpp.organization.name && (
-        <Section variant="contained" backgroundColor={primaryColor || '#0A0A0A'}>
+        <Section variant="contained" backgroundColor="#0A0A0A">
           <div style={{
             maxWidth: '800px',
             margin: '0 auto',

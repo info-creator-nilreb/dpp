@@ -85,6 +85,7 @@ export async function POST(
             key: field.key,
             type: field.type,
             required: field.required,
+            isRepeatable: field.isRepeatable || false,
             regulatoryRequired: field.regulatoryRequired || false,
             config: field.config,
             order: field.order,

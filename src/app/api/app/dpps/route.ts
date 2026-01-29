@@ -18,6 +18,11 @@ import { prisma } from "@/lib/prisma"
  * - category: Filter by category (TEXTILE, FURNITURE, OTHER)
  */
 export async function GET(request: NextRequest) {
+  // Parse query parameters außerhalb des try-Blocks, damit sie im catch-Block verfügbar sind
+  const searchParams = request.nextUrl.searchParams
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12", 10)))
+  
   try {
     const session = await auth()
 
@@ -27,11 +32,6 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       )
     }
-
-    // Parse query parameters
-    const searchParams = request.nextUrl.searchParams
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12", 10)))
     const search = searchParams.get("search")?.trim() || ""
     const status = searchParams.get("status")?.trim() || ""
     const category = searchParams.get("category")?.trim() || ""
@@ -169,8 +169,25 @@ export async function GET(request: NextRequest) {
         totalPages
       }
     }, { status: 200 })
-  } catch (error) {
-    console.error("Error fetching DPPs:", error)
+  } catch (error: any) {
+    // Connection Pool Overflow oder andere DB-Fehler abfangen
+    if (
+      error?.message?.includes("MaxClientsInSessionMode") ||
+      error?.message?.includes("max clients reached") ||
+      error?.code === "P1001"
+    ) {
+      return NextResponse.json({
+        dpps: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+        },
+        error: "Datenbankverbindung überlastet. Bitte versuchen Sie es später erneut.",
+      }, { status: 503 })
+    }
+    
     return NextResponse.json(
       { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }

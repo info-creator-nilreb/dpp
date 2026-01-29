@@ -15,7 +15,7 @@ import {
   FeatureRegistryIcon,
   PricingIcon
 } from "./Icons"
-import EasyPassLogo from "@/components/EasyPassLogo"
+import TPassLogo from "./TPassLogo"
 import { apiFetch } from "@/lib/api-client"
 
 const navigationItems = [
@@ -165,10 +165,10 @@ function SidebarContent({
         justifyContent: isCollapsed ? "center" : "flex-start",
       }}>
         {isCollapsed ? (
-          <EasyPassLogo size={32} color="#24c598" iconOnly={true} />
+          <TPassLogo size={32} color="#24c598" iconOnly={true} />
         ) : (
           <>
-            <EasyPassLogo size={32} color="#24c598" iconOnly={false} textColor="#FFFFFF" />
+            <TPassLogo size={32} color="#24c598" iconOnly={false} textColor="#FFFFFF" />
             <span style={{ 
               marginLeft: "auto",
               fontSize: "0.875rem", 

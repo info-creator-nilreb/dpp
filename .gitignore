@@ -42,3 +42,7 @@ next-env.d.ts
 # uploads
 /public/uploads
 .next/tsconfig.tsbuildinfo
+
+# migration documentation (temporary)
+MIGRATION_TEMPLATE_VERSION_BINDING.md
+migrate-template-version-binding.sql

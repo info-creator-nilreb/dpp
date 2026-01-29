@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   onConfirm: () => void
   onCancel: () => void
   variant?: "default" | "danger"
+  disabled?: boolean // Für Loading-States
 }
 
 /**
@@ -27,36 +28,57 @@ export default function ConfirmDialog({
   cancelLabel = "Abbrechen",
   onConfirm,
   onCancel,
-  variant = "default"
+  variant = "default",
+  disabled = false
 }: ConfirmDialogProps) {
-  // ESC-Taste zum Schließen
+  // ESC-Taste zum Schließen und Body-Overflow-Management
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      // Sicherstellen, dass overflow zurückgesetzt wird, wenn Dialog geschlossen wird
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = ""
+      }
+      return
+    }
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !disabled) {
         onCancel()
       }
     }
 
     document.addEventListener("keydown", handleEscape)
     // Body scroll sperren wenn Dialog offen ist
-    document.body.style.overflow = "hidden"
+    if (typeof document !== "undefined") {
+      document.body.style.overflow = "hidden"
+    }
 
     return () => {
       document.removeEventListener("keydown", handleEscape)
+      // Overflow zurücksetzen - immer zurücksetzen
+      // Das verhindert, dass overflow "hidden" bleibt, wenn Dialog geschlossen wird
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = ""
+      }
+    }
+  }, [isOpen, onCancel, disabled])
+
+  // Wichtig: Dieser Check muss NACH dem useEffect sein, damit Cleanup ausgeführt wird
+  // Zusätzliche Sicherheit: Wenn Modal nicht offen ist, nichts rendern
+  if (!isOpen) {
+    // Sicherstellen, dass overflow zurückgesetzt wird, auch wenn Modal nicht gerendert wird
+    if (typeof document !== "undefined") {
       document.body.style.overflow = ""
     }
-  }, [isOpen, onCancel])
-
-  if (!isOpen) return null
+    return null
+  }
 
   const confirmButtonColor = variant === "danger" ? "#24c598" : "#24c598"
   const confirmButtonHover = variant === "danger" ? "#C20062" : "#C20062"
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - NUR rendern wenn Modal offen ist */}
       <div
         style={{
           position: "fixed",
@@ -156,6 +178,7 @@ export default function ConfirmDialog({
           }}>
             <button
               onClick={onCancel}
+              disabled={disabled}
               style={{
                 padding: "0.75rem 1.5rem",
                 fontSize: "1rem",
@@ -164,15 +187,18 @@ export default function ConfirmDialog({
                 backgroundColor: "transparent",
                 border: "1px solid #CDCDCD",
                 borderRadius: "8px",
-                cursor: "pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
                 transition: "all 0.2s",
                 minWidth: "120px",
-                boxSizing: "border-box"
+                boxSizing: "border-box",
+                opacity: disabled ? 0.5 : 1
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#24c598"
-                e.currentTarget.style.color = "#24c598"
-                e.currentTarget.style.backgroundColor = "#FFF5F9"
+                if (!disabled) {
+                  e.currentTarget.style.borderColor = "#24c598"
+                  e.currentTarget.style.color = "#24c598"
+                  e.currentTarget.style.backgroundColor = "#FFF5F9"
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = "#CDCDCD"
@@ -184,27 +210,32 @@ export default function ConfirmDialog({
             </button>
             <button
               onClick={onConfirm}
+              disabled={disabled}
               style={{
                 padding: "0.75rem 1.5rem",
                 fontSize: "1rem",
                 fontWeight: "600",
                 color: "#FFFFFF",
-                backgroundColor: confirmButtonColor,
+                backgroundColor: disabled ? "#CDCDCD" : confirmButtonColor,
                 border: "none",
                 borderRadius: "8px",
-                cursor: "pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
                 transition: "all 0.2s",
-                boxShadow: "0 2px 8px rgba(226, 0, 116, 0.2)",
+                boxShadow: disabled ? "none" : "0 2px 8px rgba(226, 0, 116, 0.2)",
                 minWidth: "120px",
                 boxSizing: "border-box"
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = confirmButtonHover
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(226, 0, 116, 0.3)"
+                if (!disabled) {
+                  e.currentTarget.style.backgroundColor = confirmButtonHover
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(226, 0, 116, 0.3)"
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = confirmButtonColor
-                e.currentTarget.style.boxShadow = "0 2px 8px rgba(226, 0, 116, 0.2)"
+                if (!disabled) {
+                  e.currentTarget.style.backgroundColor = confirmButtonColor
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(226, 0, 116, 0.2)"
+                }
               }}
             >
               {confirmLabel}

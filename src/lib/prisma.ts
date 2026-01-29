@@ -57,8 +57,31 @@ function getPrisma(): PrismaClient {
     )
   }
 
+  // Connection Pool Konfiguration für Serverless-Umgebungen (Vercel)
+  // In Serverless: Jede Lambda-Funktion sollte nur 1 Verbindung verwenden
+  // Dies verhindert "MaxClientsInSessionMode" Fehler
+  // WICHTIG: connection_limit sollte idealerweise in DATABASE_URL in Vercel gesetzt werden
+  // Als Fallback fügen wir es hier hinzu, falls es nicht vorhanden ist
+  let databaseUrl = process.env.DATABASE_URL || ""
+  
+  // Nur in Production/Serverless-Umgebungen und nur wenn connection_limit noch nicht gesetzt ist
+  if ((process.env.VERCEL || process.env.NODE_ENV === "production") && 
+      databaseUrl && 
+      !databaseUrl.includes("connection_limit")) {
+    // Füge connection_limit=1 für Serverless-Umgebungen hinzu
+    // pool_timeout=10 verhindert, dass Verbindungen zu lange warten
+    const separator = databaseUrl.includes("?") ? "&" : "?"
+    databaseUrl = `${databaseUrl}${separator}connection_limit=1&pool_timeout=10`
+    console.log("[PRISMA] Added connection_limit=1 to DATABASE_URL for serverless environment")
+  }
+
   const prisma = new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    datasources: {
+      db: {
+        url: databaseUrl,
+      },
+    },
   })
 
   // Always cache in global scope (works in both development and Vercel serverless)

@@ -60,26 +60,16 @@ const PERMISSION_MATRIX: Record<Phase1Role, {
 /**
  * Holt die Rolle eines Users in einer Organisation
  * 
- * Phase 1: Ein User gehört genau einer Organisation
- * Die Rolle wird aus der organizationId des Users ermittelt
+ * WICHTIG: Membership ist die EINZIGE QUELLE DER WAHRHEIT
+ * Wenn mehrere Memberships existieren, wird die höchste Rolle zurückgegeben
+ * Priorität: ORG_ADMIN > EDITOR > VIEWER
  */
 export async function getUserRole(
   userId: string,
   organizationId: string
 ): Promise<Phase1Role | null> {
-  // Prüfe ob User zur Organisation gehört
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { organizationId: true },
-  })
-
-  if (!user || user.organizationId !== organizationId) {
-    return null
-  }
-
-  // Hole Rolle aus Membership (Legacy-Support) oder aus User.organizationId
-  // In Phase 1 sollte die Rolle primär aus Membership kommen
-  const membership = await prisma.membership.findFirst({
+  // Hole alle Memberships für diesen User in dieser Organisation
+  const memberships = await prisma.membership.findMany({
     where: {
       userId,
       organizationId,
@@ -87,13 +77,42 @@ export async function getUserRole(
     select: { role: true },
   })
 
-  if (membership && isValidPhase1Role(membership.role)) {
-    return membership.role as Phase1Role
+  if (memberships.length === 0) {
+    return null
   }
 
-  // Fallback: Wenn kein Membership existiert, aber User zur Org gehört
-  // (kann während Migration passieren)
-  return null
+  // Wenn mehrere Memberships existieren, wähle die höchste Rolle
+  // Priorität: ORG_ADMIN > EDITOR > VIEWER
+  const rolePriority: Record<string, number> = {
+    [PHASE1_ROLES.ORG_ADMIN]: 3,
+    "ORG_OWNER": 3, // Legacy-Rolle, gleiche Priorität wie ORG_ADMIN
+    [PHASE1_ROLES.EDITOR]: 2,
+    [PHASE1_ROLES.VIEWER]: 1,
+  }
+
+  let highestRole: Phase1Role | null = null
+  let highestPriority = 0
+
+  for (const membership of memberships) {
+    let role: Phase1Role | null = null
+    
+    // Legacy-Rollen-Mapping: ORG_OWNER → ORG_ADMIN
+    if (membership.role === "ORG_OWNER") {
+      role = PHASE1_ROLES.ORG_ADMIN
+    } else if (isValidPhase1Role(membership.role)) {
+      role = membership.role as Phase1Role
+    }
+    
+    if (role) {
+      const priority = rolePriority[role] || 0
+      if (priority > highestPriority) {
+        highestPriority = priority
+        highestRole = role
+      }
+    }
+  }
+
+  return highestRole
 }
 
 /**

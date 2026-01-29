@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import AppSidebar from "./AppSidebar"
+import MobileHeader from "./MobileHeader"
 import { useSession } from "next-auth/react"
 import { useAutoLogout } from "@/hooks/useAutoLogout"
 import { useAppData } from "@/contexts/AppDataContext"
@@ -39,6 +40,11 @@ export default function AppLayoutClient({
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#F5F5F5" }}>
+      {/* Mobile Header - only show when not on auth pages or public DPP views */}
+      {shouldShowSidebar && (
+        <MobileHeader onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+      )}
+
       {/* Sidebar - Desktop (fixed) & Mobile (overlay) - only show when not on auth pages or public DPP views */}
       {/* Only render sidebar when features are loaded to prevent layout shifts */}
       {shouldShowSidebar && !featuresLoading && (

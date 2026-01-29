@@ -13,6 +13,7 @@ import { NextResponse } from "next/server"
 import { signupUser, isEmailRegistered, type OrganizationAction } from "@/lib/phase1/signup"
 import { logOrganizationCreated } from "@/lib/phase1/audit"
 import { getClientIp } from "@/lib/audit/get-client-ip"
+import { sendVerificationEmail } from "@/lib/email"
 
 export async function POST(request: Request) {
   try {
@@ -85,6 +86,19 @@ export async function POST(request: Request) {
         result.userId,
         result.role
       )
+    }
+
+    // E-Mail-Verifizierung versenden
+    try {
+      await sendVerificationEmail(
+        result.email,
+        result.name,
+        result.verificationToken
+      )
+    } catch (emailError) {
+      // E-Mail-Fehler sollte den Signup nicht fehlschlagen lassen
+      console.error("[SIGNUP_PHASE1] Fehler beim Senden der Verifizierungs-E-Mail:", emailError)
+      // In Produktion sollte hier ein Error-Tracking-Service benachrichtigt werden
     }
 
     return NextResponse.json(

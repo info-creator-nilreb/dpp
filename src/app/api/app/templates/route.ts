@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
-import { getAllPublishedTemplates, getPublishedTemplatesByCategory } from "@/lib/template-helpers"
+import { getAllPublishedTemplates, getPublishedTemplatesByCategory, latestPublishedTemplate } from "@/lib/template-helpers"
 
 /**
  * GET /api/app/templates
@@ -14,6 +14,7 @@ import { getAllPublishedTemplates, getPublishedTemplatesByCategory } from "@/lib
  * 
  * Query-Parameter:
  * - groupByCategory: Wenn true, werden Templates nach Kategorie gruppiert zurückgegeben
+ * - category: Wenn angegeben, wird das neueste aktive Template für diese Kategorie zurückgegeben
  */
 export async function GET(request: Request) {
   try {
@@ -29,13 +30,34 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const groupByCategory = searchParams.get("groupByCategory") === "true"
+    const category = searchParams.get("category")
+
+    // Wenn category angegeben ist, lade das neueste aktive Template für diese Kategorie
+    if (category) {
+      const template = await latestPublishedTemplate(category)
+      if (!template) {
+        return NextResponse.json(
+          { error: `Kein aktives Template für die Kategorie "${category}" gefunden` },
+          { status: 404 }
+        )
+      }
+      return NextResponse.json({
+        template: {
+          id: template.id,
+          name: template.name,
+          category: template.category,
+          version: template.version,
+          label: `${template.categoryLabel || template.category} - ${template.name} (v${template.version})`
+        }
+      })
+    }
 
     if (groupByCategory) {
       const templatesByCategory = await getPublishedTemplatesByCategory()
       const result: Record<string, typeof templatesByCategory extends Map<string, infer V> ? V : never> = {}
       
-      for (const [category, templates] of templatesByCategory.entries()) {
-        result[category] = templates
+      for (const [cat, templates] of templatesByCategory.entries()) {
+        result[cat] = templates
       }
 
       return NextResponse.json({
@@ -48,7 +70,13 @@ export async function GET(request: Request) {
       })
     }
   } catch (error: any) {
-    console.error("Error fetching templates:", error)
+    // Datenbankverbindungsfehler abfangen
+    if (error?.message?.includes("Can't reach database server") || error?.code === "P1001") {
+      return NextResponse.json(
+        { error: "Datenbankverbindung fehlgeschlagen. Bitte versuchen Sie es später erneut." },
+        { status: 503 }
+      )
+    }
     return NextResponse.json(
       { error: "Ein Fehler ist aufgetreten beim Laden der Templates" },
       { status: 500 }

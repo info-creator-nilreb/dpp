@@ -13,7 +13,6 @@ import { createOrganizationWithFirstUser } from "@/lib/phase1/organization"
 import { PHASE1_ROLES } from "@/lib/phase1/roles"
 import { sendInvitationEmail } from "@/lib/email"
 import { createInvitation } from "@/lib/phase1/invitations"
-import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
@@ -98,69 +97,41 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if user with adminEmail already exists
+    // Prüfe ob User bereits existiert
     const existingUser = await prisma.user.findUnique({
       where: { email: adminEmail.toLowerCase().trim() },
     })
 
-    let userId: string
     let invitationSent = false
+    let tempPassword: string | undefined
 
-    if (existingUser) {
-      // User exists, assign to organization
-      userId = existingUser.id
-      
-      // Update user's organization
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          organizationId: undefined, // Will be set after org creation
-        },
-      })
-    } else {
-      // Create new user with temporary password
-      const tempPassword = Math.random().toString(36).slice(-12) + "A1!"
-      const hashedPassword = await bcrypt.hash(tempPassword, 10)
-      
-      const newUser = await prisma.user.create({
-        data: {
-          email: adminEmail.toLowerCase().trim(),
-          password: hashedPassword,
-          firstName: adminFirstName || null,
-          lastName: adminLastName || null,
-          status: "invited",
-        },
-      })
-      
-      userId = newUser.id
+    // Generiere temporäres Passwort falls User nicht existiert
+    if (!existingUser) {
+      tempPassword = Math.random().toString(36).slice(-12) + "A1!"
     }
 
-    // Create organization with Phase 1 fields
-    const organization = await prisma.organization.create({
+    // Erstelle Organisation mit E-Mail als erstem Nutzer
+    // createOrganizationWithFirstUser erstellt den User automatisch oder verwendet existierenden
+    const result = await createOrganizationWithFirstUser(
+      adminEmail,
+      name.trim(),
+      {
+        firstName: adminFirstName || undefined,
+        lastName: adminLastName || undefined,
+        password: tempPassword, // Nur gesetzt wenn User neu erstellt wird
+      }
+    )
+
+    const organizationId = result.organizationId
+    const userId = result.userId
+
+    // Aktualisiere zusätzliche Organisationsfelder
+    await prisma.organization.update({
+      where: { id: organizationId },
       data: {
-        name: name.trim(),
         legalName: legalName.trim(),
         country: country.trim(),
         licenseTier,
-        status: "active",
-      },
-    })
-
-    // Assign user to organization and create membership
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        organizationId: organization.id,
-        status: "active",
-      },
-    })
-
-    // Create membership with ORG_ADMIN role
-    await prisma.membership.create({
-      data: {
-        userId,
-        organizationId: organization.id,
-        role: PHASE1_ROLES.ORG_ADMIN,
       },
     })
 
@@ -169,14 +140,14 @@ export async function POST(request: Request) {
       try {
         const invitation = await createInvitation(
           adminEmail,
-          organization.id,
+          organizationId,
           PHASE1_ROLES.ORG_ADMIN,
           session.id // Super Admin as inviter
         )
 
         await sendInvitationEmail(
           adminEmail,
-          organization.id,
+          organizationId,
           invitation.token
         )
         invitationSent = true
@@ -186,15 +157,20 @@ export async function POST(request: Request) {
       }
     }
 
+    // Lade Organisation für Audit Log
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+    })
+
     // Phase 1.5: Enhanced audit log
     await logSuperAdminOrganizationCreation(
       session.id,
-      organization.id,
+      organizationId,
       {
-        name: organization.name,
-        legalName: organization.legalName,
-        country: organization.country,
-        licenseTier: organization.licenseTier,
+        name: organization?.name || name.trim(),
+        legalName: organization?.legalName || legalName.trim(),
+        country: organization?.country || country.trim(),
+        licenseTier: organization?.licenseTier || licenseTier,
         adminEmail,
         invitationSent,
       },
@@ -203,7 +179,7 @@ export async function POST(request: Request) {
     )
 
     const organizationWithDetails = await prisma.organization.findUnique({
-      where: { id: organization.id },
+      where: { id: organizationId },
       include: {
         users: {
           select: {

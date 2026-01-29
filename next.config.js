@@ -33,6 +33,16 @@ const nextConfig = {
           config.externals.push('crypto')
         }
       }
+      
+      // Fix for Next.js 14.2+ route modules path resolution
+      if (isServer) {
+        config.resolve.alias = {
+          ...config.resolve.alias,
+          'next/dist/server/route-modules/pages/module.compiled': 
+            require.resolve('next/dist/server/future/route-modules/pages/module.compiled'),
+        }
+      }
+      
       return config
     },
   }

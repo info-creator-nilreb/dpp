@@ -24,6 +24,8 @@ interface DppsContentProps {
   searchQuery: string
   statusFilter: string
   categoryFilter: string
+  availableCategories: string[]
+  availableStatuses: string[]
 }
 
 export default function DppsContent({
@@ -33,7 +35,9 @@ export default function DppsContent({
   totalCount,
   searchQuery,
   statusFilter,
-  categoryFilter
+  categoryFilter,
+  availableCategories,
+  availableStatuses
 }: DppsContentProps) {
   const hasActiveFilters = !!(searchQuery || statusFilter || categoryFilter)
 
@@ -104,6 +108,8 @@ export default function DppsContent({
         initialSearch={searchQuery}
         initialStatus={statusFilter}
         initialCategory={categoryFilter}
+        availableCategories={availableCategories}
+        availableStatuses={availableStatuses}
       />
 
       {/* DPPs Grid */}

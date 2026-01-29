@@ -1,11 +1,19 @@
-// Server-only module - DO NOT import in client components
-// This file uses Node.js modules (crypto, nodemailer) that are not available in the browser
-// 
-// Next.js 16: This file is in src/lib/ (not src/server/) to avoid Server Actions requirements
-// Webpack/Turbopack config ensures crypto and nodemailer are excluded from client bundle
-
 import crypto from "crypto"
-import nodemailer from "nodemailer"
+import { getBaseUrl } from "./getBaseUrl"
+
+// Dynamically import nodemailer only on the server
+// This prevents it from being bundled in client-side code
+let nodemailer: typeof import("nodemailer") | undefined
+function getNodemailer(): typeof import("nodemailer") {
+  if (typeof window !== "undefined") {
+    throw new Error("Email functions can only be used on the server")
+  }
+  if (!nodemailer) {
+    nodemailer = require("nodemailer")
+  }
+  // TypeScript type assertion: nodemailer is guaranteed to be set here
+  return nodemailer as typeof import("nodemailer")
+}
 
 /**
  * E-Mail Template Interface
@@ -127,7 +135,7 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
             border: none;
           }
           .cta-button:hover {
-            background-color: #1ea882;
+            background-color: #C1005F;
           }
           .divider {
             height: 1px;
@@ -232,7 +240,7 @@ export function generateVerificationToken(): string {
  * Erstellt einen konfigurierten Nodemailer-Transport
  */
 function createEmailTransport() {
-  const nm = nodemailer
+  const nm = getNodemailer()
   
   // Wenn SMTP konfiguriert ist, verwende SMTP
   if (process.env.SMTP_HOST) {
@@ -275,10 +283,11 @@ export async function sendVerificationEmail(
   name: string | null,
   verificationToken: string
 ): Promise<void> {
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/verify-email?token=${verificationToken}`
+  // Use getBaseUrl() for better URL resolution (supports VERCEL_URL fallback)
+  const baseUrl = getBaseUrl()
+  const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`
   const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
   const htmlContent = generateEmailTemplate({
     headline: "E-Mail-Adresse verifizieren",
@@ -352,7 +361,7 @@ export async function sendPasswordResetEmail(
   name: string | null,
   resetToken: string
 ): Promise<void> {
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/reset-password?token=${resetToken}`
+  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/reseeasy-password?token=${resetToken}`
   const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"

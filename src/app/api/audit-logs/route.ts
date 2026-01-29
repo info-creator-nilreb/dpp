@@ -180,42 +180,55 @@ export async function GET(request: NextRequest) {
     // Pagination mode
     const skip = (page - 1) * limit
 
-    // Debug: Log the where clause for troubleshooting
-    console.log("[AUDIT] Fetching logs with where clause:", JSON.stringify(where, null, 2))
-    console.log("[AUDIT] User ID:", userId, "Is Super Admin:", isSuperAdminUser)
 
     let logs: any[]
     let total: number
 
     try {
-      [logs, total] = await Promise.all([
-        prisma.platformAuditLog.findMany({
-          where,
-          orderBy: { timestamp: "desc" },
-          skip,
-          take: limit,
-          include: {
-            actor: {
-              select: {
-                id: true,
-                email: true,
-                name: true,
-              },
-            },
-            organization: {
-              select: {
-                id: true,
-                name: true,
-              },
+      // Sequenzielles Laden statt Promise.all, um Connection Pool Overflow zu vermeiden
+      // In Production kann paralleles Laden zu "MaxClientsInSessionMode" Fehlern führen
+      logs = await prisma.platformAuditLog.findMany({
+        where,
+        orderBy: { timestamp: "desc" },
+        skip,
+        take: limit,
+        include: {
+          actor: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
             },
           },
-        }),
-        prisma.platformAuditLog.count({ where }),
-      ])
+          organization: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
+      
+      total = await prisma.platformAuditLog.count({ where })
     } catch (dbError: any) {
-      console.error("[AUDIT] Database error:", dbError)
-      console.error("[AUDIT] Error code:", dbError.code)
-      console.error("[AUDIT] Error meta:", dbError.meta)
+      // Connection Pool Overflow oder andere DB-Fehler abfangen
+      if (
+        dbError?.message?.includes("MaxClientsInSessionMode") ||
+        dbError?.message?.includes("max clients reached") ||
+        dbError?.code === "P1001"
+      ) {
+        // Bei Connection Pool Overflow: Leere Daten zurückgeben statt Fehler zu werfen
+        return NextResponse.json({
+          logs: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+          error: "Datenbankverbindung überlastet. Bitte versuchen Sie es später erneut.",
+        }, { status: 503 })
+      }
       throw new Error(`Datenbankfehler beim Laden der Audit Logs: ${dbError.message}`)
     }
 
@@ -229,15 +242,25 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error("Error fetching audit logs:", error)
-    console.error("Error details:", {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-      stack: error.stack?.substring(0, 500)
-    })
+    // Connection Pool Overflow oder andere DB-Fehler abfangen
+    if (
+      error?.message?.includes("MaxClientsInSessionMode") ||
+      error?.message?.includes("max clients reached") ||
+      error?.code === "P1001"
+    ) {
+      return NextResponse.json({
+        logs: [],
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: 0,
+          totalPages: 0,
+        },
+        error: "Datenbankverbindung überlastet. Bitte versuchen Sie es später erneut.",
+      }, { status: 503 })
+    }
     
-    // Return more detailed error for debugging
+    // Andere Fehler
     const errorMessage = error instanceof Error 
       ? error.message 
       : "Ein Fehler ist aufgetreten beim Laden der Audit Logs"
@@ -245,7 +268,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { 
         error: errorMessage,
-        // Include error code if available (e.g., Prisma errors)
         code: error.code || undefined
       },
       { status: 500 }

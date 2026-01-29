@@ -19,7 +19,7 @@ import { FIRST_USER_ROLE } from "./roles"
  * 
  * @param email - E-Mail-Adresse des ersten Nutzers (wird erstellt oder wiederverwendet)
  * @param organizationName - Name der neuen Organisation
- * @param userData - Optional: Zusätzliche User-Daten (firstName, lastName, password, verificationToken, verificationTokenExpires)
+ * @param userData - Optional: Zusätzliche User-Daten (firstName, lastName, password)
  * @param tx - Optional: Prisma Transaction Client. Falls nicht angegeben, wird eine neue Transaction gestartet
  */
 export async function createOrganizationWithFirstUser(
@@ -29,8 +29,6 @@ export async function createOrganizationWithFirstUser(
     firstName?: string
     lastName?: string
     password?: string
-    verificationToken?: string
-    verificationTokenExpires?: Date
   },
   tx?: any // Prisma Transaction Client
 ): Promise<{ organizationId: string; membershipId: string; userId: string }> {
@@ -54,8 +52,17 @@ export async function createOrganizationWithFirstUser(
       throw new Error("Password is required when creating a new user")
     }
     
-    const bcrypt = await import("bcryptjs")
-    const hashedPassword = await bcrypt.hash(userData.password, 10)
+    // Prüfe ob Passwort bereits gehasht ist (bcrypt Hashes beginnen mit $2a$, $2b$ oder $2y$)
+    // Wenn nicht, hash es jetzt. Dies verhindert Doppel-Hashing.
+    let hashedPassword: string
+    if (userData.password.startsWith("$2a$") || userData.password.startsWith("$2b$") || userData.password.startsWith("$2y$")) {
+      // Passwort ist bereits gehasht - verwende es direkt
+      hashedPassword = userData.password
+    } else {
+      // Passwort ist noch nicht gehasht - hash es jetzt
+      const bcrypt = await import("bcryptjs")
+      hashedPassword = await bcrypt.hash(userData.password, 10)
+    }
     
     user = await tx.user.create({
       data: {
@@ -68,13 +75,15 @@ export async function createOrganizationWithFirstUser(
           : null,
         status: "active",
         emailVerified: false,
-        verificationToken: userData.verificationToken || null,
-        verificationTokenExpires: userData.verificationTokenExpires || null,
+        // WICHTIG: verificationToken wird nach dem User-Create in signup.ts gesetzt
+        // Hier wird es NICHT gesetzt, da es erst nach createOrganizationWithFirstUser
+        // in der signup-Funktion gesetzt wird
         preferredLanguage: "en",
       },
     })
   } else {
     // User existiert bereits - aktualisiere Status falls nötig
+    // WICHTIG: verificationToken wird NICHT hier überschrieben, da es in signup.ts gesetzt wird
     if (user.status !== "active") {
       await tx.user.update({
         where: { id: user.id },
@@ -233,3 +242,4 @@ export async function getOrganizationWithDetails(organizationId: string) {
     },
   })
 }
+

@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Diese Dokumentation beschreibt die Auth.js (NextAuth.js) Implementierung für T-Pass.
+Diese Dokumentation beschreibt die Auth.js (NextAuth.js) Implementierung für Easy Pass.
 
 ## Architektur
 

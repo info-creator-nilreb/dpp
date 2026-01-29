@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import { useState, Suspense } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -18,9 +18,22 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [requires2FA, setRequires2FA] = useState(false)
   const [totpCode, setTotpCode] = useState("")
+  const [showVerificationSuccess, setShowVerificationSuccess] = useState(false)
   
   // Lese callbackUrl aus Query-Parametern (falls vorhanden)
   const callbackUrl = searchParams.get("callbackUrl") || "/app/dashboard"
+  
+  // Prüfe ob verified=true Parameter vorhanden ist
+  useEffect(() => {
+    if (searchParams.get("verified") === "true") {
+      setShowVerificationSuccess(true)
+      // Nach 5 Sekunden ausblenden
+      const timer = setTimeout(() => {
+        setShowVerificationSuccess(false)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams])
 
   const performLogin = async () => {
     if (loading) {
@@ -182,6 +195,19 @@ function LoginForm() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
+          {showVerificationSuccess && (
+            <div style={{
+              padding: "0.75rem",
+              marginBottom: "1rem",
+              backgroundColor: "#E8F5E9",
+              border: "1px solid #C8E6C9",
+              borderRadius: "6px",
+              color: "#2E7D32",
+              fontSize: "0.9rem"
+            }}>
+              ✓ E-Mail erfolgreich bestätigt. Du kannst dich jetzt anmelden.
+            </div>
+          )}
           {error && (
             <div style={{
               padding: "0.75rem",
@@ -237,7 +263,7 @@ function LoginForm() {
             <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
+                autoComplete="curreneasy-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -374,7 +400,7 @@ function LoginForm() {
 
         <div style={{ textAlign: "center", marginBottom: "1rem" }}>
           <Link
-            href="/forgot-password"
+            href="/forgoeasy-password"
             style={{
               color: "#24c598",
               textDecoration: "none",

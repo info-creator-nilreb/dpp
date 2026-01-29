@@ -80,8 +80,34 @@ export async function PUT(
       )
     }
 
-    // If status is being changed to active, check if another active template exists for this category
+    // If status is being changed to active, automatically archive the previous active template
     if (status === "active" && existing.status !== "active") {
+      // VALIDIERUNG: Template muss mindestens einen Block haben, um aktiviert zu werden
+      const blocksToCheck = blocks || existing.blocks || []
+      const hasBlocks = Array.isArray(blocksToCheck) && blocksToCheck.length > 0
+      
+      // Prüfe ob Blöcke tatsächlich Felder haben
+      let hasFields = false
+      if (blocks && blocks.length > 0) {
+        // Wenn blocks im Request sind, prüfe diese
+        hasFields = blocks.some((block: any) => 
+          block.fields && Array.isArray(block.fields) && block.fields.length > 0
+        )
+      } else {
+        // Ansonsten prüfe die existierenden Blöcke
+        hasFields = existing.blocks.some(block => 
+          block.fields && Array.isArray(block.fields) && block.fields.length > 0
+        )
+      }
+      
+      if (!hasBlocks || !hasFields) {
+        console.error("[Template API] VALIDIERUNG FEHLGESCHLAGEN: Template hat keine Blöcke oder Felder")
+        return NextResponse.json(
+          { error: "Ein Template muss mindestens einen Block mit mindestens einem Feld enthalten, um veröffentlicht werden zu können." },
+          { status: 400 }
+        )
+      }
+
       const existingActive = await prisma.template.findFirst({
         where: {
           category: existing.category!,
@@ -91,10 +117,14 @@ export async function PUT(
       })
 
       if (existingActive) {
-        return NextResponse.json(
-          { error: "Es existiert bereits ein aktives Template für diese Kategorie. Bitte archivieren Sie das bestehende Template zuerst." },
-          { status: 400 }
-        )
+        // Automatisch die vorherige aktive Version archivieren
+        await prisma.template.update({
+          where: { id: existingActive.id },
+          data: {
+            status: "archived"
+          }
+        })
+        console.log(`[Template API] Vorherige aktive Version ${existingActive.id} (v${existingActive.version}) wurde automatisch archiviert`)
       }
     }
 
@@ -159,6 +189,7 @@ export async function PUT(
                 key: field.key,
                 type: field.type,
                 required: field.required || false,
+                isRepeatable: field.isRepeatable || false,
                 regulatoryRequired: field.regulatoryRequired || false,
                 config: field.config ? JSON.stringify(field.config) : null,
                 order: fieldIndex,

@@ -41,8 +41,13 @@ export async function GET(request: Request) {
       if (endDate) where.timestamp.lte = new Date(endDate)
     }
 
-    const [logs, total] = await Promise.all([
-      prisma.auditLog.findMany({
+    // Sequenzielles Laden statt Promise.all, um Connection Pool Overflow zu vermeiden
+    // In Production kann paralleles Laden zu "MaxClientsInSessionMode" Fehlern führen
+    let logs: any[]
+    let total: number
+    
+    try {
+      logs = await prisma.auditLog.findMany({
         where,
         include: {
           superAdmin: {
@@ -56,9 +61,29 @@ export async function GET(request: Request) {
         orderBy: { timestamp: "desc" },
         skip,
         take: limit
-      }),
-      prisma.auditLog.count({ where })
-    ])
+      })
+      
+      total = await prisma.auditLog.count({ where })
+    } catch (dbError: any) {
+      // Connection Pool Overflow oder andere DB-Fehler abfangen
+      if (
+        dbError?.message?.includes("MaxClientsInSessionMode") ||
+        dbError?.message?.includes("max clients reached") ||
+        dbError?.code === "P1001"
+      ) {
+        return NextResponse.json({
+          logs: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+          error: "Datenbankverbindung überlastet. Bitte versuchen Sie es später erneut.",
+        }, { status: 503 })
+      }
+      throw dbError
+    }
 
     return NextResponse.json({
       logs,
@@ -70,7 +95,24 @@ export async function GET(request: Request) {
       }
     })
   } catch (error: any) {
-    console.error("[SUPER_ADMIN_AUDIT] GET error:", error)
+    // Connection Pool Overflow oder andere DB-Fehler abfangen
+    if (
+      error?.message?.includes("MaxClientsInSessionMode") ||
+      error?.message?.includes("max clients reached") ||
+      error?.code === "P1001"
+    ) {
+      return NextResponse.json({
+        logs: [],
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: 0,
+          totalPages: 0,
+        },
+        error: "Datenbankverbindung überlastet. Bitte versuchen Sie es später erneut.",
+      }, { status: 503 })
+    }
+    
     return NextResponse.json(
       { error: "Fehler beim Laden der Audit Logs" },
       { status: 500 }

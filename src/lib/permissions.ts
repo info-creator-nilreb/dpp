@@ -1,40 +1,29 @@
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { DPP_SECTIONS, type DppSection } from "@/lib/dpp-sections"
+import {
+  SYSTEM_ROLES,
+  ORGANIZATION_ROLES,
+  EXTERNAL_ROLES,
+  PUBLIC_ROLE,
+  DPP_SECTIONS,
+  type SystemRole,
+  type OrganizationRole,
+  type ExternalRole,
+  type DppSection,
+} from "./permissions-constants"
 
-/**
- * Rollen-Definitionen
- */
-export const SYSTEM_ROLES = {
-  SUPER_ADMIN: "SUPER_ADMIN",
-  EU_REGISTRY: "EU_REGISTRY",
-} as const
-
-export const ORGANIZATION_ROLES = {
-  ORG_OWNER: "ORG_OWNER",
-  ORG_ADMIN: "ORG_ADMIN",
-  ORG_MEMBER: "ORG_MEMBER",
-  ORG_VIEWER: "ORG_VIEWER",
-} as const
-
-export const EXTERNAL_ROLES = {
-  SUPPLIER: "SUPPLIER",
-  RECYCLER: "RECYCLER",
-  REPAIR_SERVICE: "REPAIR_SERVICE",
-} as const
-
-export const PUBLIC_ROLE = "PUBLIC" as const
-
-export type SystemRole = typeof SYSTEM_ROLES[keyof typeof SYSTEM_ROLES]
-export type OrganizationRole = typeof ORGANIZATION_ROLES[keyof typeof ORGANIZATION_ROLES]
-export type ExternalRole = typeof EXTERNAL_ROLES[keyof typeof EXTERNAL_ROLES]
-
-/**
- * DPP-Sektionen für granulare Berechtigungen
- * Imported from @/lib/dpp-sections to avoid bundling issues in client components
- */
-// Re-export for backwards compatibility
-export { DPP_SECTIONS, type DppSection } from "@/lib/dpp-sections"
+// Re-export constants for backward compatibility
+export {
+  SYSTEM_ROLES,
+  ORGANIZATION_ROLES,
+  EXTERNAL_ROLES,
+  PUBLIC_ROLE,
+  DPP_SECTIONS,
+  type SystemRole,
+  type OrganizationRole,
+  type ExternalRole,
+  type DppSection,
+}
 
 /**
  * Helper: Prüft ob User Super Admin ist
