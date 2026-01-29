@@ -341,7 +341,7 @@ export default function CountrySelect({ id, label, value, onChange, required = f
         color: "#0A0A0A",
         marginBottom: "0.5rem"
       }}>
-        {label} {required && <span style={{ color: "#24c598" }}>*</span>}
+        {label} {label != null && label !== "" && required && <span style={{ color: "#24c598" }}>*</span>}
       </label>
       <div ref={containerRef} style={{ position: "relative", zIndex: 10001 }}>
         <input

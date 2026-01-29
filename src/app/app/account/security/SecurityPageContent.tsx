@@ -453,7 +453,7 @@ export function SecurityPageContent() {
               fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
               fontWeight: "600",
               cursor: changingPassword || !currentPassword || !newPassword || !confirmPassword ? "not-allowed" : "pointer",
-              boxShadow: changingPassword || !currentPassword || !newPassword || !confirmPassword ? "none" : "0 4px 12px rgba(226, 0, 116, 0.3)",
+              boxShadow: changingPassword || !currentPassword || !newPassword || !confirmPassword ? "none" : "0 4px 12px rgba(36, 197, 152, 0.3)",
               marginTop: "1.5rem"
             }}
           >
@@ -579,7 +579,7 @@ export function SecurityPageContent() {
                     fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
                     fontWeight: "600",
                     cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)"
+                    boxShadow: "0 4px 12px rgba(36, 197, 152, 0.3)"
                   }}
                 >
                   2FA einrichten
@@ -706,7 +706,7 @@ export function SecurityPageContent() {
                           fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
                           fontWeight: "600",
                           cursor: activating || verificationCode.length !== 6 ? "not-allowed" : "pointer",
-                          boxShadow: activating || verificationCode.length !== 6 ? "none" : "0 4px 12px rgba(226, 0, 116, 0.3)"
+                          boxShadow: activating || verificationCode.length !== 6 ? "none" : "0 4px 12px rgba(36, 197, 152, 0.3)"
                         }}
                       >
                         {activating ? "Aktiviere..." : "Aktivieren"}

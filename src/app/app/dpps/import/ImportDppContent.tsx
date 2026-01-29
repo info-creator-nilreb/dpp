@@ -333,9 +333,10 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
             appearance: "none",
             WebkitAppearance: "none",
             MozAppearance: "none",
-            backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237A7A7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
             backgroundRepeat: "no-repeat",
-            backgroundPosition: "right 0.75rem center"
+            backgroundPosition: "right 0.75rem center",
+            backgroundSize: "20px 20px"
           }}
         >
           {availableCategories.length === 0 ? (
@@ -384,7 +385,7 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
             fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
             fontWeight: "600",
             cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)"
+            boxShadow: "0 4px 12px rgba(36, 197, 152, 0.3)"
           }}
         >
           Template herunterladen
@@ -569,7 +570,7 @@ export default function ImportDppContent({ availableCategories }: ImportDppConte
                 fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
                 fontWeight: "600",
                 cursor: canImport ? "pointer" : "not-allowed",
-                boxShadow: canImport ? "0 4px 12px rgba(226, 0, 116, 0.3)" : "none"
+                boxShadow: canImport ? "0 4px 12px rgba(36, 197, 152, 0.3)" : "none"
               }}
             >
               {isImporting ? "Importiere..." : `${parsedData.length} Produkte importieren`}

@@ -93,7 +93,7 @@ export default function DppsContent({
               textDecoration: "none",
               fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
               fontWeight: "600",
-              boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)",
+              boxShadow: "0 4px 12px rgba(36, 197, 152, 0.3)",
               whiteSpace: "nowrap",
               display: "inline-block"
             }}
@@ -185,7 +185,7 @@ export default function DppsContent({
                 textDecoration: "none",
                 fontWeight: "600",
                 fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
-                boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)"
+                boxShadow: "0 4px 12px rgba(36, 197, 152, 0.3)"
               }}
             >
               Ersten Produktpass erstellen

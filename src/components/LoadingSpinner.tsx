@@ -43,7 +43,7 @@ export function LoadingSpinner({ message }: LoadingSpinnerProps) {
         minHeight: "200px",
       }}
     >
-      {/* 4 magentafarbene Punkte */}
+      {/* 4 Mint-Punkte */}
       <div
         style={{
           display: "flex",
@@ -94,7 +94,7 @@ export function LoadingSpinner({ message }: LoadingSpinnerProps) {
         }
 
         .loading-dot {
-          box-shadow: 0 0 8px rgba(226, 0, 116, 0.5);
+          box-shadow: 0 0 8px rgba(36, 197, 152, 0.5);
         }
       `}</style>
     </div>

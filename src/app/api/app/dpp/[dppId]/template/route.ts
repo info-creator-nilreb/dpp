@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic"
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -24,8 +25,6 @@ export async function GET(
         { status: 401 }
       )
     }
-
-    const { dppId } = params
 
     // Lade DPP, um die Kategorie zu erhalten
     const dpp = await prisma.dpp.findUnique({

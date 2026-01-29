@@ -941,13 +941,21 @@ export default function TemplateBlockField({
           required={field.required}
           style={{
             width: "100%",
-            padding: "clamp(0.75rem, 2vw, 1rem)",
+            padding: "clamp(0.75rem, 2vw, 1rem) 2.5rem clamp(0.75rem, 2vw, 1rem) clamp(0.75rem, 2vw, 1rem)",
             fontSize: "clamp(0.9rem, 2vw, 1rem)",
             border: "1px solid #CDCDCD",
             borderRadius: "8px",
             backgroundColor: "#FFFFFF",
             color: "#0A0A0A",
-            boxSizing: "border-box"
+            boxSizing: "border-box",
+            appearance: "none",
+            WebkitAppearance: "none",
+            MozAppearance: "none",
+            cursor: "pointer",
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237A7A7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 0.75rem center",
+            backgroundSize: "20px 20px"
           }}
         >
           <option value="">Bitte wählen</option>

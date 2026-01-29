@@ -248,7 +248,7 @@ export default function FileField({
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
-          {label} {required && <span style={{ color: "#E20074" }}>*</span>}
+          {label} {required && <span style={{ color: "#24c598" }}>*</span>}
         </label>
         {description && (
           <p style={{
@@ -300,7 +300,7 @@ export default function FileField({
             width: "24px",
             height: "24px",
             border: "3px solid #E5E5E5",
-            borderTopColor: "#E20074",
+            borderTopColor: "#24c598",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
             marginBottom: "0.75rem"

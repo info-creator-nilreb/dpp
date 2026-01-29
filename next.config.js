@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    eslint: {
-      ignoreDuringBuilds: true,
-    },
+    // Next.js 16: Turbopack ist Standard; leere Config unterdrückt Warnung bei vorhandener webpack-Config
+    turbopack: {},
     webpack: (config, { isServer }) => {
       // Exclude Node.js modules from client-side bundle
       if (!isServer) {

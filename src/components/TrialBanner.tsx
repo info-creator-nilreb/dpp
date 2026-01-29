@@ -67,7 +67,7 @@ function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
           transition: "background-color 0.2s"
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = "#C00060"
+          e.currentTarget.style.backgroundColor = "#1a9b6f"
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = "#24c598"

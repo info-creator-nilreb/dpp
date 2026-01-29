@@ -302,7 +302,7 @@ export default function CreateDppContent() {
           margin-top: 1rem;
           display: inline-block;
           padding: 0.375rem 0.75rem;
-          background-color: rgba(226, 0, 116, 0.22);
+          background-color: rgba(36, 197, 152, 0.22);
           border-radius: 6px;
           font-size: clamp(0.8rem, 1.8vw, 0.9rem);
           font-weight: 500;
@@ -312,7 +312,7 @@ export default function CreateDppContent() {
 
         @media (min-width: 768px) {
           .recommended-badge {
-            background-color: rgba(226, 0, 116, 0.06);
+            background-color: rgba(36, 197, 152, 0.06);
     
           }
         }

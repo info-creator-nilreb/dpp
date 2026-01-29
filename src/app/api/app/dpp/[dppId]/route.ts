@@ -17,9 +17,10 @@ import { latestPublishedTemplate, normalizeCategory } from "@/lib/template-helpe
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -30,16 +31,16 @@ export async function GET(
     }
 
     // Prüfe Berechtigung mit neuem Permission-System
-    const permissionError = await requireViewDPP(params.dppId, session.user.id)
+    const permissionError = await requireViewDPP(dppId, session.user.id)
     if (permissionError) {
-      console.error("Permission check failed:", params.dppId, session.user.id)
+      console.error("Permission check failed:", dppId, session.user.id)
       return permissionError
     }
 
     // Lade DPP mit Medien und Content
-    console.log("[DPP API] GET Request - Loading DPP:", params.dppId)
+    console.log("[DPP API] GET Request - Loading DPP:", dppId)
     const dppWithMedia = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: dppId },
       include: {
         organization: {
           select: {
@@ -63,7 +64,7 @@ export async function GET(
     })
 
     if (!dppWithMedia) {
-      console.log("[DPP API] DPP not found:", params.dppId)
+      console.log("[DPP API] DPP not found:", dppId)
       return NextResponse.json(
         { error: "DPP nicht gefunden" },
         { status: 404 }
@@ -134,7 +135,7 @@ export async function GET(
       console.log("[DPP API] Extracted field values detail:", JSON.stringify(fieldValues, null, 2))
       console.log("[DPP API] Extracted field instances:", Object.keys(fieldInstances).length, "repeatable fields:", Object.keys(fieldInstances))
     } else {
-      console.log("[DPP API] No dppContent found for DPP:", params.dppId)
+      console.log("[DPP API] No dppContent found for DPP:", dppId)
     }
 
     // FALLBACK: Ergänze fieldValues mit direkten DPP-Spalten, wenn sie noch nicht vorhanden sind
@@ -197,9 +198,10 @@ export async function GET(
  */
 export async function PUT(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -210,12 +212,12 @@ export async function PUT(
     }
 
     // Prüfe Berechtigung mit neuem Permission-System
-    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    const permissionError = await requireEditDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
     // Lade existierenden DPP, um Status zu prüfen
     const existingDpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: dppId },
       select: { status: true, category: true }
     })
 
@@ -428,7 +430,7 @@ export async function PUT(
 
     // Lade DPP für Audit-Log (alte Werte)
     const oldDpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: dppId },
       select: {
         organizationId: true,
         name: true,
@@ -461,7 +463,7 @@ export async function PUT(
 
     // DPP aktualisieren
     const dpp = await prisma.dpp.update({
-      where: { id: params.dppId },
+      where: { id: dppId },
       data: {
         name: name.trim(),
         description: description?.trim() || null,
@@ -513,7 +515,7 @@ export async function PUT(
       
       // Nur loggen wenn sich der Wert geändert hat
       if (oldValue !== newValue) {
-        await logDppAction(ACTION_TYPES.UPDATE, params.dppId, {
+        await logDppAction(ACTION_TYPES.UPDATE, dppId, {
           actorId: session.user.id,
           actorRole: role || undefined,
           organizationId: oldDpp.organizationId,

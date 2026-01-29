@@ -375,14 +375,23 @@ export default function TemplateBlocksSection({
                 {!isFirstBlock && onSupplierConfigUpdate && (
                   <>
                     {isSupplierEnabled ? (
-                      // Zustand B: Verantwortung zugewiesen - Klick entfernt die Verantwortung
-                      <button
-                        type="button"
+                      // Zustand B: Verantwortung zugewiesen - Klick entfernt die Verantwortung (span statt button, da innerhalb Accordion-Button)
+                      <span
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                           e.stopPropagation()
-                          // Entfernt Verantwortung durch Klick auf Status
                           if (onSupplierConfigUpdate) {
                             onSupplierConfigUpdate(block.id, false, "input")
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (onSupplierConfigUpdate) {
+                              onSupplierConfigUpdate(block.id, false, "input")
+                            }
                           }
                         }}
                         title="Verantwortung entfernen - Klick entfernt die Zuweisung"
@@ -409,15 +418,25 @@ export default function TemplateBlocksSection({
                       >
                         <ConnectionIcon size={17} color="currentColor" />
                         <span style={{ opacity: 0.85 }}>Verantwortung zugewiesen</span>
-                      </button>
+                      </span>
                     ) : (
-                      // Zustand A: Keine externe Verantwortung
-                      <button
-                        type="button"
+                      // Zustand A: Keine externe Verantwortung (span statt button, da innerhalb Accordion-Button)
+                      <span
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                           e.stopPropagation()
                           if (onSupplierConfigUpdate) {
                             onSupplierConfigUpdate(block.id, true, "input")
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (onSupplierConfigUpdate) {
+                              onSupplierConfigUpdate(block.id, true, "input")
+                            }
                           }
                         }}
                         title="Verantwortung zuweisen\nExterne Partner können ausgewählte Informationen ergänzen oder bestätigen."
@@ -441,7 +460,7 @@ export default function TemplateBlocksSection({
                         }}
                       >
                         <ConnectionIcon size={17} color="currentColor" />
-                      </button>
+                      </span>
                     )}
                   </>
                 )}

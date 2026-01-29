@@ -124,9 +124,10 @@ export default function FeatureFilterBar({
               fontSize: "0.875rem",
               boxSizing: "border-box",
               appearance: "none",
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237A7A7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
               backgroundRepeat: "no-repeat",
               backgroundPosition: "right 0.75rem center",
+              backgroundSize: "20px 20px",
               backgroundColor: "#FFFFFF",
               cursor: "pointer",
               transition: "border-color 0.2s, box-shadow 0.2s",
@@ -134,7 +135,7 @@ export default function FeatureFilterBar({
             }}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = "#24c598";
-              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)";
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(36, 197, 152, 0.1)";
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = "#D1D5DB";
@@ -174,9 +175,10 @@ export default function FeatureFilterBar({
               fontSize: "0.875rem",
               boxSizing: "border-box",
               appearance: "none",
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237A7A7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
               backgroundRepeat: "no-repeat",
               backgroundPosition: "right 0.75rem center",
+              backgroundSize: "20px 20px",
               backgroundColor: "#FFFFFF",
               cursor: "pointer",
               transition: "border-color 0.2s, box-shadow 0.2s",
@@ -184,7 +186,7 @@ export default function FeatureFilterBar({
             }}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = "#24c598";
-              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)";
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(36, 197, 152, 0.1)";
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = "#D1D5DB";
@@ -222,9 +224,10 @@ export default function FeatureFilterBar({
               fontSize: "0.875rem",
               boxSizing: "border-box",
               appearance: "none",
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237A7A7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
               backgroundRepeat: "no-repeat",
               backgroundPosition: "right 0.75rem center",
+              backgroundSize: "20px 20px",
               backgroundColor: "#FFFFFF",
               cursor: "pointer",
               transition: "border-color 0.2s, box-shadow 0.2s",
@@ -232,7 +235,7 @@ export default function FeatureFilterBar({
             }}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = "#24c598";
-              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)";
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(36, 197, 152, 0.1)";
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = "#D1D5DB";
