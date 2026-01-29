@@ -291,23 +291,6 @@ model ContributorToken {
   @@map("contributor_tokens")
 }
 
-// Block-level supplier config: pro DPP pro Template-Block (außer Basisdaten) "durch Partner befüllbar"
-model DppBlockSupplierConfig {
-  id         String   @id @default(cuid())
-  dppId      String
-  blockId    String   // TemplateBlock.id
-  enabled    Boolean  @default(false)
-  mode       String?  // "input" | "declaration" (Beisteuern | Prüfen)
-  allowedRoles Json?  // Optional: Array of allowed partner roles
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  dpp        Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
-
-  @@unique([dppId, blockId])
-  @@index([dppId])
-  @@map("dpp_block_supplier_configs")
-}
-
 // Block-basierte Partner-Einladung (Beisteuern/Prüfen pro Block/Feld)
 model DppSupplierInvite {
   id             String    @id @default(cuid())
