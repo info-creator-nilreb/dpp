@@ -9,7 +9,7 @@ import React from 'react'
 import { editorialTypography } from './tokens/typography'
 import { editorialColors } from './tokens/colors'
 import { StylingConfig } from "@/lib/cms/types"
-import { resolveTheme } from "@/lib/cms/validation"
+import { resolveTheme } from "@/lib/cms/theme-resolver"
 
 interface PageProps {
   children: React.ReactNode

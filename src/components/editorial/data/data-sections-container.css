@@ -1,0 +1,15 @@
+/* Data Sections Container - Responsive Zentrierung */
+
+.data-sections-container {
+  /* Desktop: Linksbündig, Mobile: Zentriert für bessere UX */
+}
+
+@media (max-width: 768px) {
+  .data-sections-container {
+    text-align: center; /* Mobile: Zentrierung für bessere UX */
+  }
+  
+  .data-sections-container > * {
+    text-align: left; /* Innerhalb der Sections: Linksbündig für Lesbarkeit */
+  }
+}

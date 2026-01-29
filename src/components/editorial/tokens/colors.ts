@@ -9,7 +9,7 @@ export const editorialColors = {
   brand: {
     primary: '#0A0A0A',      // Deep black for premium feel
     secondary: '#7A7A7A',    // Warm gray
-    accent: '#E20074',       // Magenta accent (T-Pass brand)
+    accent: '#24c598',       // Mint accent (Easy Pass brand)
   },
 
   // Semantic colors

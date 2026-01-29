@@ -7,7 +7,7 @@
 
 import { Page, Section, TextBlock, QuoteBlock, Image, Accent } from './index'
 import { StylingConfig } from "@/lib/cms/types"
-import { resolveTheme } from "@/lib/cms/validation"
+import { resolveTheme } from "@/lib/cms/theme-resolver"
 import { getHeroImage, getGalleryImages, MediaItem } from "@/lib/media/hero-logic"
 
 interface EditorialDppData {

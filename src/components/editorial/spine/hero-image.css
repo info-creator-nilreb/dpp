@@ -1,0 +1,12 @@
+/**
+ * Hero Image Responsive Styles
+ * 
+ * Mobile: 30% reduzierte Höhe (80vh * 0.7 = 56vh)
+ */
+
+@media (max-width: 768px) {
+  .hero-image-responsive {
+    height: 56vh !important; /* Mobile: 30% reduziert (80vh * 0.7 = 56vh) */
+    min-height: 350px !important;
+  }
+}
