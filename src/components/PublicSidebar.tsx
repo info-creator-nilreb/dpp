@@ -8,7 +8,7 @@ import {
   LoginIcon,
   SignupIcon
 } from "./PublicIcons"
-import TPassLogo from "./TPassLogo"
+import EasyPassLogo from "./EasyPassLogo"
 
 const navigationItems = [
   { href: "/", label: "Startseite", icon: HomeIcon },
@@ -97,7 +97,7 @@ function SidebarContent({
         alignItems: "center",
         justifyContent: "flex-start",
       }}>
-        <TPassLogo size={32} color="#E20074" iconOnly={false} textColor="#FFFFFF" />
+        <EasyPassLogo size={32} color="#24c598" iconOnly={false} textColor="#FFFFFF" />
       </div>
 
       {/* Navigation Items */}
@@ -120,7 +120,7 @@ function SidebarContent({
                 textDecoration: "none",
                 fontSize: "0.95rem",
                 fontWeight: isActive ? "600" : "400",
-                borderLeft: isActive ? "3px solid #E20074" : "3px solid transparent",
+                borderLeft: isActive ? "3px solid #24c598" : "3px solid transparent",
                 transition: "all 0.15s ease",
                 position: "relative",
               }}
@@ -210,7 +210,7 @@ function SidebarContent({
             justifyContent: "center",
             gap: "0.5rem",
             padding: "0.75rem 1.5rem",
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             textDecoration: "none",
             fontSize: "0.95rem",
@@ -226,7 +226,7 @@ function SidebarContent({
             e.currentTarget.style.boxShadow = "0 4px 12px rgba(226, 0, 116, 0.3)"
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#E20074"
+            e.currentTarget.style.backgroundColor = "#24c598"
             e.currentTarget.style.transform = "translateY(0)"
             e.currentTarget.style.boxShadow = "none"
           }}

@@ -27,7 +27,7 @@ export default function VersionLink({ href, children }: VersionLinkProps) {
         transition: "border-color 0.2s, box-shadow 0.2s"
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "#E20074"
+        e.currentTarget.style.borderColor = "#24c598"
         e.currentTarget.style.boxShadow = "0 2px 8px rgba(226, 0, 116, 0.1)"
       }}
       onMouseLeave={(e) => {

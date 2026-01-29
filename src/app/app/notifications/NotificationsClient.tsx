@@ -125,7 +125,7 @@ export default function NotificationsClient() {
             disabled={markingAllRead}
             style={{
               padding: "0.5rem 1rem",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",
@@ -172,7 +172,7 @@ export default function NotificationsClient() {
                     right: "1rem",
                     width: "8px",
                     height: "8px",
-                    backgroundColor: "#E20074",
+                    backgroundColor: "#24c598",
                     borderRadius: "50%",
                   }}
                 />

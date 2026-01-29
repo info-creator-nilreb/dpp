@@ -1,5 +1,5 @@
 /**
- * T-Pass Logo Component
+ * Easy Pass Logo Component
  * 
  * Konsistentes Logo für Super Admin Bereich
  * - iconOnly: zeigt nur das Icon (für eingeklappte Sidebar)
@@ -15,7 +15,7 @@ interface TPassLogoProps {
 
 export default function TPassLogo({ 
   size = 32, 
-  color = "#E20074", 
+  color = "#24c598", 
   iconOnly = false,
   textColor = "#FFFFFF"
 }: TPassLogoProps) {
@@ -71,7 +71,7 @@ export default function TPassLogo({
         color: textColor,
         whiteSpace: "nowrap",
       }}>
-        T-Pass
+        Easy Pass
       </span>
     </div>
   )

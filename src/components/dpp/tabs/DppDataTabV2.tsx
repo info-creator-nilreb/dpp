@@ -1,16 +1,13 @@
 "use client"
 
 /**
- * DPP Data Tab - Refactored
- * 
- * Card-based layout matching app design system
- * - White cards with border (#E5E5E5)
- * - Rounded corners (12px)
- * - Proper spacing
+ * DPP Data Tab - Pflichtdaten wie DPP-Editor im Merge 8de05e6 (supplierinvitation into main)
+ *
+ * Verwendet DppEditorPflichtdaten: Template-Blöcke, Supplier Invitation (Block-Markierung + Modal),
+ * gleiche Template-Lade-Logik und APIs (supplier-config, supplier-invites).
  */
 
-import { useState } from "react"
-import DppEditor from "@/components/DppEditor"
+import DppEditorPflichtdaten from "@/components/DppEditorPflichtdaten"
 
 interface DppDataTabV2Props {
   dpp: any
@@ -22,37 +19,37 @@ interface DppDataTabV2Props {
   onDppUpdate?: (updatedDpp: any) => void
 }
 
-export default function DppDataTabV2({ 
+export default function DppDataTabV2({
   dpp,
   onSave,
   onPublish,
   onStatusChange,
   onLastSavedChange,
   onErrorChange,
-  onDppUpdate
+  onDppUpdate,
 }: DppDataTabV2Props) {
   return (
-    <div style={{
-      flex: 1,
-      overflowY: "auto",
-      padding: "2rem",
-      backgroundColor: "#FFFFFF"
-    }}>
-      {/* Compliance Editor Card */}
-      <div style={{
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        padding: "2rem",
         backgroundColor: "#FFFFFF",
-        border: "none",
-        borderRadius: "12px",
-        overflow: "hidden"
-      }}>
-        <DppEditor 
-          dpp={dpp} 
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "none",
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      >
+        <DppEditorPflichtdaten
+          dpp={dpp}
           isNew={false}
           onSave={onSave}
           onPublish={onPublish}
-          onStatusChange={onStatusChange}
-          onLastSavedChange={onLastSavedChange}
-          onErrorChange={onErrorChange}
           onDppUpdate={onDppUpdate}
         />
       </div>

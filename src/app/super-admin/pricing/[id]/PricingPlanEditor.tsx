@@ -264,8 +264,8 @@ export default function PricingPlanEditor({
             padding: "1rem 1.5rem",
             border: "none",
             backgroundColor: "transparent",
-            borderBottom: activeTab === "basic" ? "2px solid #E20074" : "2px solid transparent",
-            color: activeTab === "basic" ? "#E20074" : "#7A7A7A",
+            borderBottom: activeTab === "basic" ? "2px solid #24c598" : "2px solid transparent",
+            color: activeTab === "basic" ? "#24c598" : "#7A7A7A",
             fontSize: "0.875rem",
             fontWeight: activeTab === "basic" ? "600" : "400",
             cursor: "pointer",
@@ -284,8 +284,8 @@ export default function PricingPlanEditor({
             padding: "1rem 1.5rem",
             border: "none",
             backgroundColor: "transparent",
-            borderBottom: activeTab === "features" ? "2px solid #E20074" : "2px solid transparent",
-            color: activeTab === "features" ? "#E20074" : "#7A7A7A",
+            borderBottom: activeTab === "features" ? "2px solid #24c598" : "2px solid transparent",
+            color: activeTab === "features" ? "#24c598" : "#7A7A7A",
             fontSize: "0.875rem",
             fontWeight: activeTab === "features" ? "600" : "400",
             cursor: "pointer",
@@ -304,8 +304,8 @@ export default function PricingPlanEditor({
             padding: "1rem 1.5rem",
             border: "none",
             backgroundColor: "transparent",
-            borderBottom: activeTab === "limits" ? "2px solid #E20074" : "2px solid transparent",
-            color: activeTab === "limits" ? "#E20074" : "#7A7A7A",
+            borderBottom: activeTab === "limits" ? "2px solid #24c598" : "2px solid transparent",
+            color: activeTab === "limits" ? "#24c598" : "#7A7A7A",
             fontSize: "0.875rem",
             fontWeight: activeTab === "limits" ? "600" : "400",
             cursor: "pointer",
@@ -324,8 +324,8 @@ export default function PricingPlanEditor({
             padding: "1rem 1.5rem",
             border: "none",
             backgroundColor: "transparent",
-            borderBottom: activeTab === "subscriptions" ? "2px solid #E20074" : "2px solid transparent",
-            color: activeTab === "subscriptions" ? "#E20074" : "#7A7A7A",
+            borderBottom: activeTab === "subscriptions" ? "2px solid #24c598" : "2px solid transparent",
+            color: activeTab === "subscriptions" ? "#24c598" : "#7A7A7A",
             fontSize: "0.875rem",
             fontWeight: activeTab === "subscriptions" ? "600" : "400",
             cursor: "pointer",
@@ -504,7 +504,7 @@ export default function PricingPlanEditor({
                   disabled={loading}
                   style={{
                     padding: "0.75rem 1.5rem",
-                    backgroundColor: loading ? "#CCCCCC" : "#E20074",
+                    backgroundColor: loading ? "#CCCCCC" : "#24c598",
                     color: "#FFFFFF",
                     border: "none",
                     borderRadius: "8px",
@@ -601,7 +601,7 @@ export default function PricingPlanEditor({
                 disabled={loading}
                 style={{
                   padding: "0.75rem 1.5rem",
-                  backgroundColor: loading ? "#CCCCCC" : "#E20074",
+                  backgroundColor: loading ? "#CCCCCC" : "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "8px",
@@ -702,7 +702,7 @@ export default function PricingPlanEditor({
                 disabled={loading}
                 style={{
                   padding: "0.75rem 1.5rem",
-                  backgroundColor: loading ? "#CCCCCC" : "#E20074",
+                  backgroundColor: loading ? "#CCCCCC" : "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "8px",
@@ -752,7 +752,7 @@ function EntitlementInput({
     <div
       style={{
         padding: "1.25rem",
-        border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
+        border: `1px solid ${isFocused ? "#24c598" : "#E5E5E5"}`,
         borderRadius: "8px",
         backgroundColor: "#FFFFFF",
         transition: "border-color 0.2s",
@@ -835,7 +835,7 @@ function EntitlementInput({
             width: "100%",
             maxWidth: "100%",
             padding: "0.75rem",
-            border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
+            border: `1px solid ${isFocused ? "#24c598" : "#E5E5E5"}`,
             borderRadius: "6px",
             fontSize: "clamp(1rem, 2vw, 0.875rem)",
             transition: "border-color 0.2s",
@@ -910,7 +910,7 @@ function SubscriptionModelsSection({
           onClick={() => setShowNewModel(true)}
           style={{
             padding: "0.75rem 1.5rem",
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "8px",
@@ -981,7 +981,7 @@ function SubscriptionModelsSection({
             onClick={() => setShowNewModel(true)}
             style={{
               padding: "0.75rem 1.5rem",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "8px",
@@ -1382,7 +1382,7 @@ function NewSubscriptionModelForm({
             disabled={loading}
             style={{
               padding: "0.75rem 1.5rem",
-              backgroundColor: loading ? "#CCCCCC" : "#E20074",
+              backgroundColor: loading ? "#CCCCCC" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "8px",
@@ -1512,7 +1512,7 @@ function SubscriptionModelEditor({
   return (
     <div style={{
       padding: "1.5rem",
-      border: "2px solid #E20074",
+      border: "2px solid #24c598",
       borderRadius: "8px",
       backgroundColor: "#FFFFFF"
     }}>
@@ -1704,7 +1704,7 @@ function SubscriptionModelEditor({
                     <span style={{
                       marginLeft: "0.5rem",
                       padding: "0.125rem 0.5rem",
-                      backgroundColor: "#E20074",
+                      backgroundColor: "#24c598",
                       color: "#FFFFFF",
                       borderRadius: "4px",
                       fontSize: "0.7rem",
@@ -1731,7 +1731,7 @@ function SubscriptionModelEditor({
           disabled={loading}
           style={{
             padding: "0.75rem 1.5rem",
-            backgroundColor: loading ? "#CCCCCC" : "#E20074",
+            backgroundColor: loading ? "#CCCCCC" : "#24c598",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "8px",
@@ -1851,7 +1851,7 @@ function NewPriceForm({
         disabled={loading}
         style={{
           padding: "0.5rem 1rem",
-          backgroundColor: loading ? "#CCCCCC" : "#E20074",
+          backgroundColor: loading ? "#CCCCCC" : "#24c598",
           color: "#FFFFFF",
           border: "none",
           borderRadius: "6px",
@@ -1934,7 +1934,7 @@ function LimitSelector({
           transition: "border-color 0.2s"
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = "#E20074"
+          e.currentTarget.style.borderColor = "#24c598"
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.borderColor = "#E5E5E5"
@@ -2075,7 +2075,7 @@ function ConfigurableLimitInput({
     <div
       style={{
         padding: "1.25rem",
-        border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
+        border: `1px solid ${isFocused ? "#24c598" : "#E5E5E5"}`,
         borderRadius: "8px",
         backgroundColor: "#FFFFFF",
         transition: "border-color 0.2s",
@@ -2197,7 +2197,7 @@ function ConfigurableLimitInput({
             width: "100%",
             maxWidth: "100%",
             padding: "0.75rem",
-            border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
+            border: `1px solid ${isFocused ? "#24c598" : "#E5E5E5"}`,
             borderRadius: "6px",
             fontSize: "clamp(1rem, 2vw, 0.875rem)",
             transition: "border-color 0.2s",

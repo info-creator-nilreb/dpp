@@ -4,7 +4,7 @@
  * DPP Editor Tabs
  * 
  * Modern horizontal tabs (matching pricing plan style):
- * - Horizontal tabs with pink accent (#E20074)
+ * - Horizontal tabs with mint accent (#24c598)
  * - Gray background (#F9F9F9)
  * - Card-based content sections
  * - Block-based structure similar to template editor
@@ -80,12 +80,18 @@ export default function DppEditorTabs({
       const response = await fetch(`/api/app/dpp/${dpp.id}/content`)
       if (response.ok) {
         const data = await response.json()
-        setCmsBlocks(data.content?.blocks || [])
+        const blocks = data.content?.blocks || []
+        console.log("DppEditorTabs: Loaded blocks:", blocks.length, blocks)
+        setCmsBlocks(blocks)
         setCmsStyling(data.content?.styling || null)
         setContentLoaded(dpp.id)
+      } else {
+        console.error("DppEditorTabs: Failed to load content:", response.status, response.statusText)
+        const errorData = await response.json().catch(() => ({}))
+        console.error("DppEditorTabs: Error data:", errorData)
       }
     } catch (error) {
-      console.error("Error loading CMS content:", error)
+      console.error("DppEditorTabs: Error loading CMS content:", error)
     } finally {
       setLoadingContent(false)
     }
@@ -156,8 +162,8 @@ export default function DppEditorTabs({
               padding: "1rem 1.5rem",
               border: "none",
               backgroundColor: "transparent",
-              borderBottom: activeTab === tab.id ? "2px solid #E20074" : "2px solid transparent",
-              color: activeTab === tab.id ? "#E20074" : "#7A7A7A",
+              borderBottom: activeTab === tab.id ? "2px solid #24c598" : "2px solid transparent",
+              color: activeTab === tab.id ? "#24c598" : "#7A7A7A",
               fontSize: "0.875rem",
               fontWeight: activeTab === tab.id ? "600" : "400",
               cursor: tab.enabled ? "pointer" : "not-allowed",

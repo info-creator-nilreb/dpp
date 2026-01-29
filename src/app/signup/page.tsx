@@ -165,7 +165,7 @@ function SignupContent() {
             width="48"
             height="48"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -181,7 +181,7 @@ function SignupContent() {
           fontWeight: "700",
           color: "#0A0A0A"
         }}>
-          T-Pass
+          Easy Pass
         </span>
       </Link>
 
@@ -362,7 +362,7 @@ function SignupContent() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#E20074"
+                  color: "#24c598"
                 }}
               >
                 {showPassword ? (
@@ -410,7 +410,7 @@ function SignupContent() {
                     const isActive = passwordStrength.score >= level
                     let bgColor = "#CDCDCD"
                     if (isActive) {
-                      if (passwordStrength.strength === "weak") bgColor = "#E20074"
+                      if (passwordStrength.strength === "weak") bgColor = "#24c598"
                       else if (passwordStrength.strength === "medium") bgColor = "#FFA500"
                       else if (passwordStrength.strength === "strong") bgColor = "#FFD700"
                       else bgColor = "#00A651"
@@ -430,7 +430,7 @@ function SignupContent() {
                 </div>
                 <span style={{
                   fontSize: "0.85rem",
-                  color: passwordStrength.strength === "weak" ? "#E20074" :
+                  color: passwordStrength.strength === "weak" ? "#24c598" :
                          passwordStrength.strength === "medium" ? "#FFA500" :
                          passwordStrength.strength === "strong" ? "#FFD700" : "#00A651",
                   fontWeight: "500"
@@ -483,7 +483,7 @@ function SignupContent() {
                         width: "18px",
                         height: "18px",
                         cursor: "pointer",
-                        accentColor: "#E20074"
+                        accentColor: "#24c598"
                       }}
                     />
                     <span style={{
@@ -514,7 +514,7 @@ function SignupContent() {
                         width: "18px",
                         height: "18px",
                         cursor: "pointer",
-                        accentColor: "#E20074"
+                        accentColor: "#24c598"
                       }}
                     />
                     <span style={{
@@ -554,7 +554,7 @@ function SignupContent() {
                       boxSizing: "border-box",
                       transition: "border-color 0.2s",
                     }}
-                    onFocus={(e) => e.target.style.borderColor = "#E20074"}
+                    onFocus={(e) => e.target.style.borderColor = "#24c598"}
                     onBlur={(e) => e.target.style.borderColor = "#CDCDCD"}
                   />
                   <p style={{
@@ -658,7 +658,7 @@ function SignupContent() {
             style={{
               width: "100%",
               padding: "0.75rem",
-              backgroundColor: loading ? "#CDCDCD" : "#E20074",
+              backgroundColor: loading ? "#CDCDCD" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",
@@ -679,7 +679,7 @@ function SignupContent() {
 
         <p style={{ textAlign: "center", color: "#7A7A7A", fontSize: "0.9rem" }}>
           Bereits ein Konto?{" "}
-          <Link href="/login" style={{ color: "#E20074", textDecoration: "none", fontWeight: "500" }}>
+          <Link href="/login" style={{ color: "#24c598", textDecoration: "none", fontWeight: "500" }}>
             Jetzt anmelden →
           </Link>
         </p>

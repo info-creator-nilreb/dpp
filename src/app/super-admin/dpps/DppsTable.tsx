@@ -193,7 +193,7 @@ export default function DppsTable({
                 <Link
                   href={`/super-admin/dpps/${dpp.id}`}
                   style={{
-                    color: "#E20074",
+                    color: "#24c598",
                     textDecoration: "none",
                     fontSize: "0.9rem",
                     fontWeight: "500"

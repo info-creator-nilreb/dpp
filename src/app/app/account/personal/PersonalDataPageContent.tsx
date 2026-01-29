@@ -193,7 +193,7 @@ export function PersonalDataPageContent() {
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Name <span style={{ color: "#E20074" }}>*</span>
+              Name <span style={{ color: "#24c598" }}>*</span>
             </label>
             {isEditing ? (
               <input
@@ -323,7 +323,7 @@ export function PersonalDataPageContent() {
                 onClick={handleSave}
                 disabled={saving}
                 style={{
-                  backgroundColor: saving ? "#7A7A7A" : "#E20074",
+                  backgroundColor: saving ? "#7A7A7A" : "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
@@ -363,7 +363,7 @@ export function PersonalDataPageContent() {
             <button
               onClick={() => setIsEditing(true)}
               style={{
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",

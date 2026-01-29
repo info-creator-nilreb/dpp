@@ -52,28 +52,48 @@ export default function DppContentTabV2({
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingBlocksRef = useRef<Block[] | null>(null) // Only for tracking pending saves
 
-  const sortedBlocks = [...blocks].sort((a, b) => a.order - b.order)
+  const sortedBlocks = [...(blocks || [])].sort((a, b) => (a.order || 0) - (b.order || 0))
+  
+  // Debug: Log blocks
+  useEffect(() => {
+    console.log("DppContentTabV2: Blocks prop changed:", blocks?.length || 0, blocks)
+  }, [blocks])
 
   // Auto-Save: Save block changes
   // CRITICAL: Receives blocks as parameter - no refs for content data
   // Server is write-only - never reloads from server response
   const performAutoSave = async (blocksToSave: Block[]) => {
     try {
+      // Ensure all blocks have valid order values (0, 1, 2, ...) and valid status
+      const blocksWithValidOrder = blocksToSave.map((block, index) => ({
+        ...block,
+        order: index,
+        // Ensure status is always "draft" or "published" (default to "draft" if missing or invalid)
+        status: (block.status === "draft" || block.status === "published") 
+          ? block.status 
+          : "draft"
+      }))
+
       const response = await fetch(`/api/app/dpp/${dppId}/content`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks: blocksToSave })
+        body: JSON.stringify({ blocks: blocksWithValidOrder })
       })
 
       if (!response.ok) {
         const error = await response.json()
+        console.error("[AutoSave] Validierungsfehler:", error.details || error.error)
+        console.error("[AutoSave] Blocks:", JSON.stringify(blocksWithValidOrder, null, 2))
         throw new Error(error.error || "Fehler beim Speichern")
       }
 
       // CRITICAL: Server is write-only - no state updates from server response
       // Client draft (blocks prop) is the single source of truth
       pendingBlocksRef.current = null
-      const savedDate = new Date()
+      
+      // Get updatedAt from server response if available, otherwise use current time
+      const result = await response.json()
+      const savedDate = result.updatedAt ? new Date(result.updatedAt) : new Date()
       onLastSavedChange?.(savedDate) // ALWAYS propagate (same pattern as DppEditor)
       // No notification for auto-save (silent)
       // No reload - blocks prop remains unchanged
@@ -193,7 +213,9 @@ export default function DppContentTabV2({
         throw new Error(error.error || "Fehler beim Löschen")
       }
 
-      const updatedBlocks = blocks.filter(b => b.id !== deleteConfirmBlockId)
+      const updatedBlocks = blocks
+        .filter(b => b.id !== deleteConfirmBlockId)
+        .map((block, index) => ({ ...block, order: index })) // Order-Werte neu berechnen
       onBlocksChange(updatedBlocks) // SYNCHRONE State-Update
       scheduleSaveWithBlocks(updatedBlocks) // Auto-Save mit aktuellen Daten
       if (selectedBlockId === deleteConfirmBlockId) {
@@ -352,9 +374,9 @@ export default function DppContentTabV2({
                   fontWeight: "500"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#E20074"
+                  e.currentTarget.style.borderColor = "#24c598"
                   e.currentTarget.style.backgroundColor = "#FFF5F9"
-                  e.currentTarget.style.color = "#E20074"
+                  e.currentTarget.style.color = "#24c598"
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = "#E5E5E5"
@@ -387,7 +409,7 @@ export default function DppContentTabV2({
                       left: 0,
                       right: 0,
                       height: "3px",
-                      backgroundColor: "#E20074",
+                      backgroundColor: "#24c598",
                       borderRadius: "2px",
                       zIndex: 10,
                       boxShadow: "0 0 8px rgba(226, 0, 116, 0.4)"
@@ -396,7 +418,7 @@ export default function DppContentTabV2({
                   <div style={{
                     backgroundColor: "#FFFFFF",
                     border: dragOverIndex === index && draggedBlockId !== block.id 
-                      ? "1px solid #E20074" 
+                      ? "1px solid #24c598" 
                       : "1px solid #E5E5E5",
                     borderRadius: "12px",
                     overflow: "hidden",
@@ -438,9 +460,9 @@ export default function DppContentTabV2({
                   fontWeight: "500"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#E20074"
+                  e.currentTarget.style.borderColor = "#24c598"
                   e.currentTarget.style.backgroundColor = "#FFF5F9"
-                  e.currentTarget.style.color = "#E20074"
+                  e.currentTarget.style.color = "#24c598"
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = "#E5E5E5"

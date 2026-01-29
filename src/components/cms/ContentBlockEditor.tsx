@@ -10,7 +10,7 @@ import { useState, useEffect, useRef } from "react"
 import { Block, UpdateBlockRequest } from "@/lib/cms/types"
 import { useAutoSave } from "@/hooks/useAutoSave"
 import StorytellingBlockEditor from "./blocks/StorytellingBlockEditor"
-import QuickPollBlockEditor from "./blocks/QuickPollBlockEditor"
+import MultiQuestionPollBlockEditor from "./blocks/MultiQuestionPollBlockEditor"
 import ImageTextBlockEditor from "./blocks/ImageTextBlockEditor"
 import TextBlockEditor from "./blocks/TextBlockEditor"
 import ImageBlockEditor from "./blocks/ImageBlockEditor"
@@ -135,9 +135,9 @@ export default function ContentBlockEditor({ block, onUpdate, dppId }: ContentBl
             blockId={block.id}
           />
         )
-      case "quick_poll":
+      case "multi_question_poll":
         return (
-          <QuickPollBlockEditor
+          <MultiQuestionPollBlockEditor
             content={content}
             onChange={handleContentChange}
           />

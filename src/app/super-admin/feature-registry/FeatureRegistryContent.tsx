@@ -112,7 +112,7 @@ export default function FeatureRegistryContent({
             }
           }}
           style={{
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "white",
             border: "none",
             padding: "0.75rem 1.5rem",
@@ -306,7 +306,7 @@ export default function FeatureRegistryContent({
                         ? "#64748B"
                         : feature.minimumPlan === "pro"
                           ? "#3B82F6"
-                          : "#E20074",
+                          : "#24c598",
                     color: "white",
                     padding: "0.25rem 0.625rem",
                     borderRadius: "4px",

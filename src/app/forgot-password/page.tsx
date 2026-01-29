@@ -62,7 +62,7 @@ function ForgotPasswordContent() {
             width="48"
             height="48"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -78,7 +78,7 @@ function ForgotPasswordContent() {
           fontWeight: "700",
           color: "#0A0A0A"
         }}>
-          T-Pass
+          Easy Pass
         </span>
       </Link>
 
@@ -125,7 +125,7 @@ function ForgotPasswordContent() {
               style={{
                 display: "inline-block",
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 textDecoration: "none",
                 borderRadius: "6px",
@@ -187,7 +187,7 @@ function ForgotPasswordContent() {
               style={{
                 width: "100%",
                 padding: "0.75rem",
-                backgroundColor: loading ? "#CCCCCC" : "#E20074",
+                backgroundColor: loading ? "#CCCCCC" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "6px",
@@ -204,7 +204,7 @@ function ForgotPasswordContent() {
               <Link
                 href="/login"
                 style={{
-                  color: "#E20074",
+                  color: "#24c598",
                   textDecoration: "none",
                   fontSize: "0.9rem"
                 }}

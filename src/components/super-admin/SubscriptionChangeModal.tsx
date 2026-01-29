@@ -91,7 +91,7 @@ export default function SubscriptionChangeModal({
           maxWidth: "600px",
           width: "100%",
           boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
-          border: "2px solid #E20074",
+          border: "2px solid #24c598",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -117,7 +117,7 @@ export default function SubscriptionChangeModal({
               width="24"
               height="24"
               fill="none"
-              stroke="#E20074"
+              stroke="#24c598"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -132,14 +132,14 @@ export default function SubscriptionChangeModal({
             <h2 style={{
               fontSize: "1.5rem",
               fontWeight: "700",
-              color: "#E20074",
+              color: "#24c598",
               marginBottom: "0.25rem",
             }}>
               Abonnement-Status ändern
             </h2>
             <div style={{
               fontSize: "0.75rem",
-              color: "#E20074",
+              color: "#24c598",
               fontWeight: "600",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
@@ -192,7 +192,7 @@ export default function SubscriptionChangeModal({
               color: "#0A0A0A",
               marginBottom: "0.5rem",
             }}>
-              Status <span style={{ color: "#E20074" }}>*</span>
+              Status <span style={{ color: "#24c598" }}>*</span>
             </label>
             <select
               value={status}
@@ -258,7 +258,7 @@ export default function SubscriptionChangeModal({
             color: "#0A0A0A",
             marginBottom: "0.5rem",
           }}>
-            Grund für die Änderung <span style={{ color: "#E20074" }}>*</span>
+            Grund für die Änderung <span style={{ color: "#24c598" }}>*</span>
           </label>
           <textarea
             value={reason}
@@ -271,7 +271,7 @@ export default function SubscriptionChangeModal({
             style={{
               width: "100%",
               padding: "0.75rem",
-              border: error ? "1px solid #E20074" : "1px solid #CDCDCD",
+              border: error ? "1px solid #24c598" : "1px solid #CDCDCD",
               borderRadius: "6px",
               fontSize: "0.9rem",
               fontFamily: "inherit",
@@ -283,7 +283,7 @@ export default function SubscriptionChangeModal({
             <div style={{
               marginTop: "0.5rem",
               fontSize: "0.85rem",
-              color: "#E20074",
+              color: "#24c598",
             }}>
               {error}
             </div>
@@ -301,13 +301,13 @@ export default function SubscriptionChangeModal({
         <div style={{
           padding: "1rem",
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "6px",
           marginBottom: "1.5rem",
         }}>
           <div style={{
             fontSize: "0.85rem",
-            color: "#E20074",
+            color: "#24c598",
             fontWeight: "500",
           }}>
             ⚠️ Diese Änderung wirkt sich direkt auf die Subscription der Organisation aus und wird im Audit-Log erfasst.
@@ -342,7 +342,7 @@ export default function SubscriptionChangeModal({
             style={{
               flex: 1,
               padding: "0.75rem 1.5rem",
-              backgroundColor: canConfirm ? "#E20074" : "#CDCDCD",
+              backgroundColor: canConfirm ? "#24c598" : "#CDCDCD",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",
@@ -358,7 +358,7 @@ export default function SubscriptionChangeModal({
             }}
             onMouseLeave={(e) => {
               if (canConfirm) {
-                e.currentTarget.style.backgroundColor = "#E20074"
+                e.currentTarget.style.backgroundColor = "#24c598"
               }
             }}
           >

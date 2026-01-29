@@ -36,12 +36,12 @@ export default async function Home() {
             color: '#0A0A0A',
             padding: '0 clamp(0.5rem, 2vw, 1rem)'
           }}>
-            In <span style={{ color: '#E20074' }}>3</span> Minuten zum Digitalen Produktpass.
+            In <span style={{ color: '#24c598' }}>3</span> Minuten zum Digitalen Produktpass.
           </h1>
           <p style={{
             fontSize: 'clamp(1.25rem, 4vw, 3.5rem)',
             marginBottom: 'clamp(1.5rem, 4vw, 2.5rem)',
-            color: '#E20074',
+            color: '#24c598',
             fontWeight: '700',
             lineHeight: '1.2',
             padding: '0 clamp(0.5rem, 2vw, 1rem)'
@@ -67,7 +67,7 @@ export default async function Home() {
             padding: '0 clamp(0.5rem, 2vw, 1rem)'
           }}>
             <Link href="/signup" style={{
-              backgroundColor: '#E20074',
+              backgroundColor: '#24c598',
               color: '#FFFFFF',
               padding: 'clamp(0.875rem, 2.5vw, 1rem) clamp(1.25rem, 4vw, 2.5rem)',
               borderRadius: '8px',
@@ -89,7 +89,7 @@ export default async function Home() {
               fontWeight: '600',
               fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)',
               display: 'inline-block',
-              border: '2px solid #E20074',
+              border: '2px solid #24c598',
               whiteSpace: 'nowrap'
             }}>
               Unsere Vorteile
@@ -114,7 +114,7 @@ export default async function Home() {
           color: '#0A0A0A',
           fontWeight: '700'
         }}>
-          Warum T-Pass?
+          Warum Easy Pass?
         </h2>
         <div style={{
           display: 'grid',
@@ -130,7 +130,7 @@ export default async function Home() {
             border: '1px solid #CDCDCD'
           }}>
             <div style={{ width: '48px', height: '48px', marginBottom: '1rem', margin: '0 auto 1rem' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#E20074" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#24c598" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
               </svg>
             </div>
@@ -207,7 +207,7 @@ export default async function Home() {
             border: '1px solid #CDCDCD'
           }}>
             <div style={{ width: '48px', height: '48px', marginBottom: '1rem', margin: '0 auto 1rem' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#E20074" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#24c598" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <path d="M12 6v6l4 2"/>
               </svg>
@@ -279,7 +279,7 @@ export default async function Home() {
                 width: '60px',
                 height: '60px',
                 borderRadius: '50%',
-                backgroundColor: '#E20074',
+                backgroundColor: '#24c598',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -300,7 +300,7 @@ export default async function Home() {
                 width: '60px',
                 height: '60px',
                 borderRadius: '50%',
-                backgroundColor: '#E20074',
+                backgroundColor: '#24c598',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -321,7 +321,7 @@ export default async function Home() {
                 width: '60px',
                 height: '60px',
                 borderRadius: '50%',
-                backgroundColor: '#E20074',
+                backgroundColor: '#24c598',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -393,7 +393,7 @@ export default async function Home() {
                   <span style={{
                     fontSize: 'clamp(2.5rem, 7vw, 4rem)',
                     fontWeight: '700',
-                    color: '#E20074',
+                    color: '#24c598',
                     lineHeight: '1'
                   }}>
                     {Math.round(cheapestPrice.amount).toLocaleString('de-DE')}
@@ -420,7 +420,7 @@ export default async function Home() {
               <div style={{
                 width: '60px',
                 height: '2px',
-                backgroundColor: '#E20074',
+                backgroundColor: '#24c598',
                 borderRadius: '1px'
               }} />
 
@@ -450,14 +450,14 @@ export default async function Home() {
 
               {/* CTA - Text Link Style */}
               <Link href="/pricing" style={{
-                color: '#E20074',
+                color: '#24c598',
                 textDecoration: 'none',
                 fontWeight: '600',
                 fontSize: 'clamp(0.95rem, 2vw, 1.1rem)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                borderBottom: '2px solid #E20074',
+                borderBottom: '2px solid #24c598',
                 paddingBottom: '0.25rem',
                 transition: 'opacity 0.2s'
               }}>
@@ -499,7 +499,7 @@ export default async function Home() {
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/signup" style={{
-              backgroundColor: '#E20074',
+              backgroundColor: '#24c598',
               color: '#FFFFFF',
               padding: 'clamp(1rem, 2.5vw, 1.2rem) clamp(2rem, 5vw, 3rem)',
               borderRadius: '8px',

@@ -56,7 +56,7 @@ export default function TimelineBlockRenderer({
             top: 0,
             bottom: 0,
             width: "2px",
-            backgroundColor: theme.colors?.accent || "#E20074"
+            backgroundColor: theme.colors?.accent || "#24c598"
           }} />
           
           {/* Events */}
@@ -77,9 +77,9 @@ export default function TimelineBlockRenderer({
                 width: "0.75rem",
                 height: "0.75rem",
                 borderRadius: "50%",
-                backgroundColor: theme.colors?.accent || "#E20074",
+                backgroundColor: theme.colors?.accent || "#24c598",
                 border: "3px solid #FFFFFF",
-                boxShadow: "0 0 0 2px " + (theme.colors?.accent || "#E20074")
+                boxShadow: "0 0 0 2px " + (theme.colors?.accent || "#24c598")
               }} />
               
               {/* Event content */}
@@ -88,7 +88,7 @@ export default function TimelineBlockRenderer({
                   <div style={{
                     fontSize: "0.875rem",
                     fontWeight: 600,
-                    color: theme.colors?.accent || "#E20074",
+                    color: theme.colors?.accent || "#24c598",
                     marginBottom: "0.5rem",
                     textTransform: "uppercase",
                     letterSpacing: "0.05em"

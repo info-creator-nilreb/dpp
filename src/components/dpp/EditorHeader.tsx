@@ -54,13 +54,16 @@ export default function EditorHeader({
     const updateTimeAgo = () => {
       const seconds = Math.floor((Date.now() - lastSaved!.getTime()) / 1000)
       if (seconds < 60) {
-        setTimeAgo(`vor ${seconds} Sekunden`)
+        setTimeAgo("gerade eben")
       } else if (seconds < 3600) {
         const minutes = Math.floor(seconds / 60)
         setTimeAgo(`vor ${minutes} Minute${minutes !== 1 ? "n" : ""}`)
-      } else {
+      } else if (seconds < 86400) {
         const hours = Math.floor(seconds / 3600)
         setTimeAgo(`vor ${hours} Stunde${hours !== 1 ? "n" : ""}`)
+      } else {
+        const days = Math.floor(seconds / 86400)
+        setTimeAgo(`vor ${days} Tag${days !== 1 ? "en" : ""}`)
       }
     }
 
@@ -104,7 +107,7 @@ export default function EditorHeader({
       return "#00A651"
     }
     if (autoSaveStatus === "error") {
-      return "#E20074"
+      return "#24c598"
     }
     
     switch (status) {
@@ -112,7 +115,7 @@ export default function EditorHeader({
       case "published_with_hints":
         return "#00A651"
       case "error":
-        return "#E20074"
+        return "#24c598"
       case "draft":
       default:
         return lastSaved ? "#00A651" : "#7A7A7A"
@@ -201,7 +204,7 @@ export default function EditorHeader({
             {status === "error" && error && (
               <span style={{
                 fontSize: "clamp(0.75rem, 1.8vw, 0.85rem)",
-                color: "#E20074"
+                color: "#24c598"
               }}>
                 {error}
               </span>
@@ -212,7 +215,7 @@ export default function EditorHeader({
                 color: "#B8860B"
               }}>
                 {hints.map((hint, idx) => (
-                  <span key={idx}>{hint}{idx < hints.length - 1 ? " • " : ""}</span>
+                  <span key={idx}>{hint}{idx < hints.length - 1 ? " ? " : ""}</span>
                 ))}
               </div>
             )}
@@ -231,8 +234,8 @@ export default function EditorHeader({
                 style={{
                   padding: "0.75rem 1.5rem",
                   backgroundColor: "transparent",
-                  color: "#E20074",
-                  border: "1px solid #E20074",
+                  color: "#24c598",
+                  border: "1px solid #24c598",
                   borderRadius: "8px",
                   fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
                   fontWeight: "600",
@@ -255,7 +258,7 @@ export default function EditorHeader({
               disabled={publishDisabled || isProcessing}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: publishDisabled || isProcessing ? "#CDCDCD" : "#E20074",
+                backgroundColor: publishDisabled || isProcessing ? "#CDCDCD" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
@@ -294,8 +297,8 @@ export default function EditorHeader({
               style={{
                 padding: "0.5rem 1rem",
                 backgroundColor: "transparent",
-                color: "#E20074",
-                border: "1px solid #E20074",
+                color: "#24c598",
+                border: "1px solid #24c598",
                 borderRadius: "6px",
                 fontSize: "clamp(0.8rem, 1.8vw, 0.9rem)",
                 fontWeight: "600",
@@ -304,12 +307,12 @@ export default function EditorHeader({
                 transition: "all 0.2s"
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#E20074"
+                e.currentTarget.style.backgroundColor = "#24c598"
                 e.currentTarget.style.color = "#FFFFFF"
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent"
-                e.currentTarget.style.color = "#E20074"
+                e.currentTarget.style.color = "#24c598"
               }}
             >
               Jetzt upgraden →

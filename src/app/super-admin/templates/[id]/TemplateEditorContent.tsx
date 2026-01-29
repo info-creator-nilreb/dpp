@@ -17,6 +17,7 @@ interface TemplateBlock {
   id: string
   name: string
   order: number
+  // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert, nicht im Template
   fields: TemplateField[]
 }
 
@@ -28,6 +29,7 @@ interface TemplateField {
   required: boolean
   config: string | null
   order: number
+  isRepeatable?: boolean
 }
 
 interface Template {
@@ -59,7 +61,10 @@ const fieldTypes = [
   { value: "boolean", label: "Ja/Nein" },
   { value: "date", label: "Datum" },
   { value: "url", label: "URL" },
-  { value: "file", label: "Datei" },
+  { value: "file", label: "Datei (alle Typen)" },
+  { value: "file-image", label: "Bild (JPG, PNG, WebP)" },
+  { value: "file-document", label: "Dokument (PDF)" },
+  { value: "file-video", label: "Video" },
   { value: "country", label: "Land (ISO-3166)" },
   { value: "reference", label: "Referenz" }
 ]
@@ -79,6 +84,8 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   const [creatingNewVersion, setCreatingNewVersion] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showPublishDialog, setShowPublishDialog] = useState(false)
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
+  const [archiving, setArchiving] = useState(false)
 
   // CRITICAL: Only drafts can be edited
   const isEditable = template.status === "draft" && canEdit
@@ -92,6 +99,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   // CRITICAL: Filter out category fields (ESPR: category is not a field, it's a template property)
   const filteredBlocks = template.blocks.map(block => ({
     ...block,
+    // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert
     fields: block.fields.filter(field => {
       const keyLower = field.key?.toLowerCase() || ""
       const labelLower = field.label?.toLowerCase() || ""
@@ -104,6 +112,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   
   const [blocks, setBlocks] = useState<TemplateBlock[]>(filteredBlocks)
   const [editingFieldOptions, setEditingFieldOptions] = useState<string | null>(null) // fieldId that is currently editing options
+  const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   
   // Listen for sidebar collapse state changes
@@ -120,6 +129,123 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
     return () => clearInterval(interval)
   }, [])
 
+  // Helper: Generate English key from German label
+  // This ensures consistency with DPP column keys (name, description, countryOfOrigin, etc.)
+  const generateKeyFromLabel = (label: string): string => {
+    if (!label) return ""
+    
+    // Mapping von deutschen Labels zu englischen Standard-Keys
+    // Dies sorgt für Konsistenz mit DPP-Spalten-Keys
+    const labelMapping: Record<string, string> = {
+      // Basis- & Produktdaten
+      "produktname": "name",
+      "produkt name": "name",
+      "name": "name",
+      "beschreibung": "description",
+      "description": "description",
+      "sku": "sku",
+      "sku / interne id": "sku",
+      "interne id": "sku",
+      "gtin": "gtin",
+      "ean": "gtin",
+      "gtin / ean": "gtin",
+      "marke": "brand",
+      "hersteller": "brand",
+      "marke / hersteller": "brand",
+      "brand": "brand",
+      "herstellungsland": "countryOfOrigin",
+      "country of origin": "countryOfOrigin",
+      "countryoforigin": "countryOfOrigin",
+      // Materialien & Zusammensetzung
+      "materialliste": "materials",
+      "materialien": "materials",
+      "materials": "materials",
+      "datenquelle": "materialSource",
+      "materialquelle": "materialSource",
+      "material source": "materialSource",
+      // Nutzung, Pflege & Lebensdauer
+      "pflegehinweise": "careInstructions",
+      "pflege": "careInstructions",
+      "care instructions": "careInstructions",
+      "lebensdauer": "lifespan",
+      "lifespan": "lifespan",
+      "reparierbarkeit": "isRepairable",
+      "reparierbar": "isRepairable",
+      "is repairable": "isRepairable",
+      "ersatzteile verfügbar": "sparePartsAvailable",
+      "spare parts available": "sparePartsAvailable",
+      // Rechtliches & Konformität
+      "konformitätserklärung": "conformityDeclaration",
+      "conformity declaration": "conformityDeclaration",
+      "entsorgungsinformationen": "disposalInfo",
+      "disposal info": "disposalInfo",
+      // Rücknahme & Second Life
+      "rücknahme angeboten": "takebackOffered",
+      "takeback offered": "takebackOffered",
+      "rücknahmekontakt": "takebackContact",
+      "takeback contact": "takebackContact",
+      "second life informationen": "secondLifeInfo",
+      "second life": "secondLifeInfo",
+      "secondlifeinfo": "secondLifeInfo"
+    }
+    
+    // Normalisiere Label für Mapping
+    const normalizedLabel = label.toLowerCase().trim()
+    
+    // Prüfe zuerst direktes Mapping
+    if (labelMapping[normalizedLabel]) {
+      return labelMapping[normalizedLabel]
+    }
+    
+    // Prüfe Teilstring-Matches (z.B. "Produktname" in "Produktname (Lang)")
+    for (const [germanLabel, englishKey] of Object.entries(labelMapping)) {
+      if (normalizedLabel.includes(germanLabel) || germanLabel.includes(normalizedLabel)) {
+        return englishKey
+      }
+    }
+    
+    // Fallback: Generiere Key aus Label (camelCase, englisch-orientiert)
+    // Versuche, deutsche Begriffe zu übersetzen
+    const translationMap: Record<string, string> = {
+      "produkt": "product",
+      "name": "name",
+      "beschreibung": "description",
+      "land": "country",
+      "herstellung": "origin",
+      "material": "material",
+      "quelle": "source",
+      "pflege": "care",
+      "hinweis": "instruction",
+      "lebens": "life",
+      "dauer": "span",
+      "reparier": "repair",
+      "konformität": "conformity",
+      "erklärung": "declaration",
+      "entsorgung": "disposal",
+      "info": "info",
+      "rücknahme": "takeback",
+      "kontakt": "contact"
+    }
+    
+    // Ersetze bekannte deutsche Begriffe
+    let englishKey = normalizedLabel
+    for (const [german, english] of Object.entries(translationMap)) {
+      englishKey = englishKey.replace(new RegExp(german, "g"), english)
+    }
+    
+    // Generiere camelCase Key
+    return englishKey
+      .replace(/[äöü]/g, (char) => {
+        const map: Record<string, string> = { ä: "ae", ö: "oe", ü: "ue" }
+        return map[char] || char
+      })
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/_+/g, "_")
+      .replace(/_([a-z])/g, (_, char) => char.toUpperCase())
+      .replace(/^[a-z]/, (char) => char.toLowerCase())
+  }
+
   const addBlock = () => {
     setBlocks([...blocks, {
       id: `new-${Date.now()}`,
@@ -134,6 +260,8 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       block.id === blockId ? { ...block, name } : block
     ))
   }
+
+  // ENTFERNT: updateSupplierConfig - Supplier-Config wird jetzt pro DPP konfiguriert
 
   const deleteBlock = (blockId: string) => {
     if (blocks.length > 1) {
@@ -155,7 +283,8 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 type: "text",
                 required: false,
                 config: null,
-                order: block.fields.length
+                order: block.fields.length,
+                isRepeatable: false
               }
             ]
           }
@@ -212,13 +341,74 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
   // Helper: Update select options in config
   const updateSelectOptions = (blockId: string, fieldId: string, options: Array<{ value: string; label: string; esprReference?: string }>) => {
-    const config = JSON.stringify({ options })
-    updateField(blockId, fieldId, { config })
+    const field = blocks.find(b => b.id === blockId)?.fields.find(f => f.id === fieldId)
+    const currentConfig = field?.config ? (typeof field.config === "string" ? JSON.parse(field.config) : field.config) : {}
+    const newConfig = { ...currentConfig, options }
+    updateField(blockId, fieldId, { config: JSON.stringify(newConfig) })
+  }
+
+  // Drag & Drop für Felder
+  const handleFieldDragStart = (e: React.DragEvent, blockId: string, fieldId: string) => {
+    setDraggedFieldId(fieldId)
+    e.dataTransfer.effectAllowed = "move"
+  }
+
+  const handleFieldDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const handleFieldDrop = (e: React.DragEvent, targetBlockId: string, targetFieldId: string) => {
+    e.preventDefault()
+    if (!draggedFieldId) return
+
+    const sourceBlock = blocks.find(b => b.fields.some(f => f.id === draggedFieldId))
+    if (!sourceBlock) return
+
+    const sourceField = sourceBlock.fields.find(f => f.id === draggedFieldId)
+    if (!sourceField) return
+
+    // Nur innerhalb desselben Blocks verschieben
+    if (sourceBlock.id !== targetBlockId) {
+      setDraggedFieldId(null)
+      return
+    }
+
+    const targetFieldIndex = sourceBlock.fields.findIndex(f => f.id === targetFieldId)
+    const sourceFieldIndex = sourceBlock.fields.findIndex(f => f.id === draggedFieldId)
+
+    if (targetFieldIndex === -1 || sourceFieldIndex === -1) {
+      setDraggedFieldId(null)
+      return
+    }
+
+    // Felder neu anordnen und order aktualisieren
+    const newFields = [...sourceBlock.fields]
+    newFields.splice(sourceFieldIndex, 1)
+    newFields.splice(targetFieldIndex, 0, sourceField)
+    
+    // Order-Werte aktualisieren
+    newFields.forEach((field, index) => {
+      field.order = index
+    })
+
+    setBlocks(blocks.map(block =>
+      block.id === targetBlockId
+        ? { ...block, fields: newFields }
+        : block
+    ))
+
+    setDraggedFieldId(null)
+  }
+
+  const handleFieldDragEnd = () => {
+    setDraggedFieldId(null)
   }
 
   // Block reordering functions
   const moveBlockUp = (blockIndex: number) => {
-    if (blockIndex === 0 || blockIndex >= blocks.length) return // Block 1 is fixed
+    // Block 0 (Basis- & Produktdaten) is always fixed, block 1 can only move down
+    if (blockIndex <= 1 || blockIndex >= blocks.length) return
     const newBlocks = [...blocks]
     const temp = newBlocks[blockIndex]
     newBlocks[blockIndex] = newBlocks[blockIndex - 1]
@@ -231,7 +421,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
   }
 
   const moveBlockDown = (blockIndex: number) => {
-    if (blockIndex === 0 || blockIndex >= blocks.length - 1) return // Block 1 is fixed
+    if (blockIndex >= blocks.length - 1) return
     const newBlocks = [...blocks]
     const temp = newBlocks[blockIndex]
     newBlocks[blockIndex] = newBlocks[blockIndex + 1]
@@ -252,7 +442,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
     try {
       // Validate
       if (!name) {
-        setError("Name ist erforderlich")
+        showNotification("Name ist erforderlich", "error")
         setLoading(false)
         return
       }
@@ -260,7 +450,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       // Validate blocks
       for (const block of blocks) {
         if (!block.name) {
-          setError("Alle Blöcke benötigen einen Namen")
+          showNotification("Alle Blöcke benötigen einen Namen", "error")
           setLoading(false)
           return
         }
@@ -269,8 +459,8 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       // Validate fields
       for (const block of blocks) {
         for (const field of block.fields) {
-          if (!field.label || !field.key) {
-            setError("Alle Felder benötigen einen Label und Key")
+          if (!field.label) {
+            showNotification("Alle Felder benötigen einen Label", "error")
             setLoading(false)
             return
           }
@@ -278,29 +468,17 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       }
 
       // Prepare data - Filter out any category fields (safety check)
-      // Verwende IMMER den aktuellen Status-State (nicht template.status als Fallback!)
-      console.log("[Template Save] ===== START SAVE =====")
-      console.log("[Template Save] Status-State:", status, "Type:", typeof status)
-      console.log("[Template Save] Template-Status (DB):", template.status, "Type:", typeof template.status)
-      console.log("[Template Save] Status-State === 'active':", status === "active")
-      console.log("[Template Save] Status-State === 'draft':", status === "draft")
-      
-      const currentStatus = status || template.status // Fallback zu template.status nur wenn status undefined/null
-      console.log("[Template Save] Finaler Status zum Speichern:", currentStatus)
-      
-      if (!currentStatus) {
-        console.error("[Template Save] FEHLER: Kein Status vorhanden!")
-        setError("Status ist erforderlich")
-        setLoading(false)
-        return
-      }
+      // Generate keys automatically from labels if missing
+      // WICHTIG: Status explizit setzen - bei Draft-Templates bleibt "draft", bei aktiven bleibt "active"
+      const currentStatus = status || template.status || "draft"
       
       const templateData = {
         name,
         description: description || null,
-        status: currentStatus, // Explizit den State verwenden
+        status: currentStatus, // Status explizit setzen
         blocks: blocks.map((block, blockIndex) => ({
           name: block.name,
+          // ENTFERNT: supplierConfig - wird jetzt pro DPP konfiguriert
           fields: block.fields
             .filter(field => {
               const keyLower = field.key?.toLowerCase() || ""
@@ -310,18 +488,16 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                      !labelLower.includes("kategorie") &&
                      !labelLower.includes("category")
             })
-            .map((field, fieldIndex) => ({
-              label: field.label,
-              key: field.key,
-              type: field.type,
-              required: field.required,
-              config: field.config ? JSON.parse(field.config) : null
-            }))
+                    .map((field, fieldIndex) => ({
+                      label: field.label,
+                      key: field.key || generateKeyFromLabel(field.label), // Auto-generate if missing
+                      type: field.type,
+                      required: field.required,
+                      isRepeatable: field.isRepeatable || false,
+                      config: field.config ? (typeof field.config === "string" ? JSON.parse(field.config) : field.config) : null
+                    }))
         }))
       }
-
-      console.log("[Template Save] Sende Request mit Daten:", JSON.stringify(templateData, null, 2))
-      console.log("[Template Save] Status im Request-Body:", templateData.status)
 
       const response = await fetch(`/api/super-admin/templates/${template.id}`, {
         method: "PUT",
@@ -330,35 +506,36 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       })
 
       const data = await response.json()
-      console.log("[Template Save] Response Status:", response.status)
-      console.log("[Template Save] Response Data:", JSON.stringify(data, null, 2))
 
       if (!response.ok) {
-        console.error("[Template Save] FEHLER:", data.error)
-        setError(data.error || "Fehler beim Aktualisieren des Templates")
+        showNotification(data.error || "Fehler beim Aktualisieren des Templates", "error")
         setLoading(false)
         return
       }
       
-      console.log("[Template Save] ===== SAVE ERFOLGREICH =====")
 
+      // Aktualisiere den Status-State, falls sich der Status geändert hat
+      if (data.template?.status && data.template.status !== status) {
+        setStatus(data.template.status)
+      }
+      
       setSaved(true)
       setLoading(false)
       showNotification("Erfolgreich gespeichert", "success")
       
-      // Refresh page to show updated data
+      // Keep success message visible for 3 seconds before refreshing
       setTimeout(() => {
+        setSaved(false)
         router.refresh()
-      }, 1000)
+      }, 3000)
     } catch (err: any) {
-      setError(err.message || "Ein Fehler ist aufgetreten")
+      showNotification(err.message || "Ein Fehler ist aufgetreten", "error")
       setLoading(false)
     }
   }
 
   const handleCreateNewVersion = async () => {
     if (!isActive) {
-      console.log("Cannot create new version: template is not active", { status: template.status })
       return
     }
 
@@ -367,13 +544,53 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
     try {
       const result = await createNewTemplateVersion(template.id)
+      
+      if (result?.templateId) {
       // Redirect to new template editor
-      router.push(`/super-admin/templates/${result.templateId}`)
-      router.refresh() // Ensure fresh data
+        showNotification("Neue Version erfolgreich erstellt", "success")
+        // Use window.location for a full page reload to ensure fresh data
+        window.location.href = `/super-admin/templates/${result.templateId}`
+      } else {
+        throw new Error("Keine Template-ID zurückgegeben")
+      }
     } catch (err: any) {
-      console.error("Error creating new version:", err)
-      setError(err.message || "Ein Fehler ist aufgetreten")
       setCreatingNewVersion(false)
+      showNotification(err.message || "Fehler beim Erstellen der neuen Version", "error")
+    }
+  }
+
+  const handleArchive = async () => {
+    setArchiving(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/super-admin/templates/${template.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: template.name,
+          description: template.description,
+          status: "archived"
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Fehler beim Archivieren")
+      }
+
+      showNotification("Template erfolgreich archiviert", "success")
+      setShowArchiveDialog(false)
+      
+      // Refresh page to show updated status
+      setTimeout(() => {
+        router.refresh()
+      }, 1000)
+    } catch (err: any) {
+      showNotification(err.message || "Fehler beim Archivieren", "error")
+    } finally {
+      setArchiving(false)
     }
   }
 
@@ -384,11 +601,11 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         {error && (
           <div style={{
             backgroundColor: "#FFF5F9",
-            border: "1px solid #E20074",
+            border: "1px solid #24c598",
             borderRadius: "8px",
             padding: "1rem",
             marginBottom: "2rem",
-            color: "#E20074",
+            color: "#24c598",
             fontSize: "0.95rem"
           }}>
             {error}
@@ -397,7 +614,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
 
         <div style={{
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "12px",
           padding: "1.5rem",
           marginBottom: "2rem"
@@ -405,7 +622,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           <h3 style={{
             fontSize: "1.25rem",
             fontWeight: "600",
-            color: "#E20074",
+            color: "#24c598",
             marginBottom: "0.5rem"
           }}>
             Template ist {isActive ? "aktiv" : "archiviert"}
@@ -421,13 +638,14 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             }
           </p>
           {isActive && canEdit && (
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={handleCreateNewVersion}
               disabled={creatingNewVersion}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: creatingNewVersion ? "#CDCDCD" : "#E20074",
+                  backgroundColor: creatingNewVersion ? "#CDCDCD" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
@@ -438,6 +656,24 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             >
               {creatingNewVersion ? "Wird erstellt..." : "Neue Version erstellen"}
             </button>
+              <button
+                type="button"
+                onClick={() => setShowArchiveDialog(true)}
+                disabled={archiving}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  backgroundColor: archiving ? "#CDCDCD" : "#7A7A7A",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.95rem",
+                  fontWeight: "600",
+                  cursor: archiving ? "not-allowed" : "pointer"
+                }}
+              >
+                {archiving ? "Wird archiviert..." : "Archivieren"}
+              </button>
+            </div>
           )}
         </div>
 
@@ -517,10 +753,10 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               marginTop: "1rem",
               padding: "0.75rem",
               backgroundColor: "#FFF5F9",
-              border: "1px solid #E20074",
+              border: "1px solid #24c598",
               borderRadius: "8px",
               fontSize: "0.875rem",
-              color: "#E20074"
+              color: "#24c598"
             }}>
               ⚠️ Änderungen gelten nur für zukünftige Produktpässe.
             </div>
@@ -544,7 +780,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 color: "#0A0A0A",
                 marginBottom: "1.5rem",
                 paddingBottom: "1rem",
-                borderBottom: "2px solid #E20074"
+                borderBottom: "2px solid #24c598"
               }}>
                 {block.name}
               </h3>
@@ -563,21 +799,60 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                   gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
                   gap: "1rem"
                 }}>
-                  {block.fields.map((field) => (
+                  {block.fields.map((field, fieldIndex) => (
                     <div
                       key={field.id}
+                      draggable={isEditable}
+                      onDragStart={(e) => isEditable && handleFieldDragStart(e, block.id, field.id)}
+                      onDragOver={handleFieldDragOver}
+                      onDrop={(e) => isEditable && handleFieldDrop(e, block.id, field.id)}
+                      onDragEnd={handleFieldDragEnd}
                       style={{
                         padding: "1rem",
-                        backgroundColor: "#F9F9F9",
-                        border: "1px solid #E5E5E5",
-                        borderRadius: "8px"
+                        backgroundColor: draggedFieldId === field.id ? "#E5F3FF" : "#F9F9F9",
+                        border: draggedFieldId === field.id ? "2px solid #24c598" : "1px solid #E5E5E5",
+                        borderRadius: "8px",
+                        cursor: isEditable ? "move" : "default",
+                        opacity: draggedFieldId === field.id ? 0.5 : 1,
+                        transition: "all 0.2s"
                       }}
                     >
                       <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.25rem",
+                        marginBottom: "0.25rem"
+                      }}>
+                        {isEditable && (
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "move",
+                            padding: "0",
+                            marginLeft: "-0.25rem"
+                          }}>
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{ color: "#7A7A7A", flexShrink: 0 }}
+                            >
+                              <line x1="3" y1="12" x2="21" y2="12" />
+                              <line x1="3" y1="6" x2="21" y2="6" />
+                              <line x1="3" y1="18" x2="21" y2="18" />
+                            </svg>
+                          </div>
+                        )}
+                      <div style={{
                         fontSize: "0.95rem",
                         fontWeight: "600",
-                        color: "#0A0A0A",
-                        marginBottom: "0.25rem"
+                          color: "#0A0A0A"
                       }}>
                         {field.label}
                         {field.required && (
@@ -591,19 +866,12 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                           </span>
                         )}
                       </div>
-                      <div style={{
-                        fontSize: "0.75rem",
-                        color: "#7A7A7A",
-                        fontFamily: "monospace",
-                        marginBottom: "0.5rem"
-                      }}>
-                        {field.key}
                       </div>
                       <div style={{
                         display: "inline-block",
                         padding: "0.25rem 0.75rem",
                         borderRadius: "6px",
-                        backgroundColor: "#E20074",
+                        backgroundColor: "#24c598",
                         color: "#FFFFFF",
                         fontSize: "0.75rem",
                         fontWeight: "600"
@@ -699,8 +967,9 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         }
         @media (min-width: 769px) and (max-width: 1200px) {
           .template-editor-field-grid {
-            grid-template-columns: 1.5fr 1.5fr 1fr auto auto !important;
-            gap: 0.5rem !important;
+            grid-template-columns: 0.5fr 1.5fr 1fr auto auto !important;
+            gap: 0.8rem !important;
+            grid-auto-flow: column;   
           }
           .template-editor-field-grid input,
           .template-editor-field-grid select {
@@ -715,7 +984,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         }
         @media (min-width: 1400px) {
           .template-editor-field-grid {
-            grid-template-columns: 2fr 2fr 1.5fr auto auto !important;
+            grid-template-columns: 1fr 4fr 1.5fr auto auto !important;
           }
         }
       `
@@ -724,11 +993,11 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       {error && (
         <div style={{
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",
           marginBottom: "2rem",
-          color: "#E20074",
+          color: "#24c598",
           fontSize: "0.95rem"
         }}>
           {error}
@@ -796,16 +1065,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               fontWeight: "600",
               color: "#0A0A0A"
             }}>
-              {template.category || "Keine"}
-              {template.categoryLabel && (
-                <span style={{
-                  marginLeft: "0.5rem",
-                  fontWeight: "400",
-                  color: "#7A7A7A"
-                }}>
-                  – {template.categoryLabel}
-                </span>
-              )}
+              {template.categoryLabel || template.category || "Keine"}
             </div>
           </div>
           <div style={{
@@ -838,7 +1098,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           fontStyle: "italic",
           lineHeight: "1.4"
         }}>
-          Die Kategorie ist Teil der regulatorischen Template-Identität und kann nach Erstellung nicht mehr geändert werden.
+          Die Kategorie kann nicht mehr verändert werden, wenn ein Template für eine Kategorie veröffentlicht worden ist.
         </p>
       </div>
 
@@ -931,7 +1191,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               value={status}
               onChange={(e) => {
                 const newStatus = e.target.value
-                console.log("[Template Editor] Status geändert von", status, "zu", newStatus)
                 setStatus(newStatus)
               }}
               disabled={loading || (!isEditable && template.status !== "draft")}
@@ -980,7 +1239,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 gap: "0.75rem",
                 flexWrap: "wrap",
                 paddingBottom: "1rem",
-                borderBottom: "2px solid #E20074"
+                borderBottom: "2px solid #24c598"
               }}>
                 <input
                   type="text"
@@ -1024,6 +1283,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                       gap: "0.5rem",
                       flexShrink: 0
                     }}>
+                      {blockIndex > 1 && (
                       <button
                         type="button"
                         onClick={() => moveBlockUp(blockIndex)}
@@ -1046,6 +1306,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                       >
                         ↑
                       </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => moveBlockDown(blockIndex)}
@@ -1069,85 +1330,125 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                         ↓
                       </button>
                     </div>
-                    <div className="block-delete">
-                      <button
-                        type="button"
-                        onClick={() => deleteBlock(block.id)}
-                        disabled={loading || !isEditable}
-                        title="Block entfernen"
-                        className="block-delete-button"
-                        style={{
-                          padding: "0.5rem",
-                          backgroundColor: "transparent",
-                          color: "#7A7A7A",
-                          border: "1px solid #CDCDCD",
-                          borderRadius: "6px",
-                          cursor: loading || !isEditable ? "not-allowed" : "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: "32px",
-                          height: "32px",
-                          opacity: loading || !isEditable ? 0.5 : 1
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!loading && isEditable) {
-                            e.currentTarget.style.backgroundColor = "#F5F5F5"
-                            e.currentTarget.style.borderColor = "#7A7A7A"
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!loading && isEditable) {
-                            e.currentTarget.style.backgroundColor = "transparent"
-                            e.currentTarget.style.borderColor = "#CDCDCD"
-                          }
-                        }}
+                  {/* ENTFERNT: Supplier Config Icon - wird jetzt pro DPP konfiguriert, nicht im Template */}
+                  
+                  <div className="block-delete">
+                    <button
+                      type="button"
+                      onClick={() => deleteBlock(block.id)}
+                      disabled={loading || !isEditable}
+                      title="Block entfernen"
+                      className="block-delete-button"
+                      style={{
+                        padding: "0.5rem",
+                        backgroundColor: "transparent",
+                        color: "#7A7A7A",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "6px",
+                        cursor: loading || !isEditable ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "32px",
+                        height: "32px",
+                        opacity: loading || !isEditable ? 0.5 : 1
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!loading && isEditable) {
+                          e.currentTarget.style.backgroundColor = "#F5F5F5"
+                          e.currentTarget.style.borderColor = "#7A7A7A"
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!loading && isEditable) {
+                          e.currentTarget.style.backgroundColor = "transparent"
+                          e.currentTarget.style.borderColor = "#CDCDCD"
+                        }
+                      }}
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </button>
-                    </div>
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
                   </div>
                 )}
               </div>
             </div>
 
+
             {/* Fields */}
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {block.fields.map((field) => (
+              {block.fields.map((field, fieldIndex) => (
                   <div
                     key={field.id}
+                    draggable={isEditable}
+                    onDragStart={(e) => isEditable && handleFieldDragStart(e, block.id, field.id)}
+                    onDragOver={handleFieldDragOver}
+                    onDrop={(e) => isEditable && handleFieldDrop(e, block.id, field.id)}
+                    onDragEnd={handleFieldDragEnd}
                     style={{
                       padding: "1rem",
-                      backgroundColor: "#F9F9F9",
-                      border: "1px solid #E5E5E5",
-                      borderRadius: "8px"
+                      backgroundColor: draggedFieldId === field.id ? "#E5F3FF" : "#F9F9F9",
+                      border: draggedFieldId === field.id ? "2px solid #24c598" : "1px solid #E5E5E5",
+                      borderRadius: "8px",
+                      cursor: isEditable ? "move" : "default",
+                      opacity: draggedFieldId === field.id ? 0.5 : 1,
+                      transition: "all 0.2s",
+                      width: "100%",
+                      boxSizing: "border-box",
+                      overflow: "visible"
                     }}
                   >
                     <div 
                       className="template-editor-field-grid"
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "minmax(120px, 2fr) minmax(100px, 2fr) minmax(120px, 1fr) auto 32px",
-                        gap: "0.75rem",
+                        gridTemplateColumns: isEditable ? "16px minmax(150px, 1fr) 140px max-content max-content 32px" : "minmax(120px, 2fr) minmax(100px, 2fr) minmax(120px, 1fr) max-content max-content 32px",
+                        gap: isEditable ? "0.25rem 0.75rem" : "0.75rem",
                         alignItems: "center",
                         width: "100%",
                         boxSizing: "border-box",
                         minWidth: 0,
-                        overflow: "hidden"
+                        overflow: "visible"
                       }}
                     >
+                      {isEditable && (
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "move",
+                          padding: "0",
+                          marginLeft: "-0.25rem"
+                        }}>
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ color: "#7A7A7A", flexShrink: 0 }}
+                          >
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                          </svg>
+                        </div>
+                      )}
                       <input
                         type="text"
                         value={field.label}
@@ -1156,8 +1457,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                           if (validateFieldLabel(newLabel)) {
                             updateField(block.id, field.id, { label: newLabel })
                           } else {
-                            setError("Das Label 'Kategorie' oder 'Category' ist nicht erlaubt. Die Kategorie ist ein Template-Merkmal und kein Feld.")
-                            setTimeout(() => setError(null), 5000)
+                            showNotification("Das Label 'Kategorie' oder 'Category' ist nicht erlaubt. Die Kategorie ist ein Template-Merkmal und kein Feld.", "error")
                           }
                         }}
                         placeholder="Label"
@@ -1167,29 +1467,6 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                           border: "1px solid #CDCDCD",
                           borderRadius: "6px",
                           fontSize: "0.95rem",
-                          boxSizing: "border-box"
-                        }}
-                      />
-                      <input
-                        type="text"
-                        value={field.key}
-                        onChange={(e) => {
-                          const newKey = e.target.value
-                          if (validateFieldKey(newKey)) {
-                            updateField(block.id, field.id, { key: newKey })
-                          } else {
-                            setError("Der Schlüssel 'category' oder 'kategorie' ist nicht erlaubt. Die Kategorie ist ein Template-Merkmal und kein Feld.")
-                            setTimeout(() => setError(null), 5000)
-                          }
-                        }}
-                        placeholder="Key (z.B. productName)"
-                        disabled={loading || !isEditable}
-                        style={{
-                          padding: "0.5rem",
-                          border: "1px solid #CDCDCD",
-                          borderRadius: "6px",
-                          fontSize: "0.95rem",
-                          fontFamily: "monospace",
                           boxSizing: "border-box"
                         }}
                       />
@@ -1215,18 +1492,38 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                       <label className="template-editor-required" style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "0.5rem",
+                        gap: "0.4rem",
                         fontSize: "0.875rem",
                         cursor: "pointer",
-                        whiteSpace: "nowrap"
+                        whiteSpace: "nowrap",
+                        flexShrink: 0
                       }}>
                         <input
                           type="checkbox"
                           checked={field.required}
                           onChange={(e) => updateField(block.id, field.id, { required: e.target.checked })}
                           disabled={loading || !isEditable}
+                          style={{ flexShrink: 0, width: "16px", height: "16px" }}
                         />
-                        Pflicht
+                        <span style={{ whiteSpace: "nowrap" }}>Pflicht</span>
+                      </label>
+                      <label style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={field.isRepeatable || false}
+                          onChange={(e) => updateField(block.id, field.id, { isRepeatable: e.target.checked })}
+                          disabled={loading || !isEditable}
+                          style={{ flexShrink: 0, width: "16px", height: "16px" }}
+                        />
+                        <span style={{ whiteSpace: "nowrap" }}>Wiederholbar</span>
                       </label>
                       <button
                         type="button"
@@ -1306,7 +1603,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                             }}
                             style={{
                               padding: "0.375rem 0.75rem",
-                              backgroundColor: editingFieldOptions === field.id ? "#7A7A7A" : "#E20074",
+                              backgroundColor: editingFieldOptions === field.id ? "#7A7A7A" : "#24c598",
                               color: "#FFFFFF",
                               border: "none",
                               borderRadius: "6px",
@@ -1337,12 +1634,18 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                               type="button"
                               onClick={() => {
                                 const options = getSelectOptions(field.config)
-                                updateSelectOptions(block.id, field.id, [...options, { value: "", label: "", esprReference: "" }])
+                                // Automatisch Key generieren beim Hinzufügen einer neuen Option
+                                const newOption = { 
+                                  value: generateKeyFromLabel("Neue Option"), 
+                                  label: "Neue Option", 
+                                  esprReference: undefined 
+                                }
+                                updateSelectOptions(block.id, field.id, [...options, newOption])
                               }}
                               disabled={loading || !isEditable}
                               style={{
                                 padding: "0.375rem 0.75rem",
-                                backgroundColor: "#E20074",
+                                backgroundColor: "#24c598",
                                 color: "#FFFFFF",
                                 border: "none",
                                 borderRadius: "6px",
@@ -1361,35 +1664,20 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                           {getSelectOptions(field.config).map((option, optIndex) => (
                             <div key={optIndex} style={{
                               display: "grid",
-                              gridTemplateColumns: "1fr 1fr 1fr auto",
+                              gridTemplateColumns: "1fr auto auto",
                               gap: "0.5rem",
                               alignItems: "center"
                             }}>
                               <input
                                 type="text"
-                                value={option.value}
-                                placeholder="Value (technisch)"
-                                onChange={(e) => {
-                                  const options = getSelectOptions(field.config)
-                                  options[optIndex] = { ...option, value: e.target.value }
-                                  updateSelectOptions(block.id, field.id, options)
-                                }}
-                                disabled={loading || !isEditable}
-                                style={{
-                                  padding: "0.5rem",
-                                  border: "1px solid #CDCDCD",
-                                  borderRadius: "6px",
-                                  fontSize: "0.875rem",
-                                  fontFamily: "monospace"
-                                }}
-                              />
-                              <input
-                                type="text"
                                 value={option.label}
-                                placeholder="Label (Anzeige)"
+                                placeholder="Label (technischer Key wird automatisch generiert)"
                                 onChange={(e) => {
                                   const options = getSelectOptions(field.config)
-                                  options[optIndex] = { ...option, label: e.target.value }
+                                  const newLabel = e.target.value
+                                  // Automatisch Key aus Label generieren
+                                  const newValue = generateKeyFromLabel(newLabel)
+                                  options[optIndex] = { ...option, label: newLabel, value: newValue }
                                   updateSelectOptions(block.id, field.id, options)
                                 }}
                                 disabled={loading || !isEditable}
@@ -1403,7 +1691,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                               <input
                                 type="text"
                                 value={option.esprReference || ""}
-                                placeholder="ESPR-Referenz (optional)"
+                                placeholder="ESPR (optional)"
                                 onChange={(e) => {
                                   const options = getSelectOptions(field.config)
                                   options[optIndex] = { ...option, esprReference: e.target.value || undefined }
@@ -1414,7 +1702,8 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                                   padding: "0.5rem",
                                   border: "1px solid #CDCDCD",
                                   borderRadius: "6px",
-                                  fontSize: "0.875rem"
+                                  fontSize: "0.875rem",
+                                  width: "120px"
                                 }}
                               />
                               <button
@@ -1432,7 +1721,12 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                                   border: "1px solid #DC2626",
                                   borderRadius: "6px",
                                   fontSize: "0.875rem",
-                                  cursor: loading ? "not-allowed" : "pointer"
+                                  cursor: loading ? "not-allowed" : "pointer",
+                                  width: "32px",
+                                  height: "32px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center"
                                 }}
                               >
                                 ✕
@@ -1629,7 +1923,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                 disabled={loading || !isEditable}
                 style={{
                   padding: "0.75rem 1.5rem",
-                  backgroundColor: loading ? "#CDCDCD" : "#00A651",
+                  backgroundColor: loading ? "#CDCDCD" : "#10B981",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "8px",
@@ -1644,11 +1938,15 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               </button>
             )}
             <button
-              type="submit"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                handleSubmit(e as any)
+              }}
               disabled={loading || !isEditable}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: loading || !isEditable ? "#CDCDCD" : "#E20074",
+                backgroundColor: loading || !isEditable ? "#CDCDCD" : "#3B82F6",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
@@ -1683,9 +1981,10 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               const data = await response.json()
               throw new Error(data.error || "Fehler beim Löschen")
             }
+            showNotification("Template erfolgreich gelöscht", "success")
             router.push("/super-admin/templates")
           } catch (err: any) {
-            setError(err.message || "Fehler beim Löschen des Templates")
+            showNotification(err.message || "Fehler beim Löschen des Templates", "error")
             setLoading(false)
           }
         }}
@@ -1696,7 +1995,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       <ConfirmDialog
         isOpen={showPublishDialog}
         title="Template veröffentlichen"
-        message="Möchten Sie dieses Template wirklich veröffentlichen? Nur ein aktives Template pro Kategorie ist erlaubt."
+        message="Möchten Sie dieses Template wirklich veröffentlichen? Die bisher aktive Version wird automatisch archiviert."
         confirmLabel="Veröffentlichen"
         cancelLabel="Abbrechen"
         onConfirm={async () => {
@@ -1712,7 +2011,14 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             try {
               // Validate
               if (!name) {
-                setError("Name ist erforderlich")
+                showNotification("Name ist erforderlich", "error")
+                setLoading(false)
+                return
+              }
+
+              // Validate blocks exist
+              if (!blocks || blocks.length === 0) {
+                showNotification("Ein Template muss mindestens einen Block enthalten, um veröffentlicht werden zu können.", "error")
                 setLoading(false)
                 return
               }
@@ -1720,21 +2026,41 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               // Validate blocks
               for (const block of blocks) {
                 if (!block.name) {
-                  setError("Alle Blöcke benötigen einen Namen")
+                  showNotification("Alle Blöcke benötigen einen Namen", "error")
                   setLoading(false)
                   return
                 }
               }
 
-              // Validate fields
+              // Validate fields exist and have content
+              let hasFields = false
               for (const block of blocks) {
+                const validFields = block.fields.filter(field => {
+                  const keyLower = field.key?.toLowerCase() || ""
+                  const labelLower = field.label?.toLowerCase() || ""
+                  return !keyLower.includes("category") && 
+                         !keyLower.includes("kategorie") &&
+                         !labelLower.includes("kategorie") &&
+                         !labelLower.includes("category")
+                })
+                
+                if (validFields.length > 0) {
+                  hasFields = true
+                }
+                
                 for (const field of block.fields) {
-                  if (!field.label || !field.key) {
-                    setError("Alle Felder benötigen einen Label und Key")
+                  if (!field.label) {
+                    showNotification("Alle Felder benötigen einen Label", "error")
                     setLoading(false)
                     return
                   }
                 }
+              }
+
+              if (!hasFields) {
+                showNotification("Ein Template muss mindestens einen Block mit mindestens einem Feld enthalten, um veröffentlicht werden zu können.", "error")
+                setLoading(false)
+                return
               }
 
               // Prepare data mit explizitem Status "active"
@@ -1755,15 +2081,14 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                     })
                     .map((field) => ({
                       label: field.label,
-                      key: field.key,
+                      key: field.key || generateKeyFromLabel(field.label), // Auto-generate if missing
                       type: field.type,
                       required: field.required,
-                      config: field.config ? JSON.parse(field.config) : null
+                      isRepeatable: field.isRepeatable || false,
+                      config: field.config ? (typeof field.config === "string" ? JSON.parse(field.config) : field.config) : null
                     }))
                 }))
               }
-
-              console.log("[Template Publish] Sende Template mit Status 'active':", templateData.status)
 
               const response = await fetch(`/api/super-admin/templates/${template.id}`, {
                 method: "PUT",
@@ -1774,21 +2099,24 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
               const data = await response.json()
 
               if (!response.ok) {
-                setError(data.error || "Fehler beim Veröffentlichen des Templates")
+                showNotification(data.error || "Fehler beim Veröffentlichen des Templates", "error")
                 setLoading(false)
                 return
               }
 
+              // Status-State aktualisieren
+              setStatus("active")
+              
               setSaved(true)
               setLoading(false)
               showNotification("Template erfolgreich veröffentlicht", "success")
               
-              // Refresh page to show updated data
+              // Refresh page to show updated data after short delay
               setTimeout(() => {
                 router.refresh()
-              }, 1000)
+              }, 1500)
             } catch (err: any) {
-              setError(err.message || "Ein Fehler ist aufgetreten")
+              showNotification(err.message || "Ein Fehler ist aufgetreten", "error")
               setLoading(false)
             }
           }
@@ -1796,6 +2124,17 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           await publishTemplate()
         }}
         onCancel={() => setShowPublishDialog(false)}
+      />
+      
+      {/* Archive Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showArchiveDialog}
+        title="Template archivieren"
+        message="Möchten Sie dieses Template wirklich archivieren? Es wird nicht mehr für neue DPPs verfügbar sein."
+        confirmLabel="Archivieren"
+        cancelLabel="Abbrechen"
+        onConfirm={handleArchive}
+        onCancel={() => setShowArchiveDialog(false)}
       />
     </div>
   )

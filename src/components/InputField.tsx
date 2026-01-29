@@ -28,7 +28,7 @@ export default function InputField({ id, label, value, onChange, required = fals
         color: "#0A0A0A",
         marginBottom: "0.5rem"
       }}>
-        {label} {required && <span style={{ color: "#E20074" }}>*</span>}
+        {label} {required && <span style={{ color: "#24c598" }}>*</span>}
       </label>
       {rows > 1 ? (
         <textarea

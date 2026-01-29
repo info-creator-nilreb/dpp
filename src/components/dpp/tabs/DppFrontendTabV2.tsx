@@ -83,7 +83,7 @@ export default function DppFrontendTabV2({
       colors: {
         primary: "#0A0A0A",
         secondary: "#7A7A7A",
-        accent: "#E20074"
+        accent: "#24c598"
       }
     }
 
@@ -146,7 +146,7 @@ export default function DppFrontendTabV2({
       colors: {
         primary: "#0A0A0A",
         secondary: "#7A7A7A",
-        accent: "#E20074"
+        accent: "#24c598"
       }
     }
     const optimisticStyling: StylingConfig = {

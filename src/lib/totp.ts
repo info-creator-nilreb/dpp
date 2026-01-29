@@ -15,7 +15,7 @@ export function generateTotpSecret(): string {
 /**
  * Generiert eine TOTP-URL für QR-Code-Generierung
  */
-export function generateTotpUrl(secret: string, email: string, issuer: string = "T-Pass"): string {
+export function generateTotpUrl(secret: string, email: string, issuer: string = "Easy Pass"): string {
   return authenticator.keyuri(email, issuer, secret)
 }
 

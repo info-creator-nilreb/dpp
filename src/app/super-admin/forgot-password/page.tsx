@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import TPassLogo from "../components/TPassLogo"
+import EasyPassLogo from "@/components/EasyPassLogo"
 
 /**
  * SUPER ADMIN FORGOT PASSWORD PAGE
@@ -22,7 +22,7 @@ export default function SuperAdminForgotPasswordPage() {
     setLoading(true)
 
     try {
-      const response = await fetch("/api/super-admin/auth/forgot-password", {
+      const response = await fetch("/api/super-admin/auth/forgoeasy-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
@@ -67,7 +67,7 @@ export default function SuperAdminForgotPasswordPage() {
           justifyContent: "center",
           marginBottom: "2rem"
         }}>
-          <TPassLogo size={64} color="#E20074" />
+          <EasyPassLogo size={64} color="#24c598" />
         </div>
         
         <h1 style={{
@@ -91,11 +91,11 @@ export default function SuperAdminForgotPasswordPage() {
         {error && (
           <div style={{
             backgroundColor: "#FFF5F9",
-            border: "1px solid #E20074",
+            border: "1px solid #24c598",
             borderRadius: "8px",
             padding: "1rem",
             marginBottom: "1.5rem",
-            color: "#E20074",
+            color: "#24c598",
             fontSize: "0.9rem"
           }}>
             {error}
@@ -121,7 +121,7 @@ export default function SuperAdminForgotPasswordPage() {
                 display: "block",
                 width: "100%",
                 padding: "0.75rem",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "6px",
@@ -171,7 +171,7 @@ export default function SuperAdminForgotPasswordPage() {
               style={{
                 width: "100%",
                 padding: "0.75rem",
-                backgroundColor: loading ? "#CDCDCD" : "#E20074",
+                backgroundColor: loading ? "#CDCDCD" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "6px",

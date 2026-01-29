@@ -167,7 +167,7 @@ export default function OrganizationsTable({ organizations }: OrganizationsTable
                 <Link
                   href={`/super-admin/organizations/${org.id}`}
                   style={{
-                    color: "#E20074",
+                    color: "#24c598",
                     textDecoration: "none",
                     fontSize: "clamp(0.8rem, 1.5vw, 0.9rem)",
                     fontWeight: "500"

@@ -207,7 +207,7 @@ export default function PricingPageContent({
             lineHeight: "1.2"
           }}>
             Einfach. Skalierbar.{" "}
-            <span style={{ color: "#E20074" }}>ESPR-ready.</span>
+            <span style={{ color: "#24c598" }}>ESPR-ready.</span>
           </h1>
           <p style={{
             color: "#7A7A7A",
@@ -317,7 +317,7 @@ export default function PricingPageContent({
                     padding: "0.625rem 1.5rem",
                     borderRadius: "6px",
                     border: "none",
-                    backgroundColor: billingInterval === "monthly" ? "#E20074" : "transparent",
+                    backgroundColor: billingInterval === "monthly" ? "#24c598" : "transparent",
                     color: billingInterval === "monthly" ? "#FFFFFF" : "#0A0A0A",
                     fontSize: "0.875rem",
                     fontWeight: "500",
@@ -333,7 +333,7 @@ export default function PricingPageContent({
                     padding: "0.625rem 1.5rem",
                     borderRadius: "6px",
                     border: "none",
-                    backgroundColor: billingInterval === "yearly" ? "#E20074" : "transparent",
+                    backgroundColor: billingInterval === "yearly" ? "#24c598" : "transparent",
                     color: billingInterval === "yearly" ? "#FFFFFF" : "#0A0A0A",
                     fontSize: "0.875rem",
                     fontWeight: "500",
@@ -393,7 +393,7 @@ export default function PricingPageContent({
                   backgroundColor: "#FFFFFF",
                   borderRadius: "12px",
                   padding: "2rem",
-                  border: isHighlighted ? "2px solid #E20074" : "1px solid #E5E5E5",
+                  border: isHighlighted ? "2px solid #24c598" : "1px solid #E5E5E5",
                   display: "flex",
                   flexDirection: "column",
                   position: "relative",
@@ -422,7 +422,7 @@ export default function PricingPageContent({
                     top: "-12px",
                     left: "50%",
                     transform: "translateX(-50%)",
-                    backgroundColor: "#E20074",
+                    backgroundColor: "#24c598",
                     color: "#FFFFFF",
                     padding: "0.375rem 1rem",
                     borderRadius: "20px",
@@ -516,7 +516,7 @@ export default function PricingPageContent({
                       }}>
                         {plan.entitlements.slice(0, 3).map((entitlement) => {
                           const definition = getEntitlementDefinition(entitlement.entitlementKey)
-                          const icon = getEntitlementIcon(definition.icon, 18, "#E20074")
+                          const icon = getEntitlementIcon(definition.icon, 18, "#24c598")
                           return (
                             <div
                               key={entitlement.id}
@@ -546,7 +546,7 @@ export default function PricingPageContent({
                                   overflowWrap: "break-word"
                                 }}>
                                   {entitlement.value === null ? (
-                                    <span style={{ color: "#E20074" }}>Unbegrenzt</span>
+                                    <span style={{ color: "#24c598" }}>Unbegrenzt</span>
                                   ) : (
                                     <>
                                       Bis zu {entitlement.value}
@@ -602,7 +602,7 @@ export default function PricingPageContent({
                       {billingInterval === "yearly" && savings && savings > 0 && (
                         <span style={{
                           fontSize: "0.75rem",
-                          color: "#E20074",
+                          color: "#24c598",
                           fontWeight: "600"
                         }}>
                           ({savings}% gespart)
@@ -642,7 +642,7 @@ export default function PricingPageContent({
                       style={{
                         display: "inline-block",
                         padding: "0.5rem 1rem",
-                        backgroundColor: "#E20074",
+                        backgroundColor: "#24c598",
                         color: "#FFFFFF",
                         borderRadius: "6px",
                         textDecoration: "none",
@@ -665,7 +665,7 @@ export default function PricingPageContent({
                     style={{
                       display: "block",
                       padding: "0.875rem 1.5rem",
-                      backgroundColor: isHighlighted ? "#E20074" : "#0A0A0A",
+                      backgroundColor: isHighlighted ? "#24c598" : "#0A0A0A",
                       color: "#FFFFFF",
                       borderRadius: "8px",
                       textDecoration: "none",
@@ -678,7 +678,7 @@ export default function PricingPageContent({
                       e.currentTarget.style.backgroundColor = "#C1005F"
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = isHighlighted ? "#E20074" : "#0A0A0A"
+                      e.currentTarget.style.backgroundColor = isHighlighted ? "#24c598" : "#0A0A0A"
                     }}
                   >
                     Jetzt starten
@@ -889,7 +889,7 @@ export default function PricingPageContent({
                                     height="20"
                                     viewBox="0 0 24 24"
                                     fill="none"
-                                    stroke="#E20074"
+                                    stroke="#24c598"
                                     strokeWidth="2"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
@@ -970,7 +970,7 @@ export default function PricingPageContent({
                                   height="16"
                                   viewBox="0 0 24 24"
                                   fill="none"
-                                  stroke="#E20074"
+                                  stroke="#24c598"
                                   strokeWidth="2"
                                 >
                                   <polyline points="20 6 9 17 4 12" />

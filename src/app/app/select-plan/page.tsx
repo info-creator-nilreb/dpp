@@ -85,7 +85,7 @@ export default function SelectPlanPage() {
         <Link
           href="/app/dashboard"
           style={{
-            color: "#E20074",
+            color: "#24c598",
             textDecoration: "none",
             fontWeight: "500"
           }}
@@ -167,7 +167,7 @@ export default function SelectPlanPage() {
                   padding: "0.625rem 1.5rem",
                   borderRadius: "6px",
                   border: "none",
-                  backgroundColor: billingInterval === "monthly" ? "#E20074" : "transparent",
+                  backgroundColor: billingInterval === "monthly" ? "#24c598" : "transparent",
                   color: billingInterval === "monthly" ? "#FFFFFF" : "#0A0A0A",
                   fontSize: "0.875rem",
                   fontWeight: "500",
@@ -183,7 +183,7 @@ export default function SelectPlanPage() {
                   padding: "0.625rem 1.5rem",
                   borderRadius: "6px",
                   border: "none",
-                  backgroundColor: billingInterval === "yearly" ? "#E20074" : "transparent",
+                  backgroundColor: billingInterval === "yearly" ? "#24c598" : "transparent",
                   color: billingInterval === "yearly" ? "#FFFFFF" : "#0A0A0A",
                   fontSize: "0.875rem",
                   fontWeight: "500",
@@ -406,7 +406,7 @@ export default function SelectPlanPage() {
                     style={{
                       width: "100%",
                       padding: "0.75rem 1.5rem",
-                      backgroundColor: "#E20074",
+                      backgroundColor: "#24c598",
                       color: "#FFFFFF",
                       border: "none",
                       borderRadius: "6px",
@@ -472,8 +472,8 @@ export default function SelectPlanPage() {
                     width: "100%",
                     padding: "0.75rem 1.5rem",
                     backgroundColor: "#FFFFFF",
-                    color: "#E20074",
-                    border: "2px solid #E20074",
+                    color: "#24c598",
+                    border: "2px solid #24c598",
                     borderRadius: "6px",
                     fontSize: "0.875rem",
                     fontWeight: "600",

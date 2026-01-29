@@ -71,25 +71,23 @@ export const BLOCK_TEMPLATES: BlockTemplate[] = [
     }
   },
   {
-    id: "quick_poll_feedback",
+    id: "multi_question_poll_feedback",
     name: "Feedback-Umfrage",
-    description: "Eine einfache Umfrage für Nutzer-Feedback",
-    type: "quick_poll",
-    featureKey: BLOCK_TYPE_FEATURE_MAP.quick_poll,
+    description: "Interaktive Umfrage für Nutzer-Feedback",
+    type: "multi_question_poll",
+    featureKey: BLOCK_TYPE_FEATURE_MAP.multi_question_poll,
     template: {
-      type: "quick_poll",
-      featureKey: BLOCK_TYPE_FEATURE_MAP.quick_poll,
+      type: "multi_question_poll",
+      featureKey: BLOCK_TYPE_FEATURE_MAP.multi_question_poll,
       status: "draft",
       content: {
-        question: "Wie zufrieden sind Sie mit unserem Produkt?",
-        options: [
-          { id: "opt1", label: "Sehr zufrieden" },
-          { id: "opt2", label: "Zufrieden" },
-          { id: "opt3", label: "Neutral" },
-          { id: "opt4", label: "Unzufrieden" }
+        questions: [
+          {
+            question: "Wie zufrieden sind Sie mit unserem Produkt?",
+            options: ["Sehr zufrieden", "Zufrieden", "Neutral", "Unzufrieden"]
+          }
         ],
-        allowMultiple: false,
-        showResults: true
+        completionMessage: "Vielen Dank für Ihre Teilnahme!"
       }
     }
   },

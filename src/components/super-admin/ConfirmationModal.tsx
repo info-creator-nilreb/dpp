@@ -87,7 +87,7 @@ export default function ConfirmationModal({
           maxWidth: "500px",
           width: "100%",
           boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
-          border: isHighSeverity ? "2px solid #E20074" : "1px solid #CDCDCD",
+          border: isHighSeverity ? "2px solid #24c598" : "1px solid #CDCDCD",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -114,7 +114,7 @@ export default function ConfirmationModal({
                 width="24"
                 height="24"
                 fill="none"
-                stroke="#E20074"
+                stroke="#24c598"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -130,7 +130,7 @@ export default function ConfirmationModal({
             <h2 style={{
               fontSize: "1.5rem",
               fontWeight: "700",
-              color: isHighSeverity ? "#E20074" : "#0A0A0A",
+              color: isHighSeverity ? "#24c598" : "#0A0A0A",
               marginBottom: "0.25rem",
             }}>
               {title}
@@ -138,7 +138,7 @@ export default function ConfirmationModal({
             {isHighSeverity && (
               <div style={{
                 fontSize: "0.75rem",
-                color: "#E20074",
+                color: "#24c598",
                 fontWeight: "600",
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
@@ -195,7 +195,7 @@ export default function ConfirmationModal({
               color: "#0A0A0A",
               marginBottom: "0.5rem",
             }}>
-              Grund für die Änderung <span style={{ color: "#E20074" }}>*</span>
+              Grund für die Änderung <span style={{ color: "#24c598" }}>*</span>
             </label>
             <textarea
               value={reason}
@@ -208,7 +208,7 @@ export default function ConfirmationModal({
               style={{
                 width: "100%",
                 padding: "0.75rem",
-                border: error ? "1px solid #E20074" : "1px solid #CDCDCD",
+                border: error ? "1px solid #24c598" : "1px solid #CDCDCD",
                 borderRadius: "6px",
                 fontSize: "0.9rem",
                 fontFamily: "inherit",
@@ -220,7 +220,7 @@ export default function ConfirmationModal({
               <div style={{
                 marginTop: "0.5rem",
                 fontSize: "0.85rem",
-                color: "#E20074",
+                color: "#24c598",
               }}>
                 {error}
               </div>
@@ -239,13 +239,13 @@ export default function ConfirmationModal({
         <div style={{
           padding: "1rem",
           backgroundColor: isHighSeverity ? "#FFF5F9" : "#F5F5F5",
-          border: `1px solid ${isHighSeverity ? "#E20074" : "#CDCDCD"}`,
+          border: `1px solid ${isHighSeverity ? "#24c598" : "#CDCDCD"}`,
           borderRadius: "6px",
           marginBottom: "1.5rem",
         }}>
           <div style={{
             fontSize: "0.85rem",
-            color: isHighSeverity ? "#E20074" : "#0A0A0A",
+            color: isHighSeverity ? "#24c598" : "#0A0A0A",
             fontWeight: "500",
           }}>
             ⚠️ Diese Änderung wird im Audit-Log erfasst und kann Auswirkungen auf die Organisation haben.
@@ -280,7 +280,7 @@ export default function ConfirmationModal({
             style={{
               flex: 1,
               padding: "0.75rem 1.5rem",
-              backgroundColor: canConfirm && !loading ? "#E20074" : "#CDCDCD",
+              backgroundColor: canConfirm && !loading ? "#24c598" : "#CDCDCD",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",
@@ -296,7 +296,7 @@ export default function ConfirmationModal({
             }}
             onMouseLeave={(e) => {
               if (canConfirm && !loading) {
-                e.currentTarget.style.backgroundColor = "#E20074"
+                e.currentTarget.style.backgroundColor = "#24c598"
               }
             }}
           >

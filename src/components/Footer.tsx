@@ -32,7 +32,7 @@ export default function Footer() {
         </Link>
       </nav>
       <p style={{ margin: 0, opacity: 0.8, color: '#CDCDCD', fontSize: 'clamp(0.85rem, 2vw, 0.95rem)' }}>
-        © 2025 T-Pass. Alle Rechte vorbehalten.
+        © 2025 Easy Pass. Alle Rechte vorbehalten.
       </p>
     </footer>
   )

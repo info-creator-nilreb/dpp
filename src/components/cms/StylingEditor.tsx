@@ -22,7 +22,7 @@ interface StylingEditorProps {
 // System default colors
 const DEFAULT_PRIMARY = editorialColors.brand.primary // '#0A0A0A'
 const DEFAULT_SECONDARY = editorialColors.brand.secondary // '#7A7A7A'
-const DEFAULT_ACCENT = editorialColors.brand.accent // '#E20074'
+const DEFAULT_ACCENT = editorialColors.brand.accent // '#24c598' (Mint)
 
 export default function StylingEditor({ styling, onUpdate, dppId }: StylingEditorProps) {
   const { showNotification } = useNotification()
@@ -220,35 +220,54 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
           <div style={{
             display: "flex",
             alignItems: "center",
-            gap: "1rem",
-            padding: "1rem",
-            backgroundColor: "#F9F9F9",
-            borderRadius: "8px",
-            border: "1px solid #E5E5E5"
+            gap: "0.75rem",
+            padding: "0.75rem",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E5E5E5",
+            borderRadius: "8px"
           }}>
-            <img
-              src={logoUrl}
-              alt={logoAlt || "Logo"}
-              style={{
-                maxWidth: "120px",
-                maxHeight: "60px",
-                objectFit: "contain"
-              }}
-            />
-            <div style={{ flex: 1 }}>
+            <div style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "6px",
+              border: "1px solid #E5E5E5",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#F9F9F9",
+              overflow: "hidden"
+            }}>
+              <img
+                src={logoUrl}
+                alt={logoAlt || "Logo"}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  width: "auto",
+                  height: "auto",
+                  objectFit: "contain",
+                  display: "block"
+                }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontSize: "0.875rem",
                 fontWeight: 500,
                 color: "#0A0A0A",
                 marginBottom: "0.25rem"
               }}>
-                Logo hochgeladen
+                Logo
               </div>
               <div style={{
                 fontSize: "0.75rem",
-                color: "#7A7A7A"
+                color: "#7A7A7A",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
               }}>
-                {logoUrl.substring(logoUrl.lastIndexOf('/') + 1)}
+                Hochgeladen
               </div>
             </div>
             <button
@@ -259,7 +278,7 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
                 backgroundColor: "transparent",
                 border: "none",
                 cursor: "pointer",
-                borderRadius: "6px",
+                borderRadius: "4px",
                 transition: "background-color 0.2s",
                 display: "flex",
                 alignItems: "center",
@@ -508,7 +527,7 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
           }}>
             <input
               type="color"
-              value={accentColor || "#E20074"}
+              value={accentColor || "#24c598"}
               onChange={(e) => handleColorChange("accent", e.target.value)}
               style={{
                 position: "absolute",

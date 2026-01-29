@@ -142,7 +142,7 @@ function LoginForm() {
             width="48"
             height="48"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -158,7 +158,7 @@ function LoginForm() {
           fontWeight: "700",
           color: "#0A0A0A"
         }}>
-          T-Pass
+          Easy Pass
         </span>
       </Link>
 
@@ -269,7 +269,7 @@ function LoginForm() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#E20074"
+                  color: "#24c598"
                 }}
               >
                 {showPassword ? (
@@ -358,7 +358,7 @@ function LoginForm() {
             style={{
               width: "100%",
               padding: "0.75rem",
-              backgroundColor: loading ? "#CDCDCD" : "#E20074",
+              backgroundColor: loading ? "#CDCDCD" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",
@@ -376,7 +376,7 @@ function LoginForm() {
           <Link
             href="/forgot-password"
             style={{
-              color: "#E20074",
+              color: "#24c598",
               textDecoration: "none",
               fontSize: "0.9rem"
             }}
@@ -387,7 +387,7 @@ function LoginForm() {
 
         <p style={{ textAlign: "center", color: "#7A7A7A", fontSize: "0.9rem" }}>
           Neu hier?{" "}
-          <Link href="/signup" style={{ color: "#E20074", textDecoration: "none", fontWeight: "500" }}>
+          <Link href="/signup" style={{ color: "#24c598", textDecoration: "none", fontWeight: "500" }}>
             Jetzt registrieren →
           </Link>
         </p>

@@ -455,7 +455,7 @@ export default function NewPricingPlanContent({
           disabled={loading}
           style={{
             padding: "0.75rem 1.5rem",
-            backgroundColor: loading ? "#CCCCCC" : "#E20074",
+            backgroundColor: loading ? "#CCCCCC" : "#24c598",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "8px",
@@ -489,7 +489,7 @@ function EntitlementInput({
     <div
       style={{
         padding: "1.25rem",
-        border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
+        border: `1px solid ${isFocused ? "#24c598" : "#E5E5E5"}`,
         borderRadius: "8px",
         backgroundColor: "#FFFFFF",
         transition: "border-color 0.2s",
@@ -572,7 +572,7 @@ function EntitlementInput({
             width: "100%",
             maxWidth: "100%",
             padding: "0.75rem",
-            border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
+            border: `1px solid ${isFocused ? "#24c598" : "#E5E5E5"}`,
             borderRadius: "6px",
             fontSize: "clamp(1rem, 2vw, 0.875rem)",
             transition: "border-color 0.2s",
@@ -642,7 +642,7 @@ function LimitSelector({
           transition: "border-color 0.2s"
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = "#E20074"
+          e.currentTarget.style.borderColor = "#24c598"
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.borderColor = "#E5E5E5"
@@ -783,7 +783,7 @@ function ConfigurableLimitInput({
     <div
       style={{
         padding: "1.25rem",
-        border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
+        border: `1px solid ${isFocused ? "#24c598" : "#E5E5E5"}`,
         borderRadius: "8px",
         backgroundColor: "#FFFFFF",
         transition: "border-color 0.2s",
@@ -905,7 +905,7 @@ function ConfigurableLimitInput({
             width: "100%",
             maxWidth: "100%",
             padding: "0.75rem",
-            border: `1px solid ${isFocused ? "#E20074" : "#E5E5E5"}`,
+            border: `1px solid ${isFocused ? "#24c598" : "#E5E5E5"}`,
             borderRadius: "6px",
             fontSize: "clamp(1rem, 2vw, 0.875rem)",
             transition: "border-color 0.2s",

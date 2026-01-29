@@ -961,7 +961,7 @@ export default function DppEditor({
         color: "#0A0A0A",
         marginBottom: "0.5rem"
       }}>
-        {label} {required && <span style={{ color: "#E20074" }}>*</span>}
+        {label} {required && <span style={{ color: "#24c598" }}>*</span>}
       </label>
       <select
         id={id}
@@ -1154,7 +1154,7 @@ export default function DppEditor({
             marginTop: "1rem",
             padding: "1rem",
             backgroundColor: "#FFF5F5",
-            border: "1px solid #E20074",
+            border: "1px solid #24c598",
             borderRadius: "8px"
           }}>
             <p style={{
@@ -1185,7 +1185,7 @@ export default function DppEditor({
                 }}
                 style={{
                   padding: "0.5rem 1rem",
-                  backgroundColor: "#E20074",
+                  backgroundColor: "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "6px",
@@ -1438,7 +1438,7 @@ export default function DppEditor({
                 color: "#0A0A0A",
                 marginBottom: "0.5rem"
               }}>
-                Sektionen für Zugriff <span style={{ color: "#E20074" }}>*</span>
+                Sektionen für Zugriff <span style={{ color: "#24c598" }}>*</span>
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {[
@@ -1513,7 +1513,7 @@ export default function DppEditor({
               disabled={requestLoading}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: requestLoading ? "#7A7A7A" : "#E20074",
+                backgroundColor: requestLoading ? "#7A7A7A" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
@@ -1801,7 +1801,7 @@ export default function DppEditor({
               }}
               style={{
                 padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",

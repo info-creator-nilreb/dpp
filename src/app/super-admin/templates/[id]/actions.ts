@@ -81,6 +81,7 @@ export async function createNewTemplateVersion(templateId: string) {
           regulatoryRequired: field.regulatoryRequired || false,
           config: field.config,
           order: field.order,
+          isRepeatable: (field as { isRepeatable?: boolean }).isRepeatable ?? false,
           introducedInVersion: newVersion // New version for cloned fields
         }
       })

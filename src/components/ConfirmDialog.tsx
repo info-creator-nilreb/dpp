@@ -51,7 +51,7 @@ export default function ConfirmDialog({
 
   if (!isOpen) return null
 
-  const confirmButtonColor = variant === "danger" ? "#E20074" : "#E20074"
+  const confirmButtonColor = variant === "danger" ? "#24c598" : "#24c598"
   const confirmButtonHover = variant === "danger" ? "#C20062" : "#C20062"
 
   return (
@@ -170,8 +170,8 @@ export default function ConfirmDialog({
                 boxSizing: "border-box"
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#E20074"
-                e.currentTarget.style.color = "#E20074"
+                e.currentTarget.style.borderColor = "#24c598"
+                e.currentTarget.style.color = "#24c598"
                 e.currentTarget.style.backgroundColor = "#FFF5F9"
               }}
               onMouseLeave={(e) => {

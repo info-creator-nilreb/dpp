@@ -39,11 +39,13 @@ export async function POST(
     const permissionError = await requireEditDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
-    // Parse FormData
+    // Parse FormData (fieldId von Pflichtdaten-Upload, fieldKey alternativ)
     const formData = await request.formData()
     const file = formData.get("file") as File | null
     const blockId = formData.get("blockId") as string | null
-    const fieldKey = formData.get("fieldKey") as string | null
+    const fieldKeyParam = formData.get("fieldKey") as string | null
+    const fieldIdParam = formData.get("fieldId") as string | null
+    const fieldKey = (fieldKeyParam || fieldIdParam || "").trim() || null
     const role = formData.get("role") as string | null
 
     if (!file) {
@@ -119,9 +121,35 @@ export async function POST(
       { status: 201 }
     )
   } catch (error: any) {
-    console.error("Media upload error:", error)
+    console.error("[Media Upload] Error:", error)
+    
+    // Detaillierte Fehlermeldung für besseres Debugging
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : typeof error === 'string' 
+        ? error 
+        : "Ein Fehler ist aufgetreten"
+    
+    // Prüfe spezifische Fehlertypen
+    if (error?.code === 'P2002') {
+      return NextResponse.json(
+        { error: "Ein Medium mit diesem Namen existiert bereits" },
+        { status: 409 }
+      )
+    }
+    
+    if (error?.code === 'P2003') {
+      return NextResponse.json(
+        { error: "DPP nicht gefunden" },
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
+      { 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      },
       { status: 500 }
     )
   }

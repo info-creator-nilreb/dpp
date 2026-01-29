@@ -59,7 +59,7 @@ export default function VideoBlockEditor({
             transition: "all 0.2s"
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = "#E20074"
+            e.target.style.borderColor = "#24c598"
             e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
           }}
           onBlur={(e) => {
@@ -101,7 +101,7 @@ export default function VideoBlockEditor({
             transition: "all 0.2s"
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = "#E20074"
+            e.target.style.borderColor = "#24c598"
             e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
           }}
           onBlur={(e) => {
@@ -139,7 +139,7 @@ export default function VideoBlockEditor({
             transition: "all 0.2s"
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = "#E20074"
+            e.target.style.borderColor = "#24c598"
             e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
           }}
           onBlur={(e) => {

@@ -9,7 +9,6 @@
 import { useState, useEffect } from "react"
 import { Block, UpdateBlockRequest } from "@/lib/cms/types"
 import StorytellingBlockEditor from "./blocks/StorytellingBlockEditor"
-import QuickPollBlockEditor from "./blocks/QuickPollBlockEditor"
 import ImageTextBlockEditor from "./blocks/ImageTextBlockEditor"
 
 interface BlockEditorProps {
@@ -47,13 +46,6 @@ export default function BlockEditor({ block, onUpdate }: BlockEditorProps) {
       case "storytelling":
         return (
           <StorytellingBlockEditor
-            content={content}
-            onChange={handleContentChange}
-          />
-        )
-      case "quick_poll":
-        return (
-          <QuickPollBlockEditor
             content={content}
             onChange={handleContentChange}
           />

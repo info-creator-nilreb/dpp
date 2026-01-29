@@ -1,22 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    eslint: {
-      ignoreDuringBuilds: true,
-    },
     typescript: {
       // TypeScript-Fehler blockieren Builds nicht (schnellere Dev-Umgebung)
       ignoreBuildErrors: true,
     },
-    // Turbopack optimizations
-    turbopack: {
-      // Enable experimental features for better performance
-      resolveAlias: {
-        // Add any custom aliases here if needed
-      },
-    },
-    // Webpack config (fallback für --webpack flag, wird mit --turbo ignoriert)
+    // Next.js 16: Turbopack is default
+    // Empty turbopack config to silence the warning
+    turbopack: {},
+    // Webpack config for production builds - exclude Node.js modules from client bundle
     webpack: (config, { isServer }) => {
-      // Exclude Node.js modules from client-side bundle
       if (!isServer) {
         config.resolve.fallback = {
           ...config.resolve.fallback,
@@ -34,10 +26,12 @@ const nextConfig = {
           path: false,
           os: false,
         }
-        
-        // Mark nodemailer as external for client builds
+        // Mark server-only modules as external for client builds
         config.externals = config.externals || []
-        config.externals.push('nodemailer')
+        if (Array.isArray(config.externals)) {
+          config.externals.push('nodemailer')
+          config.externals.push('crypto')
+        }
       }
       return config
     },

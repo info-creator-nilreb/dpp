@@ -139,6 +139,8 @@ model Dpp {
   versions              DppVersion[]
   content               DppContent[]
   contributorTokens     ContributorToken[]
+  blockSupplierConfigs   DppBlockSupplierConfig[]
+  supplierInvites       DppSupplierInvite[]
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("dpps")
@@ -254,6 +256,50 @@ model ContributorToken {
   @@index([status])
   @@index([expiresAt])
   @@map("contributor_tokens")
+}
+
+// Block-level supplier config: pro DPP pro Template-Block (außer Basisdaten) "durch Partner befüllbar"
+model DppBlockSupplierConfig {
+  id         String   @id @default(cuid())
+  dppId      String
+  blockId    String   // TemplateBlock.id
+  enabled    Boolean  @default(false)
+  mode       String?  // "input" | "declaration" (Beisteuern | Prüfen)
+  allowedRoles Json?  // Optional: Array of allowed partner roles
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  dpp        Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+
+  @@unique([dppId, blockId])
+  @@index([dppId])
+  @@map("dpp_block_supplier_configs")
+}
+
+// Block-basierte Partner-Einladung (Beisteuern/Prüfen pro Block/Feld)
+model DppSupplierInvite {
+  id             String    @id @default(cuid())
+  dppId          String
+  email          String
+  name           String?
+  company        String?
+  message        String?
+  partnerRole    String
+  blockIds       Json      // string[]
+  fieldInstances Json      // Array<{ fieldId, instanceId, label?, assignedSupplier? }>
+  supplierMode   String    // "input" | "declaration" (contribute | review)
+  status         String    @default("pending") // pending | submitted | expired
+  emailSentAt    DateTime?
+  token          String?   @unique // Link für Beitrags-/Prüfungsseite
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  dpp            Dpp       @relation(fields: [dppId], references: [id], onDelete: Cascade)
+
+  @@index([dppId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+  @@map("dpp_supplier_invites")
 }
 
 model SuperAdmin {
@@ -537,16 +583,18 @@ model BlockType {
 }
 
 model DppContent {
-  id          String   @id @default(cuid())
-  dppId       String
-  dpp         Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
-  versionId   String? // Optional: Link zu published version
-  isPublished Boolean  @default(false)
-  blocks      Json // Array von Block Objects
-  styling     Json? // Global styling config (nur wenn capability vorhanden)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
+  id              String   @id @default(cuid())
+  dppId           String
+  dpp             Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  versionId       String? // Optional: Link zu published version
+  isPublished     Boolean  @default(false)
+  blocks          Json // Array von Block Objects
+  styling         Json? // Global styling config (nur wenn capability vorhanden)
+  fieldValues     Json? // Template-Feldwerte (Pflichtdaten, technical keys)
+  fieldInstances  Json? // Wiederholbare Feld-Instanzen
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
 
   @@index([dppId])
   @@index([dppId, isPublished])

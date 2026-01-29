@@ -181,7 +181,7 @@ export default function SubscriptionUsageCard({
             href="/pricing"
             style={{
               fontSize: "0.875rem",
-              color: "#E20074",
+              color: "#24c598",
               textDecoration: "none",
               fontWeight: "500"
             }}
@@ -301,7 +301,7 @@ export default function SubscriptionUsageCard({
                       <div style={{
                         width: `${percentage}%`,
                         height: "100%",
-                        backgroundColor: isCritical ? "#DC2626" : isWarning ? "#F59E0B" : "#E20074",
+                        backgroundColor: isCritical ? "#DC2626" : isWarning ? "#F59E0B" : "#24c598",
                         transition: "width 0.3s ease"
                       }} />
                     </div>

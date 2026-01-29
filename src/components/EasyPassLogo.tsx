@@ -1,22 +1,22 @@
 /**
- * T-Pass Logo Component
+ * Easy Pass Logo Component
  * 
  * Reusable logo component for public and admin areas
  */
 
-interface TPassLogoProps {
+interface EasyPassLogoProps {
   size?: number
   color?: string
   iconOnly?: boolean
   textColor?: string
 }
 
-export default function TPassLogo({ 
+export default function EasyPassLogo({ 
   size = 32, 
-  color = "#E20074",
+  color = "#24c598",
   iconOnly = false,
   textColor = "#0A0A0A"
-}: TPassLogoProps) {
+}: EasyPassLogoProps) {
   if (iconOnly) {
     return (
       <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -60,9 +60,8 @@ export default function TPassLogo({
         color: textColor,
         whiteSpace: "nowrap"
       }}>
-        T-Pass
+        Easy Pass
       </span>
     </div>
   )
 }
-

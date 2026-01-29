@@ -1,6 +1,6 @@
 import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
-import { sendPasswordResetEmail } from "./email"
+import { sendPasswordResetEmail } from "@/lib/email"
 
 /**
  * Generiert einen sicheren Reset-Token

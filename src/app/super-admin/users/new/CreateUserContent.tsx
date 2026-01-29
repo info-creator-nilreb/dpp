@@ -119,7 +119,7 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Vorname <span style={{ color: "#E20074" }}>*</span>
+              Vorname <span style={{ color: "#24c598" }}>*</span>
             </label>
             <input
               type="text"
@@ -144,7 +144,7 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Nachname <span style={{ color: "#E20074" }}>*</span>
+              Nachname <span style={{ color: "#24c598" }}>*</span>
             </label>
             <input
               type="text"
@@ -169,7 +169,7 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              E-Mail <span style={{ color: "#E20074" }}>*</span>
+              E-Mail <span style={{ color: "#24c598" }}>*</span>
             </label>
             <input
               type="email"
@@ -194,7 +194,7 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Organisation <span style={{ color: "#E20074" }}>*</span>
+              Organisation <span style={{ color: "#24c598" }}>*</span>
             </label>
             <select
               value={formData.organizationId}
@@ -225,7 +225,7 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Rolle <span style={{ color: "#E20074" }}>*</span>
+              Rolle <span style={{ color: "#24c598" }}>*</span>
             </label>
             <select
               value={formData.role}
@@ -256,7 +256,7 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
             disabled={loading}
             style={{
               padding: "0.75rem 1.5rem",
-              backgroundColor: loading ? "#7A7A7A" : "#E20074",
+              backgroundColor: loading ? "#7A7A7A" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "6px",

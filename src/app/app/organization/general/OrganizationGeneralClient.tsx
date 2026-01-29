@@ -107,7 +107,7 @@ export default function OrganizationGeneralClient() {
         <Link
           href="/app/organization"
           style={{
-            color: "#E20074",
+            color: "#24c598",
             textDecoration: "none",
             fontWeight: "500"
           }}
@@ -210,7 +210,7 @@ export default function OrganizationGeneralClient() {
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Organisationsname <span style={{ color: "#E20074" }}>*</span>
+              Organisationsname <span style={{ color: "#24c598" }}>*</span>
             </label>
             {isEditing && canEdit ? (
               <input
@@ -311,7 +311,7 @@ export default function OrganizationGeneralClient() {
                   onClick={handleSave}
                   disabled={saving}
                   style={{
-                    backgroundColor: saving ? "#7A7A7A" : "#E20074",
+                    backgroundColor: saving ? "#7A7A7A" : "#24c598",
                     color: "#FFFFFF",
                     border: "none",
                     padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
@@ -350,7 +350,7 @@ export default function OrganizationGeneralClient() {
               <button
                 onClick={() => setIsEditing(true)}
                 style={{
-                  backgroundColor: "#E20074",
+                  backgroundColor: "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",

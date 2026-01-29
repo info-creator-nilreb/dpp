@@ -96,7 +96,7 @@ export default function AccordionBlockRenderer({
                   height="20"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke={theme.colors?.accent || "#E20074"}
+                  stroke={theme.colors?.accent || "#24c598"}
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"

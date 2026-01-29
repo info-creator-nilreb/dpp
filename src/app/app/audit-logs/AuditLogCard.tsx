@@ -17,7 +17,7 @@ interface AuditLogCardProps {
 export default function AuditLogCard({ log, onClick }: AuditLogCardProps) {
   const getActionBadgeColor = (actionType: string) => {
     if (actionType.startsWith("AI_")) {
-      return "#E20074" // AI actions: pink
+      return "#24c598" // AI actions: pink
     }
     if (["CREATE", "PUBLISH"].includes(actionType)) {
       return "#10B981" // Positive actions: green
@@ -143,7 +143,7 @@ export default function AuditLogCard({ log, onClick }: AuditLogCardProps) {
             fontSize: "0.6875rem",
             fontWeight: "600",
             color: "#FFFFFF",
-            backgroundColor: "#E20074"
+            backgroundColor: "#24c598"
           }}>
             KI-unterstützt
           </span>

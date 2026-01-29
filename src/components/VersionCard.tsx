@@ -53,7 +53,7 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
           text-decoration: none;
         }
         .version-card-wrapper:hover {
-          border-color: #E20074 !important;
+          border-color: #24c598 !important;
           box-shadow: 0 2px 8px rgba(226, 0, 116, 0.1);
         }
       `}</style>
@@ -144,8 +144,8 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
               transition: "all 0.2s"
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#E20074"
-              e.currentTarget.style.color = "#E20074"
+              e.currentTarget.style.borderColor = "#24c598"
+              e.currentTarget.style.color = "#24c598"
               e.currentTarget.style.backgroundColor = "#FFF5F9"
             }}
             onMouseLeave={(e) => {

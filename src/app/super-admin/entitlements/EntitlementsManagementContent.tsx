@@ -109,7 +109,7 @@ export default function EntitlementsManagementContent({
           onClick={() => setShowNewForm(!showNewForm)}
           style={{
             padding: "0.75rem 1.5rem",
-            backgroundColor: showNewForm ? "#7A7A7A" : "#E20074",
+            backgroundColor: showNewForm ? "#7A7A7A" : "#24c598",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "8px",
@@ -255,7 +255,7 @@ export default function EntitlementsManagementContent({
             disabled={loading || !newEntitlement.key.trim()}
             style={{
               padding: "0.75rem 1.5rem",
-              backgroundColor: loading || !newEntitlement.key.trim() ? "#CCCCCC" : "#E20074",
+              backgroundColor: loading || !newEntitlement.key.trim() ? "#CCCCCC" : "#24c598",
               color: "#FFFFFF",
               border: "none",
               borderRadius: "8px",
@@ -284,7 +284,7 @@ export default function EntitlementsManagementContent({
             type="button"
             onClick={() => setShowNewForm(true)}
             style={{
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               color: "#FFFFFF",
               padding: "0.75rem 1.5rem",
               borderRadius: "8px",
@@ -305,7 +305,7 @@ export default function EntitlementsManagementContent({
         }}>
           {entitlements.map((entitlement) => {
             const definition = getEntitlementDefinition(entitlement.key)
-            const icon = getEntitlementIcon(definition.icon, 24, "#E20074")
+            const icon = getEntitlementIcon(definition.icon, 24, "#24c598")
 
             return (
               <div

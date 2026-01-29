@@ -81,7 +81,10 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
           media: data.dpp.media.map((m: any) => ({
             ...m,
             uploadedAt: new Date(m.uploadedAt)
-          }))
+          })),
+          // Pflichtdaten-Tab: Feldwerte aus API (technical keys / template keys)
+          _fieldValues: data.fieldValues ?? {},
+          _fieldInstances: data.fieldInstances ?? {},
         }
         
         setDpp(normalizedDpp)
@@ -175,7 +178,7 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
           href="/app/dpps"
           style={{
             display: "inline-block",
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
             borderRadius: "8px",
@@ -210,7 +213,7 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
           href="/app/dpps"
           style={{
             display: "inline-block",
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
             borderRadius: "8px",

@@ -7,9 +7,8 @@
  */
 
 import { Block, StylingConfig } from "@/lib/cms/types"
-import { resolveTheme } from "@/lib/cms/validation"
+import { resolveTheme } from "@/lib/cms/theme-resolver"
 import StorytellingBlockRenderer from "./StorytellingBlockRenderer"
-import QuickPollBlockRenderer from "./QuickPollBlockRenderer"
 import ImageTextBlockRenderer from "./ImageTextBlockRenderer"
 import TextBlockRenderer from "./TextBlockRenderer"
 import ImageBlockRenderer from "./ImageBlockRenderer"
@@ -27,8 +26,6 @@ export default function BlockRenderer({ block, theme }: BlockRendererProps) {
   switch (block.type) {
     case "storytelling":
       return <StorytellingBlockRenderer block={block} theme={theme} />
-    case "quick_poll":
-      return <QuickPollBlockRenderer block={block} theme={theme} />
     case "image_text":
       return <ImageTextBlockRenderer block={block} theme={theme} />
     case "text":

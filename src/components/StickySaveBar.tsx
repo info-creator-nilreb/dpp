@@ -79,7 +79,7 @@ export default function StickySaveBar({
       case "saved":
         return "#00A651"
       case "error":
-        return "#E20074"
+        return "#24c598"
       case "saving":
       case "publishing":
         return "#7A7A7A"
@@ -174,7 +174,7 @@ export default function StickySaveBar({
           {status === "error" && error && (
             <span style={{
               fontSize: "clamp(0.75rem, 1.8vw, 0.85rem)",
-              color: "#E20074"
+              color: "#24c598"
             }}>
               {error}
             </span>
@@ -217,7 +217,7 @@ export default function StickySaveBar({
               disabled={publishDisabled}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: publishDisabled ? "#CDCDCD" : "#E20074",
+                backgroundColor: publishDisabled ? "#CDCDCD" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
@@ -257,8 +257,8 @@ export default function StickySaveBar({
             style={{
               padding: "0.5rem 1rem",
               backgroundColor: "transparent",
-              color: "#E20074",
-              border: "1px solid #E20074",
+              color: "#24c598",
+              border: "1px solid #24c598",
               borderRadius: "6px",
               fontSize: "clamp(0.8rem, 1.8vw, 0.9rem)",
               fontWeight: "600",
@@ -267,12 +267,12 @@ export default function StickySaveBar({
               transition: "all 0.2s"
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#E20074"
+              e.currentTarget.style.backgroundColor = "#24c598"
               e.currentTarget.style.color = "#FFFFFF"
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent"
-              e.currentTarget.style.color = "#E20074"
+              e.currentTarget.style.color = "#24c598"
             }}
           >
             Jetzt upgraden →

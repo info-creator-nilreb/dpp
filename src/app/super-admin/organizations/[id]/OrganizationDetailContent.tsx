@@ -6,6 +6,8 @@ import SubscriptionChangeModal from "@/components/super-admin/SubscriptionChange
 import { getFieldSensitivity, getHighestSensitivityLevel, requiresConfirmation, requiresReason } from "@/lib/phase1.5/organization-sensitivity"
 import { getDisplayTier, isFreeTier } from "@/lib/phase1.7/subscription-state"
 import { Tooltip, TooltipIcon } from "@/components/Tooltip"
+import CountrySelect from "@/components/CountrySelect"
+import VatIdInput from "@/components/VatIdInput"
 
 interface User {
   id: string
@@ -424,68 +426,93 @@ export default function OrganizationDetailContent({
     value: string | null | undefined,
     fieldName: string,
     section: "basic" | "company" | "billing",
-    type: "text" | "select" = "text",
+    type: "text" | "select" | "country" = "text",
     options?: { value: string; label: string }[]
   ) => {
     const isEditing = editing === section
     const fieldValue = formData[fieldName as keyof typeof formData] || ""
 
+    // Prüfe ob es ein Länderfeld ist (country, addressCountry, invoiceAddressCountry, billingCountry)
+    const isCountryField = fieldName === "country" || fieldName === "addressCountry" || fieldName === "invoiceAddressCountry" || fieldName === "billingCountry"
+    
+    // Prüfe ob es ein VAT-ID-Feld ist
+    const isVatIdField = fieldName === "vatId"
+
     return (
       <div>
-        <div style={{
-          fontSize: "0.85rem",
-          color: "#7A7A7A",
-          marginBottom: "0.25rem"
-        }}>
-          {label}
-        </div>
-        {isEditing ? (
-          type === "select" ? (
-            <select
-              value={fieldValue}
-              onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "4px",
-                fontSize: "0.9rem"
-              }}
-            >
-              {options?.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type={type}
-              value={fieldValue}
-              onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: "1px solid #CDCDCD",
-                borderRadius: "4px",
-                fontSize: "0.9rem"
-              }}
-            />
-          )
+        {isEditing && isVatIdField ? (
+          <VatIdInput
+            id={fieldName}
+            label={label}
+            value={fieldValue}
+            onChange={(newValue) => setFormData({ ...formData, [fieldName]: newValue })}
+            placeholder="z.B. DE123456789"
+          />
+        ) : isEditing && (type === "country" || isCountryField) ? (
+          <CountrySelect
+            id={fieldName}
+            label={label}
+            value={fieldValue}
+            onChange={(newValue) => setFormData({ ...formData, [fieldName]: newValue })}
+          />
         ) : (
-          <div style={{
-            fontSize: "1rem",
-            color: value ? "#0A0A0A" : "#7A7A7A",
-            fontWeight: value ? "500" : "400",
-            fontStyle: value ? "normal" : "italic"
-          }}>
-            {(() => {
-              // If this is a select field with options, translate the value using the options
-              if (type === "select" && options && value) {
-                const option = options.find(opt => opt.value === value)
-                return option ? option.label : value
-              }
-              return value || "Nicht gesetzt"
-            })()}
-          </div>
+          <>
+            <div style={{
+              fontSize: "0.85rem",
+              color: "#7A7A7A",
+              marginBottom: "0.25rem"
+            }}>
+              {label}
+            </div>
+            {isEditing ? (
+              type === "select" ? (
+                <select
+                  value={fieldValue}
+                  onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "4px",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  {options?.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={type}
+                  value={fieldValue}
+                  onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "4px",
+                    fontSize: "0.9rem"
+                  }}
+                />
+              )
+            ) : (
+              <div style={{
+                fontSize: "1rem",
+                color: value ? "#0A0A0A" : "#7A7A7A",
+                fontWeight: value ? "500" : "400",
+                fontStyle: value ? "normal" : "italic"
+              }}>
+                {(() => {
+                  // If this is a select field with options, translate the value using the options
+                  if (type === "select" && options && value) {
+                    const option = options.find(opt => opt.value === value)
+                    return option ? option.label : value
+                  }
+                  return value || "Nicht gesetzt"
+                })()}
+              </div>
+            )}
+          </>
         )}
       </div>
     )
@@ -513,9 +540,9 @@ export default function OrganizationDetailContent({
             padding: "clamp(0.625rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)",
             border: "none",
             backgroundColor: "transparent",
-            color: activeTab === "details" ? "#E20074" : "#7A7A7A",
+            color: activeTab === "details" ? "#24c598" : "#7A7A7A",
             fontWeight: activeTab === "details" ? "600" : "400",
-            borderBottom: activeTab === "details" ? "2px solid #E20074" : "2px solid transparent",
+            borderBottom: activeTab === "details" ? "2px solid #24c598" : "2px solid transparent",
             cursor: "pointer",
             fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
             whiteSpace: "nowrap",
@@ -530,9 +557,9 @@ export default function OrganizationDetailContent({
             padding: "clamp(0.625rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)",
             border: "none",
             backgroundColor: "transparent",
-            color: activeTab === "activity" ? "#E20074" : "#7A7A7A",
+            color: activeTab === "activity" ? "#24c598" : "#7A7A7A",
             fontWeight: activeTab === "activity" ? "600" : "400",
-            borderBottom: activeTab === "activity" ? "2px solid #E20074" : "2px solid transparent",
+            borderBottom: activeTab === "activity" ? "2px solid #24c598" : "2px solid transparent",
             cursor: "pointer",
             fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
             whiteSpace: "nowrap",
@@ -551,7 +578,7 @@ export default function OrganizationDetailContent({
           {/* Phase 1.5: Super Admin Warning Banner */}
       <div style={{
         backgroundColor: "#FFF5F9",
-        border: "2px solid #E20074",
+        border: "2px solid #24c598",
         borderRadius: "8px",
         padding: "1rem 1.5rem",
         display: "flex",
@@ -568,7 +595,7 @@ export default function OrganizationDetailContent({
             width="24"
             height="24"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -583,7 +610,7 @@ export default function OrganizationDetailContent({
           <div style={{
             fontSize: "0.9rem",
             fontWeight: "600",
-            color: "#E20074",
+            color: "#24c598",
             marginBottom: "0.25rem",
           }}>
             Super Admin Ansicht
@@ -658,7 +685,7 @@ export default function OrganizationDetailContent({
               }}
               style={{
                 padding: "0.5rem 1rem",
-                backgroundColor: editing === "basic" ? "#7A7A7A" : "#E20074",
+                backgroundColor: editing === "basic" ? "#7A7A7A" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "4px",
@@ -755,7 +782,7 @@ export default function OrganizationDetailContent({
               disabled={loading}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "6px",
@@ -815,7 +842,7 @@ export default function OrganizationDetailContent({
               }}
               style={{
                 padding: "0.5rem 1rem",
-                backgroundColor: editing === "company" ? "#7A7A7A" : "#E20074",
+                backgroundColor: editing === "company" ? "#7A7A7A" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "4px",
@@ -839,15 +866,14 @@ export default function OrganizationDetailContent({
           {renderField("Straße", organization.addressStreet, "addressStreet", "company")}
           {renderField("PLZ", organization.addressZip, "addressZip", "company")}
           {renderField("Stadt", organization.addressCity, "addressCity", "company")}
-          {renderField("Land (Adresse)", organization.addressCountry, "addressCountry", "company")}
-          {renderField("Land (ISO)", organization.country, "country", "company")}
+          {renderField("Land", organization.country, "country", "company", "country")}
           {editing === "company" && (
             <button
               onClick={() => handleSaveClick("company")}
               disabled={loading}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "6px",
@@ -905,7 +931,7 @@ export default function OrganizationDetailContent({
               }}
               style={{
                 padding: "0.5rem 1rem",
-                backgroundColor: editing === "billing" ? "#7A7A7A" : "#E20074",
+                backgroundColor: editing === "billing" ? "#7A7A7A" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "4px",
@@ -927,15 +953,14 @@ export default function OrganizationDetailContent({
           {renderField("Rechnungsadresse: Straße", organization.invoiceAddressStreet, "invoiceAddressStreet", "billing")}
           {renderField("Rechnungsadresse: PLZ", organization.invoiceAddressZip, "invoiceAddressZip", "billing")}
           {renderField("Rechnungsadresse: Stadt", organization.invoiceAddressCity, "invoiceAddressCity", "billing")}
-          {renderField("Rechnungsadresse: Land", organization.invoiceAddressCountry, "invoiceAddressCountry", "billing")}
-          {renderField("Rechnungsland (ISO)", organization.billingCountry, "billingCountry", "billing")}
+          {renderField("Rechnungsland", organization.billingCountry, "billingCountry", "billing", "country")}
           {editing === "billing" && (
             <button
               onClick={() => handleSaveClick("billing")}
               disabled={loading}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "6px",
@@ -1042,7 +1067,7 @@ export default function OrganizationDetailContent({
               onClick={() => setShowSubscriptionModal(true)}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "6px",
@@ -1205,7 +1230,7 @@ export default function OrganizationDetailContent({
       {canEdit && (
         <div style={{
           backgroundColor: "#FFF5F9",
-          border: "1px solid #E20074",
+          border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1.5rem"
         }}>
@@ -1213,7 +1238,7 @@ export default function OrganizationDetailContent({
             fontSize: "1.1rem",
             fontWeight: "600",
             marginBottom: "0.75rem",
-            color: "#E20074"
+            color: "#24c598"
           }}>
             Aktionen
           </h2>
@@ -1228,7 +1253,7 @@ export default function OrganizationDetailContent({
                 disabled={loading}
                 style={{
                   padding: "0.75rem 1.5rem",
-                  backgroundColor: "#E20074",
+                  backgroundColor: "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "6px",

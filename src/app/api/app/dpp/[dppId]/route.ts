@@ -61,7 +61,49 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ dpp: dppWithMedia }, { status: 200 })
+    // Feldwerte für Pflichtdaten-Tab: Fallback aus DPP-Direktfeldern (technical keys)
+    const fieldValuesFromDpp: Record<string, string> = {
+      name: dppWithMedia.name ?? "",
+      description: dppWithMedia.description ?? "",
+      sku: dppWithMedia.sku ?? "",
+      gtin: dppWithMedia.gtin ?? "",
+      brand: dppWithMedia.brand ?? "",
+      countryOfOrigin: dppWithMedia.countryOfOrigin ?? "",
+      materials: dppWithMedia.materials ?? "",
+      materialSource: dppWithMedia.materialSource ?? "",
+      careInstructions: dppWithMedia.careInstructions ?? "",
+      isRepairable: dppWithMedia.isRepairable ?? "",
+      sparePartsAvailable: dppWithMedia.sparePartsAvailable ?? "",
+      lifespan: dppWithMedia.lifespan ?? "",
+      conformityDeclaration: dppWithMedia.conformityDeclaration ?? "",
+      disposalInfo: dppWithMedia.disposalInfo ?? "",
+      takebackOffered: dppWithMedia.takebackOffered ?? "",
+      takebackContact: dppWithMedia.takebackContact ?? "",
+      secondLifeInfo: dppWithMedia.secondLifeInfo ?? "",
+    }
+    let fieldValues: Record<string, string> = {}
+    for (const [k, v] of Object.entries(fieldValuesFromDpp)) {
+      if (v != null && String(v).trim() !== "") fieldValues[k] = String(v).trim()
+    }
+    let fieldInstances: Record<string, unknown[]> = {}
+
+    const draftContent = await prisma.dppContent.findFirst({
+      where: { dppId: resolvedParams.dppId, isPublished: false },
+      orderBy: { updatedAt: "desc" }
+    })
+    if (draftContent?.fieldValues && typeof draftContent.fieldValues === "object") {
+      const fromContent = draftContent.fieldValues as Record<string, string | string[]>
+      fieldValues = { ...fieldValues, ...fromContent } as Record<string, string>
+    }
+    if (draftContent?.fieldInstances && typeof draftContent.fieldInstances === "object") {
+      fieldInstances = draftContent.fieldInstances as Record<string, unknown[]>
+    }
+
+    return NextResponse.json({
+      dpp: dppWithMedia,
+      fieldValues,
+      fieldInstances,
+    }, { status: 200 })
   } catch (error: any) {
     console.error("Error fetching DPP:", error)
     const errorMessage = error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"

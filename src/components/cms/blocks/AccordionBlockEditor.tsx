@@ -73,7 +73,7 @@ export default function AccordionBlockEditor({
             transition: "all 0.2s"
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = "#E20074"
+            e.target.style.borderColor = "#24c598"
             e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
           }}
           onBlur={(e) => {
@@ -106,21 +106,21 @@ export default function AccordionBlockEditor({
             style={{
               padding: "0.5rem 1rem",
               fontSize: "0.875rem",
-              color: "#E20074",
+              color: "#24c598",
               backgroundColor: "#FFF5F9",
-              border: "1px solid #E20074",
+              border: "1px solid #24c598",
               borderRadius: "8px",
               fontWeight: "500",
               cursor: "pointer",
               transition: "all 0.2s"
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#E20074"
+              e.currentTarget.style.backgroundColor = "#24c598"
               e.currentTarget.style.color = "#FFFFFF"
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "#FFF5F9"
-              e.currentTarget.style.color = "#E20074"
+              e.currentTarget.style.color = "#24c598"
             }}
           >
             + Element hinzufügen
@@ -203,7 +203,7 @@ export default function AccordionBlockEditor({
                       transition: "all 0.2s"
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#E20074"
+                      e.target.style.borderColor = "#24c598"
                       e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
                     }}
                     onBlur={(e) => {
@@ -228,7 +228,7 @@ export default function AccordionBlockEditor({
                       transition: "all 0.2s"
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#E20074"
+                      e.target.style.borderColor = "#24c598"
                       e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
                     }}
                     onBlur={(e) => {

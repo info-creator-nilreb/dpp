@@ -123,7 +123,7 @@ export default function PricingManagementContent({
         <Link
           href="/super-admin/pricing/new"
           style={{
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             padding: "clamp(0.625rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem)",
             borderRadius: "8px",
@@ -270,7 +270,7 @@ export default function PricingManagementContent({
                   onClick={(e) => e.stopPropagation()}
                   style={{
                     padding: "0.5rem 1rem",
-                    backgroundColor: "#E20074",
+                    backgroundColor: "#24c598",
                     color: "#FFFFFF",
                     borderRadius: "6px",
                     textDecoration: "none",
@@ -282,7 +282,7 @@ export default function PricingManagementContent({
                     e.currentTarget.style.backgroundColor = "#C1005F"
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#E20074"
+                    e.currentTarget.style.backgroundColor = "#24c598"
                   }}
                 >
                   Bearbeiten
@@ -435,7 +435,7 @@ export default function PricingManagementContent({
                             <div style={{
                               fontSize: "1.25rem",
                               fontWeight: "600",
-                              color: "#E20074"
+                              color: "#24c598"
                             }}>
                               {entitlement.value === null ? "Unbegrenzt" : entitlement.value}
                               {definition.unit && definition.unit !== "count" && entitlement.value !== null && (

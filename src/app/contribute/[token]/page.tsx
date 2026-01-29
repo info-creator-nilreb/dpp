@@ -229,14 +229,14 @@ function ContributeContent() {
               xmlns="http://www.w3.org/2000/svg"
               style={{ margin: "0 auto" }}
             >
-              <circle cx="12" cy="12" r="10" fill="#E20074" />
+              <circle cx="12" cy="12" r="10" fill="#24c598" />
               <path d="M9 9l6 6M15 9l-6 6" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <h1 style={{
             fontSize: "1.5rem",
             fontWeight: "700",
-            color: "#E20074",
+            color: "#24c598",
             marginBottom: "0.5rem",
           }}>
             Ungültiger oder abgelaufener Link
@@ -276,7 +276,7 @@ function ContributeContent() {
               height: "80px",
               margin: "0 auto",
               borderRadius: "50%",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -414,7 +414,7 @@ function ContributeContent() {
             <div style={{
               width: `${progress}%`,
               height: "100%",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               transition: "width 0.3s ease",
             }} />
           </div>
@@ -654,7 +654,7 @@ function ContributeContent() {
               style={{
                 width: "100%",
                 padding: "0.75rem 1.5rem",
-                backgroundColor: status === "submitting" ? "#7A7A7A" : "#E20074",
+                backgroundColor: status === "submitting" ? "#7A7A7A" : "#24c598",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",

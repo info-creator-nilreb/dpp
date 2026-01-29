@@ -24,13 +24,14 @@ export interface ValidationResult {
  */
 export const BLOCK_TYPE_FEATURE_MAP: Record<BlockTypeKey, string> = {
   storytelling: "block_storytelling",
-  quick_poll: "block_quick_poll",
+  multi_question_poll: "block_quick_poll", // TODO: Migrate to interaction_blocks after feature migration
   image_text: "block_image_text",
   text: "cms_access", // Basic text blocks are always available
   image: "cms_access",
   video: "cms_access",
   accordion: "cms_access",
-  timeline: "cms_access"
+  timeline: "cms_access",
+  template_block: "cms_access" // Legacy block type from template system - treat as basic CMS block
 }
 
 /**
@@ -46,9 +47,15 @@ export async function validateBlock(
   // 1. Check if block type is valid
   const featureKey = BLOCK_TYPE_FEATURE_MAP[block.type]
   if (!featureKey) {
+    // For unknown block types, log a warning but allow them (for backward compatibility)
+    // This handles legacy blocks that might still exist in the database
+    console.warn(`[validateBlock] Unbekannter Block-Typ: ${block.type} - wird als gültig behandelt (Legacy)`)
+    // Treat unknown block types as basic CMS blocks for backward compatibility
+    // Skip further validation for unknown types
     return {
-      valid: false,
-      errors: [`Unbekannter Block-Typ: ${block.type}`]
+      valid: true, // Allow unknown block types for backward compatibility
+      errors: [],
+      warnings: [`Unbekannter Block-Typ: ${block.type} (Legacy-Block wird toleriert)`]
     }
   }
 
@@ -66,13 +73,28 @@ export async function validateBlock(
   }
 
   // 3. Validate block content against schema
+  // NOTE: Skip schema validation for draft blocks with empty content
+  // This allows creating blocks first, then editing them
   const schema = blockSchemas[block.type]
-  if (schema) {
-    const schemaErrors = validateAgainstSchema(block.content, schema)
+  const isDraft = block.status === "draft"
+  const isEmptyContent = !block.content || Object.keys(block.content).length === 0
+  
+  if (schema && block.status === "published") {
+    // Only validate published blocks against schema strictly
+    const schemaErrors = validateAgainstSchema(block.content, schema, false)
     if (schemaErrors.length > 0) {
       errors.push(...schemaErrors.map(e => `Block ${block.id}: ${e}`))
     }
-  } else {
+  } else if (schema && isDraft && isEmptyContent) {
+    // Skip validation for draft blocks with empty content (newly created blocks)
+    // This allows creating blocks first, then editing them
+  } else if (schema) {
+    // Validate draft blocks leniently (allow empty values) if they have some content
+    const schemaErrors = validateAgainstSchema(block.content, schema, true)
+    if (schemaErrors.length > 0) {
+      errors.push(...schemaErrors.map(e => `Block ${block.id}: ${e}`))
+    }
+  } else if (!schema) {
     warnings.push(`Kein Schema für Block-Typ ${block.type} gefunden`)
   }
 
@@ -82,9 +104,19 @@ export async function validateBlock(
   }
 
   // 5. Validate block status
-  if (block.status !== "draft" && block.status !== "published") {
-    errors.push(`Block ${block.id}: Ungültiger Status`)
+  // Normalize status: if missing or invalid, default to "draft"
+  const normalizedStatus = (block.status === "draft" || block.status === "published") 
+    ? block.status 
+    : "draft"
+  
+  // Only report error if status is explicitly set to an invalid value (not just missing)
+  if (block.status !== undefined && block.status !== null && 
+      block.status !== "draft" && block.status !== "published") {
+    errors.push(`Block ${block.id}: Ungültiger Status "${block.status}"`)
   }
+  
+  // Update block with normalized status for validation
+  block.status = normalizedStatus
 
   return {
     valid: errors.length === 0,
@@ -103,6 +135,15 @@ export async function validateBlocks(
   const errors: string[] = []
   const warnings: string[] = []
 
+  // Allow empty blocks array (all blocks deleted)
+  if (blocks.length === 0) {
+    return {
+      valid: true,
+      errors: [],
+      warnings: undefined
+    }
+  }
+
   // Check for duplicate IDs
   const blockIds = blocks.map(b => b.id)
   const duplicateIds = blockIds.filter((id, index) => blockIds.indexOf(id) !== index)
@@ -114,7 +155,7 @@ export async function validateBlocks(
   const orders = blocks.map(b => b.order)
   const duplicateOrders = orders.filter((order, index) => orders.indexOf(order) !== index)
   if (duplicateOrders.length > 0) {
-    errors.push(`Doppelte Order-Werte gefunden`)
+    errors.push(`Doppelte Order-Werte gefunden: ${duplicateOrders.join(", ")}`)
   }
 
   // Validate each block
@@ -192,10 +233,27 @@ export async function validateStyling(
     if (!styling.logo.url) {
       errors.push("Logo URL ist erforderlich")
     } else {
-      try {
-        new URL(styling.logo.url)
-      } catch {
-        errors.push("Ungültige Logo URL")
+      // Akzeptiere sowohl absolute als auch relative URLs
+      const url = styling.logo.url.trim()
+      if (url.length === 0) {
+        errors.push("Logo URL darf nicht leer sein")
+      } else {
+        // Prüfe ob es eine absolute URL ist (http/https) oder eine relative URL (beginnt mit /)
+        const isAbsoluteUrl = url.startsWith("http://") || url.startsWith("https://")
+        const isRelativeUrl = url.startsWith("/")
+        
+        if (isAbsoluteUrl) {
+          // Validiere absolute URLs
+          try {
+            new URL(url)
+          } catch {
+            errors.push("Ungültige Logo URL")
+          }
+        } else if (!isRelativeUrl) {
+          // Wenn weder absolute noch relative URL, ist es ungültig
+          errors.push("Logo URL muss eine absolute URL (http:// oder https://) oder eine relative URL (beginnt mit /) sein")
+        }
+        // Relative URLs (beginnt mit /) sind immer gültig
       }
     }
     if (styling.logo.width && (styling.logo.width < 1 || styling.logo.width > 2000)) {
@@ -265,7 +323,7 @@ export async function validateDppContent(
  * Simple JSON Schema validation (basic implementation)
  * For production, consider using ajv or similar library
  */
-function validateAgainstSchema(data: any, schema: any): string[] {
+function validateAgainstSchema(data: any, schema: any, isDraft: boolean = false): string[] {
   const errors: string[] = []
 
   if (schema.type === "object") {
@@ -274,11 +332,23 @@ function validateAgainstSchema(data: any, schema: any): string[] {
       return errors
     }
 
-    // Check required fields
+    // Check required fields (skip for drafts if field is empty or missing)
     if (schema.required && Array.isArray(schema.required)) {
       for (const field of schema.required) {
         if (!(field in data)) {
-          errors.push(`Pflichtfeld fehlt: ${field}`)
+          // For drafts, missing required fields are allowed (block can be created empty)
+          if (!isDraft) {
+            errors.push(`Pflichtfeld fehlt: ${field}`)
+          }
+        } else {
+          // For drafts, allow empty values for required fields
+          const value = data[field]
+          if (!isDraft && (value === null || value === undefined || 
+              (typeof value === "string" && value.length === 0) ||
+              (Array.isArray(value) && value.length === 0))) {
+            errors.push(`Pflichtfeld ${field} darf nicht leer sein`)
+          }
+          // For drafts, even if field exists but is empty, allow it
         }
       }
     }
@@ -288,7 +358,7 @@ function validateAgainstSchema(data: any, schema: any): string[] {
       for (const [key, propSchema] of Object.entries(schema.properties)) {
         if (key in data) {
           const value = data[key]
-          const propErrors = validateValue(value, propSchema as any)
+          const propErrors = validateValue(value, propSchema as any, isDraft)
           if (propErrors.length > 0) {
             errors.push(...propErrors.map(e => `${key}: ${e}`))
           }
@@ -300,14 +370,18 @@ function validateAgainstSchema(data: any, schema: any): string[] {
   return errors
 }
 
-function validateValue(value: any, schema: any): string[] {
+function validateValue(value: any, schema: any, isDraft: boolean = false): string[] {
   const errors: string[] = []
 
   if (schema.type === "string") {
     if (typeof value !== "string") {
       errors.push("Muss ein String sein")
     } else {
-      if (schema.minLength && value.length < schema.minLength) {
+      // Allow empty strings in draft blocks
+      if (isDraft && value.length === 0) {
+        return errors // Skip minLength validation for empty strings in drafts
+      }
+      if (schema.minLength && value.length > 0 && value.length < schema.minLength) {
         errors.push(`Muss mindestens ${schema.minLength} Zeichen lang sein`)
       }
       if (schema.maxLength && value.length > schema.maxLength) {
@@ -342,17 +416,56 @@ function validateValue(value: any, schema: any): string[] {
     if (!Array.isArray(value)) {
       errors.push("Muss ein Array sein")
     } else {
-      if (schema.minItems && value.length < schema.minItems) {
-        errors.push(`Muss mindestens ${schema.minItems} Elemente enthalten`)
+      // For draft blocks, allow empty arrays (for newly created blocks)
+      if (isDraft && value.length === 0) {
+        // Allow empty arrays in drafts - user can add items later
+        // Skip minItems check for drafts
+        return errors
       }
-      if (schema.maxItems && value.length > schema.maxItems) {
-        errors.push(`Darf maximal ${schema.maxItems} Elemente enthalten`)
-      }
-      if (schema.items) {
-        for (let i = 0; i < value.length; i++) {
-          const itemErrors = validateValue(value[i], schema.items)
-          if (itemErrors.length > 0) {
-            errors.push(...itemErrors.map(e => `[${i}]: ${e}`))
+      // For draft blocks, allow arrays with empty items (for adding new items)
+      if (isDraft) {
+        // Only check maxItems for drafts (skip minItems)
+        if (schema.maxItems && value.length > schema.maxItems) {
+          errors.push(`Darf maximal ${schema.maxItems} Elemente enthalten`)
+        }
+        // Validate non-empty items only
+        if (schema.items) {
+          for (let i = 0; i < value.length; i++) {
+            const item = value[i]
+            // Skip validation for empty items in drafts
+            if (typeof item === "string" && item.length === 0) {
+              continue
+            }
+            if (typeof item === "object" && item !== null) {
+              // For objects, check if all required fields are empty
+              const hasContent = Object.values(item).some(v => {
+                if (typeof v === "string") return v.length > 0
+                return v !== null && v !== undefined
+              })
+              if (!hasContent) {
+                continue // Skip empty objects in drafts
+              }
+            }
+            const itemErrors = validateValue(item, schema.items, true)
+            if (itemErrors.length > 0) {
+              errors.push(...itemErrors.map(e => `[${i}]: ${e}`))
+            }
+          }
+        }
+      } else {
+        // For published blocks, validate strictly
+        if (schema.minItems && value.length < schema.minItems) {
+          errors.push(`Muss mindestens ${schema.minItems} Elemente enthalten`)
+        }
+        if (schema.maxItems && value.length > schema.maxItems) {
+          errors.push(`Darf maximal ${schema.maxItems} Elemente enthalten`)
+        }
+        if (schema.items) {
+          for (let i = 0; i < value.length; i++) {
+            const itemErrors = validateValue(value[i], schema.items, false)
+            if (itemErrors.length > 0) {
+              errors.push(...itemErrors.map(e => `[${i}]: ${e}`))
+            }
           }
         }
       }
@@ -361,7 +474,7 @@ function validateValue(value: any, schema: any): string[] {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
       errors.push("Muss ein Objekt sein")
     } else {
-      const objErrors = validateAgainstSchema(value, schema)
+      const objErrors = validateAgainstSchema(value, schema, isDraft)
       if (objErrors.length > 0) {
         errors.push(...objErrors)
       }
@@ -373,23 +486,13 @@ function validateValue(value: any, schema: any): string[] {
 
 /**
  * Resolves theme with defaults
+ * 
+ * @deprecated Use resolveTheme from "@/lib/cms/theme-resolver" instead
+ * This function is kept for backward compatibility but should not be used in client components
  */
 export function resolveTheme(styling: StylingConfig | undefined): StylingConfig {
-  return {
-    colors: {
-      primary: styling?.colors?.primary || defaultStylingConfig.colors.primary,
-      secondary: styling?.colors?.secondary || defaultStylingConfig.colors.secondary,
-      accent: styling?.colors?.accent || defaultStylingConfig.colors.accent
-    },
-    fonts: {
-      primary: styling?.fonts?.primary || defaultStylingConfig.fonts.primary,
-      secondary: styling?.fonts?.secondary || defaultStylingConfig.fonts.secondary
-    },
-    spacing: {
-      blockSpacing: styling?.spacing?.blockSpacing ?? defaultStylingConfig.spacing.blockSpacing,
-      sectionPadding: styling?.spacing?.sectionPadding ?? defaultStylingConfig.spacing.sectionPadding
-    },
-    logo: styling?.logo
-  }
+  // Re-export from theme-resolver to maintain backward compatibility
+  const { resolveTheme: resolveThemeFromResolver } = require("./theme-resolver")
+  return resolveThemeFromResolver(styling)
 }
 

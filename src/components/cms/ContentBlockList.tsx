@@ -19,7 +19,6 @@ interface ContentBlockListProps {
 
 const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
   storytelling: "Storytelling",
-  quick_poll: "Quick Poll",
   image_text: "Bild & Text",
   text: "Text",
   image: "Bild",
@@ -30,7 +29,6 @@ const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
 
 const BLOCK_TYPE_ICONS: Record<BlockTypeKey, string> = {
   storytelling: "📖",
-  quick_poll: "📊",
   image_text: "🖼️",
   text: "📝",
   image: "🖼️",

@@ -36,7 +36,7 @@ export default function LimitDefinitionsContent({
         <Link
           href="/super-admin/pricing"
           style={{
-            backgroundColor: "#E20074",
+            backgroundColor: "#24c598",
             color: "#FFFFFF",
             padding: "0.75rem 1.5rem",
             borderRadius: "8px",
@@ -69,7 +69,7 @@ export default function LimitDefinitionsContent({
         }}>
           <strong>Hinweis:</strong> Diese Seite zeigt nur die verfügbaren Limit-Definitionen an. 
           Um Limits für Pricing Plans zu konfigurieren, gehen Sie zu{" "}
-          <Link href="/super-admin/pricing" style={{ color: "#E20074", textDecoration: "underline" }}>
+          <Link href="/super-admin/pricing" style={{ color: "#24c598", textDecoration: "underline" }}>
             Preise & Abos
           </Link>{" "}
           und bearbeiten Sie einen Pricing Plan.

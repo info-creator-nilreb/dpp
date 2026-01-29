@@ -26,11 +26,14 @@ const BlockIcons: Record<BlockTypeKey, React.ReactNode> = {
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
     </svg>
   ),
-  quick_poll: (
+  multi_question_poll: (
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10"/>
       <line x1="12" y1="20" x2="12" y2="4"/>
       <line x1="6" y1="20" x2="6" y2="14"/>
+      <circle cx="18" cy="10" r="2"/>
+      <circle cx="12" cy="4" r="2"/>
+      <circle cx="6" cy="14" r="2"/>
     </svg>
   ),
   image_text: (
@@ -71,6 +74,13 @@ const BlockIcons: Record<BlockTypeKey, React.ReactNode> = {
       <circle cx="12" cy="12" r="10"/>
       <polyline points="12 6 12 12 16 14"/>
     </svg>
+  ),
+  template_block: (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+      <line x1="9" y1="3" x2="9" y2="21"/>
+      <line x1="9" y1="9" x2="21" y2="9"/>
+    </svg>
   )
 }
 
@@ -79,9 +89,9 @@ const BLOCK_TYPE_INFO: Record<BlockTypeKey, { name: string; description: string 
     name: "Storytelling",
     description: "Erzählende Inhalte mit Text, Bildern und Abschnitten"
   },
-  quick_poll: {
-    name: "Quick Poll",
-    description: "Interaktive Umfrage für Nutzer-Feedback"
+  multi_question_poll: {
+    name: "Umfrage",
+    description: "Interaktive Umfrage mit bis zu 3 Fragen für Nutzer-Feedback"
   },
   image_text: {
     name: "Bild & Text",
@@ -106,6 +116,10 @@ const BLOCK_TYPE_INFO: Record<BlockTypeKey, { name: string; description: string 
   timeline: {
     name: "Timeline",
     description: "Zeitstrahl-Darstellung"
+  },
+  template_block: {
+    name: "Template Block",
+    description: "Legacy-Block aus Template-System"
   }
 }
 
@@ -115,10 +129,27 @@ export default function BlockPickerModal({
   onClose
 }: BlockPickerModalProps) {
   // Get available block types
+  // Filter by feature availability
+  // NOTE: If availableFeatures is empty, we still filter - empty means no features available
+  // Exclude legacy block types from the picker (they should not be created new)
   const availableBlockTypes = Object.keys(BLOCK_TYPE_FEATURE_MAP).filter(type => {
+    // Exclude legacy block types from picker
+    if (type === "template_block") {
+      return false
+    }
     const featureKey = BLOCK_TYPE_FEATURE_MAP[type as BlockTypeKey]
-    return availableFeatures.includes(featureKey)
+    // Always require feature to be in availableFeatures list
+    // Empty availableFeatures means no features are available
+    return availableFeatures.length > 0 && availableFeatures.includes(featureKey)
   }) as BlockTypeKey[]
+  
+  // Debug: Log available features and block types (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log("[BlockPickerModal] availableFeatures:", availableFeatures)
+    console.log("[BlockPickerModal] availableBlockTypes:", availableBlockTypes)
+    console.log("[BlockPickerModal] interaction_blocks in features:", availableFeatures.includes("interaction_blocks"))
+    console.log("[BlockPickerModal] BLOCK_TYPE_FEATURE_MAP:", BLOCK_TYPE_FEATURE_MAP)
+  }
 
   const availableTemplates = getAvailableTemplates(availableFeatures)
 
@@ -246,6 +277,11 @@ export default function BlockPickerModal({
             }}>
               {availableBlockTypes.map((type) => {
                 const info = BLOCK_TYPE_INFO[type]
+                // Skip if info is not available (should not happen, but safety check)
+                if (!info) {
+                  console.warn(`[BlockPickerModal] Missing info for block type: ${type}`)
+                  return null
+                }
                 return (
                   <button
                     key={type}
@@ -265,9 +301,9 @@ export default function BlockPickerModal({
                       width: "100%"
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "#E20074"
-                      e.currentTarget.style.backgroundColor = "#FFF5F9"
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(226, 0, 116, 0.1)"
+                      e.currentTarget.style.borderColor = "#24c598"
+                      e.currentTarget.style.backgroundColor = "#F0FDF4"
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(36, 197, 152, 0.1)"
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = "#E5E5E5"
@@ -276,7 +312,7 @@ export default function BlockPickerModal({
                     }}
                   >
                     <div style={{
-                      color: "#E20074",
+                      color: "#24c598",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center"

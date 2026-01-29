@@ -14,13 +14,14 @@ export type BlockStatus = "draft" | "published"
  */
 export type BlockTypeKey = 
   | "storytelling"
-  | "quick_poll"
+  | "multi_question_poll"
   | "image_text"
   | "text"
   | "image"
   | "video"
   | "accordion"
   | "timeline"
+  | "template_block" // Legacy block type from template system
 
 /**
  * Block Definition
@@ -110,6 +111,22 @@ export interface QuickPollBlockContent {
   }>
   allowMultiple?: boolean
   showResults?: boolean
+  completionMessage?: string
+}
+
+export interface MultiQuestionPollBlockContent {
+  questions: Array<{
+    question: string
+    options: string[]
+  }>
+  completionMessage?: string
+}
+
+export interface ImageBlockContent {
+  url: string | string[] // Einzelnes Bild oder Array von Bildern
+  alt?: string // Alt-Text für alle Bilder (oder individuell)
+  caption?: string // Caption für alle Bilder (oder individuell)
+  alignment?: "left" | "center" | "right"
 }
 
 export interface ImageTextBlockContent {

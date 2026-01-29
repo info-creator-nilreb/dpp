@@ -1,28 +1,11 @@
-// Dynamically import crypto and nodemailer only on the server
-// This prevents them from being bundled in client-side code or Edge Runtime
-let crypto: typeof import("crypto") | undefined
-let nodemailer: typeof import("nodemailer") | undefined
+// Server-only module - DO NOT import in client components
+// This file uses Node.js modules (crypto, nodemailer) that are not available in the browser
+// 
+// Next.js 16: This file is in src/lib/ (not src/server/) to avoid Server Actions requirements
+// Webpack/Turbopack config ensures crypto and nodemailer are excluded from client bundle
 
-function getCrypto(): typeof import("crypto") {
-  if (typeof window !== "undefined") {
-    throw new Error("Email functions can only be used on the server")
-  }
-  if (!crypto) {
-    crypto = require("crypto")
-  }
-  return crypto as typeof import("crypto")
-}
-
-function getNodemailer(): typeof import("nodemailer") {
-  if (typeof window !== "undefined") {
-    throw new Error("Email functions can only be used on the server")
-  }
-  if (!nodemailer) {
-    nodemailer = require("nodemailer")
-  }
-  // TypeScript type assertion: nodemailer is guaranteed to be set here
-  return nodemailer as typeof import("nodemailer")
-}
+import crypto from "crypto"
+import nodemailer from "nodemailer"
 
 /**
  * E-Mail Template Interface
@@ -43,14 +26,14 @@ interface EmailTemplateOptions {
  * Entspricht den B2B SaaS Design-Prinzipien: clean, minimal, produktorientiert
  */
 function generateEmailTemplate(options: EmailTemplateOptions): string {
-  const appName = options.appName || process.env.APP_NAME || "T-Pass"
+  const appName = options.appName || process.env.APP_NAME || "Easy Pass"
   const baseUrl = options.baseUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
-  // Logo SVG (T-Pass Logo)
+  // Logo SVG (Easy Pass Logo)
   const logoSvg = `
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#E20074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M9 12l2 2 4-4" stroke="#E20074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="10" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9 12l2 2 4-4" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `
   
@@ -133,7 +116,7 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
           .cta-button {
             display: inline-block;
             padding: 12px 24px;
-            background-color: #E20074;
+            background-color: #24c598;
             color: #FFFFFF;
             text-decoration: none;
             border-radius: 4px;
@@ -144,7 +127,7 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
             border: none;
           }
           .cta-button:hover {
-            background-color: #C1005F;
+            background-color: #1ea882;
           }
           .divider {
             height: 1px;
@@ -163,7 +146,7 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
             margin-bottom: 16px;
           }
           .footer-links a {
-            color: #E20074;
+            color: #24c598;
             text-decoration: none;
             margin: 0 12px;
           }
@@ -242,14 +225,14 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
  * Generiert einen sicheren Verifizierungs-Token
  */
 export function generateVerificationToken(): string {
-  return getCrypto().randomBytes(32).toString("hex")
+  return crypto.randomBytes(32).toString("hex")
 }
 
 /**
  * Erstellt einen konfigurierten Nodemailer-Transport
  */
 function createEmailTransport() {
-  const nm = getNodemailer()
+  const nm = nodemailer
   
   // Wenn SMTP konfiguriert ist, verwende SMTP
   if (process.env.SMTP_HOST) {
@@ -293,7 +276,7 @@ export async function sendVerificationEmail(
   verificationToken: string
 ): Promise<void> {
   const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/verify-email?token=${verificationToken}`
-  const appName = process.env.APP_NAME || "T-Pass"
+  const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
@@ -370,7 +353,7 @@ export async function sendPasswordResetEmail(
   resetToken: string
 ): Promise<void> {
   const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/reset-password?token=${resetToken}`
-  const appName = process.env.APP_NAME || "T-Pass"
+  const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
 
@@ -450,7 +433,7 @@ export async function sendInvitationEmail(
   organizationId: string,
   invitationToken: string
 ): Promise<void> {
-  const appName = process.env.APP_NAME || "T-Pass"
+  const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
@@ -538,7 +521,7 @@ export async function sendSupplierDataRequestEmail(
     contributeUrl: string
   }
 ): Promise<void> {
-  const appName = process.env.APP_NAME || "T-Pass"
+  const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   

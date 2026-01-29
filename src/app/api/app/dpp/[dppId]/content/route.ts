@@ -95,10 +95,22 @@ export async function GET(
     const styling = activeContent.styling as StylingConfig | null
     const resolvedStyling = resolveTheme(styling || undefined)
 
+    // Normalize block statuses (ensure all blocks have valid status)
+    const blocks = (activeContent.blocks as Block[]) || []
+    const normalizedBlocks = blocks.map(block => ({
+      ...block,
+      // Ensure status is always "draft" or "published" (default to "draft" if missing or invalid)
+      status: (block.status === "draft" || block.status === "published") 
+        ? block.status 
+        : "draft"
+    }))
+
     return NextResponse.json({
       content: {
-        blocks: activeContent.blocks as Block[],
-        styling: resolvedStyling
+        blocks: normalizedBlocks,
+        styling: resolvedStyling,
+        fieldValues: (activeContent as any).fieldValues ?? {},
+        fieldInstances: (activeContent as any).fieldInstances ?? {}
       },
       isPublished: activeContent.isPublished
     })
@@ -173,6 +185,8 @@ export async function POST(
     )
 
     if (!validation.valid) {
+      console.error("[Content API] Validierungsfehler:", validation.errors)
+      console.error("[Content API] Blocks:", JSON.stringify(blocks || [], null, 2))
       return NextResponse.json(
         {
           error: "Validierungsfehler",
@@ -242,7 +256,8 @@ export async function POST(
 
       return NextResponse.json({
         message: publish ? "Content veröffentlicht" : "Content gespeichert",
-        content: updated
+        content: updated,
+        updatedAt: updated.updatedAt
       })
     } else {
       // Create new content
@@ -279,11 +294,99 @@ export async function POST(
 
       return NextResponse.json({
         message: publish ? "Content veröffentlicht" : "Content erstellt",
-        content: created
+        content: created,
+        updatedAt: created.updatedAt || created.createdAt
       }, { status: 201 })
     }
   } catch (error: any) {
     console.error("Error saving DPP content:", error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Ein Fehler ist aufgetreten" },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PUT /api/app/dpp/[dppId]/content
+ *
+ * Aktualisiert nur Pflichtdaten (fieldValues, fieldInstances).
+ * Body: { fieldValues?: Record<string, string | string[]>, fieldInstances?: Record<string, any[]> }
+ */
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ dppId: string }> }
+) {
+  try {
+    const session = await auth()
+    const resolvedParams = await params
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Nicht autorisiert" },
+        { status: 401 }
+      )
+    }
+
+    const permissionError = await requireEditDPP(resolvedParams.dppId, session.user.id)
+    if (permissionError) return permissionError
+
+    const body = await request.json()
+    const fieldValues = body.fieldValues
+    const fieldInstances = body.fieldInstances
+
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: resolvedParams.dppId },
+      select: { organizationId: true }
+    })
+    if (!dpp) {
+      return NextResponse.json({ error: "DPP nicht gefunden" }, { status: 404 })
+    }
+
+    const existingDraft = await prisma.dppContent.findFirst({
+      where: {
+        dppId: resolvedParams.dppId,
+        isPublished: false
+      }
+    })
+
+    const payload: { fieldValues?: object; fieldInstances?: object } = {}
+    if (fieldValues !== undefined && typeof fieldValues === "object") {
+      payload.fieldValues = fieldValues
+    }
+    if (fieldInstances !== undefined && typeof fieldInstances === "object") {
+      payload.fieldInstances = fieldInstances
+    }
+
+    if (existingDraft) {
+      const updated = await prisma.dppContent.update({
+        where: { id: existingDraft.id },
+        data: payload
+      })
+      return NextResponse.json({
+        message: "Feldwerte gespeichert",
+        content: updated,
+        updatedAt: updated.updatedAt
+      })
+    }
+
+    const created = await prisma.dppContent.create({
+      data: {
+        dppId: resolvedParams.dppId,
+        blocks: [],
+        styling: null,
+        ...payload,
+        isPublished: false,
+        createdBy: session.user.id
+      }
+    })
+    return NextResponse.json({
+      message: "Feldwerte gespeichert",
+      content: created,
+      updatedAt: created.updatedAt
+    })
+  } catch (error: any) {
+    console.error("Error updating DPP content (PUT):", error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Ein Fehler ist aufgetreten" },
       { status: 500 }

@@ -82,6 +82,52 @@ export const quickPollBlockSchema = {
     showResults: {
       type: "boolean",
       default: false
+    },
+    completionMessage: {
+      type: "string",
+      maxLength: 200,
+      default: "Vielen Dank für Ihre Teilnahme!"
+    }
+  }
+}
+
+/**
+ * Multi-Question Poll Block Schema
+ */
+export const multiQuestionPollBlockSchema = {
+  type: "object",
+  required: ["questions"],
+  properties: {
+    questions: {
+      type: "array",
+      minItems: 1,
+      maxItems: 3,
+      items: {
+        type: "object",
+        required: ["question", "options"],
+        properties: {
+          question: {
+            type: "string",
+            minLength: 1,
+            maxLength: 300
+          },
+          options: {
+            type: "array",
+            minItems: 2,
+            maxItems: 5,
+            items: {
+              type: "string",
+              minLength: 1,
+              maxLength: 200
+            }
+          }
+        }
+      }
+    },
+    completionMessage: {
+      type: "string",
+      maxLength: 200,
+      default: "Vielen Dank für Ihre Teilnahme!"
     }
   }
 }
@@ -207,7 +253,7 @@ export const stylingConfigSchema = {
  */
 export const blockSchemas: Record<string, any> = {
   storytelling: storytellingBlockSchema,
-  quick_poll: quickPollBlockSchema,
+  multi_question_poll: multiQuestionPollBlockSchema,
   image_text: imageTextBlockSchema
 }
 
@@ -218,7 +264,7 @@ export const defaultStylingConfig = {
   colors: {
     primary: "#0A0A0A", // System default
     secondary: "#7A7A7A", // System default
-    accent: "#E20074" // System default
+    accent: "#24c598" // System default (Mint)
   },
   fonts: {
     primary: "Inter",

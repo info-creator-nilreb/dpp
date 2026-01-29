@@ -545,7 +545,7 @@ export function FeatureEditor({ feature, onSave, onCancel }: FeatureEditorProps)
                 padding: "0.625rem 1.25rem",
                 border: "none",
                 borderRadius: "4px",
-                backgroundColor: loading ? "#CDCDCD" : "#E20074",
+                backgroundColor: loading ? "#CDCDCD" : "#24c598",
                 color: "#FFFFFF",
                 cursor: loading ? "not-allowed" : "pointer",
                 fontSize: "0.875rem",

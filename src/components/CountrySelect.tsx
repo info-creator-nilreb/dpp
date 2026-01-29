@@ -322,15 +322,17 @@ export default function CountrySelect({ id, label, value, onChange, required = f
 
   return (
     <div style={{ marginBottom: "1.5rem", position: "relative", zIndex: 1000 }}>
-      <label htmlFor={id} style={{
-        display: "block",
-        fontSize: "clamp(0.9rem, 2vw, 1rem)",
-        fontWeight: "600",
-        color: "#0A0A0A",
-        marginBottom: "0.5rem"
-      }}>
-        {label} {required && <span style={{ color: "#E20074" }}>*</span>}
-      </label>
+      {(label || required) && (
+        <label htmlFor={id} style={{
+          display: "block",
+          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
+        }}>
+          {label} {required && label !== "" && <span style={{ color: "#24c598" }}>*</span>}
+        </label>
+      )}
       <div ref={containerRef} style={{ position: "relative" }}>
         <input
           ref={inputRef}
@@ -432,7 +434,7 @@ export default function CountrySelect({ id, label, value, onChange, required = f
                   {detectedCountry === country.code && (
                     <span style={{
                       fontSize: "0.75rem",
-                      color: "#E20074",
+                      color: "#24c598",
                       fontWeight: "600"
                     }}>
                       ●

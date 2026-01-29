@@ -84,7 +84,7 @@ export default function DppBrandingTab({
               height="32"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#E20074"
+              stroke="#24c598"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -115,7 +115,7 @@ export default function DppBrandingTab({
             style={{
               display: "inline-block",
               padding: "0.75rem 1.5rem",
-              backgroundColor: "#E20074",
+              backgroundColor: "#24c598",
               color: "#FFFFFF",
               borderRadius: "8px",
               fontSize: "0.875rem",
@@ -127,7 +127,7 @@ export default function DppBrandingTab({
               e.currentTarget.style.backgroundColor = "#C20062"
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#E20074"
+              e.currentTarget.style.backgroundColor = "#24c598"
             }}
           >
             Jetzt upgraden

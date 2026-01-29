@@ -21,8 +21,8 @@ export type FileFieldType = "media" | "document"
 
 interface FileFieldProps {
   label: string
-  value: string | null // storageUrl oder null
-  onChange: (value: string | null) => void
+  value: string | string[] | null // storageUrl oder Array von URLs oder null
+  onChange: (value: string | string[] | null) => void
   dppId: string
   blockId?: string // Optional: ID des Blocks (für Content-Blöcke)
   fieldKey?: string // Optional: Key des Felds im Block
@@ -117,10 +117,9 @@ export default function FileField({
 
     // Prüfe Max-Anzahl (falls gesetzt)
     if (maxCount !== undefined && maxCount > 0) {
-      // TODO: Lade aktuelle Medienanzahl für dieses Feld
-      // Für jetzt: Nur Warnung, wenn bereits ein Wert vorhanden
-      if (value && maxCount === 1) {
-        showNotification(`Maximal ${maxCount} Datei erlaubt. Bitte entfernen Sie zuerst die vorhandene Datei.`, "error")
+      const currentCount = Array.isArray(value) ? value.length : (value ? 1 : 0)
+      if (currentCount >= maxCount) {
+        showNotification(`Maximal ${maxCount} Datei${maxCount > 1 ? 'en' : ''} erlaubt. Bitte entfernen Sie zuerst eine vorhandene Datei.`, "error")
         return
       }
     }
@@ -175,8 +174,21 @@ export default function FileField({
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.error || errorData.message || `Fehler beim Hochladen (${response.status})`
+        let errorMessage = `Fehler beim Hochladen (${response.status})`
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorData.message || errorMessage
+          console.error("[FileField] Upload error response:", {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData
+          })
+        } catch (parseError) {
+          // Wenn JSON-Parsing fehlschlägt, verwende Status-Text
+          const statusText = response.statusText || `HTTP ${response.status}`
+          errorMessage = `Fehler beim Hochladen: ${statusText}`
+          console.error("[FileField] Failed to parse error response:", parseError)
+        }
         throw new Error(errorMessage)
       }
 
@@ -198,7 +210,14 @@ export default function FileField({
       
       // Update value mit neuem Media-Objekt (inkl. Thumbnail-Info)
       const mediaUrl = result.media.storageUrl
-      onChange(mediaUrl)
+      
+      // Wenn maxCount > 1, füge zur Array hinzu, sonst ersetze
+      if (maxCount && maxCount > 1) {
+        const currentUrls = Array.isArray(value) ? value : (value ? [value] : [])
+        onChange([...currentUrls, mediaUrl])
+      } else {
+        onChange(mediaUrl)
+      }
       
       // Zeige kontextbezogene Erfolgsmeldung
       const successMessage = derivedRole === "primary_product_image"
@@ -228,13 +247,35 @@ export default function FileField({
     }
   }
 
-  function handleRemove() {
-    onChange(null)
+  function handleRemove(index?: number) {
+    if (maxCount && maxCount > 1 && Array.isArray(value)) {
+      // Entferne spezifisches Bild aus Array
+      const newValue = value.filter((_, i) => i !== index)
+      onChange(newValue.length > 0 ? newValue : null)
+    } else {
+      onChange(null)
+    }
   }
 
-  const isImage = value && (
-    value.match(/\.(jpg|jpeg|png|gif|webp)$/i) || 
-    value.startsWith("/uploads/") && !value.endsWith(".pdf")
+  // Normalisiere value zu Array für Multi-File oder zu String für Single-File
+  const isMultiFile = maxCount && maxCount > 1
+  const imageUrls = isMultiFile 
+    ? (Array.isArray(value) ? value : (value ? [value] : []))
+    : (Array.isArray(value) ? value[0] : value)
+  
+  // Prüfe ob es ein Bild ist (sicher mit null/undefined checks)
+  const getImageUrl = () => {
+    if (!imageUrls) return null
+    if (Array.isArray(imageUrls)) {
+      return imageUrls.length > 0 ? imageUrls[0] : null
+    }
+    return typeof imageUrls === 'string' ? imageUrls : null
+  }
+  
+  const imageUrl = getImageUrl()
+  const isImage = imageUrl && typeof imageUrl === 'string' && (
+    imageUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) || 
+    (imageUrl.startsWith("/uploads/") && !imageUrl.endsWith(".pdf"))
   )
 
   return (
@@ -248,7 +289,7 @@ export default function FileField({
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
-          {label} {required && <span style={{ color: "#E20074" }}>*</span>}
+          {label} {required && <span style={{ color: "#24c598" }}>*</span>}
         </label>
         {description && (
           <p style={{
@@ -300,7 +341,7 @@ export default function FileField({
             width: "24px",
             height: "24px",
             border: "3px solid #E5E5E5",
-            borderTopColor: "#E20074",
+            borderTopColor: "#24c598",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
             marginBottom: "0.75rem"
@@ -320,14 +361,14 @@ export default function FileField({
         </div>
       )}
 
-      {/* File Upload */}
-      {!value && !uploading && (
+      {/* File Upload - nur anzeigen wenn keine Dateien oder wenn Single-File */}
+      {(!value || (Array.isArray(value) && value.length === 0) || (!isMultiFile && value)) && !uploading && (
         <FileUploadArea
           accept={effectiveAccept}
           maxSize={maxSize}
           onFileSelect={handleFileUpload}
           disabled={uploading}
-          label="Datei auswählen"
+          label={isMultiFile ? "Dateien auswählen" : "Datei auswählen"}
           description={description || (
             fileType === "document"
               ? `PDF-Dokument (max. ${(maxSize / 1024 / 1024).toFixed(0)} MB)`
@@ -344,10 +385,65 @@ export default function FileField({
           border: "1px solid #E5E5E5",
           borderRadius: "8px"
         }}>
-          {isImage ? (
+          {isMultiFile && Array.isArray(imageUrls) && imageUrls.length > 0 ? (
+            // Multi-File: Thumbnail-Galerie
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+              gap: "0.75rem",
+              marginBottom: "0.75rem"
+            }}>
+              {imageUrls.map((url, index) => (
+                <div key={index} style={{ position: "relative" }}>
+                  <img
+                    src={url}
+                    alt={`${label} ${index + 1}`}
+                    style={{
+                      width: "100%",
+                      height: "100px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #E5E5E5",
+                      backgroundColor: "#FFFFFF"
+                    }}
+                    onError={(e) => {
+                      console.error("Error loading image:", url)
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(index)}
+                    disabled={uploading}
+                    style={{
+                      position: "absolute",
+                      top: "4px",
+                      right: "4px",
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      backgroundColor: "rgba(220, 38, 38, 0.9)",
+                      color: "#FFFFFF",
+                      border: "none",
+                      cursor: uploading ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      padding: 0
+                    }}
+                    title="Entfernen"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : isImage && imageUrl ? (
+            // Single-File: Einzelnes Bild
             <div style={{ marginBottom: "0.75rem" }}>
               <img
-                src={value}
+                src={imageUrl}
                 alt={label}
                 style={{
                   width: "100%",
@@ -361,12 +457,12 @@ export default function FileField({
                   display: "block"
                 }}
                 onError={(e) => {
-                  // Fallback bei Fehler beim Laden
-                  console.error("Error loading image:", value)
+                  console.error("Error loading image:", imageUrl)
                 }}
               />
             </div>
-          ) : (
+          ) : imageUrl ? (
+            // Dokument
             <div style={{
               padding: "1rem",
               backgroundColor: "#FFFFFF",
@@ -385,27 +481,38 @@ export default function FileField({
                 <polyline points="10 9 9 9 8 9" />
               </svg>
               <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>
-                {value.split("/").pop() || "Datei"}
+                {imageUrl.split("/").pop() || "Datei"}
               </span>
             </div>
+          ) : null}
+          {!isMultiFile && (
+            <button
+              type="button"
+              onClick={() => handleRemove()}
+              disabled={uploading}
+              style={{
+                fontSize: "0.75rem",
+                color: "#DC2626",
+                backgroundColor: "transparent",
+                border: "none",
+                cursor: uploading ? "not-allowed" : "pointer",
+                padding: "0.5rem 0",
+                opacity: uploading ? 0.5 : 1,
+                fontWeight: "500"
+              }}
+            >
+              Datei entfernen
+            </button>
           )}
-          <button
-            type="button"
-            onClick={handleRemove}
-            disabled={uploading}
-            style={{
+          {isMultiFile && Array.isArray(imageUrls) && imageUrls.length > 0 && (
+            <p style={{
               fontSize: "0.75rem",
-              color: "#DC2626",
-              backgroundColor: "transparent",
-              border: "none",
-              cursor: uploading ? "not-allowed" : "pointer",
-              padding: "0.5rem 0",
-              opacity: uploading ? 0.5 : 1,
-              fontWeight: "500"
-            }}
-          >
-            Datei entfernen
-          </button>
+              color: "#7A7A7A",
+              margin: "0.5rem 0 0 0"
+            }}>
+              {imageUrls.length} Bild{imageUrls.length > 1 ? 'er' : ''} hochgeladen
+            </p>
+          )}
         </div>
       )}
     </div>

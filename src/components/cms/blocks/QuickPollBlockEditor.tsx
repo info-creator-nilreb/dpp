@@ -2,6 +2,8 @@
 
 /**
  * Quick Poll Block Editor
+ * 
+ * Styling konsistent mit anderen CMS-Komponenten (AccordionBlockEditor, TextBlockEditor)
  */
 
 import { QuickPollBlockContent } from "@/lib/cms/types"
@@ -19,7 +21,8 @@ export default function QuickPollBlockEditor({
     question: content.question || "",
     options: content.options || [],
     allowMultiple: content.allowMultiple || false,
-    showResults: content.showResults || false
+    showResults: content.showResults || false,
+    completionMessage: content.completionMessage || "Vielen Dank für Ihre Teilnahme!"
   }
 
   function updateField(field: keyof QuickPollBlockContent, value: any) {
@@ -50,60 +53,170 @@ export default function QuickPollBlockEditor({
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {/* Question */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Frage *
+        <label style={{
+          display: "block",
+          fontSize: "0.875rem",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
+        }}>
+          Frage <span style={{ color: "#24c598" }}>*</span>
         </label>
         <input
           type="text"
           value={data.question}
           onChange={(e) => updateField("question", e.target.value)}
           placeholder="Frage eingeben"
-          className="w-full px-3 py-2 border border-gray-300 rounded"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: "1px solid #E5E5E5",
+            borderRadius: "8px",
+            fontSize: "0.875rem",
+            transition: "all 0.2s"
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = "#24c598"
+            e.target.style.boxShadow = "0 0 0 3px rgba(36, 197, 152, 0.1)"
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = "#E5E5E5"
+            e.target.style.boxShadow = "none"
+          }}
           maxLength={300}
         />
       </div>
 
       {/* Options */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Optionen * (mindestens 2)
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "1rem"
+        }}>
+          <label style={{
+            display: "block",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            color: "#0A0A0A"
+          }}>
+            Optionen <span style={{ color: "#24c598" }}>*</span> (mindestens 2)
           </label>
           <button
+            type="button"
             onClick={addOption}
-            className="text-sm text-blue-600 hover:text-blue-700"
+            style={{
+              padding: "0.5rem 1rem",
+              fontSize: "0.875rem",
+              color: "#24c598",
+              backgroundColor: "#FFF5F9",
+              border: "1px solid #24c598",
+              borderRadius: "8px",
+              fontWeight: "500",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#24c598"
+              e.currentTarget.style.color = "#FFFFFF"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#FFF5F9"
+              e.currentTarget.style.color = "#24c598"
+            }}
           >
             + Option hinzufügen
           </button>
         </div>
-        {data.options.length === 0 && (
-          <p className="text-sm text-gray-500 mb-3">
+
+        {data.options.length === 0 ? (
+          <div style={{
+            padding: "2rem",
+            textAlign: "center",
+            backgroundColor: "#F9F9F9",
+            border: "1px dashed #E5E5E5",
+            borderRadius: "8px",
+            color: "#7A7A7A",
+            fontSize: "0.875rem"
+          }}>
             Fügen Sie mindestens 2 Optionen hinzu
-          </p>
-        )}
-        {data.options.length > 0 && (
-          <div className="space-y-2">
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             {data.options.map((option, index) => (
-              <div key={option.id || index} className="flex items-center gap-2">
+              <div key={option.id || index} style={{
+                padding: "1rem",
+                border: "1px solid #E5E5E5",
+                borderRadius: "8px",
+                backgroundColor: "#FFFFFF"
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "0.75rem"
+                }}>
+                  <span style={{
+                    fontSize: "0.75rem",
+                    fontWeight: "500",
+                    color: "#7A7A7A"
+                  }}>
+                    Option {index + 1}
+                  </span>
+                  {data.options.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => removeOption(index)}
+                      style={{
+                        padding: "0.5rem",
+                        color: "#DC2626",
+                        backgroundColor: "transparent",
+                        border: "none",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#FEF2F2"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent"
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={option.label}
                   onChange={(e) => updateOption(index, "label", e.target.value)}
                   placeholder={`Option ${index + 1}`}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #E5E5E5",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    transition: "all 0.2s"
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "#24c598"
+                    e.target.style.boxShadow = "0 0 0 3px rgba(36, 197, 152, 0.1)"
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "#E5E5E5"
+                    e.target.style.boxShadow = "none"
+                  }}
                   maxLength={200}
                 />
-                {data.options.length > 2 && (
-                  <button
-                    onClick={() => removeOption(index)}
-                    className="text-red-600 hover:text-red-700 text-sm px-2"
-                  >
-                    ×
-                  </button>
-                )}
               </div>
             ))}
           </div>
@@ -111,34 +224,110 @@ export default function QuickPollBlockEditor({
       </div>
 
       {/* Settings */}
-      <div className="space-y-3">
-        <label className="block text-sm font-medium text-gray-700">
+      <div>
+        <label style={{
+          display: "block",
+          fontSize: "0.875rem",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.75rem"
+        }}>
           Einstellungen
         </label>
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="allowMultiple"
-            checked={data.allowMultiple}
-            onChange={(e) => updateField("allowMultiple", e.target.checked)}
-            className="mr-2"
-          />
-          <label htmlFor="allowMultiple" className="text-sm text-gray-700">
-            Mehrfachauswahl erlauben
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <label style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            cursor: "pointer"
+          }}>
+            <input
+              type="checkbox"
+              checked={data.allowMultiple}
+              onChange={(e) => updateField("allowMultiple", e.target.checked)}
+              style={{
+                width: "18px",
+                height: "18px",
+                cursor: "pointer",
+                accentColor: "#24c598"
+              }}
+            />
+            <span style={{
+              fontSize: "0.875rem",
+              color: "#0A0A0A"
+            }}>
+              Mehrfachauswahl erlauben
+            </span>
+          </label>
+          <label style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            cursor: "pointer"
+          }}>
+            <input
+              type="checkbox"
+              checked={data.showResults}
+              onChange={(e) => updateField("showResults", e.target.checked)}
+              style={{
+                width: "18px",
+                height: "18px",
+                cursor: "pointer",
+                accentColor: "#24c598"
+              }}
+            />
+            <span style={{
+              fontSize: "0.875rem",
+              color: "#0A0A0A"
+            }}>
+              Ergebnisse anzeigen
+            </span>
           </label>
         </div>
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="showResults"
-            checked={data.showResults}
-            onChange={(e) => updateField("showResults", e.target.checked)}
-            className="mr-2"
-          />
-          <label htmlFor="showResults" className="text-sm text-gray-700">
-            Ergebnisse anzeigen
-          </label>
-        </div>
+      </div>
+
+      {/* Completion Message */}
+      <div>
+        <label style={{
+          display: "block",
+          fontSize: "0.875rem",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
+        }}>
+          Dankesnachricht
+        </label>
+        <input
+          type="text"
+          value={data.completionMessage || ""}
+          onChange={(e) => updateField("completionMessage" as any, e.target.value)}
+          placeholder="Vielen Dank für Ihre Teilnahme!"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: "1px solid #E5E5E5",
+            borderRadius: "8px",
+            fontSize: "0.875rem",
+            transition: "all 0.2s"
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = "#24c598"
+            e.target.style.boxShadow = "0 0 0 3px rgba(36, 197, 152, 0.1)"
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = "#E5E5E5"
+            e.target.style.boxShadow = "none"
+          }}
+          maxLength={200}
+        />
+        <p style={{
+          fontSize: "0.75rem",
+          color: "#7A7A7A",
+          marginTop: "0.5rem",
+          marginBottom: 0
+        }}>
+          Diese Nachricht wird nach dem Absenden der Umfrage angezeigt
+        </p>
       </div>
     </div>
   )

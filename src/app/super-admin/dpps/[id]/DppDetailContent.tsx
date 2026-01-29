@@ -201,7 +201,7 @@ export default function DppDetailContent({ dpp }: DppDetailContentProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      color: "#E20074",
+                      color: "#24c598",
                       textDecoration: "none",
                       fontSize: "0.9rem",
                       fontWeight: "500"

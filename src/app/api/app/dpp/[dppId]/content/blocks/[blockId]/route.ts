@@ -98,11 +98,20 @@ export async function PUT(
     const { content, order, status } = body
 
     // Update block
+    // Normalize status: ensure it's always "draft" or "published"
+    const currentStatus = blocks[blockIndex].status
+    const newStatus = status !== undefined ? status : currentStatus
+    const normalizedStatus = (newStatus === "draft" || newStatus === "published") 
+      ? newStatus 
+      : (currentStatus === "draft" || currentStatus === "published" 
+          ? currentStatus 
+          : "draft")
+    
     const updatedBlock: Block = {
       ...blocks[blockIndex],
       content: content !== undefined ? content : blocks[blockIndex].content,
       order: order !== undefined ? order : blocks[blockIndex].order,
-      status: status !== undefined ? status : blocks[blockIndex].status
+      status: normalizedStatus
     }
 
     // Validate updated block
@@ -221,10 +230,14 @@ export async function DELETE(
       )
     }
 
-    // Reorder remaining blocks
+    // Reorder remaining blocks and ensure valid status
     const reorderedBlocks = filteredBlocks.map((block, index) => ({
       ...block,
-      order: index
+      order: index,
+      // Ensure status is always "draft" or "published" (default to "draft" if missing or invalid)
+      status: (block.status === "draft" || block.status === "published") 
+        ? block.status 
+        : "draft"
     }))
 
     // Save updated content

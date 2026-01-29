@@ -16,7 +16,7 @@ import FileUploadArea from "@/components/FileUploadArea"
 
 const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
   storytelling: "Storytelling",
-  quick_poll: "Quick Poll",
+  multi_question_poll: "Umfrage",
   image_text: "Bild & Text",
   text: "Text",
   image: "Bild",
@@ -27,17 +27,20 @@ const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
 
 // SVG Icons im Projekt-Stil
 const BlockIcons: Record<BlockTypeKey, React.ReactNode> = {
-  storytelling: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-    </svg>
-  ),
-  quick_poll: (
+  multi_question_poll: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10"/>
       <line x1="12" y1="20" x2="12" y2="4"/>
       <line x1="6" y1="20" x2="6" y2="14"/>
+      <circle cx="18" cy="10" r="2"/>
+      <circle cx="12" cy="4" r="2"/>
+      <circle cx="6" cy="14" r="2"/>
+    </svg>
+  ),
+  storytelling: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
     </svg>
   ),
   image_text: (
@@ -148,7 +151,7 @@ export default function ContentBlockCard({
               backgroundColor: "#FFFFFF",
               border: "1px solid #E5E5E5",
               borderRadius: "6px",
-              color: "#E20074"
+              color: "#24c598"
             }}>
               {BlockIcons[block.type]}
             </div>
@@ -218,7 +221,7 @@ export default function ContentBlockCard({
       onMouseLeave={() => setIsHovered(false)}
       style={{
         backgroundColor: "#FFFFFF",
-        border: isSelected ? "1px solid #E20074" : "1px solid #E5E5E5",
+        border: isSelected ? "1px solid #24c598" : "1px solid #E5E5E5",
         borderRadius: "12px",
         overflow: "hidden",
         width: "100%",
@@ -262,7 +265,7 @@ export default function ContentBlockCard({
           backgroundColor: "#FFFFFF",
           border: "1px solid #E5E5E5",
           borderRadius: "6px",
-          color: "#E20074",
+          color: "#24c598",
           flexShrink: 0
         }}>
           {BlockIcons[block.type]}
@@ -317,6 +320,73 @@ export default function ContentBlockCard({
             alignItems: "center",
             gap: "0.5rem"
           }} onClick={(e) => e.stopPropagation()}>
+            {/* Status Toggle Button - immer verfügbar wenn Block im entsprechenden Status */}
+            {block.status === "draft" && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUpdate({ status: "published" })
+                }}
+                style={{
+                  padding: "0.5rem",
+                  color: "#7A7A7A",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#24c598"
+                  e.currentTarget.style.backgroundColor = "#F0FDF4"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "#7A7A7A"
+                  e.currentTarget.style.backgroundColor = "transparent"
+                }}
+                title="Veröffentlichen"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+            )}
+            {block.status === "published" && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUpdate({ status: "draft" })
+                }}
+                style={{
+                  padding: "0.5rem",
+                  color: "#7A7A7A",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#24c598"
+                  e.currentTarget.style.backgroundColor = "#F0FDF4"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "#7A7A7A"
+                  e.currentTarget.style.backgroundColor = "transparent"
+                }}
+                title="Zurück zu Entwurf"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -335,8 +405,8 @@ export default function ContentBlockCard({
                 justifyContent: "center"
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#E20074"
-                e.currentTarget.style.backgroundColor = "#FFF5F9"
+                e.currentTarget.style.color = "#24c598"
+                e.currentTarget.style.backgroundColor = "#F0FDF4"
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = "#7A7A7A"
@@ -364,20 +434,15 @@ export default function ContentBlockCard({
                 transition: "all 0.2s",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                position: "relative"
+                justifyContent: "center"
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = "#DC2626"
                 e.currentTarget.style.backgroundColor = "#FEF2F2"
-                const tooltip = e.currentTarget.querySelector(".delete-tooltip") as HTMLElement
-                if (tooltip) tooltip.style.opacity = "1"
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = "#7A7A7A"
                 e.currentTarget.style.backgroundColor = "transparent"
-                const tooltip = e.currentTarget.querySelector(".delete-tooltip") as HTMLElement
-                if (tooltip) tooltip.style.opacity = "0"
               }}
               title="Block löschen"
             >
@@ -385,27 +450,6 @@ export default function ContentBlockCard({
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
               </svg>
-              <div 
-                className="delete-tooltip"
-                style={{
-                  position: "absolute",
-                  bottom: "100%",
-                  right: 0,
-                  marginBottom: "0.5rem",
-                  padding: "0.5rem 0.75rem",
-                  backgroundColor: "#0A0A0A",
-                  color: "#FFFFFF",
-                  fontSize: "0.75rem",
-                  borderRadius: "6px",
-                  whiteSpace: "nowrap",
-                  opacity: 0,
-                  pointerEvents: "none",
-                  transition: "opacity 0.2s",
-                  zIndex: 1000
-                }}
-              >
-                Block löschen
-              </div>
             </button>
           </div>
         )}
@@ -452,7 +496,7 @@ export default function ContentBlockCard({
             </div>
           </div>
         )}
-        {block.type === "quick_poll" && (
+        {false && (
           <div>
             <div style={{
               fontSize: "0.875rem",
@@ -576,7 +620,7 @@ export default function ContentBlockCard({
             )}
           </div>
         )}
-        {!["storytelling", "quick_poll", "image_text", "text", "image", "video", "timeline", "accordion"].includes(block.type) && (
+        {!["storytelling", "image_text", "text", "image", "video", "timeline", "accordion"].includes(block.type) && (
           <div style={{
             fontSize: "0.875rem",
             color: "#7A7A7A",

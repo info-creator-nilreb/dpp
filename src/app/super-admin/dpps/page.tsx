@@ -83,7 +83,34 @@ export default async function SuperAdminDppsPage({ searchParams }: SuperAdminDpp
     }
   }
 
-  // Get all DPPs with organization and counts (filtered)
+  // Get all available categories and statuses from ALL DPPs (before filtering)
+  // This ensures filter options only show values that actually exist
+  const allDpps = await prisma.dpp.findMany({
+    select: {
+      category: true,
+      status: true
+    }
+  })
+
+  // Extract unique categories and statuses that actually exist
+  const availableCategories = Array.from(
+    new Set(allDpps.map(dpp => dpp.category).filter(Boolean))
+  ).sort() as string[]
+  
+  const availableStatuses = Array.from(
+    new Set(allDpps.map(dpp => dpp.status).filter(Boolean))
+  ).sort() as string[]
+
+  // Get all organizations for filter dropdown
+  const organizations = await prisma.organization.findMany({
+    select: {
+      id: true,
+      name: true
+    },
+    orderBy: { name: "asc" }
+  })
+
+  // Get filtered DPPs with organization and counts (after filtering)
   const dpps = await prisma.dpp.findMany({
     where,
     orderBy: { updatedAt: "desc" },
@@ -106,22 +133,6 @@ export default async function SuperAdminDppsPage({ searchParams }: SuperAdminDpp
       }
     }
   })
-
-  // Get all organizations for filter dropdown
-  const organizations = await prisma.organization.findMany({
-    select: {
-      id: true,
-      name: true
-    },
-    orderBy: { name: "asc" }
-  })
-
-  // Extract unique categories and statuses from filtered results for filter options
-  const availableCategories = Array.from(new Set(dpps.map(dpp => dpp.category).filter(Boolean))) as string[]
-  availableCategories.sort()
-
-  const availableStatuses = Array.from(new Set(dpps.map(dpp => dpp.status)))
-  availableStatuses.sort()
 
   return (
     <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>

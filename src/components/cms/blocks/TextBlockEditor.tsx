@@ -110,7 +110,7 @@ export default function TextBlockEditor({
             transition: "all 0.2s"
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = "#E20074"
+            e.target.style.borderColor = "#24c598"
             e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
           }}
           onBlur={(e) => {
@@ -161,7 +161,7 @@ export default function TextBlockEditor({
                 transition: "all 0.2s"
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = "#E20074"
+                e.target.style.borderColor = "#24c598"
                 e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
               }}
               onBlur={(e) => {
@@ -201,11 +201,11 @@ export default function TextBlockEditor({
                   style={{
                     flex: 1,
                     padding: "0.75rem",
-                    border: `1px solid ${data.alignment === option.value ? "#E20074" : "#E5E5E5"}`,
+                    border: `1px solid ${data.alignment === option.value ? "#24c598" : "#E5E5E5"}`,
                     borderRadius: "8px",
                     fontSize: "1rem",
                     fontWeight: data.alignment === option.value ? "600" : "400",
-                    color: data.alignment === option.value ? "#E20074" : "#0A0A0A",
+                    color: data.alignment === option.value ? "#24c598" : "#0A0A0A",
                     backgroundColor: data.alignment === option.value ? "#FFF5F9" : "#FFFFFF",
                     cursor: "pointer",
                     transition: "all 0.2s"
@@ -229,11 +229,11 @@ export default function TextBlockEditor({
             onClick={() => updateField("fontWeight", data.fontWeight === "bold" ? "normal" : "bold")}
             style={{
               padding: "0.5rem 1rem",
-              border: `1px solid ${data.fontWeight === "bold" ? "#E20074" : "#E5E5E5"}`,
+              border: `1px solid ${data.fontWeight === "bold" ? "#24c598" : "#E5E5E5"}`,
               borderRadius: "8px",
               fontSize: "0.875rem",
               fontWeight: data.fontWeight === "bold" ? "700" : "400",
-              color: data.fontWeight === "bold" ? "#E20074" : "#0A0A0A",
+              color: data.fontWeight === "bold" ? "#24c598" : "#0A0A0A",
               backgroundColor: data.fontWeight === "bold" ? "#FFF5F9" : "#FFFFFF",
               cursor: "pointer",
               transition: "all 0.2s"
@@ -246,11 +246,11 @@ export default function TextBlockEditor({
             onClick={() => updateField("fontStyle", data.fontStyle === "italic" ? "normal" : "italic")}
             style={{
               padding: "0.5rem 1rem",
-              border: `1px solid ${data.fontStyle === "italic" ? "#E20074" : "#E5E5E5"}`,
+              border: `1px solid ${data.fontStyle === "italic" ? "#24c598" : "#E5E5E5"}`,
               borderRadius: "8px",
               fontSize: "0.875rem",
               fontStyle: data.fontStyle === "italic" ? "italic" : "normal",
-              color: data.fontStyle === "italic" ? "#E20074" : "#0A0A0A",
+              color: data.fontStyle === "italic" ? "#24c598" : "#0A0A0A",
               backgroundColor: data.fontStyle === "italic" ? "#FFF5F9" : "#FFFFFF",
               cursor: "pointer",
               transition: "all 0.2s"
@@ -263,11 +263,11 @@ export default function TextBlockEditor({
             onClick={() => updateField("textDecoration", data.textDecoration === "underline" ? "none" : "underline")}
             style={{
               padding: "0.5rem 1rem",
-              border: `1px solid ${data.textDecoration === "underline" ? "#E20074" : "#E5E5E5"}`,
+              border: `1px solid ${data.textDecoration === "underline" ? "#24c598" : "#E5E5E5"}`,
               borderRadius: "8px",
               fontSize: "0.875rem",
               textDecoration: data.textDecoration === "underline" ? "underline" : "none",
-              color: data.textDecoration === "underline" ? "#E20074" : "#0A0A0A",
+              color: data.textDecoration === "underline" ? "#24c598" : "#0A0A0A",
               backgroundColor: data.textDecoration === "underline" ? "#FFF5F9" : "#FFFFFF",
               cursor: "pointer",
               transition: "all 0.2s"
@@ -313,7 +313,7 @@ export default function TextBlockEditor({
             transition: "all 0.2s"
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = "#E20074"
+            e.target.style.borderColor = "#24c598"
             e.target.style.boxShadow = "0 0 0 3px rgba(226, 0, 116, 0.1)"
           }}
           onBlur={(e) => {

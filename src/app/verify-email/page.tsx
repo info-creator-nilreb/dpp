@@ -37,7 +37,7 @@ function LoadingSpinner() {
           cx="12"
           cy="12"
           r="10"
-          stroke="#E20074"
+          stroke="#24c598"
           strokeWidth="2"
           strokeLinecap="round"
           strokeDasharray="32"
@@ -48,7 +48,7 @@ function LoadingSpinner() {
           cx="12"
           cy="12"
           r="10"
-          stroke="#E20074"
+          stroke="#24c598"
           strokeWidth="2"
           strokeLinecap="round"
           strokeDasharray="32"
@@ -129,7 +129,7 @@ function VerifyEmailContent() {
       subtitle="Ihre Registrierung wird geprüft"
       quote={{
         text: "Vertrauen beginnt mit Verifizierung.",
-        author: "T-Pass"
+        author: "Easy Pass"
       }}
     >
       {/* Logo über der Card */}
@@ -140,7 +140,7 @@ function VerifyEmailContent() {
             width="48"
             height="48"
             fill="none"
-            stroke="#E20074"
+            stroke="#24c598"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -156,7 +156,7 @@ function VerifyEmailContent() {
           fontWeight: "700",
           color: "#0A0A0A"
         }}>
-          T-Pass
+          Easy Pass
         </span>
       </Link>
 
@@ -249,14 +249,14 @@ function VerifyEmailContent() {
                 xmlns="http://www.w3.org/2000/svg"
                 style={{ margin: "0 auto" }}
               >
-                <circle cx="12" cy="12" r="10" fill="#E20074" />
+                <circle cx="12" cy="12" r="10" fill="#24c598" />
                 <path d="M9 9l6 6M15 9l-6 6" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <h1 style={{
               fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
               fontWeight: "700",
-              color: "#E20074",
+              color: "#24c598",
               marginBottom: "0.5rem"
             }}>
               Fehler bei der Verifizierung
@@ -269,7 +269,7 @@ function VerifyEmailContent() {
               style={{
                 display: "inline-block",
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 textDecoration: "none",
                 borderRadius: "6px",
@@ -293,7 +293,7 @@ function VerifyEmailContent() {
                 xmlns="http://www.w3.org/2000/svg"
                 style={{ margin: "0 auto" }}
               >
-                <circle cx="12" cy="12" r="10" fill="#E20074" />
+                <circle cx="12" cy="12" r="10" fill="#24c598" />
                 <circle cx="12" cy="12" r="1" fill="#FFFFFF" />
                 <path d="M12 6v6l4 2" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
               </svg>
@@ -301,7 +301,7 @@ function VerifyEmailContent() {
             <h1 style={{
               fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
               fontWeight: "700",
-              color: "#E20074",
+              color: "#24c598",
               marginBottom: "0.5rem"
             }}>
               Link abgelaufen
@@ -314,7 +314,7 @@ function VerifyEmailContent() {
               style={{
                 display: "inline-block",
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#E20074",
+                backgroundColor: "#24c598",
                 color: "#FFFFFF",
                 textDecoration: "none",
                 borderRadius: "6px",
@@ -339,7 +339,7 @@ export default function VerifyEmailPage() {
         subtitle="Ihre Registrierung wird geprüft"
         quote={{
           text: "Vertrauen beginnt mit Verifizierung.",
-          author: "T-Pass"
+          author: "Easy Pass"
         }}
       >
         <div style={{

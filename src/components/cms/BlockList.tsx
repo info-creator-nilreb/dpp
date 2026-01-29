@@ -10,6 +10,7 @@ import { useState } from "react"
 import { Block, BlockTypeKey } from "@/lib/cms/types"
 import { BLOCK_TYPE_FEATURE_MAP } from "@/lib/cms/validation"
 import { getAvailableTemplates, createBlockFromTemplate, BlockTemplate } from "@/lib/cms/templates"
+import BlockPickerModal from "./BlockPickerModal"
 
 interface BlockListProps {
   blocks: Block[]
@@ -23,7 +24,7 @@ interface BlockListProps {
 
 const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
   storytelling: "Storytelling",
-  quick_poll: "Quick Poll",
+  multi_question_poll: "Multi-Question Poll",
   image_text: "Bild & Text",
   text: "Text",
   image: "Bild",
@@ -44,6 +45,7 @@ export default function BlockList({
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [showBlockPicker, setShowBlockPicker] = useState(false)
 
   // Sort blocks by order
   const sortedBlocks = [...blocks].sort((a, b) => a.order - b.order)
@@ -128,12 +130,7 @@ export default function BlockList({
       {/* Add Block Button */}
       <div className="p-4 border-b border-gray-200 space-y-2">
         <button
-          onClick={() => {
-            // Simple: just add first available type
-            if (availableBlockTypes.length > 0) {
-              onAddBlock(availableBlockTypes[0])
-            }
-          }}
+          onClick={() => setShowBlockPicker(true)}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
         >
           + Block hinzufügen
@@ -259,6 +256,18 @@ export default function BlockList({
             )
           })}
         </div>
+      )}
+
+      {/* Block Picker Modal */}
+      {showBlockPicker && (
+        <BlockPickerModal
+          availableFeatures={availableFeatures}
+          onSelectBlock={(type) => {
+            onAddBlock(type)
+            setShowBlockPicker(false)
+          }}
+          onClose={() => setShowBlockPicker(false)}
+        />
       )}
     </div>
   )

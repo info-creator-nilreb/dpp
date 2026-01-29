@@ -106,7 +106,7 @@ export async function PUT(
       colors: {
         primary: "#0A0A0A", // System default
         secondary: "#7A7A7A", // System default
-        accent: "#E20074" // System default
+        accent: "#24c598" // System default
       }
     }
 

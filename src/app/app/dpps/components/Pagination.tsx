@@ -91,7 +91,7 @@ export default function Pagination({
               padding: "0.75rem 1rem",
               border: "1px solid #CDCDCD",
               borderRadius: "6px",
-              backgroundColor: currentPage === pageNum ? "#E20074" : "#FFFFFF",
+              backgroundColor: currentPage === pageNum ? "#24c598" : "#FFFFFF",
               color: currentPage === pageNum ? "#FFFFFF" : "#0A0A0A",
               cursor: "pointer",
               fontSize: "0.9rem",

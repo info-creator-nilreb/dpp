@@ -215,7 +215,7 @@ export default function UsersTable({ users, canCreate }: UsersTableProps) {
                     <Link
                       href={`/super-admin/users/${user.id}`}
                       style={{
-                        color: "#E20074",
+                        color: "#24c598",
                         textDecoration: "none",
                         fontWeight: "500"
                       }}
@@ -236,7 +236,7 @@ export default function UsersTable({ users, canCreate }: UsersTableProps) {
                       <Link
                         href={`/super-admin/organizations/${user.organizationId}`}
                         style={{
-                          color: "#E20074",
+                          color: "#24c598",
                           textDecoration: "none"
                         }}
                       >
@@ -286,7 +286,7 @@ export default function UsersTable({ users, canCreate }: UsersTableProps) {
                       href={`/super-admin/users/${user.id}`}
                       style={{
                         padding: "clamp(0.4rem, 1.5vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
-                        backgroundColor: "#E20074",
+                        backgroundColor: "#24c598",
                         color: "#FFFFFF",
                         textDecoration: "none",
                         borderRadius: "6px",

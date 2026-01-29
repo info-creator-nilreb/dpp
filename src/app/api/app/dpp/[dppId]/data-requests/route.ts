@@ -198,7 +198,7 @@ export async function GET(
         id: token.id,
         email: token.email,
         partnerRole: token.partnerRole,
-        sections: token.sections.split(","),
+        sections: token.sections ? token.sections.split(",") : [],
         status: token.status,
         expiresAt: token.expiresAt,
         submittedAt: token.submittedAt,
