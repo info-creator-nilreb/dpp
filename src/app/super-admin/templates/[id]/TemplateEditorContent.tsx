@@ -970,7 +970,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             display: grid;
             grid-template-columns:
               24px
-              minmax(240px, 1fr)
+              minmax(220px, 1fr)
               160px
               96px
               120px
