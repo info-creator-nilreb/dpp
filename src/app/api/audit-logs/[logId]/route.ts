@@ -14,9 +14,10 @@ import { canAccessAuditLogs, canSeeIpAddresses } from "@/lib/audit/audit-access"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { logId: string } }
+  context: { params: Promise<{ logId: string }> }
 ) {
   try {
+    const { logId } = await context.params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -24,7 +25,7 @@ export async function GET(
     }
 
     const log = await prisma.platformAuditLog.findUnique({
-      where: { id: params.logId },
+      where: { id: logId },
       include: {
         actor: {
           select: {
