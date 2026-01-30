@@ -16,16 +16,17 @@ import { getClientIp } from "@/lib/audit/audit-utils"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "read")
     if (session instanceof NextResponse) {
       return session
     }
 
     const pricingPlan = await prisma.pricingPlan.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         features: true,
         entitlements: true,
@@ -60,9 +61,10 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "update")
     if (session instanceof NextResponse) {
       return session
@@ -82,7 +84,7 @@ export async function PUT(
 
     // Check if plan exists
     const existingPlan = await prisma.pricingPlan.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingPlan) {
@@ -117,15 +119,15 @@ export async function PUT(
 
     // Get old features and entitlements for audit log
     const oldFeatures = await prisma.pricingPlanFeature.findMany({
-      where: { pricingPlanId: params.id }
+      where: { pricingPlanId: id }
     })
     const oldEntitlements = await prisma.pricingPlanEntitlement.findMany({
-      where: { pricingPlanId: params.id }
+      where: { pricingPlanId: id }
     })
 
     // Update pricing plan
     const pricingPlan = await prisma.pricingPlan.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         ...(name && { name }),
         ...(slug && { slug }),
@@ -200,7 +202,7 @@ export async function PUT(
 
     // Log each changed field
     for (const field of changedFields) {
-      await logPricingPlanAction(ACTION_TYPES.UPDATE, params.id, {
+      await logPricingPlanAction(ACTION_TYPES.UPDATE, id, {
         actorId: session.id,
         actorRole: "SUPER_ADMIN",
         fieldName: field,
@@ -220,7 +222,7 @@ export async function PUT(
           await logPricingPlanFeatureAction(ACTION_TYPES.DELETE, oldFeature.id, {
             actorId: session.id,
             actorRole: "SUPER_ADMIN",
-            pricingPlanId: params.id,
+            pricingPlanId: id,
             featureKey: oldFeature.featureKey,
             oldValue: {
               included: oldFeature.included,
@@ -240,7 +242,7 @@ export async function PUT(
           await logPricingPlanFeatureAction(ACTION_TYPES.CREATE, newFeature.id, {
             actorId: session.id,
             actorRole: "SUPER_ADMIN",
-            pricingPlanId: params.id,
+            pricingPlanId: id,
             featureKey: newFeature.featureKey,
             newValue: {
               included: newFeature.included,
@@ -254,7 +256,7 @@ export async function PUT(
           await logPricingPlanFeatureAction(ACTION_TYPES.UPDATE, newFeature.id, {
             actorId: session.id,
             actorRole: "SUPER_ADMIN",
-            pricingPlanId: params.id,
+            pricingPlanId: id,
             featureKey: newFeature.featureKey,
             oldValue: {
               included: oldFeature.included,
@@ -280,7 +282,7 @@ export async function PUT(
           await logPricingPlanEntitlementAction(ACTION_TYPES.DELETE, oldEntitlement.id, {
             actorId: session.id,
             actorRole: "SUPER_ADMIN",
-            pricingPlanId: params.id,
+            pricingPlanId: id,
             entitlementKey: oldEntitlement.entitlementKey,
             oldValue: {
               value: oldEntitlement.value
@@ -299,7 +301,7 @@ export async function PUT(
           await logPricingPlanEntitlementAction(ACTION_TYPES.CREATE, newEntitlement.id, {
             actorId: session.id,
             actorRole: "SUPER_ADMIN",
-            pricingPlanId: params.id,
+            pricingPlanId: id,
             entitlementKey: newEntitlement.entitlementKey,
             newValue: {
               value: newEntitlement.value
@@ -312,7 +314,7 @@ export async function PUT(
           await logPricingPlanEntitlementAction(ACTION_TYPES.UPDATE, newEntitlement.id, {
             actorId: session.id,
             actorRole: "SUPER_ADMIN",
-            pricingPlanId: params.id,
+            pricingPlanId: id,
             entitlementKey: newEntitlement.entitlementKey,
             oldValue: {
               value: oldEntitlement.value
@@ -339,9 +341,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "update")
     if (session instanceof NextResponse) {
       return session
@@ -349,7 +352,7 @@ export async function DELETE(
 
     // Check if plan exists
     const existingPlan = await prisma.pricingPlan.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         subscriptionModels: {
           include: {
@@ -380,7 +383,7 @@ export async function DELETE(
 
     // Audit log: Pricing Plan deleted
     const ipAddress = getClientIp(req)
-    await logPricingPlanAction(ACTION_TYPES.DELETE, params.id, {
+    await logPricingPlanAction(ACTION_TYPES.DELETE, id, {
       actorId: session.id,
       actorRole: "SUPER_ADMIN",
       oldValue: {
@@ -400,7 +403,7 @@ export async function DELETE(
 
     // Delete pricing plan (cascade will handle related records)
     await prisma.pricingPlan.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     return NextResponse.json({ success: true }, { status: 200 })
