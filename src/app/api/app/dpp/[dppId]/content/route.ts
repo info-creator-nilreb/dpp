@@ -14,9 +14,10 @@ export const dynamic = "force-dynamic"
  */
 export async function PUT(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -27,18 +28,18 @@ export async function PUT(
     }
 
     // Prüfe Berechtigung
-    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    const permissionError = await requireEditDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
     const { fieldValues, fieldInstances } = await request.json()
 
-    console.log("[DPP Content API] Saving content for DPP:", params.dppId)
+    console.log("[DPP Content API] Saving content for DPP:", dppId)
     console.log("[DPP Content API] Field values:", Object.keys(fieldValues || {}).length, "fields:", Object.keys(fieldValues || {}))
     console.log("[DPP Content API] Field instances:", Object.keys(fieldInstances || {}).length, "repeatable fields:", Object.keys(fieldInstances || {}))
 
     // Lade Template, um Block-Struktur zu erhalten
     const dpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: dppId },
       select: { category: true }
     })
 
@@ -104,7 +105,7 @@ export async function PUT(
     // Lade oder erstelle DppContent
     let dppContent = await prisma.dppContent.findFirst({
       where: {
-        dppId: params.dppId,
+        dppId,
         isPublished: false
       }
     })
@@ -159,7 +160,7 @@ export async function PUT(
       finalBlocks = templateBlocks
       await prisma.dppContent.create({
         data: {
-          dppId: params.dppId,
+          dppId,
           blocks: finalBlocks,
           isPublished: false
         }

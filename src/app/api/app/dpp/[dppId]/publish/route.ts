@@ -24,9 +24,10 @@ import { getOrganizationRole } from "@/lib/permissions"
  */
 export async function POST(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -37,12 +38,12 @@ export async function POST(
     }
 
     // Prüfe Berechtigung zum Bearbeiten (Veröffentlichen erfordert Bearbeitungsrechte)
-    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    const permissionError = await requireEditDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
     // Hole DPP mit allen Daten
     const dpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: dppId },
       include: {
         media: true
       }
@@ -115,7 +116,7 @@ export async function POST(
 
     // Finde höchste bestehende Versionsnummer
     const latestVersion = await prisma.dppVersion.findFirst({
-      where: { dppId: params.dppId },
+      where: { dppId: dppId },
       orderBy: { version: "desc" },
       select: { version: true }
     })
@@ -125,7 +126,7 @@ export async function POST(
     // Speichere NUR den relativen Pfad in der DB (nicht die absolute URL)
     // Absolute URLs werden dynamisch zur Laufzeit mit getBaseUrl() generiert
     // Dies stellt sicher, dass URLs korrekt sind, auch nach Deployment-Umgebungswechsel
-    const publicPath = `/public/dpp/${params.dppId}/v/${nextVersion}`
+    const publicPath = `/public/dpp/${dppId}/v/${nextVersion}`
     
     console.log("Generated public path (relative):", publicPath)
 
@@ -145,21 +146,21 @@ export async function POST(
     console.log("Values to save:", { publicPath, qrCodeImageUrl })
 
     // Transaktion: Erstelle Version und aktualisiere Status
-    console.log("Starting publish transaction for DPP:", params.dppId)
+    console.log("Starting publish transaction for DPP:", dppId)
     console.log("Next version number:", nextVersion)
     console.log("User ID:", session.user.id)
     
     const result = await prisma.$transaction(async (tx) => {
       // Erstelle neue Version (Snapshot aller Daten)
       console.log("Creating DPP version with data:", {
-        dppId: params.dppId,
+        dppId: dppId,
         version: nextVersion,
         publicPath: publicPath,
         hasPublicPath: !!publicPath
       })
       
       const versionData = {
-        dppId: params.dppId,
+        dppId: dppId,
         version: nextVersion,
         name: dpp.name,
         description: dpp.description || null,
@@ -196,7 +197,7 @@ export async function POST(
       // Setze Status auf PUBLISHED (falls noch nicht gesetzt)
       if (dpp.status !== "PUBLISHED") {
         await tx.dpp.update({
-          where: { id: params.dppId },
+          where: { id: dppId },
           data: { status: "PUBLISHED" }
         })
         console.log("DPP status updated to PUBLISHED")
@@ -213,7 +214,7 @@ export async function POST(
     const ipAddress = getClientIp(request)
     const role = await getOrganizationRole(session.user.id, dpp.organizationId)
     
-    await logDppAction(ACTION_TYPES.PUBLISH, params.dppId, {
+    await logDppAction(ACTION_TYPES.PUBLISH, dppId, {
       actorId: session.user.id,
       actorRole: role || undefined,
       organizationId: dpp.organizationId,

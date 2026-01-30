@@ -14,9 +14,10 @@ import { requireViewDPP } from "@/lib/api-permissions"
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string; versionNumber: string } }
+  { params }: { params: Promise<{ dppId: string; versionNumber: string }> }
 ) {
   try {
+    const { dppId, versionNumber: versionNumberParam } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -27,10 +28,10 @@ export async function GET(
     }
 
     // Prüfe Berechtigung zum Ansehen
-    const permissionError = await requireViewDPP(params.dppId, session.user.id)
+    const permissionError = await requireViewDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
-    const versionNumber = parseInt(params.versionNumber, 10)
+    const versionNumber = parseInt(versionNumberParam, 10)
     if (isNaN(versionNumber)) {
       return NextResponse.json(
         { error: "Ungültige Versionsnummer" },
@@ -42,7 +43,7 @@ export async function GET(
     const version = await prisma.dppVersion.findUnique({
       where: {
         dppId_version: {
-          dppId: params.dppId,
+          dppId,
           version: versionNumber
         }
       },

@@ -12,16 +12,17 @@ import { canViewDPP } from "@/lib/permissions"
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string } }
+  context: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await context.params
     const session = await auth()
     
     if (!session?.user?.id) {
       return NextResponse.json({ hasAccess: false }, { status: 200 })
     }
 
-    const hasAccess = await canViewDPP(session.user.id, params.dppId)
+    const hasAccess = await canViewDPP(session.user.id, dppId)
     return NextResponse.json({ hasAccess }, { status: 200 })
   } catch (error) {
     console.error("Error checking DPP access:", error)

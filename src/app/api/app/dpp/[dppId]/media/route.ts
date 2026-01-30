@@ -20,9 +20,10 @@ import { scanFile } from "@/lib/virus-scanner"
  */
 export async function POST(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -31,8 +32,6 @@ export async function POST(
         { status: 401 }
       )
     }
-
-    const { dppId } = params
 
     // Prüfe Berechtigung zum Bearbeiten (inkl. Medien-Upload)
     const permissionError = await requireEditDPP(dppId, session.user.id)
@@ -129,9 +128,10 @@ export async function POST(
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -140,8 +140,6 @@ export async function GET(
         { status: 401 }
       )
     }
-
-    const { dppId } = params
 
     // Prüfe Berechtigung zum Ansehen
     const permissionError = await requireViewDPP(dppId, session.user.id)

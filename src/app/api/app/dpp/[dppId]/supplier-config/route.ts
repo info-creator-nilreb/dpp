@@ -8,15 +8,14 @@ import { prisma } from "@/lib/prisma"
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
-    const { dppId } = params
 
     // Prüfe, ob DPP existiert und User Zugriff hat
     const dpp = await prisma.dpp.findUnique({
@@ -83,15 +82,14 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
-    const { dppId } = params
     const { blockId, enabled, mode, allowedRoles } = await request.json()
 
     if (!blockId) {

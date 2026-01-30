@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,7 +18,7 @@ export async function GET(
 
     // Get DPP and organization
     const dpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: dppId },
       include: { organization: true },
     });
 
