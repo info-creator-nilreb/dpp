@@ -16,16 +16,17 @@ import { getClientIp } from "@/lib/audit/audit-utils"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "read")
     if (session instanceof NextResponse) {
       return session
     }
 
     const subscriptionModel = await prisma.subscriptionModel.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         pricingPlan: {
           select: {
@@ -61,9 +62,10 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "update")
     if (session instanceof NextResponse) {
       return session
@@ -78,7 +80,7 @@ export async function PUT(
 
     // Check if model exists
     const existing = await prisma.subscriptionModel.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existing) {
@@ -90,7 +92,7 @@ export async function PUT(
 
     // Update subscription model
     const subscriptionModel = await prisma.subscriptionModel.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(minCommitmentMonths !== undefined && { minCommitmentMonths: minCommitmentMonths || null }),
         ...(trialDays !== undefined && { trialDays }),
@@ -118,7 +120,7 @@ export async function PUT(
     
     if (minCommitmentMonths !== undefined && minCommitmentMonths !== existing.minCommitmentMonths) {
       changedFields.push("minCommitmentMonths")
-      await logSubscriptionModelAction(ACTION_TYPES.UPDATE, params.id, {
+      await logSubscriptionModelAction(ACTION_TYPES.UPDATE, id, {
         actorId: session.id,
         actorRole: "SUPER_ADMIN",
         pricingPlanId: existing.pricingPlanId,
@@ -132,7 +134,7 @@ export async function PUT(
     
     if (trialDays !== undefined && trialDays !== existing.trialDays) {
       changedFields.push("trialDays")
-      await logSubscriptionModelAction(ACTION_TYPES.UPDATE, params.id, {
+      await logSubscriptionModelAction(ACTION_TYPES.UPDATE, id, {
         actorId: session.id,
         actorRole: "SUPER_ADMIN",
         pricingPlanId: existing.pricingPlanId,
@@ -146,7 +148,7 @@ export async function PUT(
     
     if (isActive !== undefined && isActive !== existing.isActive) {
       changedFields.push("isActive")
-      await logSubscriptionModelAction(ACTION_TYPES.UPDATE, params.id, {
+      await logSubscriptionModelAction(ACTION_TYPES.UPDATE, id, {
         actorId: session.id,
         actorRole: "SUPER_ADMIN",
         pricingPlanId: existing.pricingPlanId,
@@ -170,9 +172,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "update")
     if (session instanceof NextResponse) {
       return session
@@ -180,7 +183,7 @@ export async function DELETE(
 
     // Check if model exists and has subscriptions
     const existing = await prisma.subscriptionModel.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         subscriptions: true
       }
@@ -202,7 +205,7 @@ export async function DELETE(
 
     // Audit log: Subscription Model deleted
     const ipAddress = getClientIp(req)
-    await logSubscriptionModelAction(ACTION_TYPES.DELETE, params.id, {
+    await logSubscriptionModelAction(ACTION_TYPES.DELETE, id, {
       actorId: session.id,
       actorRole: "SUPER_ADMIN",
       pricingPlanId: existing.pricingPlanId,
@@ -222,7 +225,7 @@ export async function DELETE(
 
     // Delete subscription model (cascade will handle related records)
     await prisma.subscriptionModel.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ success: true }, { status: 200 })
