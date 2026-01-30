@@ -23,6 +23,7 @@ export default auth(async (req) => {
     "/api/auth/check-verification",
     "/api/auth/signup",
     "/api/auth/signup-phase1",
+    "/api/auth/invitation",
     "/api/auth/verify-password",
     "/api/auth/forgot-password",
   ]
