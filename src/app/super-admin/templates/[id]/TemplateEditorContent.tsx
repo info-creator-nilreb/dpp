@@ -965,26 +965,23 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             }
           }
         }
-        @media (min-width: 769px) and (max-width: 1200px) {
+        @media (min-width: 769px) {
           .template-editor-field-grid {
-            grid-template-columns: 0.5fr 1.5fr 1fr auto auto !important;
-            gap: 0.8rem !important;
-            grid-auto-flow: column;   
+            display: grid;
+            grid-template-columns:
+              24px
+              minmax(240px, 1fr)
+              160px
+              96px
+              120px
+              32px;
+            gap: 0.75rem;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
           }
-          .template-editor-field-grid input,
-          .template-editor-field-grid select {
-            min-width: 0 !important;
-            font-size: 0.875rem !important;
-          }
-          .template-editor-field-grid button {
-            padding: 0.375rem 0.5rem !important;
-            font-size: 0.75rem !important;
-            white-space: nowrap !important;
-          }
-        }
-        @media (min-width: 1400px) {
-          .template-editor-field-grid {
-            grid-template-columns: 1fr 4fr 1.5fr auto auto !important;
+          .template-editor-field-grid > * {
+            min-width: 0;
           }
         }
       `
@@ -1407,20 +1404,16 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
                       transition: "all 0.2s",
                       width: "100%",
                       boxSizing: "border-box",
-                      overflow: "visible"
                     }}
                   >
                     <div 
                       className="template-editor-field-grid"
                       style={{
                         display: "grid",
-                        gridTemplateColumns: isEditable ? "16px minmax(150px, 1fr) 140px max-content max-content 32px" : "minmax(120px, 2fr) minmax(100px, 2fr) minmax(120px, 1fr) max-content max-content 32px",
-                        gap: isEditable ? "0.25rem 0.75rem" : "0.75rem",
+                        gap: "0.75rem",
                         alignItems: "center",
                         width: "100%",
-                        boxSizing: "border-box",
                         minWidth: 0,
-                        overflow: "visible"
                       }}
                     >
                       {isEditable && (
