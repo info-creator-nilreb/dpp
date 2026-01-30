@@ -369,7 +369,7 @@ function ContributeContent() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)",
+              boxShadow: "0 4px 12px rgba(36, 197, 152, 0.3)",
             }}>
               <svg
                 width="48"

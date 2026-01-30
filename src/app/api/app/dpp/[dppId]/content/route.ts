@@ -1,325 +1,24 @@
-/**
- * DPP Content API
- * 
- * GET: Load DPP content (blocks + styling)
- * POST: Create or update DPP content
- */
+import { NextResponse } from "next/server"
+import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
+import { requireEditDPP } from "@/lib/api-permissions"
+import { latestPublishedTemplate } from "@/lib/template-helpers"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-import { NextResponse } from "next/server"
-import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
-import { requireViewDPP, requireEditDPP } from "@/lib/api-permissions"
-import { hasFeature, CapabilityContext } from "@/lib/capabilities/resolver"
-import { validateDppContent, resolveTheme } from "@/lib/cms/validation"
-import { Block, StylingConfig } from "@/lib/cms/types"
-import { defaultStylingConfig } from "@/lib/cms/schemas"
-import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
-import { getClientIp } from "@/lib/audit/get-client-ip"
-import { getOrganizationRole } from "@/lib/permissions"
-
-/**
- * GET /api/app/dpp/[dppId]/content
- * 
- * Loads DPP content (blocks + styling)
- */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ dppId: string }> }
-) {
-  try {
-    const session = await auth()
-    const resolvedParams = await params
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      )
-    }
-
-    // Check permissions
-    const permissionError = await requireViewDPP(resolvedParams.dppId, session.user.id)
-    if (permissionError) {
-      return permissionError
-    }
-
-    // Load DPP to get organization
-    const dpp = await prisma.dpp.findUnique({
-      where: { id: resolvedParams.dppId },
-      select: { organizationId: true }
-    })
-
-    if (!dpp) {
-      return NextResponse.json(
-        { error: "DPP nicht gefunden" },
-        { status: 404 }
-      )
-    }
-
-    // Load content (draft or published)
-    const content = await prisma.dppContent.findFirst({
-      where: {
-        dppId: resolvedParams.dppId,
-        isPublished: false // Load draft by default
-      },
-      orderBy: { updatedAt: "desc" }
-    })
-
-    // If no draft, try to load published
-    const publishedContent = content
-      ? null
-      : await prisma.dppContent.findFirst({
-          where: {
-            dppId: resolvedParams.dppId,
-            isPublished: true
-          },
-          orderBy: { updatedAt: "desc" }
-        })
-
-    const activeContent = content || publishedContent
-
-    if (!activeContent) {
-      // Return empty content structure
-      return NextResponse.json({
-        content: {
-          blocks: [],
-          styling: defaultStylingConfig
-        }
-      })
-    }
-
-    // Resolve theme with defaults
-    const styling = activeContent.styling as StylingConfig | null
-    const resolvedStyling = resolveTheme(styling || undefined)
-
-    // Normalize block statuses (ensure all blocks have valid status)
-    const blocks = (activeContent.blocks as Block[]) || []
-    const normalizedBlocks = blocks.map(block => ({
-      ...block,
-      // Ensure status is always "draft" or "published" (default to "draft" if missing or invalid)
-      status: (block.status === "draft" || block.status === "published") 
-        ? block.status 
-        : "draft"
-    }))
-
-    return NextResponse.json({
-      content: {
-        blocks: normalizedBlocks,
-        styling: resolvedStyling,
-        fieldValues: (activeContent as any).fieldValues ?? {},
-        fieldInstances: (activeContent as any).fieldInstances ?? {}
-      },
-      isPublished: activeContent.isPublished
-    })
-  } catch (error: any) {
-    console.error("Error loading DPP content:", error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * POST /api/app/dpp/[dppId]/content
- * 
- * Creates or updates DPP content
- */
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ dppId: string }> }
-) {
-  try {
-    const session = await auth()
-    const resolvedParams = await params
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 }
-      )
-    }
-
-    // Check permissions
-    const permissionError = await requireEditDPP(resolvedParams.dppId, session.user.id)
-    if (permissionError) {
-      return permissionError
-    }
-
-    // Check CMS access
-    const dpp = await prisma.dpp.findUnique({
-      where: { id: resolvedParams.dppId },
-      select: { organizationId: true }
-    })
-
-    if (!dpp) {
-      return NextResponse.json(
-        { error: "DPP nicht gefunden" },
-        { status: 404 }
-      )
-    }
-
-    const context: CapabilityContext = {
-      organizationId: dpp.organizationId,
-      userId: session.user.id
-    }
-
-    const hasCmsAccess = await hasFeature("cms_access", context)
-    if (!hasCmsAccess) {
-      return NextResponse.json(
-        { error: "CMS-Zugriff nicht verfügbar" },
-        { status: 403 }
-      )
-    }
-
-    const { blocks, styling, publish } = await request.json()
-
-    // Validate content
-    const validation = await validateDppContent(
-      blocks || [],
-      styling,
-      context
-    )
-
-    if (!validation.valid) {
-      console.error("[Content API] Validierungsfehler:", validation.errors)
-      console.error("[Content API] Blocks:", JSON.stringify(blocks || [], null, 2))
-      return NextResponse.json(
-        {
-          error: "Validierungsfehler",
-          details: validation.errors
-        },
-        { status: 400 }
-      )
-    }
-
-    // Check publishing capability if trying to publish
-    if (publish) {
-      const canPublish = await hasFeature("publish_dpp", context)
-      if (!canPublish) {
-        return NextResponse.json(
-          { error: "Veröffentlichung nicht verfügbar. Upgrade erforderlich." },
-          { status: 403 }
-        )
-      }
-    }
-
-    // Check if draft content exists
-    const existingDraft = await prisma.dppContent.findFirst({
-      where: {
-        dppId: resolvedParams.dppId,
-        isPublished: false
-      }
-    })
-
-    // Create or update content
-    const contentData = {
-      blocks: blocks || [],
-      styling: styling || null
-    }
-
-    if (existingDraft) {
-      // Update existing draft
-      const updated = await prisma.dppContent.update({
-        where: { id: existingDraft.id },
-        data: {
-          blocks: contentData.blocks,
-          styling: contentData.styling,
-          isPublished: publish ? true : false,
-          updatedAt: new Date()
-        }
-      })
-
-      // Audit log
-      const ipAddress = getClientIp(request)
-      const role = await getOrganizationRole(session.user.id, dpp.organizationId)
-      
-      await logDppAction(
-        publish ? ACTION_TYPES.PUBLISH : ACTION_TYPES.UPDATE,
-        resolvedParams.dppId,
-        {
-          actorId: session.user.id,
-          actorRole: role || undefined,
-          organizationId: dpp.organizationId,
-          source: SOURCES.UI,
-          complianceRelevant: publish,
-          ipAddress,
-          metadata: {
-            contentType: "cms",
-            blockCount: blocks?.length || 0
-          }
-        }
-      )
-
-      return NextResponse.json({
-        message: publish ? "Content veröffentlicht" : "Content gespeichert",
-        content: updated,
-        updatedAt: updated.updatedAt
-      })
-    } else {
-      // Create new content
-      const created = await prisma.dppContent.create({
-        data: {
-          dppId: resolvedParams.dppId,
-          blocks: contentData.blocks,
-          styling: contentData.styling,
-          isPublished: publish ? true : false,
-          createdBy: session.user.id
-        }
-      })
-
-      // Audit log
-      const ipAddress = getClientIp(request)
-      const role = await getOrganizationRole(session.user.id, dpp.organizationId)
-      
-      await logDppAction(
-        publish ? ACTION_TYPES.PUBLISH : ACTION_TYPES.CREATE,
-        resolvedParams.dppId,
-        {
-          actorId: session.user.id,
-          actorRole: role || undefined,
-          organizationId: dpp.organizationId,
-          source: SOURCES.UI,
-          complianceRelevant: publish,
-          ipAddress,
-          metadata: {
-            contentType: "cms",
-            blockCount: blocks?.length || 0
-          }
-        }
-      )
-
-      return NextResponse.json({
-        message: publish ? "Content veröffentlicht" : "Content erstellt",
-        content: created,
-        updatedAt: created.updatedAt || created.createdAt
-      }, { status: 201 })
-    }
-  } catch (error: any) {
-    console.error("Error saving DPP content:", error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Ein Fehler ist aufgetreten" },
-      { status: 500 }
-    )
-  }
-}
-
 /**
  * PUT /api/app/dpp/[dppId]/content
- *
- * Aktualisiert nur Pflichtdaten (fieldValues, fieldInstances).
- * Body: { fieldValues?: Record<string, string | string[]>, fieldInstances?: Record<string, any[]> }
+ * 
+ * Speichert template-basierte Feldwerte in dppContent
  */
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
-    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -328,69 +27,153 @@ export async function PUT(
       )
     }
 
-    const permissionError = await requireEditDPP(resolvedParams.dppId, session.user.id)
+    // Prüfe Berechtigung
+    const permissionError = await requireEditDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
-    const body = await request.json()
-    const fieldValues = body.fieldValues
-    const fieldInstances = body.fieldInstances
+    const { fieldValues, fieldInstances } = await request.json()
 
+    console.log("[DPP Content API] Saving content for DPP:", dppId)
+    console.log("[DPP Content API] Field values:", Object.keys(fieldValues || {}).length, "fields:", Object.keys(fieldValues || {}))
+    console.log("[DPP Content API] Field instances:", Object.keys(fieldInstances || {}).length, "repeatable fields:", Object.keys(fieldInstances || {}))
+
+    // Lade Template, um Block-Struktur zu erhalten
     const dpp = await prisma.dpp.findUnique({
-      where: { id: resolvedParams.dppId },
-      select: { organizationId: true }
+      where: { id: dppId },
+      select: { category: true }
     })
+
     if (!dpp) {
-      return NextResponse.json({ error: "DPP nicht gefunden" }, { status: 404 })
+      return NextResponse.json(
+        { error: "DPP nicht gefunden" },
+        { status: 404 }
+      )
     }
 
-    const existingDraft = await prisma.dppContent.findFirst({
+    const template = await latestPublishedTemplate(dpp.category)
+
+    if (!template) {
+      return NextResponse.json(
+        { error: `Kein Template für die Kategorie "${dpp.category}" gefunden` },
+        { status: 404 }
+      )
+    }
+
+    // Erstelle Block-Struktur mit Feldwerten
+    const templateBlocks = template.blocks.map(block => {
+      const blockData: Record<string, any> = {}
+
+      // Sammle normale Feldwerte für diesen Block
+      block.fields.forEach(field => {
+        if (!field.isRepeatable) {
+          // Normales Feld
+          // WICHTIG: Prüfe zuerst Template-Key, dann englischen Key (für Kompatibilität)
+          if (fieldValues && (fieldValues[field.key] !== undefined || fieldValues[field.key] !== null)) {
+            blockData[field.key] = fieldValues[field.key]
+            console.log(`[DPP Content API] Block ${block.name}: Field ${field.key} (${field.label}) = ${fieldValues[field.key]}`)
+          } else {
+            // Versuche englischen Key (für alte DPPs mit englischen Keys)
+            const englishKeyMapping: Record<string, string> = {
+              "produktname": "name",
+              "beschreibung": "description",
+              "herstellungsland": "countryOfOrigin",
+              "ean": "gtin"
+            }
+            const englishKey = englishKeyMapping[field.key.toLowerCase()] || field.key
+            if (fieldValues && fieldValues[englishKey] !== undefined && fieldValues[englishKey] !== null) {
+              blockData[field.key] = fieldValues[englishKey]
+              console.log(`[DPP Content API] Block ${block.name}: Field ${field.key} (${field.label}) mapped from english key "${englishKey}" = ${fieldValues[englishKey]}`)
+            }
+          }
+        } else {
+          // Wiederholbares Feld
+          if (fieldInstances && fieldInstances[field.key]) {
+            blockData[field.key] = fieldInstances[field.key]
+            console.log(`[DPP Content API] Block ${block.name}: Repeatable field ${field.key} (${field.label}) =`, fieldInstances[field.key].length, "instances")
+          }
+        }
+      })
+
+      return {
+        id: block.id,
+        type: "template_block",
+        order: block.order,
+        data: blockData
+      }
+    })
+
+    // Lade oder erstelle DppContent
+    let dppContent = await prisma.dppContent.findFirst({
       where: {
-        dppId: resolvedParams.dppId,
+        dppId,
         isPublished: false
       }
     })
 
-    const payload: { fieldValues?: object; fieldInstances?: object } = {}
-    if (fieldValues !== undefined && typeof fieldValues === "object") {
-      payload.fieldValues = fieldValues
-    }
-    if (fieldInstances !== undefined && typeof fieldInstances === "object") {
-      payload.fieldInstances = fieldInstances
+    let finalBlocks: any[] = []
+
+    if (dppContent) {
+      // Lade bestehende Blöcke
+      const existingBlocks = (dppContent.blocks as any) || []
+      
+      // Trenne CMS-Blöcke (mit content) und template-basierte Blöcke (mit data)
+      const cmsBlocks = existingBlocks.filter((block: any) => 
+        block.content && !block.data && block.type !== "template_block"
+      )
+      
+      // Merge: CMS-Blöcke + template-basierte Blöcke
+      // Template-Blöcke ersetzen bestehende template-basierte Blöcke mit gleicher ID
+      const existingTemplateBlockIds = new Set(
+        existingBlocks
+          .filter((block: any) => block.type === "template_block" || block.data)
+          .map((block: any) => block.id)
+      )
+      
+      // Füge CMS-Blöcke hinzu
+      finalBlocks = [...cmsBlocks]
+      
+      // Füge template-basierte Blöcke hinzu (ersetzen bestehende mit gleicher ID)
+      templateBlocks.forEach(templateBlock => {
+        const existingIndex = finalBlocks.findIndex(
+          (b: any) => b.id === templateBlock.id && (b.type === "template_block" || b.data)
+        )
+        if (existingIndex >= 0) {
+          // Ersetze bestehenden template-basierten Block
+          finalBlocks[existingIndex] = templateBlock
+        } else {
+          // Füge neuen template-basierten Block hinzu
+          finalBlocks.push(templateBlock)
+        }
+      })
+      
+      // Aktualisiere bestehenden DppContent
+      await prisma.dppContent.update({
+        where: { id: dppContent.id },
+        data: {
+          blocks: finalBlocks,
+          updatedAt: new Date()
+        }
+      })
+      console.log("[DPP Content API] Updated existing dppContent with", finalBlocks.length, "blocks (", cmsBlocks.length, "CMS,", templateBlocks.length, "template)")
+    } else {
+      // Erstelle neuen DppContent (nur template-basierte Blöcke)
+      finalBlocks = templateBlocks
+      await prisma.dppContent.create({
+        data: {
+          dppId,
+          blocks: finalBlocks,
+          isPublished: false
+        }
+      })
+      console.log("[DPP Content API] Created new dppContent with", finalBlocks.length, "template blocks")
     }
 
-    if (existingDraft) {
-      const updated = await prisma.dppContent.update({
-        where: { id: existingDraft.id },
-        data: payload
-      })
-      return NextResponse.json({
-        message: "Feldwerte gespeichert",
-        content: updated,
-        updatedAt: updated.updatedAt
-      })
-    }
-
-    const created = await prisma.dppContent.create({
-      data: {
-        dppId: resolvedParams.dppId,
-        blocks: [],
-        styling: null,
-        ...payload,
-        isPublished: false,
-        createdBy: session.user.id
-      }
-    })
-    return NextResponse.json({
-      message: "Feldwerte gespeichert",
-      content: created,
-      updatedAt: created.updatedAt
-    })
+    return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: any) {
-    console.error("Error updating DPP content (PUT):", error)
+    console.error("[DPP Content API] Error saving content:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Ein Fehler ist aufgetreten" },
+      { error: error.message || "Fehler beim Speichern des Contents" },
       { status: 500 }
     )
   }
 }
-

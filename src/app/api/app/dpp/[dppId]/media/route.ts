@@ -4,9 +4,9 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { saveFile, isAllowedFileType, MAX_FILE_SIZE } from "@/lib/storage"
+import { saveFile, isAllowedFileType, getMaxFileSize } from "@/lib/storage"
 import { requireEditDPP, requireViewDPP } from "@/lib/api-permissions"
-import { DPP_SECTIONS } from "@/lib/dpp-sections"
+import { DPP_SECTIONS } from "@/lib/permissions"
 import { scanFile } from "@/lib/virus-scanner"
 
 /**
@@ -23,8 +23,8 @@ export async function POST(
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
-    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -33,20 +33,15 @@ export async function POST(
       )
     }
 
-    const { dppId } = resolvedParams
-
     // Prüfe Berechtigung zum Bearbeiten (inkl. Medien-Upload)
     const permissionError = await requireEditDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
-    // Parse FormData (fieldId von Pflichtdaten-Upload, fieldKey alternativ)
+    // Parse FormData
     const formData = await request.formData()
     const file = formData.get("file") as File | null
     const blockId = formData.get("blockId") as string | null
-    const fieldKeyParam = formData.get("fieldKey") as string | null
-    const fieldIdParam = formData.get("fieldId") as string | null
-    const fieldKey = (fieldKeyParam || fieldIdParam || "").trim() || null
-    const role = formData.get("role") as string | null
+    const fieldId = formData.get("fieldId") as string | null
 
     if (!file) {
       return NextResponse.json(
@@ -58,15 +53,16 @@ export async function POST(
     // Validierung: Dateityp
     if (!isAllowedFileType(file.type)) {
       return NextResponse.json(
-        { error: "Dateityp nicht erlaubt. Erlaubt: Bilder (JPEG, PNG, GIF, WebP) und PDFs" },
+        { error: "Dateityp nicht erlaubt. Erlaubt: Bilder (JPEG, PNG, GIF, WebP), PDFs und Videos (MP4, WebM, OGG)" },
         { status: 400 }
       )
     }
 
-    // Validierung: Dateigröße
-    if (file.size > MAX_FILE_SIZE) {
+    // Validierung: Dateigröße (dynamisch basierend auf Dateityp)
+    const maxSize = getMaxFileSize(file.type)
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { error: `Datei zu groß. Maximum: ${MAX_FILE_SIZE / 1024 / 1024} MB` },
+        { error: `Datei zu groß. Maximum: ${maxSize / 1024 / 1024} MB` },
         { status: 400 }
       )
     }
@@ -89,7 +85,7 @@ export async function POST(
     // Datei im Storage speichern
     const storageUrl = await saveFile(buffer, file.name)
 
-    // Metadaten in DB speichern (mit optionalen Block-Informationen und Rolle)
+    // Metadaten in DB speichern
     const media = await prisma.dppMedia.create({
       data: {
         dppId,
@@ -97,9 +93,8 @@ export async function POST(
         fileType: file.type,
         fileSize: file.size,
         storageUrl,
-        role: role || null,
         blockId: blockId || null,
-        fieldKey: fieldKey || null
+        fieldId: fieldId || null
       }
     })
 
@@ -112,44 +107,15 @@ export async function POST(
           fileType: media.fileType,
           fileSize: media.fileSize,
           storageUrl: media.storageUrl,
-          role: media.role,
-          blockId: media.blockId,
-          fieldKey: media.fieldKey,
           uploadedAt: media.uploadedAt
         }
       },
       { status: 201 }
     )
   } catch (error: any) {
-    console.error("[Media Upload] Error:", error)
-    
-    // Detaillierte Fehlermeldung für besseres Debugging
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : typeof error === 'string' 
-        ? error 
-        : "Ein Fehler ist aufgetreten"
-    
-    // Prüfe spezifische Fehlertypen
-    if (error?.code === 'P2002') {
-      return NextResponse.json(
-        { error: "Ein Medium mit diesem Namen existiert bereits" },
-        { status: 409 }
-      )
-    }
-    
-    if (error?.code === 'P2003') {
-      return NextResponse.json(
-        { error: "DPP nicht gefunden" },
-        { status: 404 }
-      )
-    }
-    
+    console.error("Media upload error:", error)
     return NextResponse.json(
-      { 
-        error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
-      },
+      { error: "Ein Fehler ist aufgetreten" },
       { status: 500 }
     )
   }
@@ -165,6 +131,7 @@ export async function GET(
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -173,9 +140,6 @@ export async function GET(
         { status: 401 }
       )
     }
-
-    const resolvedParams = await params
-    const { dppId } = resolvedParams
 
     // Prüfe Berechtigung zum Ansehen
     const permissionError = await requireViewDPP(dppId, session.user.id)

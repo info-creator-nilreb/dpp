@@ -6,9 +6,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const session = await requireSessionAndRoleApi("super_admin");
     
     if (session instanceof NextResponse) {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const feature = await prisma.featureRegistry.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         blockTypes: true,
       },
@@ -38,9 +39,10 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const session = await requireSessionAndRoleApi("super_admin");
     
     if (session instanceof NextResponse) {
@@ -70,7 +72,7 @@ export async function PATCH(
       updateData.defaultForNewDpps = body.defaultForNewDpps;
 
     const feature = await prisma.featureRegistry.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
@@ -86,9 +88,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const session = await requireSessionAndRoleApi("super_admin");
     
     if (session instanceof NextResponse) {
@@ -96,7 +99,7 @@ export async function DELETE(
     }
 
     await prisma.featureRegistry.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

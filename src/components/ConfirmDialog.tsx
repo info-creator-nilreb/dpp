@@ -221,20 +221,20 @@ export default function ConfirmDialog({
                 borderRadius: "8px",
                 cursor: disabled ? "not-allowed" : "pointer",
                 transition: "all 0.2s",
-                boxShadow: disabled ? "none" : "0 2px 8px rgba(226, 0, 116, 0.2)",
+                boxShadow: disabled ? "none" : "0 2px 8px rgba(36, 197, 152, 0.2)",
                 minWidth: "120px",
                 boxSizing: "border-box"
               }}
               onMouseEnter={(e) => {
                 if (!disabled) {
                   e.currentTarget.style.backgroundColor = confirmButtonHover
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(226, 0, 116, 0.3)"
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(36, 197, 152, 0.3)"
                 }
               }}
               onMouseLeave={(e) => {
                 if (!disabled) {
                   e.currentTarget.style.backgroundColor = confirmButtonColor
-                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(226, 0, 116, 0.2)"
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(36, 197, 152, 0.2)"
                 }
               }}
             >

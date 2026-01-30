@@ -15,9 +15,10 @@ import { getPublicUrl } from "@/lib/getPublicUrl"
  */
 export async function GET(
   request: Request,
-  { params }: { params: { dppId: string; versionNumber: string } }
+  { params }: { params: Promise<{ dppId: string; versionNumber: string }> }
 ) {
   try {
+    const { dppId, versionNumber: versionNumberParam } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -29,7 +30,7 @@ export async function GET(
 
     // Prüfe Zugriff auf DPP
     const accessCheck = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: dppId },
       include: {
         organization: {
           include: {
@@ -50,7 +51,7 @@ export async function GET(
       )
     }
 
-    const versionNumber = parseInt(params.versionNumber, 10)
+    const versionNumber = parseInt(versionNumberParam, 10)
     if (isNaN(versionNumber)) {
       return NextResponse.json(
         { error: "Ungültige Versionsnummer" },
@@ -62,7 +63,7 @@ export async function GET(
     const version = await prisma.dppVersion.findUnique({
       where: {
         dppId_version: {
-          dppId: params.dppId,
+          dppId,
           version: versionNumber
         }
       },
@@ -90,7 +91,7 @@ export async function GET(
 
     // Generiere QR-Code on-demand (SVG) mit absoluter URL
     const qrCodeSvg = await generateQrCodeSvg(absolutePublicUrl)
-    const fileName = `qrcode-dpp-${params.dppId}-v${versionNumber}.svg`
+    const fileName = `qrcode-dpp-${dppId}-v${versionNumber}.svg`
 
     return new NextResponse(qrCodeSvg, {
       headers: {

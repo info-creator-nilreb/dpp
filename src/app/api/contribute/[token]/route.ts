@@ -13,10 +13,10 @@ import { latestPublishedTemplate } from "@/lib/template-helpers"
  */
 export async function GET(
   request: Request,
-  { params }: { params: { token: string } }
+  context: { params: Promise<{ token: string }> }
 ) {
   try {
-    const token = params.token
+    const { token } = await context.params
 
     if (!token) {
       return NextResponse.json(

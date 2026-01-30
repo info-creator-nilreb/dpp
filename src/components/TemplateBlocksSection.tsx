@@ -375,7 +375,7 @@ export default function TemplateBlocksSection({
                 {!isFirstBlock && onSupplierConfigUpdate && (
                   <>
                     {isSupplierEnabled ? (
-                      // Zustand B: Verantwortung zugewiesen – Klick entfernt die Verantwortung (span statt button, um Button-in-Button zu vermeiden)
+                      // Zustand B: Verantwortung zugewiesen - Klick entfernt die Verantwortung (span statt button, da innerhalb Accordion-Button)
                       <span
                         role="button"
                         tabIndex={0}
@@ -420,7 +420,7 @@ export default function TemplateBlocksSection({
                         <span style={{ opacity: 0.85 }}>Verantwortung zugewiesen</span>
                       </span>
                     ) : (
-                      // Zustand A: Keine externe Verantwortung (span statt button, um Button-in-Button zu vermeiden)
+                      // Zustand A: Keine externe Verantwortung (span statt button, da innerhalb Accordion-Button)
                       <span
                         role="button"
                         tabIndex={0}

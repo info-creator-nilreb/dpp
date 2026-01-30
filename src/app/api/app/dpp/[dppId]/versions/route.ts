@@ -16,8 +16,8 @@ export async function GET(
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
-    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -27,16 +27,16 @@ export async function GET(
     }
 
     // Prüfe Berechtigung zum Ansehen
-    const permissionError = await requireViewDPP(resolvedParams.dppId, session.user.id)
+    const permissionError = await requireViewDPP(dppId, session.user.id)
     if (permissionError) {
-      console.error("Permission check failed for versions:", resolvedParams.dppId, session.user.id)
+      console.error("Permission check failed for versions:", dppId, session.user.id)
       return permissionError
     }
 
-    console.log("Loading versions for DPP:", resolvedParams.dppId)
+    console.log("Loading versions for DPP:", dppId)
     // Hole alle Versionen (absteigend nach Versionsnummer)
     const versions = await prisma.dppVersion.findMany({
-      where: { dppId: resolvedParams.dppId },
+      where: { dppId },
       include: {
         createdBy: {
           select: {
@@ -54,7 +54,7 @@ export async function GET(
 
     // Also get DPP info for context
     const dpp = await prisma.dpp.findUnique({
-      where: { id: resolvedParams.dppId },
+      where: { id: dppId },
       select: {
         id: true,
         name: true,

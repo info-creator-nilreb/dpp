@@ -54,7 +54,7 @@ export default function VersionCard({ href, version, createdAt, createdBy, hasQr
         }
         .version-card-wrapper:hover {
           border-color: #24c598 !important;
-          box-shadow: 0 2px 8px rgba(226, 0, 116, 0.1);
+          box-shadow: 0 2px 8px rgba(36, 197, 152, 0.1);
         }
       `}</style>
       <Link

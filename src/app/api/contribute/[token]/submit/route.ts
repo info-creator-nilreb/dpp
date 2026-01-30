@@ -16,10 +16,10 @@ import { latestPublishedTemplate } from "@/lib/template-helpers"
  */
 export async function POST(
   request: Request,
-  { params }: { params: { token: string } }
+  context: { params: Promise<{ token: string }> }
 ) {
   try {
-    const token = params.token
+    const { token } = await context.params
     const data = await request.json()
 
     if (!token) {

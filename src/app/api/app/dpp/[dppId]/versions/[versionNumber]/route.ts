@@ -17,8 +17,8 @@ export async function GET(
   { params }: { params: Promise<{ dppId: string; versionNumber: string }> }
 ) {
   try {
+    const { dppId, versionNumber: versionNumberParam } = await params
     const session = await auth()
-    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -28,10 +28,10 @@ export async function GET(
     }
 
     // Prüfe Berechtigung zum Ansehen
-    const permissionError = await requireViewDPP(resolvedParams.dppId, session.user.id)
+    const permissionError = await requireViewDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
-    const versionNumber = parseInt(resolvedParams.versionNumber, 10)
+    const versionNumber = parseInt(versionNumberParam, 10)
     if (isNaN(versionNumber)) {
       return NextResponse.json(
         { error: "Ungültige Versionsnummer" },
@@ -39,11 +39,11 @@ export async function GET(
       )
     }
 
-    // Hole spezifische Version mit Medien
+    // Hole spezifische Version
     const version = await prisma.dppVersion.findUnique({
       where: {
         dppId_version: {
-          dppId: resolvedParams.dppId,
+          dppId,
           version: versionNumber
         }
       },
@@ -59,9 +59,6 @@ export async function GET(
           select: {
             name: true
           }
-        },
-        media: {
-          orderBy: { uploadedAt: "asc" }
         }
       }
     })
@@ -105,18 +102,7 @@ export async function GET(
         },
         publicUrl: absolutePublicUrl, // Absolute URL für Client
         qrCodeImageUrl: version.qrCodeImageUrl,
-        dppName: version.dpp.name,
-        media: version.media.map(m => ({
-          id: m.id,
-          fileName: m.fileName,
-          fileType: m.fileType,
-          fileSize: m.fileSize,
-          storageUrl: m.storageUrl,
-          role: m.role,
-          blockId: m.blockId,
-          fieldKey: m.fieldKey,
-          uploadedAt: m.uploadedAt.toISOString()
-        }))
+        dppName: version.dpp.name
       }
     }, { status: 200 })
   } catch (error: any) {

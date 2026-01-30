@@ -43,7 +43,7 @@ export function LoadingSpinner({ message }: LoadingSpinnerProps) {
         minHeight: "200px",
       }}
     >
-      {/* 4 mintfarbene Punkte */}
+      {/* 4 Mint-Punkte */}
       <div
         style={{
           display: "flex",

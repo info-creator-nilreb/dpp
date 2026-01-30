@@ -8,6 +8,7 @@ import { requireViewDPP, requireEditDPP } from "@/lib/api-permissions"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
 import { getOrganizationRole } from "@/lib/permissions"
+import { latestPublishedTemplate, normalizeCategory } from "@/lib/template-helpers"
 
 /**
  * GET /api/app/dpp/[dppId]
@@ -19,8 +20,8 @@ export async function GET(
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
-    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -30,16 +31,16 @@ export async function GET(
     }
 
     // Prüfe Berechtigung mit neuem Permission-System
-    const permissionError = await requireViewDPP(resolvedParams.dppId, session.user.id)
+    const permissionError = await requireViewDPP(dppId, session.user.id)
     if (permissionError) {
-      console.error("Permission check failed:", resolvedParams.dppId, session.user.id)
+      console.error("Permission check failed:", dppId, session.user.id)
       return permissionError
     }
 
-    // Lade DPP mit Medien
-    console.log("Loading DPP:", resolvedParams.dppId)
+    // Lade DPP mit Medien und Content
+    console.log("[DPP API] GET Request - Loading DPP:", dppId)
     const dppWithMedia = await prisma.dpp.findUnique({
-      where: { id: resolvedParams.dppId },
+      where: { id: dppId },
       include: {
         organization: {
           select: {
@@ -49,60 +50,136 @@ export async function GET(
         },
         media: {
           orderBy: { uploadedAt: "desc" }
+        },
+        content: {
+          where: {
+            isPublished: false // Lade nur Draft-Content
+          },
+          orderBy: {
+            updatedAt: "desc"
+          },
+          take: 1 // Neueste Draft-Version
         }
       }
     })
-    console.log("DPP loaded:", dppWithMedia ? "found" : "not found")
 
     if (!dppWithMedia) {
+      console.log("[DPP API] DPP not found:", dppId)
       return NextResponse.json(
         { error: "DPP nicht gefunden" },
         { status: 404 }
       )
     }
 
-    // Feldwerte für Pflichtdaten-Tab: Fallback aus DPP-Direktfeldern (technical keys)
-    const fieldValuesFromDpp: Record<string, string> = {
-      name: dppWithMedia.name ?? "",
-      description: dppWithMedia.description ?? "",
-      sku: dppWithMedia.sku ?? "",
-      gtin: dppWithMedia.gtin ?? "",
-      brand: dppWithMedia.brand ?? "",
-      countryOfOrigin: dppWithMedia.countryOfOrigin ?? "",
-      materials: dppWithMedia.materials ?? "",
-      materialSource: dppWithMedia.materialSource ?? "",
-      careInstructions: dppWithMedia.careInstructions ?? "",
-      isRepairable: dppWithMedia.isRepairable ?? "",
-      sparePartsAvailable: dppWithMedia.sparePartsAvailable ?? "",
-      lifespan: dppWithMedia.lifespan ?? "",
-      conformityDeclaration: dppWithMedia.conformityDeclaration ?? "",
-      disposalInfo: dppWithMedia.disposalInfo ?? "",
-      takebackOffered: dppWithMedia.takebackOffered ?? "",
-      takebackContact: dppWithMedia.takebackContact ?? "",
-      secondLifeInfo: dppWithMedia.secondLifeInfo ?? "",
-    }
-    let fieldValues: Record<string, string> = {}
-    for (const [k, v] of Object.entries(fieldValuesFromDpp)) {
-      if (v != null && String(v).trim() !== "") fieldValues[k] = String(v).trim()
-    }
-    let fieldInstances: Record<string, unknown[]> = {}
+    console.log("[DPP API] DPP loaded successfully:", dppWithMedia.id)
+    console.log("[DPP API] DPP has content entries:", dppWithMedia.content?.length || 0)
 
-    const draftContent = await prisma.dppContent.findFirst({
-      where: { dppId: resolvedParams.dppId, isPublished: false },
-      orderBy: { updatedAt: "desc" }
+    // Extrahiere Feldwerte aus DppContent
+    let fieldValues: Record<string, string | string[]> = {}
+    let fieldInstances: Record<string, Array<{
+      instanceId: string
+      values: Record<string, string | string[]>
+    }>> = {}
+
+    if (dppWithMedia.content && dppWithMedia.content.length > 0) {
+      const dppContent = dppWithMedia.content[0]
+      const blocks = (dppContent.blocks as any) || []
+      
+      console.log("[DPP API] Found dppContent with", blocks.length, "blocks")
+      console.log("[DPP API] DppContent blocks:", JSON.stringify(blocks, null, 2))
+      
+      blocks.forEach((block: any) => {
+        console.log("[DPP API] Processing block:", block.id, "type:", block.type, "has data:", !!block.data, "has content:", !!block.content)
+        
+        // Nur template-basierte Blöcke haben block.data
+        // CMS-Blöcke haben block.content, aber keine template-basierten Felder
+        // Wir extrahieren nur Felder aus block.data (template-basierte Blöcke)
+        if (!block.data || typeof block.data !== 'object') {
+          // Kein template-basierter Block, überspringe
+          console.log("[DPP API] Skipping block (no data):", block.id)
+          return
+        }
+        
+        console.log("[DPP API] Block data keys:", Object.keys(block.data))
+        
+        const blockData = block.data
+        if (blockData && typeof blockData === 'object') {
+          // Für normale Felder: Speichere direkt in fieldValues
+          Object.keys(blockData).forEach(fieldKey => {
+            const value = blockData[fieldKey]
+            console.log("[DPP API] Processing field:", fieldKey, "value type:", typeof value, "isArray:", Array.isArray(value))
+            
+            // Prüfe ob es ein wiederholbares Feld ist (Array von Objekten mit instanceId)
+            if (Array.isArray(value) && value.length > 0) {
+              // Prüfe ob das erste Element ein Objekt mit instanceId ist
+              const firstElement = value[0]
+              if (typeof firstElement === 'object' && firstElement !== null && firstElement.instanceId) {
+                // Wiederholbares Feld: Speichere in fieldInstances
+                fieldInstances[fieldKey] = value
+                console.log("[DPP API] Detected repeatable field:", fieldKey, "with", value.length, "instances")
+              } else {
+                // Normales Array-Feld (z.B. Multi-Select): Speichere direkt
+                fieldValues[fieldKey] = value
+                console.log("[DPP API] Detected array field (multi-select):", fieldKey)
+              }
+            } else if (value !== null && value !== undefined) {
+              // Normales Feld: Speichere direkt
+              fieldValues[fieldKey] = value
+              console.log("[DPP API] Detected normal field:", fieldKey, "=", value)
+            }
+          })
+        }
+      })
+      
+      console.log("[DPP API] Extracted field values:", Object.keys(fieldValues).length, "fields:", Object.keys(fieldValues))
+      console.log("[DPP API] Extracted field values detail:", JSON.stringify(fieldValues, null, 2))
+      console.log("[DPP API] Extracted field instances:", Object.keys(fieldInstances).length, "repeatable fields:", Object.keys(fieldInstances))
+    } else {
+      console.log("[DPP API] No dppContent found for DPP:", dppId)
+    }
+
+    // FALLBACK: Ergänze fieldValues mit direkten DPP-Spalten, wenn sie noch nicht vorhanden sind
+    // Dies ist für alte DPPs, die noch nicht alle Werte in template-basierten Feldern haben
+    // WICHTIG: Ergänze nur, wenn Werte in DPP-Spalten vorhanden sind, aber nicht in fieldValues
+    const directFieldMapping: Record<string, string> = {
+      "name": "name",
+      "description": "description",
+      "sku": "sku",
+      "gtin": "gtin",
+      "brand": "brand",
+      "countryOfOrigin": "countryOfOrigin",
+      "materials": "materials",
+      "materialSource": "materialSource",
+      "careInstructions": "careInstructions",
+      "isRepairable": "isRepairable",
+      "sparePartsAvailable": "sparePartsAvailable",
+      "lifespan": "lifespan",
+      "conformityDeclaration": "conformityDeclaration",
+      "disposalInfo": "disposalInfo",
+      "takebackOffered": "takebackOffered",
+      "takebackContact": "takebackContact",
+      "secondLifeInfo": "secondLifeInfo"
+    }
+
+    // Ergänze fieldValues mit direkten DPP-Spalten, wenn sie noch nicht vorhanden sind
+    Object.keys(directFieldMapping).forEach(dppColumn => {
+      const fieldKey = directFieldMapping[dppColumn]
+      const value = (dppWithMedia as any)[dppColumn]
+      // Ergänze nur, wenn Wert vorhanden ist UND noch nicht in fieldValues
+      if (value !== null && value !== undefined && value !== "" && !fieldValues[fieldKey]) {
+        fieldValues[fieldKey] = value
+        console.log("[DPP API] Fallback: Added", dppColumn, "->", fieldKey, "=", value)
+      }
     })
-    if (draftContent?.fieldValues && typeof draftContent.fieldValues === "object") {
-      const fromContent = draftContent.fieldValues as Record<string, string | string[]>
-      fieldValues = { ...fieldValues, ...fromContent } as Record<string, string>
-    }
-    if (draftContent?.fieldInstances && typeof draftContent.fieldInstances === "object") {
-      fieldInstances = draftContent.fieldInstances as Record<string, unknown[]>
+    
+    if (Object.keys(fieldValues).length > 0) {
+      console.log("[DPP API] Final fieldValues after fallback:", Object.keys(fieldValues).length, "fields:", Object.keys(fieldValues))
     }
 
-    return NextResponse.json({
+    return NextResponse.json({ 
       dpp: dppWithMedia,
       fieldValues,
-      fieldInstances,
+      fieldInstances
     }, { status: 200 })
   } catch (error: any) {
     console.error("Error fetching DPP:", error)
@@ -124,8 +201,8 @@ export async function PUT(
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
-    const resolvedParams = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -135,12 +212,12 @@ export async function PUT(
     }
 
     // Prüfe Berechtigung mit neuem Permission-System
-    const permissionError = await requireEditDPP(resolvedParams.dppId, session.user.id)
+    const permissionError = await requireEditDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
     // Lade existierenden DPP, um Status zu prüfen
     const existingDpp = await prisma.dpp.findUnique({
-      where: { id: resolvedParams.dppId },
+      where: { id: dppId },
       select: { status: true, category: true }
     })
 
@@ -151,14 +228,24 @@ export async function PUT(
       )
     }
 
+    const requestBody = await request.json()
     const {
       name, description, category,
       sku, gtin, brand, countryOfOrigin,
       materials, materialSource,
       careInstructions, isRepairable, sparePartsAvailable, lifespan,
       conformityDeclaration, disposalInfo,
-      takebackOffered, takebackContact, secondLifeInfo
-    } = await request.json()
+      takebackOffered, takebackContact, secondLifeInfo,
+      templateId, templateVersionId, // Diese Felder werden explizit ignoriert (immutable)
+      fieldValues, // Template-basierte Feldwerte (optional)
+      fieldInstances // Wiederholbare Feld-Instanzen (optional)
+    } = requestBody
+    
+    // Template-Version-Binding Guard: templateId und templateVersionId sind immutable
+    // Verhindere explizite Änderungen dieser Felder
+    if (templateId !== undefined || templateVersionId !== undefined) {
+      console.warn("[DPP Update] Attempt to modify immutable template binding fields ignored")
+    }
 
     // ESPR Guardrail: Kategorie ist unveränderbar ab Veröffentlichung
     if (existingDpp.status === "PUBLISHED" && category && category !== existingDpp.category) {
@@ -186,30 +273,164 @@ export async function PUT(
       )
     }
 
-    if (!sku || typeof sku !== "string" || sku.trim().length === 0) {
+    // Template-basierte Validierung (wie in POST-Route)
+    const normalizedCategory = normalizeCategory(category) || category
+    const validatedTemplate = await latestPublishedTemplate(normalizedCategory)
+    const templateWithFields = validatedTemplate ? await prisma.template.findUnique({
+      where: { id: validatedTemplate.id },
+      include: {
+        blocks: {
+          include: {
+            fields: {
+              where: { deprecatedInVersion: null },
+              orderBy: { order: "asc" }
+            }
+          },
+          orderBy: { order: "asc" }
+        }
+      }
+    }) : null
+
+    // Map DPP-Feldnamen zu Template-Keys (reverse mapping)
+    const dppFieldToTemplateKey: Record<string, string[]> = {
+      "name": ["name", "produktname", "productname"],
+      "description": ["description", "beschreibung"],
+      "sku": ["sku"],
+      "gtin": ["gtin", "ean"],
+      "brand": ["brand", "marke", "hersteller"],
+      "countryOfOrigin": ["countryOfOrigin", "herstellungsland", "country"],
+      "materials": ["materials", "material", "materialien"],
+      "materialSource": ["materialSource", "materialquelle", "datenquelle"],
+      "careInstructions": ["careInstructions", "pflegehinweise", "pflege"],
+      "isRepairable": ["isRepairable", "reparierbarkeit", "reparierbar"],
+      "sparePartsAvailable": ["sparePartsAvailable", "ersatzteile"],
+      "lifespan": ["lifespan", "lebensdauer"],
+      "conformityDeclaration": ["conformityDeclaration", "konformiataetserklaerung", "konformität"],
+      "disposalInfo": ["disposalInfo", "entsorgung"],
+      "takebackOffered": ["takebackOffered", "ruecknahme_angeboten", "rücknahme"],
+      "takebackContact": ["takebackContact", "ruecknahme_kontakt"],
+      "secondLifeInfo": ["secondLifeInfo", "secondlife"]
+    }
+
+    // Validiere nur required fields aus dem Template
+    if (templateWithFields) {
+      const requiredFieldKeys = new Set<string>()
+      templateWithFields.blocks.forEach(block => {
+        block.fields.forEach(field => {
+          if (field.required && field.deprecatedInVersion === null) {
+            requiredFieldKeys.add(field.key.toLowerCase())
+          }
+        })
+      })
+
+      // Prüfe jedes required Template-Feld
+      for (const [dppFieldName, templateKeyVariants] of Object.entries(dppFieldToTemplateKey)) {
+        // Prüfe ob einer der Template-Keys required ist
+        const isRequired = templateKeyVariants.some(key => requiredFieldKeys.has(key.toLowerCase()))
+        
+        if (isRequired) {
+          // Prüfe zuerst, ob es ein repeatable field ist (in fieldInstances)
+          let hasValue = false
+          let fieldValue: string | null | undefined
+          
+          // 1. Prüfe fieldInstances (wiederholbare Felder)
+          if (fieldInstances && typeof fieldInstances === "object") {
+            for (const [templateKey, instances] of Object.entries(fieldInstances)) {
+              const normalizedTemplateKey = templateKey.toLowerCase()
+              if (templateKeyVariants.some(variant => variant.toLowerCase() === normalizedTemplateKey)) {
+                // Prüfe ob mindestens eine Instanz einen Wert hat
+                if (Array.isArray(instances) && instances.length > 0) {
+                  for (const instance of instances) {
+                    if (instance && typeof instance === "object" && instance.values) {
+                      const instanceValue = instance.values[templateKey]
+                      if (instanceValue !== null && instanceValue !== undefined) {
+                        const stringValue = Array.isArray(instanceValue) ? instanceValue.join(", ") : String(instanceValue)
+                        if (stringValue.trim()) {
+                          hasValue = true
+                          fieldValue = stringValue.trim()
+                          break
+                        }
+                      }
+                    }
+                  }
+                  if (hasValue) break
+                }
+              }
+            }
+          }
+          
+          // 2. Prüfe fieldValues (normale Template-Felder)
+          if (!hasValue && fieldValues && typeof fieldValues === "object") {
+            for (const [templateKey, value] of Object.entries(fieldValues)) {
+              const normalizedTemplateKey = templateKey.toLowerCase()
+              if (templateKeyVariants.some(variant => variant.toLowerCase() === normalizedTemplateKey)) {
+                if (value !== null && value !== undefined) {
+                  fieldValue = Array.isArray(value) ? value.join(", ") : String(value)
+                  if (fieldValue.trim()) {
+                    hasValue = true
+                    break
+                  }
+                }
+              }
+            }
+          }
+          
+          // 3. Fallback: Direkte Request-Felder
+          if (!hasValue) {
+            switch (dppFieldName) {
+              case "name": fieldValue = name; break
+              case "description": fieldValue = description; break
+              case "sku": fieldValue = sku; break
+              case "gtin": fieldValue = gtin; break
+              case "brand": fieldValue = brand; break
+              case "countryOfOrigin": fieldValue = countryOfOrigin; break
+              case "materials": fieldValue = materials; break
+              case "materialSource": fieldValue = materialSource; break
+              case "careInstructions": fieldValue = careInstructions; break
+              case "isRepairable": fieldValue = isRepairable; break
+              case "sparePartsAvailable": fieldValue = sparePartsAvailable; break
+              case "lifespan": fieldValue = lifespan; break
+              case "conformityDeclaration": fieldValue = conformityDeclaration; break
+              case "disposalInfo": fieldValue = disposalInfo; break
+              case "takebackOffered": fieldValue = takebackOffered; break
+              case "takebackContact": fieldValue = takebackContact; break
+              case "secondLifeInfo": fieldValue = secondLifeInfo; break
+              default: fieldValue = undefined
+            }
+            hasValue = fieldValue !== null && fieldValue !== undefined && typeof fieldValue === "string" && fieldValue.trim().length > 0
+          }
+
+          // Validiere required field
+          if (!hasValue) {
+            // Finde das erste matching Template-Feld für die Fehlermeldung
+            const matchingField = templateWithFields.blocks
+              .flatMap(block => block.fields)
+              .find(field => 
+                field.required && 
+                templateKeyVariants.includes(field.key.toLowerCase())
+              )
+            
+            const fieldLabel = matchingField?.label || dppFieldName
       return NextResponse.json(
-        { error: "SKU / Interne ID ist erforderlich" },
+              { error: `${fieldLabel} ist erforderlich` },
         { status: 400 }
       )
     }
-
-    if (!brand || typeof brand !== "string" || brand.trim().length === 0) {
+        }
+      }
+    } else {
+      // Fallback: Wenn Template nicht geladen werden kann, nur name validieren
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
       return NextResponse.json(
-        { error: "Marke / Hersteller ist erforderlich" },
+          { error: "Produktname ist erforderlich" },
         { status: 400 }
       )
-    }
-
-    if (!countryOfOrigin || typeof countryOfOrigin !== "string" || countryOfOrigin.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Herstellungsland ist erforderlich" },
-        { status: 400 }
-      )
+      }
     }
 
     // Lade DPP für Audit-Log (alte Werte)
     const oldDpp = await prisma.dpp.findUnique({
-      where: { id: resolvedParams.dppId },
+      where: { id: dppId },
       select: {
         organizationId: true,
         name: true,
@@ -242,15 +463,15 @@ export async function PUT(
 
     // DPP aktualisieren
     const dpp = await prisma.dpp.update({
-      where: { id: resolvedParams.dppId },
+      where: { id: dppId },
       data: {
         name: name.trim(),
         description: description?.trim() || null,
         category: category as "TEXTILE" | "FURNITURE" | "OTHER",
-        sku: sku.trim(),
-        gtin: gtin?.trim() || null,
-        brand: brand.trim(),
-        countryOfOrigin: countryOfOrigin.trim(),
+        sku: (sku && typeof sku === "string") ? sku.trim() : "",
+        gtin: (gtin && typeof gtin === "string") ? gtin.trim() : null,
+        brand: (brand && typeof brand === "string") ? brand.trim() : "",
+        countryOfOrigin: (countryOfOrigin && typeof countryOfOrigin === "string") ? countryOfOrigin.trim() : "",
         materials: materials?.trim() || null,
         materialSource: materialSource?.trim() || null,
         careInstructions: careInstructions?.trim() || null,
@@ -294,7 +515,7 @@ export async function PUT(
       
       // Nur loggen wenn sich der Wert geändert hat
       if (oldValue !== newValue) {
-        await logDppAction(ACTION_TYPES.UPDATE, resolvedParams.dppId, {
+        await logDppAction(ACTION_TYPES.UPDATE, dppId, {
           actorId: session.user.id,
           actorRole: role || undefined,
           organizationId: oldDpp.organizationId,

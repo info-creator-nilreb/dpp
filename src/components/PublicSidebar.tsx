@@ -223,7 +223,7 @@ function SidebarContent({
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = "#C1005F"
             e.currentTarget.style.transform = "translateY(-1px)"
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(226, 0, 116, 0.3)"
+            e.currentTarget.style.boxShadow = "0 4px 12px rgba(36, 197, 152, 0.3)"
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "#24c598"

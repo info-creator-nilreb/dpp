@@ -2,7 +2,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
-import { createUser } from "@/auth"
+import { createUser } from "@/lib/auth-create-user"
 import { prisma } from "@/lib/prisma"
 
 /**

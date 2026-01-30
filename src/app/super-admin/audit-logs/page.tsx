@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic"
 export default async function SuperAdminAuditLogsPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const session = await getSuperAdminSession()
 
@@ -22,11 +22,12 @@ export default async function SuperAdminAuditLogsPage({
     redirect("/super-admin/login")
   }
 
+  const resolved = await searchParams
   // Parse search params
-  const organizationId = typeof searchParams.organizationId === "string" ? searchParams.organizationId : undefined
-  const dppId = typeof searchParams.dppId === "string" ? searchParams.dppId : undefined
-  const page = parseInt(typeof searchParams.page === "string" ? searchParams.page : "1")
-  const limit = parseInt(typeof searchParams.limit === "string" ? searchParams.limit : "50")
+  const organizationId = typeof resolved.organizationId === "string" ? resolved.organizationId : undefined
+  const dppId = typeof resolved.dppId === "string" ? resolved.dppId : undefined
+  const page = parseInt(typeof resolved.page === "string" ? resolved.page : "1")
+  const limit = parseInt(typeof resolved.limit === "string" ? resolved.limit : "50")
 
   return (
     <div style={{

@@ -436,7 +436,7 @@ export default function AiStartDppContent() {
             fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
             fontWeight: "600",
             cursor: canStartAnalysis() && !isAnalyzing ? "pointer" : "not-allowed",
-            boxShadow: canStartAnalysis() && !isAnalyzing ? "0 4px 12px rgba(226, 0, 116, 0.3)" : "none",
+            boxShadow: canStartAnalysis() && !isAnalyzing ? "0 4px 12px rgba(36, 197, 152, 0.3)" : "none",
             marginBottom: "0.5rem"
           }}
         >
@@ -1057,7 +1057,7 @@ function ResultSection({
             fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
             fontWeight: "600",
             cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)"
+            boxShadow: "0 4px 12px rgba(36, 197, 152, 0.3)"
           }}
         >
           Ausgewählte Daten in DPP übernehmen

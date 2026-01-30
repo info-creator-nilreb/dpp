@@ -134,7 +134,7 @@ export default function OnboardingPage() {
             fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
             fontWeight: "600",
             cursor: loading || !organizationName.trim() ? "not-allowed" : "pointer",
-            boxShadow: loading || !organizationName.trim() ? "none" : "0 4px 12px rgba(226, 0, 116, 0.3)"
+            boxShadow: loading || !organizationName.trim() ? "none" : "0 4px 12px rgba(36, 197, 152, 0.3)"
           }}
         >
           {loading ? "Wird gespeichert..." : "Speichern & weiter"}

@@ -8,10 +8,10 @@ export default async function VersionsPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const resolvedParams = await params
+  const { id } = await params
   return (
     <AuthGate>
-      <VersionsContent id={resolvedParams.id} />
+      <VersionsContent id={id} />
     </AuthGate>
   )
 }

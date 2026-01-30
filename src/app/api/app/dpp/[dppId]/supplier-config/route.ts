@@ -1,49 +1,76 @@
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { requireViewDPP, requireEditDPP } from "@/lib/api-permissions"
 
 /**
  * GET /api/app/dpp/[dppId]/supplier-config
- *
- * Liefert die Block-Supplier-Konfiguration (durch Partner befüllbar) für diesen DPP.
+ * Lädt Supplier-Configs für alle Blöcke eines DPPs
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
-    const resolvedParams = await params
-
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const permissionError = await requireViewDPP(resolvedParams.dppId, session.user.id)
-    if (permissionError) return permissionError
-
-    const configs = await prisma.dppBlockSupplierConfig.findMany({
-      where: { dppId: resolvedParams.dppId },
-    })
-
-    const configsMap: Record<string, { enabled: boolean; mode: "input" | "declaration" | null; allowedRoles?: string[] }> = {}
-    configs.forEach((c) => {
-      configsMap[c.blockId] = {
-        enabled: c.enabled,
-        mode: (c.mode as "input" | "declaration") || null,
-        allowedRoles: Array.isArray(c.allowedRoles) ? (c.allowedRoles as string[]) : [],
+    // Prüfe, ob DPP existiert und User Zugriff hat
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: { userId: session.user.id }
+            }
+          }
+        }
       }
     })
 
-    return NextResponse.json({ configs: configsMap })
+    if (!dpp) {
+      return NextResponse.json({ error: "DPP nicht gefunden" }, { status: 404 })
+    }
+
+    // Prüfe Berechtigung
+    const hasAccess = dpp.organization.memberships.length > 0
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 })
+    }
+
+    // Lade Supplier-Configs
+    const configs = await prisma.dppBlockSupplierConfig.findMany({
+      where: { dppId }
+    })
+
+    // Transform zu Record<blockId, config>
+    const configMap = configs.reduce((acc, config) => {
+      const allowedRoles: string[] = Array.isArray(config.allowedRoles) 
+        ? (config.allowedRoles as string[])
+        : []
+      
+      acc[config.blockId] = {
+        enabled: config.enabled,
+        mode: config.mode as "input" | "declaration" | null,
+        allowedRoles
+      }
+      return acc
+    }, {} as Record<string, { enabled: boolean; mode: "input" | "declaration" | null; allowedRoles: string[] }>)
+
+    // Transform zu Array für Response
+    const configArray = Object.entries(configMap).map(([blockId, config]) => ({
+      blockId,
+      ...config
+    }))
+
+    return NextResponse.json({ configs: configArray })
   } catch (error: any) {
-    console.error("Error fetching supplier config:", error)
+    console.error("Error fetching supplier configs:", error)
     return NextResponse.json(
-      { error: error?.message || "Ein Fehler ist aufgetreten" },
+      { error: "Fehler beim Laden der Supplier-Configs" },
       { status: 500 }
     )
   }
@@ -51,79 +78,110 @@ export async function GET(
 
 /**
  * PUT /api/app/dpp/[dppId]/supplier-config
- *
- * Aktualisiert die Block-Supplier-Konfiguration.
- * Body: { configs: Record<blockId, { enabled: boolean, mode?: "input" | "declaration", allowedRoles?: string[] }> }
+ * Speichert/aktualisiert Supplier-Config für einen Block
  */
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
-    const resolvedParams = await params
-
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    const { blockId, enabled, mode, allowedRoles } = await request.json()
 
-    const permissionError = await requireEditDPP(resolvedParams.dppId, session.user.id)
-    if (permissionError) return permissionError
-
-    const body = await request.json()
-    const configs = body.configs as Record<string, { enabled: boolean; mode?: "input" | "declaration"; allowedRoles?: string[] }>
-    if (!configs || typeof configs !== "object") {
+    if (!blockId) {
       return NextResponse.json(
-        { error: "configs (Objekt) ist erforderlich" },
+        { error: "blockId ist erforderlich" },
         { status: 400 }
       )
     }
 
-    const dppId = resolvedParams.dppId
-
-    for (const [blockId, cfg] of Object.entries(configs)) {
-      if (!blockId || typeof cfg !== "object") continue
-      const enabled = !!cfg.enabled
-      const mode = cfg.mode === "input" || cfg.mode === "declaration" ? cfg.mode : null
-      const allowedRoles = Array.isArray(cfg.allowedRoles) ? cfg.allowedRoles : []
-
-      await prisma.dppBlockSupplierConfig.upsert({
-        where: {
-          dppId_blockId: { dppId, blockId },
-        },
-        create: {
-          dppId,
-          blockId,
-          enabled,
-          mode,
-          allowedRoles: allowedRoles.length ? allowedRoles : undefined,
-        },
-        update: {
-          enabled,
-          mode,
-          allowedRoles: allowedRoles.length ? allowedRoles : undefined,
-        },
-      })
-    }
-
-    const updated = await prisma.dppBlockSupplierConfig.findMany({
-      where: { dppId },
-    })
-    const configsMap: Record<string, { enabled: boolean; mode: "input" | "declaration" | null; allowedRoles?: string[] }> = {}
-    updated.forEach((c) => {
-      configsMap[c.blockId] = {
-        enabled: c.enabled,
-        mode: (c.mode as "input" | "declaration") || null,
-        allowedRoles: Array.isArray(c.allowedRoles) ? (c.allowedRoles as string[]) : [],
+    // Prüfe, ob DPP existiert und User Zugriff hat
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: { userId: session.user.id }
+            }
+          }
+        }
       }
     })
 
-    return NextResponse.json({ configs: configsMap })
+    if (!dpp) {
+      return NextResponse.json({ error: "DPP nicht gefunden" }, { status: 404 })
+    }
+
+    // Prüfe Berechtigung
+    const hasAccess = dpp.organization.memberships.length > 0
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 })
+    }
+
+    // Lade Template über Kategorie (optional - für Validierung)
+    const template = await prisma.template.findFirst({
+      where: {
+        category: dpp.category,
+        status: "active"
+      },
+      include: {
+        blocks: true
+      },
+      orderBy: {
+        version: "desc"
+      }
+    })
+
+    // Wenn Template gefunden wurde, validiere Block
+    if (template) {
+      const block = template.blocks.find(b => b.id === blockId)
+      if (block) {
+        // Validierung: Block darf nicht order === 0 sein (Produktidentität)
+        if (block.order === 0) {
+          return NextResponse.json(
+            { error: "Basisdaten-Block kann keine Lieferanten-Konfiguration haben" },
+            { status: 400 }
+          )
+        }
+      }
+      // Wenn Block nicht im Template gefunden wurde, trotzdem erlauben (könnte ein CMS-Block sein)
+    }
+    // Wenn kein Template gefunden wurde, trotzdem erlauben (könnte ein CMS-basierter DPP sein)
+
+    // Speichere/aktualisiere Config
+    await prisma.dppBlockSupplierConfig.upsert({
+      where: {
+        dppId_blockId: {
+          dppId,
+          blockId
+        }
+      },
+      update: {
+        enabled: enabled ?? false,
+        mode: mode || null,
+        allowedRoles: allowedRoles && allowedRoles.length > 0 ? allowedRoles : null
+      },
+      create: {
+        dppId,
+        blockId,
+        enabled: enabled ?? false,
+        mode: mode || null,
+        allowedRoles: allowedRoles && allowedRoles.length > 0 ? allowedRoles : null
+      }
+    })
+
+    return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error("Error updating supplier config:", error)
+    console.error("Error saving supplier config:", error)
     return NextResponse.json(
-      { error: error?.message || "Ein Fehler ist aufgetreten" },
+      { error: "Fehler beim Speichern der Supplier-Config" },
       { status: 500 }
     )
   }
 }
+

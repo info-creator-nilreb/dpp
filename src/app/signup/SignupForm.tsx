@@ -1,0 +1,934 @@
+"use client"
+
+import React, { useState, useMemo, useEffect, type FormEvent } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
+
+// Passwortstärke berechnen
+function calculatePasswordStrength(password: string): {
+  strength: "weak" | "medium" | "strong" | "very-strong"
+  score: number
+  feedback: string
+} {
+  if (!password) {
+    return { strength: "weak", score: 0, feedback: "" }
+  }
+
+  let score = 0
+  const feedback: string[] = []
+
+  if (password.length >= 8) score += 1
+  else feedback.push("Mindestens 8 Zeichen")
+  if (password.length >= 12) score += 1
+  if (/[A-Z]/.test(password)) score += 1
+  else feedback.push("Großbuchstaben verwenden")
+  if (/[a-z]/.test(password)) score += 1
+  else feedback.push("Kleinbuchstaben verwenden")
+  if (/\d/.test(password)) score += 1
+  else feedback.push("Zahlen verwenden")
+  if (/[^A-Za-z0-9]/.test(password)) score += 1
+  else feedback.push("Sonderzeichen verwenden")
+
+  let strength: "weak" | "medium" | "strong" | "very-strong"
+  let feedbackText = ""
+  if (score <= 2) {
+    strength = "weak"
+    feedbackText = "Schwach"
+  } else if (score <= 4) {
+    strength = "medium"
+    feedbackText = "Mittel"
+  } else if (score <= 5) {
+    strength = "strong"
+    feedbackText = "Stark"
+  } else {
+    strength = "very-strong"
+    feedbackText = "Sehr stark"
+  }
+
+  return { strength, score, feedback: feedbackText }
+}
+
+interface SignupFormProps {
+  /** Vom Server gelesen – garantiert beim ersten Render verfügbar */
+  initialInvitationToken: string | null
+}
+
+export default function SignupForm({ initialInvitationToken }: SignupFormProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [organizationAction, setOrganizationAction] = useState<"create_new_organization" | "request_to_join_organization">(
+    initialInvitationToken ? "request_to_join_organization" : "create_new_organization"
+  )
+  const [organizationName, setOrganizationName] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState("")
+
+  const passwordStrength = useMemo(() => calculatePasswordStrength(password), [password])
+
+  // Server-Prop hat Priorität; useSearchParams für clientseitige Navigation
+  const invitationToken =
+    initialInvitationToken ?? searchParams.get("invitation")
+  const [invitationOrganizationName, setInvitationOrganizationName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (invitationToken) {
+      setOrganizationAction("request_to_join_organization")
+      fetch(`/api/auth/invitation?token=${encodeURIComponent(invitationToken)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.organizationName) setInvitationOrganizationName(data.organizationName)
+          if (data?.email) setEmail(data.email)
+        })
+        .catch(() => {})
+    } else {
+      setInvitationOrganizationName(null)
+    }
+  }, [invitationToken])
+
+  useEffect(() => {
+    if (searchParams.get("success") === "true") {
+      setShowSuccessMessage(true)
+      const emailParam = searchParams.get("email")
+      if (emailParam) {
+        setRegisteredEmail(emailParam)
+      }
+    }
+  }, [searchParams])
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+
+    try {
+      if (!firstName.trim() || !lastName.trim()) {
+        setError("Vorname und Nachname sind erforderlich")
+        setLoading(false)
+        return
+      }
+
+      if (!invitationToken && organizationAction === "create_new_organization" && !organizationName.trim()) {
+        setError("Organisationsname ist erforderlich")
+        setLoading(false)
+        return
+      }
+
+      if (!invitationToken && organizationAction === "request_to_join_organization") {
+        setError("Um einer bestehenden Organisation beizutreten, benötigen Sie eine Einladung. Bitte verwenden Sie den Einladungslink aus Ihrer E-Mail.")
+        setLoading(false)
+        return
+      }
+
+      const effectiveOrganizationAction = invitationToken
+        ? "request_to_join_organization"
+        : organizationAction
+
+      const response = await fetch("/api/auth/signup-phase1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email,
+          password,
+          organizationAction: effectiveOrganizationAction,
+          organizationName: organizationName.trim() || undefined,
+          invitationToken: invitationToken || undefined,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        const errMsg = data.error || "Ein Fehler ist aufgetreten"
+        if (
+          invitationToken &&
+          (errMsg.includes("bereits registriert") || errMsg.includes("already registered"))
+        ) {
+          setError(
+            "Diese E-Mail ist bereits registriert. Bitte melden Sie sich an, um der Einladung beizutreten."
+          )
+        } else {
+          setError(errMsg)
+        }
+      } else {
+        router.push("/signup?success=true&email=" + encodeURIComponent(email))
+      }
+    } catch (err) {
+      setError("Ein Fehler ist aufgetreten")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#F5F5F5",
+        padding: "1rem",
+        boxSizing: "border-box",
+        overflowX: "hidden",
+      }}
+    >
+      <Link
+        href="/"
+        style={{
+          textDecoration: "none",
+          marginBottom: "2rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.75rem",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            fill="none"
+            stroke="#24c598"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+            style={{ width: "100%", height: "100%" }}
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+        </div>
+        <span
+          style={{
+            fontSize: "clamp(1.5rem, 4vw, 2rem)",
+            fontWeight: "700",
+            color: "#0A0A0A",
+          }}
+        >
+          Easy Pass
+        </span>
+      </Link>
+
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "400px",
+          padding: "clamp(1.5rem, 4vw, 2rem)",
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          border: "1px solid #CDCDCD",
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ marginBottom: "1.5rem" }}>
+          <h1
+            style={{
+              fontSize: "clamp(1.5rem, 4vw, 2rem)",
+              fontWeight: "700",
+              color: "#0A0A0A",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Jetzt kostenlos registrieren
+          </h1>
+        </div>
+
+        {showSuccessMessage ? (
+          <div>
+            <div
+              style={{
+                padding: "1.5rem",
+                marginBottom: "1.5rem",
+                backgroundColor: "#E8F5E9",
+                border: "1px solid #C8E6C9",
+                borderRadius: "8px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ marginBottom: "1rem" }}>
+                <svg
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style={{ margin: "0 auto" }}
+                >
+                  <circle cx="12" cy="12" r="10" fill="#00A651" />
+                  <path
+                    d="M9 12l2 2 4-4"
+                    stroke="#FFFFFF"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <h2
+                style={{
+                  fontSize: "1.25rem",
+                  fontWeight: "700",
+                  color: "#2E7D32",
+                  marginBottom: "0.75rem",
+                }}
+              >
+                Registrierung erfolgreich!
+              </h2>
+              <p
+                style={{
+                  margin: "0 0 1rem 0",
+                  color: "#2E7D32",
+                  fontSize: "0.95rem",
+                  lineHeight: "1.5",
+                }}
+              >
+                Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihr Konto zu aktivieren.
+              </p>
+              <p
+                style={{
+                  margin: "0 0 1.5rem 0",
+                  color: "#0A0A0A",
+                  fontSize: "0.9rem",
+                  fontWeight: "500",
+                }}
+              >
+                {registeredEmail}
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/auth/resend-verification", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email: registeredEmail }),
+                      })
+                      const data = await response.json()
+                      if (response.ok) {
+                        setError("")
+                        alert("Verifizierungs-E-Mail wurde erneut gesendet. Bitte prüfen Sie Ihr Postfach.")
+                      } else {
+                        setError(data.error || "Fehler beim Senden der E-Mail")
+                      }
+                    } catch (err) {
+                      setError("Ein Fehler ist aufgetreten")
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    backgroundColor: "#24c598",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Verifizierungs-E-Mail erneut senden
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSuccessMessage(false)
+                    setRegisteredEmail("")
+                    setEmail("")
+                    setFirstName("")
+                    setLastName("")
+                    setPassword("")
+                    setOrganizationName("")
+                    setError("")
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    backgroundColor: "transparent",
+                    color: "#24c598",
+                    border: "1px solid #24c598",
+                    borderRadius: "6px",
+                    fontSize: "0.95rem",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                  }}
+                >
+                  E-Mail-Adresse ändern
+                </button>
+              </div>
+            </div>
+            {error && (
+              <div
+                style={{
+                  padding: "0.75rem",
+                  marginBottom: "1rem",
+                  backgroundColor: "#FEE",
+                  border: "1px solid #FCC",
+                  borderRadius: "6px",
+                  color: "#C33",
+                  fontSize: "0.9rem",
+                }}
+              >
+                {error}
+              </div>
+            )}
+            <p style={{ textAlign: "center", color: "#7A7A7A", fontSize: "0.9rem" }}>
+              Bereits ein Konto?{" "}
+              <Link href="/login" style={{ color: "#24c598", textDecoration: "none", fontWeight: "500" }}>
+                Jetzt anmelden →
+              </Link>
+            </p>
+          </div>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} noValidate>
+              {error && (
+                <div
+                  style={{
+                    padding: "0.75rem",
+                    marginBottom: "1rem",
+                    backgroundColor: "#FEE",
+                    border: "1px solid #FCC",
+                    borderRadius: "6px",
+                    color: "#C33",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    color: "#0A0A0A",
+                    fontWeight: "500",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Vorname *
+                </label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                  }}
+                  autoComplete="given-name"
+                  name="firstName"
+                />
+              </div>
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    color: "#0A0A0A",
+                    fontWeight: "500",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Nachname *
+                </label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                  }}
+                  autoComplete="family-name"
+                  name="lastName"
+                />
+              </div>
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    color: "#0A0A0A",
+                    fontWeight: "500",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  E-Mail *
+                </label>
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                  }}
+                  name="email"
+                />
+              </div>
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.5rem",
+                    color: "#0A0A0A",
+                    fontWeight: "500",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Passwort *
+                </label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      paddingRight: "3rem",
+                      border: "1px solid #CDCDCD",
+                      borderRadius: "6px",
+                      fontSize: "1rem",
+                      boxSizing: "border-box",
+                    }}
+                    name="password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                    style={{
+                      position: "absolute",
+                      right: "0.75rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "0.5rem",
+                      minWidth: "44px",
+                      minHeight: "44px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#24c598",
+                    }}
+                    tabIndex={0}
+                  >
+                    {showPassword ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {password && (
+                  <div style={{ marginTop: "0.5rem" }}>
+                    <div style={{ display: "flex", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                      {[1, 2, 3, 4].map((level) => {
+                        const isActive = passwordStrength.score >= level
+                        let bgColor = "#CDCDCD"
+                        if (isActive) {
+                          if (passwordStrength.strength === "weak") bgColor = "#24c598"
+                          else if (passwordStrength.strength === "medium") bgColor = "#FFA500"
+                          else if (passwordStrength.strength === "strong") bgColor = "#FFD700"
+                          else bgColor = "#00A651"
+                        }
+                        return (
+                          <div
+                            key={level}
+                            style={{
+                              flex: 1,
+                              height: "4px",
+                              backgroundColor: bgColor,
+                              borderRadius: "2px",
+                            }}
+                          />
+                        )
+                      })}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.85rem",
+                        color:
+                          passwordStrength.strength === "weak"
+                            ? "#24c598"
+                            : passwordStrength.strength === "medium"
+                              ? "#FFA500"
+                              : passwordStrength.strength === "strong"
+                                ? "#FFD700"
+                                : "#00A651",
+                        fontWeight: "500",
+                      }}
+                    >
+                      {passwordStrength.feedback}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Organisation nur anzeigen, wenn KEINE Einladung vorliegt */}
+              {!invitationToken && (
+                <>
+                  <div style={{ marginBottom: "1.75rem" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "0.75rem",
+                        color: "#0A0A0A",
+                        fontWeight: "600",
+                        fontSize: "0.9375rem",
+                      }}
+                    >
+                      Organisation
+                    </label>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.625rem",
+                        padding: "0.75rem",
+                        backgroundColor: "#FAFAFA",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          cursor: "pointer",
+                          padding: "0.625rem",
+                          borderRadius: "6px",
+                          transition: "background-color 0.2s",
+                          backgroundColor:
+                            organizationAction === "create_new_organization" ? "#F3F4F6" : "transparent",
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="organizationAction"
+                          value="create_new_organization"
+                          checked={organizationAction === "create_new_organization"}
+                          onChange={(e) => setOrganizationAction(e.target.value as "create_new_organization")}
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            cursor: "pointer",
+                            accentColor: "#24c598",
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: "0.9375rem",
+                            color: "#0A0A0A",
+                            fontWeight: organizationAction === "create_new_organization" ? "500" : "400",
+                          }}
+                        >
+                          Neue Organisation erstellen
+                        </span>
+                      </label>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          cursor: "pointer",
+                          padding: "0.625rem",
+                          borderRadius: "6px",
+                          transition: "background-color 0.2s",
+                          backgroundColor:
+                            organizationAction === "request_to_join_organization" ? "#F3F4F6" : "transparent",
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="organizationAction"
+                          value="request_to_join_organization"
+                          checked={organizationAction === "request_to_join_organization"}
+                          onChange={(e) =>
+                            setOrganizationAction(e.target.value as "request_to_join_organization")
+                          }
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            cursor: "pointer",
+                            accentColor: "#24c598",
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: "0.9375rem",
+                            color: "#0A0A0A",
+                            fontWeight:
+                              organizationAction === "request_to_join_organization" ? "500" : "400",
+                          }}
+                        >
+                          Bestehender Organisation beitreten
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {organizationAction === "create_new_organization" && (
+                    <div style={{ marginBottom: "1.75rem" }}>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "0.5rem",
+                          color: "#0A0A0A",
+                          fontWeight: "500",
+                          fontSize: "0.9375rem",
+                        }}
+                      >
+                        Organisationsname
+                      </label>
+                      <input
+                        type="text"
+                        value={organizationName}
+                        onChange={(e) => setOrganizationName(e.target.value)}
+                        required={organizationAction === "create_new_organization"}
+                        placeholder="z. B. Acme GmbH"
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #CDCDCD",
+                          borderRadius: "6px",
+                          fontSize: "0.9375rem",
+                          boxSizing: "border-box",
+                          transition: "border-color 0.2s",
+                        }}
+                        onFocus={(e) => {
+                          ;(e.target as HTMLInputElement).style.borderColor = "#24c598"
+                        }}
+                        onBlur={(e) => {
+                          ;(e.target as HTMLInputElement).style.borderColor = "#CDCDCD"
+                        }}
+                        name="organizationName"
+                      />
+                      <p
+                        style={{
+                          marginTop: "0.5rem",
+                          fontSize: "0.8125rem",
+                          color: "#6B7280",
+                          marginBottom: 0,
+                          lineHeight: "1.4",
+                        }}
+                      >
+                        Der Name kann später in den Einstellungen geändert werden.
+                      </p>
+                    </div>
+                  )}
+
+                  {organizationAction === "request_to_join_organization" && (
+                    <div
+                      style={{
+                        padding: "1rem",
+                        marginBottom: "1.75rem",
+                        backgroundColor: "#F9FAFB",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        color: "#374151",
+                        lineHeight: "1.6",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        viewBox="0 0 24 24"
+                        style={{
+                          flexShrink: 0,
+                          marginTop: "0.0625rem",
+                          color: "#6B7280",
+                        }}
+                        aria-hidden="true"
+                      >
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontWeight: "500", marginBottom: "0.25rem", color: "#111827" }}>
+                          Einladung erforderlich
+                        </p>
+                        <p style={{ margin: 0, fontSize: "0.8125rem", color: "#6B7280" }}>
+                          Der Beitritt erfolgt über eine Einladung. Verwenden Sie den Einladungslink aus
+                          Ihrer E-Mail oder kontaktieren Sie Ihren Administrator.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Einladungs-Hinweis wenn Token in URL */}
+              {invitationToken && (
+                <div
+                  style={{
+                    padding: "0.875rem 1rem",
+                    marginBottom: "1.75rem",
+                    backgroundColor: "#ECFDF5",
+                    border: "1px solid #A7F3D0",
+                    borderRadius: "8px",
+                    color: "#065F46",
+                    fontSize: "0.875rem",
+                    lineHeight: "1.5",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    viewBox="0 0 24 24"
+                    style={{
+                      flexShrink: 0,
+                      marginTop: "0.0625rem",
+                    }}
+                    aria-hidden="true"
+                  >
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontWeight: "600", marginBottom: "0.25rem" }}>
+                      {invitationOrganizationName
+                        ? `Einladung zu ${invitationOrganizationName}`
+                        : "Sie wurden eingeladen"}
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.8125rem", opacity: 0.95 }}>
+                      Nach der Registrierung werden Sie automatisch dieser Organisation beitreten.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  backgroundColor: loading ? "#CDCDCD" : "#24c598",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "1rem",
+                  fontWeight: "600",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  marginBottom: "1rem",
+                }}
+              >
+                {loading
+                  ? invitationToken || organizationAction === "request_to_join_organization"
+                    ? "Wird beigetreten..."
+                    : "Wird erstellt..."
+                  : invitationToken
+                    ? "Konto erstellen und beitreten"
+                    : organizationAction === "request_to_join_organization"
+                      ? "Konto erstellen"
+                      : "Konto erstellen"}
+              </button>
+            </form>
+
+            <p style={{ textAlign: "center", color: "#7A7A7A", fontSize: "0.9rem" }}>
+              Bereits ein Konto?{" "}
+              <Link href="/login" style={{ color: "#24c598", textDecoration: "none", fontWeight: "500" }}>
+                Jetzt anmelden →
+              </Link>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}

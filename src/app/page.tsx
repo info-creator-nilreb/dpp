@@ -75,7 +75,7 @@ export default async function Home() {
               fontWeight: '600',
               fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)',
               display: 'inline-block',
-              boxShadow: '0 4px 12px rgba(226, 0, 116, 0.3)',
+              boxShadow: '0 4px 12px rgba(36, 197, 152, 0.3)',
               whiteSpace: 'nowrap'
             }}>
               Kostenlos testen
@@ -507,7 +507,7 @@ export default async function Home() {
               fontWeight: '600',
               fontSize: 'clamp(0.95rem, 2vw, 1.1rem)',
               display: 'inline-block',
-              boxShadow: '0 4px 12px rgba(226, 0, 116, 0.3)'
+              boxShadow: '0 4px 12px rgba(36, 197, 152, 0.3)'
             }}>
               Jetzt kostenlos starten
             </Link>

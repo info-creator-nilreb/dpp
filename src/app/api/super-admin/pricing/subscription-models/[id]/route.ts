@@ -16,15 +16,15 @@ import { getClientIp } from "@/lib/audit/audit-utils"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "read")
     if (session instanceof NextResponse) {
       return session
     }
 
-    const { id } = await params
     const subscriptionModel = await prisma.subscriptionModel.findUnique({
       where: { id },
       include: {
@@ -62,15 +62,15 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "update")
     if (session instanceof NextResponse) {
       return session
     }
 
-    const { id } = await params
     const body = await req.json()
     const {
       minCommitmentMonths,
@@ -172,15 +172,15 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const session = await requireSuperAdminPermissionApiThrow("template", "update")
     if (session instanceof NextResponse) {
       return session
     }
 
-    const { id } = await params
     // Check if model exists and has subscriptions
     const existing = await prisma.subscriptionModel.findUnique({
       where: { id },

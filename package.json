@@ -5,7 +5,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "next dev -p 3001",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "migrate:production:missing-tables": "node scripts/apply-missing-tables-to-production.js",
@@ -24,7 +24,7 @@
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.1.2",
     "jose": "^6.1.3",
-    "next": "^14.2.35",
+    "next": "^16.1.6",
     "next-auth": "^5.0.0-beta.25",
     "nodemailer": "^7.0.11",
     "openai": "^6.15.0",

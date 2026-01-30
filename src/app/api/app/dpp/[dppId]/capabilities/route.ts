@@ -10,16 +10,15 @@ export async function GET(
   { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const resolvedParams = await params;
-
     // Get DPP and organization
     const dpp = await prisma.dpp.findUnique({
-      where: { id: resolvedParams.dppId },
+      where: { id: dppId },
       include: { organization: true },
     });
 

@@ -398,7 +398,7 @@ export default function PricingPageContent({
                   flexDirection: "column",
                   position: "relative",
                   transition: "all 0.2s",
-                  boxShadow: isHighlighted ? "0 8px 24px rgba(226, 0, 116, 0.15)" : "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  boxShadow: isHighlighted ? "0 8px 24px rgba(36, 197, 152, 0.15)" : "0 2px 8px rgba(0, 0, 0, 0.04)",
                   boxSizing: "border-box",
                   width: "100%",
                   minWidth: 0,

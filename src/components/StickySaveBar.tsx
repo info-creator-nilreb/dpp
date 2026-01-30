@@ -226,7 +226,7 @@ export default function StickySaveBar({
                 fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
                 fontWeight: "600",
                 cursor: publishDisabled ? "not-allowed" : "pointer",
-                boxShadow: publishDisabled ? "none" : "0 4px 12px rgba(226, 0, 116, 0.3)",
+                boxShadow: publishDisabled ? "none" : "0 4px 12px rgba(36, 197, 152, 0.3)",
                 transition: "all 0.2s"
               }}
             >

@@ -141,7 +141,7 @@ export default function FileUploadArea({
           borderRadius: "8px",
           padding: "2rem",
           textAlign: "center",
-          backgroundColor: isDragging ? "#FEF3F8" : "#F5F5F5",
+          backgroundColor: isDragging ? "#ECFDF5" : "#F5F5F5",
           cursor: disabled ? "not-allowed" : "pointer",
           transition: "all 0.2s ease",
           opacity: disabled ? 0.5 : 1,

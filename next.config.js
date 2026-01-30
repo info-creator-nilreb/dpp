@@ -1,14 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    typescript: {
-      // TypeScript-Fehler blockieren Builds nicht (schnellere Dev-Umgebung)
-      ignoreBuildErrors: true,
-    },
-    // Next.js 16: Turbopack is default
-    // Empty turbopack config to silence the warning
+    // Nodemailer und Node-Built-ins (crypto, fs, net, dns, tls) nicht bündeln – nur auf dem Server mit require laden
+    serverExternalPackages: ["nodemailer"],
+    // Next.js 16: Turbopack ist Standard; leere Config unterdrückt Warnung bei vorhandener webpack-Config
     turbopack: {},
-    // Webpack config for production builds - exclude Node.js modules from client bundle
     webpack: (config, { isServer }) => {
+      // Exclude Node.js modules from client-side bundle
       if (!isServer) {
         config.resolve.fallback = {
           ...config.resolve.fallback,
@@ -26,21 +23,10 @@ const nextConfig = {
           path: false,
           os: false,
         }
-        // Mark server-only modules as external for client builds
+        
+        // Mark nodemailer as external for client builds
         config.externals = config.externals || []
-        if (Array.isArray(config.externals)) {
-          config.externals.push('nodemailer')
-          config.externals.push('crypto')
-        }
-      }
-      
-      // Fix for Next.js 14.2+ route modules path resolution
-      if (isServer) {
-        config.resolve.alias = {
-          ...config.resolve.alias,
-          'next/dist/server/route-modules/pages/module.compiled': 
-            require.resolve('next/dist/server/future/route-modules/pages/module.compiled'),
-        }
+        config.externals.push('nodemailer')
       }
       
       return config
