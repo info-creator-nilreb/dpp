@@ -5,15 +5,15 @@ import DppEditor from "@/components/DppEditor"
 import AuthGate from "../../_auth/AuthGate"
 
 async function DppEditorContent({
-  params,
+  dppId,
 }: {
-  params: { dppId: string }
+  dppId: string
 }) {
   // Prüfe Zugriff und lade DPP via API
   let dpp: any = null
   try {
     // Prüfe Zugriff
-    const accessResponse = await fetch(`/api/app/dpp/${params.dppId}/access`, {
+    const accessResponse = await fetch(`/api/app/dpp/${dppId}/access`, {
       cache: "no-store",
     })
     if (!accessResponse.ok) {
@@ -24,7 +24,7 @@ async function DppEditorContent({
     }
 
     // Lade DPP mit Medien und Content
-    const dppResponse = await fetch(`/api/app/dpp/${params.dppId}`, {
+    const dppResponse = await fetch(`/api/app/dpp/${dppId}`, {
       cache: "no-store",
     })
     if (dppResponse.ok) {
@@ -72,11 +72,12 @@ async function DppEditorContent({
 export default async function DppEditorPage({
   params,
 }: {
-  params: { dppId: string }
+  params: Promise<{ dppId: string }>
 }) {
+  const { dppId } = await params
   return (
     <AuthGate>
-      <DppEditorContent params={params} />
+      <DppEditorContent dppId={dppId} />
     </AuthGate>
   )
 }

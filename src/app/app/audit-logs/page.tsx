@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic"
 export default async function AuditLogsPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const session = await auth()
 
@@ -48,11 +48,12 @@ export default async function AuditLogsPage({
     redirect("/app/dashboard")
   }
 
+  const resolved = await searchParams
   // Parse search params
   const organizationId = membership.organizationId
-  const dppId = typeof searchParams.dppId === "string" ? searchParams.dppId : undefined
-  const page = parseInt(typeof searchParams.page === "string" ? searchParams.page : "1")
-  const limit = parseInt(typeof searchParams.limit === "string" ? searchParams.limit : "50")
+  const dppId = typeof resolved.dppId === "string" ? resolved.dppId : undefined
+  const page = parseInt(typeof resolved.page === "string" ? resolved.page : "1")
+  const limit = parseInt(typeof resolved.limit === "string" ? resolved.limit : "50")
 
   return (
     <div style={{

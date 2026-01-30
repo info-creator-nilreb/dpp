@@ -17,8 +17,9 @@ export const dynamic = "force-dynamic"
 export default async function SuperAdminUserDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   // Check auth and permission
   const session = await getSuperAdminSession()
   if (!session) {
@@ -33,7 +34,7 @@ export default async function SuperAdminUserDetailPage({
 
   // Get user with organization
   const user = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       organization: {
         select: {
