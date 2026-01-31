@@ -1,7 +1,7 @@
 /**
  * Headline Block Component
  * 
- * Große Überschrift (wenn kein Hero-Bild vorhanden)
+ * Große Überschrift mit Hersteller und Version (wenn kein Hero-Bild vorhanden)
  */
 
 "use client"
@@ -12,11 +12,22 @@ import { editorialColors } from '../tokens/colors'
 interface HeadlineBlockProps {
   text: string
   brandName?: string
+  versionInfo?: {
+    version: number
+    createdAt: Date
+  }
 }
 
-export default function HeadlineBlock({ text, brandName }: HeadlineBlockProps) {
+export default function HeadlineBlock({ text, brandName, versionInfo }: HeadlineBlockProps) {
+  const formatDate = (date: Date) =>
+    new Date(date).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    })
+
   return (
-    <div>
+    <div style={{ textAlign: 'center' }}>
       {brandName && (
         <p
           style={{
@@ -39,10 +50,23 @@ export default function HeadlineBlock({ text, brandName }: HeadlineBlockProps) {
           letterSpacing: '-0.02em',
           color: editorialColors.text.primary,
           margin: 0,
+          marginBottom: versionInfo || !versionInfo ? '0.5rem' : 0,
         }}
       >
         {text}
       </h1>
+      <p
+        style={{
+          fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+          color: editorialColors.text.secondary,
+          fontWeight: 400,
+          margin: 0,
+        }}
+      >
+        {versionInfo
+          ? `Version ${versionInfo.version} • Veröffentlicht am ${formatDate(versionInfo.createdAt)}`
+          : 'Entwurf • Noch nicht veröffentlicht'}
+      </p>
     </div>
   )
 }

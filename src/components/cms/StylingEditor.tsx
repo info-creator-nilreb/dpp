@@ -56,6 +56,7 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
     try {
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("role", "logo")
 
       const response = await fetch(`/api/app/dpp/${dppId}/media`, {
         method: "POST",
@@ -124,6 +125,13 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
   }
 
   function saveStyling(updates: Partial<UpdateStylingRequest>) {
+    // "logo" in updates: explizites Setzen (auch auf undefined beim Entfernen) berücksichtigen
+    const logoValue =
+      "logo" in updates
+        ? updates.logo
+        : logoUrl
+          ? { url: logoUrl, alt: logoAlt || undefined }
+          : undefined
     const fullUpdates: UpdateStylingRequest = {
       ...updates,
       colors: {
@@ -131,10 +139,7 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
         ...(secondaryColor && { secondary: secondaryColor }),
         ...(accentColor && { accent: accentColor })
       },
-      logo: updates.logo !== undefined ? updates.logo : (logoUrl ? {
-        url: logoUrl,
-        alt: logoAlt || undefined
-      } : undefined)
+      logo: logoValue
     }
     onUpdate(fullUpdates)
   }

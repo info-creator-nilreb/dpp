@@ -4,6 +4,7 @@ import { useState } from "react"
 import FileUploadArea from "@/components/FileUploadArea"
 import InputField from "@/components/InputField"
 import CountrySelect from "@/components/CountrySelect"
+import ConfirmDialog from "@/components/ConfirmDialog"
 import { useNotification } from "@/components/NotificationProvider"
 
 interface PendingFile {
@@ -22,6 +23,7 @@ interface TemplateBlockFieldProps {
     config: any
   }
   blockId: string
+  blockName?: string // z. B. "Basis- & Produktdaten" für Hero-Rolle
   dppId: string | null
   value?: string | string[] // Für file-Felder: Array von Media-IDs oder URLs
   onChange?: (value: string | string[]) => void
@@ -69,7 +71,8 @@ export default function TemplateBlockField({
 }: TemplateBlockFieldProps) {
   const { showNotification } = useNotification()
   const [uploading, setUploading] = useState(false)
-  
+  const [deleteConfirmMediaId, setDeleteConfirmMediaId] = useState<string | null>(null)
+
   // Debug: Log value prop
   console.log(`[TemplateBlockField] Field ${field.key} (${field.label}): value=`, value, "type:", typeof value, "supplierInfo:", supplierInfo)
   
@@ -268,13 +271,17 @@ export default function TemplateBlockField({
       return
     }
 
-    // Für bestehende DPPs: Sofort hochladen
+    // Für bestehende DPPs: Sofort hochladen (role = primary_product_image für erstes Bild in Basisdaten)
     setUploading(true)
     try {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("blockId", blockId)
       formData.append("fieldId", field.key)
+      formData.append("fieldKey", field.key)
+      const isProductDataBlock = blockName && (blockName.includes("Basis") || blockName.includes("Produktdaten"))
+      const isFirstImage = field.type === "file-image" && isProductDataBlock && fieldMedia.length === 0 && fieldPendingFiles.length === 0
+      formData.append("role", isFirstImage ? "primary_product_image" : (field.type === "file-image" && isProductDataBlock ? "gallery_image" : ""))
 
       const response = await fetch(`/api/app/dpp/${dppId}/media`, {
         method: "POST",
@@ -319,8 +326,8 @@ export default function TemplateBlockField({
           {renderSupplierInfo()}
         </label>
         
-        {/* Upload Area - nur anzeigen wenn nicht read-only */}
-        {!readOnly && (
+        {/* Upload-Bereich: Großes Feld nur wenn noch keine Datei; sonst nur Plus/Drag (wie Mehrwert-Tab) */}
+        {!readOnly && (fieldMedia.length === 0 && fieldPendingFiles.length === 0) && (
           <FileUploadArea
             accept={
               field.type === "file-image" 
@@ -376,7 +383,7 @@ export default function TemplateBlockField({
           </div>
         )}
 
-        {/* Angezeigte Medien (inkl. Pending Files) - Pending Files nur im Edit-Modus */}
+        {/* Thumbnails + Plus-Slot (wie Mehrwert-Tab): nur wenn mindestens eine Datei oder nicht read-only mit Plus */}
         {(fieldMedia.length > 0 || (!readOnly && fieldPendingFiles.length > 0)) && (
           <div style={{
             marginTop: "1rem",
@@ -616,26 +623,9 @@ export default function TemplateBlockField({
                   {/* Delete-Button nur anzeigen wenn nicht read-only */}
                   {!readOnly && dppId && dppId !== "new" && (
                     <button
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation()
-                        if (!confirm("Möchten Sie diese Datei wirklich löschen?")) return
-                        
-                        try {
-                          const response = await fetch(`/api/app/dpp/${dppId}/media/${mediaItem.id}`, {
-                            method: "DELETE"
-                          })
-                          if (response.ok) {
-                            showNotification("Datei gelöscht", "success")
-                            if (onMediaChange) {
-                              onMediaChange()
-                            }
-                          } else {
-                            const data = await response.json()
-                            throw new Error(data.error || "Fehler beim Löschen")
-                          }
-                        } catch (error: any) {
-                          showNotification(error.message || "Fehler beim Löschen", "error")
-                        }
+                        setDeleteConfirmMediaId(mediaItem.id)
                       }}
                       style={{
                         background: "none",
@@ -656,8 +646,57 @@ export default function TemplateBlockField({
                 </div>
               </div>
             ))}
+            {/* Plus-Slot zum Hinzufügen weiterer Dateien (rechts von den Thumbnails) */}
+            {!readOnly && (
+              <FileUploadArea
+                accept={
+                  field.type === "file-image" 
+                    ? "image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    : field.type === "file-document"
+                    ? "application/pdf"
+                    : field.type === "file-video"
+                    ? "video/mp4,video/webm,video/ogg"
+                    : "image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf,video/mp4,video/webm,video/ogg"
+                }
+                maxSize={field.type === "file-video" ? 100 * 1024 * 1024 : 10 * 1024 * 1024}
+                onFileSelect={handleFileUpload}
+                disabled={uploading}
+                label=""
+                description=""
+                compact
+              />
+            )}
           </div>
         )}
+
+        <ConfirmDialog
+          isOpen={deleteConfirmMediaId !== null}
+          title="Datei löschen"
+          message="Möchten Sie diese Datei wirklich löschen?"
+          confirmLabel="Löschen"
+          cancelLabel="Abbrechen"
+          variant="danger"
+          onConfirm={async () => {
+            if (!deleteConfirmMediaId || !dppId) return
+            try {
+              const response = await fetch(`/api/app/dpp/${dppId}/media/${deleteConfirmMediaId}`, {
+                method: "DELETE"
+              })
+              if (response.ok) {
+                showNotification("Datei gelöscht", "success")
+                onMediaChange?.()
+              } else {
+                const data = await response.json()
+                throw new Error(data.error || "Fehler beim Löschen")
+              }
+            } catch (error: any) {
+              showNotification(error.message || "Fehler beim Löschen", "error")
+            } finally {
+              setDeleteConfirmMediaId(null)
+            }
+          }}
+          onCancel={() => setDeleteConfirmMediaId(null)}
+        />
       </div>
     )
   }

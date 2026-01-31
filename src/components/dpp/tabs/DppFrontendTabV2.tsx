@@ -88,10 +88,15 @@ export default function DppFrontendTabV2({
     }
 
     try {
+      // Logo entfernen: undefined wird in JSON weggelassen – explizit null senden
+      const body =
+        currentStyling.logo === undefined
+          ? { ...currentStyling, logo: null }
+          : currentStyling
       const response = await fetch(`/api/app/dpp/${dppId}/content/styling`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(currentStyling)
+        body: JSON.stringify(body)
       })
 
       if (!response.ok) {
@@ -149,6 +154,7 @@ export default function DppFrontendTabV2({
         accent: "#24c598"
       }
     }
+    // "logo" in updates: explizites Entfernen (logo: undefined) berücksichtigen
     const optimisticStyling: StylingConfig = {
       ...currentStyling,
       ...updates,
@@ -156,7 +162,7 @@ export default function DppFrontendTabV2({
         ...currentStyling.colors,
         ...(updates.colors || {})
       },
-      logo: updates.logo !== undefined ? updates.logo : currentStyling.logo
+      logo: "logo" in updates ? updates.logo : currentStyling.logo
     }
     
     // Update ref FIRST so auto-save uses the correct value
@@ -166,13 +172,10 @@ export default function DppFrontendTabV2({
     // Then update UI state
     onStylingChange(optimisticStyling)
     
-    // For logo uploads, trigger immediate save (no debounce)
-    // For other changes, use debounced save
-    if (updates.logo !== undefined) {
-      // Logo upload: Save immediately for instant feedback
+    // Logo-Änderung (Upload oder Entfernen): sofort speichern
+    if ("logo" in updates) {
       triggerSave()
     } else {
-      // Color changes: Use debounced save
       scheduleSave()
     }
   }

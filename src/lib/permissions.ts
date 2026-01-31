@@ -25,6 +25,15 @@ export {
   type DppSection,
 }
 
+/** Prisma-Verbindungsfehler erkennen (DB nicht erreichbar, Pool, etc.) */
+function isPrismaConnectionError(e: unknown): boolean {
+  const msg = e && typeof (e as { message?: string }).message === "string" ? (e as { message: string }).message : ""
+  const code = (e as { code?: string })?.code
+  const connectionErrorCodes = ["P1001", "P1002", "P1008", "P1017", "P1031"]
+  const connectionErrorPattern = /can't reach|can't connect|reach database|connection refused|connection.*refused|database server|ECONNREFUSED|ETIMEDOUT|getaddrinfo/i
+  return (code && connectionErrorCodes.includes(code)) || connectionErrorPattern.test(msg)
+}
+
 /**
  * Helper: Prüft ob User Super Admin ist
  */
@@ -35,12 +44,19 @@ export async function isSuperAdmin(userId?: string): Promise<boolean> {
     userId = session.user.id
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { systemRole: true, isPlatformAdmin: true }, // isPlatformAdmin für Backward Compatibility
-  })
-
-  return user?.systemRole === SYSTEM_ROLES.SUPER_ADMIN || user?.isPlatformAdmin === true
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { systemRole: true, isPlatformAdmin: true }, // isPlatformAdmin für Backward Compatibility
+    })
+    return user?.systemRole === SYSTEM_ROLES.SUPER_ADMIN || user?.isPlatformAdmin === true
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] isSuperAdmin: DB nicht erreichbar, Fallback false:", (e as Error)?.message)
+      return false
+    }
+    throw e
+  }
 }
 
 /**
@@ -50,17 +66,24 @@ export async function getOrganizationRole(
   userId: string,
   organizationId: string
 ): Promise<OrganizationRole | null> {
-  const membership = await prisma.membership.findUnique({
-    where: {
-      userId_organizationId: {
-        userId,
-        organizationId,
+  try {
+    const membership = await prisma.membership.findUnique({
+      where: {
+        userId_organizationId: {
+          userId,
+          organizationId,
+        },
       },
-    },
-    select: { role: true },
-  })
-
-  return (membership?.role as OrganizationRole) || null
+      select: { role: true },
+    })
+    return (membership?.role as OrganizationRole) || null
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] getOrganizationRole: DB nicht erreichbar, Fallback null:", (e as Error)?.message)
+      return null
+    }
+    throw e
+  }
 }
 
 /**
@@ -82,22 +105,28 @@ export async function getDppPermission(
   userId: string,
   dppId: string
 ): Promise<{ role: ExternalRole; sections: string[] | null } | null> {
-  const permission = await prisma.dppPermission.findFirst({
-    where: {
-      dppId,
-      userId,
-    },
-    select: {
-      role: true,
-      sections: true,
-    },
-  })
-
-  if (!permission) return null
-
-  return {
-    role: permission.role as ExternalRole,
-    sections: permission.sections ? permission.sections.split(",") : null,
+  try {
+    const permission = await prisma.dppPermission.findFirst({
+      where: {
+        dppId,
+        userId,
+      },
+      select: {
+        role: true,
+        sections: true,
+      },
+    })
+    if (!permission) return null
+    return {
+      role: permission.role as ExternalRole,
+      sections: permission.sections ? permission.sections.split(",") : null,
+    }
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] getDppPermission: DB nicht erreichbar, Fallback null:", (e as Error)?.message)
+      return null
+    }
+    throw e
   }
 }
 
@@ -105,68 +134,68 @@ export async function getDppPermission(
  * Kann User einen DPP ansehen?
  */
 export async function canViewDPP(userId: string, dppId: string): Promise<boolean> {
-  // Super Admin kann alles sehen
   if (await isSuperAdmin(userId)) return true
-
-  const dpp = await prisma.dpp.findUnique({
-    where: { id: dppId },
-    include: {
-      organization: {
-        include: {
-          memberships: {
-            where: { userId },
+  try {
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: { userId },
+            },
           },
         },
       },
-    },
-  })
-
-  if (!dpp) return false
-
-  // User muss Mitglied der Organisation sein oder DPP-Permission haben
-  const isOrgMember = dpp.organization.memberships.length > 0
-  if (isOrgMember) return true
-
-  // Oder externe Permission
-  const permission = await getDppPermission(userId, dppId)
-  return permission !== null
+    })
+    if (!dpp) return false
+    const isOrgMember = dpp.organization.memberships.length > 0
+    if (isOrgMember) return true
+    const permission = await getDppPermission(userId, dppId)
+    return permission !== null
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] canViewDPP: DB nicht erreichbar, Fallback false:", (e as Error)?.message)
+      return false
+    }
+    throw e
+  }
 }
 
 /**
  * Kann User einen DPP bearbeiten?
  */
 export async function canEditDPP(userId: string, dppId: string): Promise<boolean> {
-  // Super Admin kann alles bearbeiten
   if (await isSuperAdmin(userId)) return true
-
-  const dpp = await prisma.dpp.findUnique({
-    where: { id: dppId },
-    include: {
-      organization: {
-        include: {
-          memberships: {
-            where: { userId },
+  try {
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: { userId },
+            },
           },
         },
       },
-    },
-  })
-
-  if (!dpp) return false
-
-  // Prüfe Organisations-Rolle
-  const membership = dpp.organization.memberships[0]
-  if (membership) {
-    const role = membership.role as OrganizationRole
-    // ORG_VIEWER kann nicht bearbeiten
-    if (role === ORGANIZATION_ROLES.ORG_VIEWER) return false
-    // Alle anderen Organisations-Rollen können bearbeiten
-    return true
+    })
+    if (!dpp) return false
+    const membership = dpp.organization.memberships[0]
+    if (membership) {
+      const role = membership.role as OrganizationRole
+      if (role === ORGANIZATION_ROLES.ORG_VIEWER) return false
+      return true
+    }
+    const permission = await getDppPermission(userId, dppId)
+    return permission !== null
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] canEditDPP: DB nicht erreichbar, Fallback false:", (e as Error)?.message)
+      return false
+    }
+    throw e
   }
-
-  // Externe Rollen können grundsätzlich bearbeiten (aber nur bestimmte Sektionen)
-  const permission = await getDppPermission(userId, dppId)
-  return permission !== null
 }
 
 /**
@@ -183,49 +212,57 @@ export async function canEditSection(
   // Basis-Check: Kann User den DPP überhaupt bearbeiten?
   if (!(await canEditDPP(userId, dppId))) return false
 
-  const dpp = await prisma.dpp.findUnique({
-    where: { id: dppId },
-    include: {
-      organization: {
-        include: {
-          memberships: {
-            where: { userId },
+  try {
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: { userId },
+            },
           },
         },
       },
-    },
-  })
+    })
 
-  if (!dpp) return false
+    if (!dpp) return false
 
-  // Organisations-Mitglieder können alle Sektionen bearbeiten (außer VIEWER)
-  const membership = dpp.organization.memberships[0]
-  if (membership) {
-    const role = membership.role as OrganizationRole
-    return role !== ORGANIZATION_ROLES.ORG_VIEWER
-  }
-
-  // Externe Rollen: Prüfe Permission
-  const permission = await getDppPermission(userId, dppId)
-  if (!permission) return false
-
-  // Wenn sections null ist, hat User Zugriff auf alle Sektionen der Rolle
-  if (!permission.sections) {
-    // Default-Berechtigungen basierend auf Rolle
-    switch (permission.role) {
-      case EXTERNAL_ROLES.SUPPLIER:
-        return section === DPP_SECTIONS.MATERIALS || section === DPP_SECTIONS.MATERIAL_SOURCE
-      case EXTERNAL_ROLES.RECYCLER:
-        return section === DPP_SECTIONS.DISPOSAL || section === DPP_SECTIONS.SECOND_LIFE
-      case EXTERNAL_ROLES.REPAIR_SERVICE:
-        return section === DPP_SECTIONS.REPAIR || section === DPP_SECTIONS.CARE
-      default:
-        return false
+    // Organisations-Mitglieder können alle Sektionen bearbeiten (außer VIEWER)
+    const membership = dpp.organization.memberships[0]
+    if (membership) {
+      const role = membership.role as OrganizationRole
+      return role !== ORGANIZATION_ROLES.ORG_VIEWER
     }
-  }
 
-  // Prüfe ob Sektion in der Liste ist
-  return permission.sections.includes(section)
+    // Externe Rollen: Prüfe Permission
+    const permission = await getDppPermission(userId, dppId)
+    if (!permission) return false
+
+    // Wenn sections null ist, hat User Zugriff auf alle Sektionen der Rolle
+    if (!permission.sections) {
+      // Default-Berechtigungen basierend auf Rolle
+      switch (permission.role) {
+        case EXTERNAL_ROLES.SUPPLIER:
+          return section === DPP_SECTIONS.MATERIALS || section === DPP_SECTIONS.MATERIAL_SOURCE
+        case EXTERNAL_ROLES.RECYCLER:
+          return section === DPP_SECTIONS.DISPOSAL || section === DPP_SECTIONS.SECOND_LIFE
+        case EXTERNAL_ROLES.REPAIR_SERVICE:
+          return section === DPP_SECTIONS.REPAIR || section === DPP_SECTIONS.CARE
+        default:
+          return false
+      }
+    }
+
+    // Prüfe ob Sektion in der Liste ist
+    return permission.sections.includes(section)
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] canEditSection: DB nicht erreichbar, Fallback false:", (e as Error)?.message)
+      return false
+    }
+    throw e
+  }
 }
 
 /**
@@ -272,29 +309,37 @@ export async function canInviteExternalRole(
   // Super Admin kann alles
   if (await isSuperAdmin(userId)) return true
 
-  const dpp = await prisma.dpp.findUnique({
-    where: { id: dppId },
-    include: {
-      organization: {
-        include: {
-          memberships: {
-            where: { userId },
+  try {
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: { userId },
+            },
           },
         },
       },
-    },
-  })
+    })
 
-  if (!dpp) return false
+    if (!dpp) return false
 
-  // Nur OWNER und ADMIN können externe Rollen einladen
-  const membership = dpp.organization.memberships[0]
-  if (!membership) return false
+    // Nur OWNER und ADMIN können externe Rollen einladen
+    const membership = dpp.organization.memberships[0]
+    if (!membership) return false
 
-  const role = membership.role as OrganizationRole
-  return (
-    role === ORGANIZATION_ROLES.ORG_OWNER || role === ORGANIZATION_ROLES.ORG_ADMIN
-  )
+    const role = membership.role as OrganizationRole
+    return (
+      role === ORGANIZATION_ROLES.ORG_OWNER || role === ORGANIZATION_ROLES.ORG_ADMIN
+    )
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] canInviteExternalRole: DB nicht erreichbar, Fallback false:", (e as Error)?.message)
+      return false
+    }
+    throw e
+  }
 }
 
 /**
@@ -307,12 +352,19 @@ export async function isEuRegistry(userId?: string): Promise<boolean> {
     userId = session.user.id
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { systemRole: true },
-  })
-
-  return user?.systemRole === SYSTEM_ROLES.EU_REGISTRY
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { systemRole: true },
+    })
+    return user?.systemRole === SYSTEM_ROLES.EU_REGISTRY
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] isEuRegistry: DB nicht erreichbar, Fallback false:", (e as Error)?.message)
+      return false
+    }
+    throw e
+  }
 }
 
 /**
@@ -325,49 +377,57 @@ export async function getAllowedSections(
   // Super Admin kann alles
   if (await isSuperAdmin(userId)) return null // null = alle Sektionen
 
-  const dpp = await prisma.dpp.findUnique({
-    where: { id: dppId },
-    include: {
-      organization: {
-        include: {
-          memberships: {
-            where: { userId },
+  try {
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      include: {
+        organization: {
+          include: {
+            memberships: {
+              where: { userId },
+            },
           },
         },
       },
-    },
-  })
+    })
 
-  if (!dpp) return []
+    if (!dpp) return []
 
-  // Organisations-Mitglieder (außer VIEWER) können alle Sektionen
-  const membership = dpp.organization.memberships[0]
-  if (membership) {
-    const role = membership.role as OrganizationRole
-    if (role !== ORGANIZATION_ROLES.ORG_VIEWER) {
-      return null // null = alle Sektionen
+    // Organisations-Mitglieder (außer VIEWER) können alle Sektionen
+    const membership = dpp.organization.memberships[0]
+    if (membership) {
+      const role = membership.role as OrganizationRole
+      if (role !== ORGANIZATION_ROLES.ORG_VIEWER) {
+        return null // null = alle Sektionen
+      }
+      return [] // VIEWER kann nichts bearbeiten
     }
-    return [] // VIEWER kann nichts bearbeiten
-  }
 
-  // Externe Rollen: Prüfe Permission
-  const permission = await getDppPermission(userId, dppId)
-  if (!permission) return []
+    // Externe Rollen: Prüfe Permission
+    const permission = await getDppPermission(userId, dppId)
+    if (!permission) return []
 
-  if (!permission.sections) {
-    // Default-Berechtigungen basierend auf Rolle
-    switch (permission.role) {
-      case EXTERNAL_ROLES.SUPPLIER:
-        return [DPP_SECTIONS.MATERIALS, DPP_SECTIONS.MATERIAL_SOURCE]
-      case EXTERNAL_ROLES.RECYCLER:
-        return [DPP_SECTIONS.DISPOSAL, DPP_SECTIONS.SECOND_LIFE]
-      case EXTERNAL_ROLES.REPAIR_SERVICE:
-        return [DPP_SECTIONS.REPAIR, DPP_SECTIONS.CARE]
-      default:
-        return []
+    if (!permission.sections) {
+      // Default-Berechtigungen basierend auf Rolle
+      switch (permission.role) {
+        case EXTERNAL_ROLES.SUPPLIER:
+          return [DPP_SECTIONS.MATERIALS, DPP_SECTIONS.MATERIAL_SOURCE]
+        case EXTERNAL_ROLES.RECYCLER:
+          return [DPP_SECTIONS.DISPOSAL, DPP_SECTIONS.SECOND_LIFE]
+        case EXTERNAL_ROLES.REPAIR_SERVICE:
+          return [DPP_SECTIONS.REPAIR, DPP_SECTIONS.CARE]
+        default:
+          return []
+      }
     }
-  }
 
-  return permission.sections as DppSection[]
+    return permission.sections as DppSection[]
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] getAllowedSections: DB nicht erreichbar, Fallback []:", (e as Error)?.message)
+      return []
+    }
+    throw e
+  }
 }
 

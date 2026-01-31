@@ -89,7 +89,16 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
         
         setDpp(normalizedDpp)
         setOrganizationId(normalizedDpp.organizationId)
-        setLastSaved(normalizedDpp.updatedAt)
+        // "Zuletzt gespeichert": neuerer Zeitstempel aus DPP oder Draft-Content (Mehrwert-Tab)
+        const dppUpdated = normalizedDpp.updatedAt
+        const contentUpdated = data.dpp.content?.[0]?.updatedAt
+          ? new Date(data.dpp.content[0].updatedAt)
+          : null
+        const lastSavedDate =
+          contentUpdated && contentUpdated.getTime() > dppUpdated.getTime()
+            ? contentUpdated
+            : dppUpdated
+        setLastSaved(lastSavedDate)
         setEditorStatus(normalizedDpp.status === "PUBLISHED" ? "published" : "draft")
         
         // Load user ID and capabilities in parallel

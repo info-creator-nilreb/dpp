@@ -42,6 +42,8 @@ export async function POST(
     const file = formData.get("file") as File | null
     const blockId = formData.get("blockId") as string | null
     const fieldId = formData.get("fieldId") as string | null
+    const fieldKey = formData.get("fieldKey") as string | null
+    const role = formData.get("role") as string | null
 
     if (!file) {
       return NextResponse.json(
@@ -85,7 +87,7 @@ export async function POST(
     // Datei im Storage speichern
     const storageUrl = await saveFile(buffer, file.name)
 
-    // Metadaten in DB speichern
+    // Metadaten in DB speichern (role = primary_product_image für erstes Produktbild in Basisdaten)
     const media = await prisma.dppMedia.create({
       data: {
         dppId,
@@ -93,8 +95,10 @@ export async function POST(
         fileType: file.type,
         fileSize: file.size,
         storageUrl,
+        role: role?.trim() || null,
         blockId: blockId || null,
-        fieldId: fieldId || null
+        fieldId: fieldId || null,
+        fieldKey: fieldKey || null
       }
     })
 
@@ -114,8 +118,12 @@ export async function POST(
     )
   } catch (error: any) {
     console.error("Media upload error:", error)
+    const message =
+      error?.message && typeof error.message === "string"
+        ? error.message
+        : "Ein Fehler ist aufgetreten"
     return NextResponse.json(
-      { error: "Ein Fehler ist aufgetreten" },
+      { error: message },
       { status: 500 }
     )
   }

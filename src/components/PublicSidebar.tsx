@@ -8,7 +8,7 @@ import {
   LoginIcon,
   SignupIcon
 } from "./PublicIcons"
-import TPassLogo from "./TPassLogo"
+import EasyPassLogo from "./EasyPassLogo"
 
 const navigationItems = [
   { href: "/", label: "Startseite", icon: HomeIcon },
@@ -97,7 +97,7 @@ function SidebarContent({
         alignItems: "center",
         justifyContent: "flex-start",
       }}>
-        <TPassLogo size={32} color="#24c598" iconOnly={false} textColor="#FFFFFF" />
+        <EasyPassLogo size={32} color="#24c598" iconOnly={false} textColor="#FFFFFF" />
       </div>
 
       {/* Navigation Items */}

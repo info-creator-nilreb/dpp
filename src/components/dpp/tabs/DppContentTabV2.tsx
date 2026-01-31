@@ -81,10 +81,10 @@ export default function DppContentTabV2({
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        console.error("[AutoSave] Validierungsfehler:", error.details || error.error)
+        const error = await response.json().catch(() => ({})) as { error?: string; details?: unknown }
+        console.error("[AutoSave] Validierungsfehler:", error.details ?? error.error, "Status:", response.status)
         console.error("[AutoSave] Blocks:", JSON.stringify(blocksWithValidOrder, null, 2))
-        throw new Error(error.error || "Fehler beim Speichern")
+        throw new Error(error.error || response.statusText || "Fehler beim Speichern")
       }
 
       // CRITICAL: Server is write-only - no state updates from server response
@@ -92,7 +92,7 @@ export default function DppContentTabV2({
       pendingBlocksRef.current = null
       
       // Get updatedAt from server response if available, otherwise use current time
-      const result = await response.json()
+      const result = await response.json().catch(() => ({})) as { updatedAt?: string }
       const savedDate = result.updatedAt ? new Date(result.updatedAt) : new Date()
       onLastSavedChange?.(savedDate) // ALWAYS propagate (same pattern as DppEditor)
       // No notification for auto-save (silent)

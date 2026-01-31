@@ -12,6 +12,7 @@ import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRed
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { Block, StylingConfig } from "@/lib/cms/types"
 import { UnifiedContentBlock } from "@/lib/content-adapter"
+import { getHeroImage, type MediaItem } from "@/lib/media/hero-logic"
 
 interface DppFrontendPreviewProps {
   dpp: any
@@ -183,10 +184,28 @@ export default function DppFrontendPreview({
     )
   }
 
-  // Get organization info
+  // Get organization info; Hersteller = Marke oder Organisationsname (wenn angegeben)
   const organizationName = dpp.organization?.name || ""
-  const brandName = dpp.brand || ""
-  const heroImage = dpp.media?.find((m: any) => m.role === "hero_image" || m.role === "product_image")?.storageUrl
+  const brandName = dpp.brand || organizationName || ""
+
+  // Hero = Produktbild aus Basisdaten (niemals Logo). Logo (role "logo") nur für Platzierung oben links.
+  const withoutLogo = (dpp.media || []).filter((m: any) => m.role !== "logo")
+  const mediaList: MediaItem[] = withoutLogo.map((m: any) => ({
+    id: m.id,
+    storageUrl: m.storageUrl,
+    fileType: m.fileType || "",
+    role: m.role ?? undefined,
+    blockId: m.blockId ?? undefined,
+    fieldKey: m.fieldKey ?? m.fieldId ?? undefined,
+    fileName: m.fileName ?? (m.originalFileName as string) ?? "",
+  }))
+  const heroFromBasisdaten = getHeroImage(mediaList)
+  const heroImage =
+    heroFromBasisdaten?.storageUrl ??
+    withoutLogo.find((m: any) => m.role === "hero_image" || m.role === "product_image")?.storageUrl ??
+    withoutLogo.find((m: any) => m.blockId && (m.fileType || "").startsWith("image/"))?.storageUrl ??
+    withoutLogo.find((m: any) => (m.fileType || "").startsWith("image/"))?.storageUrl
+
   // Get logo from styling config
   const organizationLogoUrl = styling?.logo?.url || undefined
 

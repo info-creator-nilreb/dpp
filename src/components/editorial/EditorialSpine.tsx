@@ -121,7 +121,7 @@ export default function EditorialSpine({
       {/* Headline ohne Hero (wenn kein Hero-Bild) */}
       {!heroUrl && headline && (
         <Section variant="contained">
-          <HeadlineBlock text={headline} brandName={brandName} />
+          <HeadlineBlock text={headline} brandName={brandName} versionInfo={versionInfo} />
         </Section>
       )}
       

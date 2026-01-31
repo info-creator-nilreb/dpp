@@ -34,13 +34,12 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
         fontSize: '1rem',
         lineHeight: 1.6,
         color: editorialColors.text.primary,
-        maxWidth: '800px', // Desktop: 2-Spalten möglich
+        maxWidth: '800px',
         margin: '0 auto',
-        // marginTop wird durch Section paddingTop geregelt
-        marginBottom: 0, // Abstand wird durch mintfarbene Linie und Basisdaten geregelt
+        marginBottom: 0,
+        textAlign: 'center',
       }}
     >
-      {/* Desktop: 2-Spalten wenn Text > 150 Wörter */}
       {words.length > 150 ? (
         <div
           className="story-text-two-columns"
@@ -48,6 +47,7 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
             gap: editorialSpacing.lg,
+            textAlign: 'center',
           }}
         >
           <div>{truncated}</div>

@@ -5,9 +5,11 @@
  * Combines template blocks and CMS blocks into UnifiedContentBlocks
  */
 
+import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { transformDppToUnified } from "@/lib/content-adapter/dpp-transformer"
 import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRedesign"
+import { getHeroImage, type MediaItem } from "@/lib/media/hero-logic"
 
 interface DppPublicViewProps {
   dppId: string
@@ -24,6 +26,9 @@ export default async function DppPublicView({
     include: {
       organization: {
         select: { name: true }
+      },
+      media: {
+        orderBy: { uploadedAt: "desc" }
       },
       versions: versionNumber ? {
         where: { version: versionNumber },
@@ -47,7 +52,7 @@ export default async function DppPublicView({
   })
 
   if (!dpp || dpp.status !== "PUBLISHED") {
-    return null
+    notFound()
   }
 
   // Transform DPP to UnifiedContentBlocks (includes template blocks + CMS blocks)
@@ -76,10 +81,23 @@ export default async function DppPublicView({
     createdAt: dpp.versions[0].createdAt
   } : undefined
 
-  // Get hero image
-  const heroImage = dpp.media?.find((m: any) => 
-    m.role === "hero_image" || m.role === "product_image"
-  )?.storageUrl
+  // Hero = Produktbild aus Basisdaten (niemals Logo). Logo nur für Platzierung oben links.
+  const withoutLogo = ((dpp.media || []) as any[]).filter((m: any) => m.role !== "logo")
+  const mediaList: MediaItem[] = withoutLogo.map((m: any) => ({
+    id: m.id,
+    storageUrl: m.storageUrl,
+    fileType: m.fileType || "",
+    role: m.role ?? undefined,
+    blockId: m.blockId ?? undefined,
+    fieldKey: m.fieldKey ?? m.fieldId ?? undefined,
+    fileName: m.fileName ?? (m.originalFileName as string) ?? "",
+  }))
+  const heroFromBasisdaten = getHeroImage(mediaList)
+  const heroImage =
+    heroFromBasisdaten?.storageUrl ??
+    withoutLogo.find((m: any) => m.role === "hero_image" || m.role === "product_image")?.storageUrl ??
+    withoutLogo.find((m: any) => m.blockId && (m.fileType || "").startsWith("image/"))?.storageUrl ??
+    withoutLogo.find((m: any) => (m.fileType || "").startsWith("image/"))?.storageUrl
 
   // Get logo from published content styling
   const publishedContent = await prisma.dppContent.findFirst({

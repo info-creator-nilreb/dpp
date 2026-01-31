@@ -110,10 +110,10 @@ export async function PUT(
       }
     }
 
-    // Merge updates
+    // Merge updates (logo === null = explizit entfernen)
     const updatedStyling: StylingConfig = {
       ...currentStyling,
-      logo: logo !== undefined ? logo : currentStyling.logo,
+      logo: logo === null ? undefined : (logo !== undefined ? logo : currentStyling.logo),
       colors: {
         ...currentStyling.colors,
         ...(colors || {})

@@ -1,16 +1,16 @@
 /**
  * Logo Component
  * 
- * Kundenlogo-Platzierung (Top-Left)
+ * Kundenlogo-Platzierung (Top-Left). Wird nur gerendert, wenn eine gültige logoUrl übergeben wird.
+ * Bei Fehler (z. B. entferntes Logo) keine Darstellung, kein Platzhalter, kein Console-Fehler.
  */
 
 "use client"
 
-import React from 'react'
-import { editorialSpacing } from './tokens/spacing'
+import React, { useState } from 'react'
 
 interface LogoProps {
-  logoUrl: string
+  logoUrl?: string | null
   organizationName?: string
   organizationWebsite?: string
   className?: string
@@ -22,16 +22,23 @@ export default function Logo({
   organizationWebsite,
   className = ''
 }: LogoProps) {
+  const [loadError, setLoadError] = useState(false)
+
+  // Kein Logo: nichts rendern (kein Platzhalter, keine Fehlermeldung)
+  if (!logoUrl || !logoUrl.trim() || loadError) {
+    return null
+  }
+
   const logoContent = (
     <div
       style={{
         position: 'absolute',
         top: 'clamp(16px, 2vw, 24px)',
         left: 'clamp(16px, 2vw, 24px)',
-        zIndex: 100, // Höherer z-index, damit Logo über allem liegt
+        zIndex: 100,
         width: 'clamp(100px, 12vw, 160px)',
         height: 'auto',
-        pointerEvents: 'auto', // Sicherstellen, dass Logo klickbar ist
+        pointerEvents: 'auto',
       }}
       className={className}
     >
@@ -44,19 +51,16 @@ export default function Logo({
           height: 'auto',
           objectFit: 'contain',
           display: 'block',
-          backgroundColor: 'rgba(255, 255, 255, 0.7)', // Leicht transparenter weißer Hintergrund
+          backgroundColor: 'rgba(255, 255, 255, 0.7)',
           padding: '0.5rem',
           borderRadius: '4px',
         }}
         loading="eager"
-        onError={(e) => {
-          // Fallback falls Bild nicht lädt
-          console.error('Logo konnte nicht geladen werden:', logoUrl)
-        }}
+        onError={() => setLoadError(true)}
       />
     </div>
   )
-  
+
   if (organizationWebsite) {
     return (
       <a
@@ -69,6 +73,6 @@ export default function Logo({
       </a>
     )
   }
-  
+
   return logoContent
 }

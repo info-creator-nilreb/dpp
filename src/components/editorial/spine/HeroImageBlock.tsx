@@ -73,6 +73,7 @@ export default function HeroImageBlock({
             maxWidth: '1200px',
             margin: '0 auto',
             width: '100%',
+            textAlign: 'center',
           }}
         >
           {/* Headline */}
@@ -109,22 +110,22 @@ export default function HeroImageBlock({
             </p>
           )}
           
-          {/* Version Info */}
-          {versionInfo && (
-            <p
-              style={{
-                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontWeight: 400,
-                letterSpacing: '0.02em',
-                marginTop: '0.5rem',
-                wordWrap: 'break-word',
-                overflowWrap: 'break-word',
-              }}
-            >
-              Version {versionInfo.version} • Veröffentlicht am {formatDate(versionInfo.createdAt)}
-            </p>
-          )}
+          {/* Version: immer anzeigen (veröffentlicht oder Entwurf) */}
+          <p
+            style={{
+              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontWeight: 400,
+              letterSpacing: '0.02em',
+              marginTop: '0.5rem',
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+            }}
+          >
+            {versionInfo
+              ? `Version ${versionInfo.version} • Veröffentlicht am ${formatDate(versionInfo.createdAt)}`
+              : 'Entwurf • Noch nicht veröffentlicht'}
+          </p>
         </div>
       </div>
     </div>

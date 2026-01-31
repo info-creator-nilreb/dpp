@@ -149,8 +149,8 @@ model Dpp {
   versions              DppVersion[]
   content               DppContent[]
   contributorTokens     ContributorToken[]
-  blockSupplierConfigs  DppBlockSupplierConfig[]
-  supplierInvites       DppSupplierInvite[]
+  blockSupplierConfigs DppBlockSupplierConfig[]
+  supplierInvites     DppSupplierInvite[]
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([templateId])
@@ -174,6 +174,30 @@ model DppBlockSupplierConfig {
   @@map("dpp_block_supplier_configs")
 }
 
+model DppSupplierInvite {
+  id              String    @id @default(cuid())
+  dppId           String
+  email           String
+  name            String?
+  company         String?
+  message         String?
+  partnerRole     String
+  blockIds        Json      // string[] – Template-Block-IDs
+  fieldInstances  Json      // FieldInstance[] – Feld-Instanzen
+  supplierMode    String    // "input" | "declaration"
+  status          String    @default("pending") // pending | submitted
+  token           String?   @unique
+  expiresAt       DateTime?
+  emailSentAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  dpp             Dpp       @relation(fields: [dppId], references: [id], onDelete: Cascade)
+
+  @@index([dppId])
+  @@index([token])
+  @@map("dpp_supplier_invites")
+}
+
 model DppMedia {
   id         String   @id @default(cuid())
   dppId      String
@@ -181,21 +205,22 @@ model DppMedia {
   fileType   String
   fileSize   Int
   storageUrl String
-  role       String?  // Semantische Rolle: primary_product_image, gallery_image, certificate, logo, etc.
-  blockId   String?  // Optional: ID des Blocks, dem das Medium zugeordnet ist (für Content-Blöcke)
-  fieldKey   String?  // Optional: Key des File-Felds im Block
-  fieldId    String?  // TemplateField ID (key)
   uploadedAt DateTime @default(now())
+  // Semantische Rolle: primary_product_image (Hero), gallery_image, certificate, logo, etc.
+  role       String?
+  // Zuordnung zu Template-Block und -Feld (optional für Legacy-Medien)
+  blockId    String?  // TemplateBlock ID
+  fieldId    String?  // TemplateField ID (key)
+  fieldKey   String?  // Key des File-Felds im Block
   dpp        Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
 
-  @@index([dppId, role])
-  @@index([blockId])
   @@index([dppId, blockId, fieldId])
+  @@index([dppId, role])
   @@map("dpp_media")
 }
 
 model DppVersion {
-  id                    String            @id @default(cuid())
+  id                    String   @id @default(cuid())
   dppId                 String
   version               Int
   name                  String
@@ -216,35 +241,15 @@ model DppVersion {
   takebackOffered       String?
   takebackContact       String?
   secondLifeInfo        String?
-  createdAt             DateTime          @default(now())
+  createdAt             DateTime @default(now())
   createdByUserId       String
   publicUrl             String?
   qrCodeImageUrl        String?
-  createdBy             User              @relation(fields: [createdByUserId], references: [id])
-  dpp                   Dpp               @relation(fields: [dppId], references: [id], onDelete: Cascade)
-  media                 DppVersionMedia[]
+  createdBy             User     @relation(fields: [createdByUserId], references: [id])
+  dpp                   Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
 
   @@unique([dppId, version])
   @@map("dpp_versions")
-}
-
-model DppVersionMedia {
-  id         String      @id @default(cuid())
-  versionId String
-  version    DppVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  fileName   String
-  fileType   String
-  fileSize   Int
-  storageUrl String
-  role       String?     // Semantische Rolle: primary_product_image, gallery_image, certificate, logo, etc.
-  blockId   String?     // Optional: ID des Blocks, dem das Medium zugeordnet ist
-  fieldKey   String?     // Optional: Key des File-Felds im Block
-  uploadedAt DateTime    @default(now())
-
-  @@index([versionId])
-  @@index([versionId, role])
-  @@index([blockId])
-  @@map("dpp_version_media")
 }
 
 model DppPermission {
@@ -289,33 +294,6 @@ model ContributorToken {
   @@index([status])
   @@index([expiresAt])
   @@map("contributor_tokens")
-}
-
-// Block-basierte Partner-Einladung (Beisteuern/Prüfen pro Block/Feld)
-model DppSupplierInvite {
-  id             String    @id @default(cuid())
-  dppId          String
-  email          String
-  name           String?
-  company        String?
-  message        String?
-  partnerRole    String
-  blockIds       Json      // string[]
-  fieldInstances Json      // Array<{ fieldId, instanceId, label?, assignedSupplier? }>
-  supplierMode   String    // "input" | "declaration" (contribute | review)
-  status         String    @default("pending") // pending | submitted | expired
-  emailSentAt    DateTime?
-  token          String?   @unique // Link für Beitrags-/Prüfungsseite
-  expiresAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  dpp            Dpp       @relation(fields: [dppId], references: [id], onDelete: Cascade)
-
-  @@index([dppId])
-  @@index([email])
-  @@index([token])
-  @@index([status])
-  @@map("dpp_supplier_invites")
 }
 
 model SuperAdmin {
@@ -601,18 +579,16 @@ model BlockType {
 }
 
 model DppContent {
-  id              String   @id @default(cuid())
-  dppId           String
-  dpp             Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
-  versionId       String? // Optional: Link zu published version
-  isPublished     Boolean  @default(false)
-  blocks          Json // Array von Block Objects
-  styling         Json? // Global styling config (nur wenn capability vorhanden)
-  fieldValues     Json? // Template-Feldwerte (Pflichtdaten, technical keys)
-  fieldInstances  Json? // Wiederholbare Feld-Instanzen
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  createdBy       String?
+  id          String   @id @default(cuid())
+  dppId       String
+  dpp         Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  versionId   String? // Optional: Link zu published version
+  isPublished Boolean  @default(false)
+  blocks      Json // Array von Block Objects
+  styling     Json? // Global styling config (nur wenn capability vorhanden)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
 
   @@index([dppId])
   @@index([dppId, isPublished])

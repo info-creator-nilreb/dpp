@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { MenuIcon } from "./PublicIcons"
-import TPassLogo from "./TPassLogo"
+import EasyPassLogo from "./EasyPassLogo"
 
 interface PublicHeaderProps {
   onMenuClick: () => void
@@ -71,7 +71,7 @@ export default function PublicHeader({ onMenuClick }: PublicHeaderProps) {
         opacity: isVisible ? 1 : 0
       }}
     >
-      <TPassLogo size={32} color="#24c598" iconOnly={false} textColor="#0A0A0A" />
+      <EasyPassLogo size={32} color="#24c598" iconOnly={false} textColor="#0A0A0A" />
       <button
         onClick={onMenuClick}
         style={{

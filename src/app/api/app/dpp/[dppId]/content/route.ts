@@ -1,15 +1,123 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { requireEditDPP } from "@/lib/api-permissions"
+import { requireViewDPP, requireEditDPP } from "@/lib/api-permissions"
 import { latestPublishedTemplate } from "@/lib/template-helpers"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
+ * GET /api/app/dpp/[dppId]/content
+ *
+ * Liefert CMS-Inhalt (Blocks, Styling) für den Mehrwert-Tab.
+ */
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ dppId: string }> }
+) {
+  try {
+    const { dppId } = await params
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
+    }
+
+    const permissionError = await requireViewDPP(dppId, session.user.id)
+    if (permissionError) return permissionError
+
+    const dppContent = await prisma.dppContent.findFirst({
+      where: { dppId, isPublished: false },
+      orderBy: { updatedAt: "desc" },
+      select: { blocks: true, styling: true },
+    })
+
+    const blocks = Array.isArray(dppContent?.blocks) ? dppContent.blocks : []
+    const styling = dppContent?.styling ?? null
+
+    return NextResponse.json({ content: { blocks, styling } })
+  } catch (error) {
+    console.error("[DPP Content API] GET error:", error)
+    return NextResponse.json(
+      { error: (error as Error)?.message || "Fehler beim Laden des Inhalts" },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * POST /api/app/dpp/[dppId]/content
+ *
+ * Speichert CMS-Blöcke (Autosave aus Mehrwert-Tab). Body: { blocks: Block[], styling?: unknown }
+ */
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ dppId: string }> }
+) {
+  try {
+    const { dppId } = await params
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
+    }
+
+    const permissionError = await requireEditDPP(dppId, session.user.id)
+    if (permissionError) return permissionError
+
+    const body = await request.json().catch(() => ({})) as { blocks?: unknown[]; styling?: unknown }
+    const blocks = Array.isArray(body.blocks) ? body.blocks : []
+    const styling = body.styling ?? undefined
+
+    const existingContent = await prisma.dppContent.findFirst({
+      where: { dppId, isPublished: false },
+      orderBy: { updatedAt: "desc" },
+    })
+
+    const updatedAt = new Date()
+
+    if (existingContent) {
+      await prisma.dppContent.update({
+        where: { id: existingContent.id },
+        data: {
+          blocks,
+          ...(styling !== undefined && { styling }),
+          updatedAt,
+        },
+      })
+    } else {
+      await prisma.dppContent.create({
+        data: {
+          dppId,
+          blocks,
+          ...(styling !== undefined && { styling }),
+          isPublished: false,
+          createdBy: session.user.id,
+          updatedAt,
+        },
+      })
+    }
+
+    // Damit "Zuletzt gespeichert" nach Neuladen stimmt: Dpp.updatedAt mitschreiben
+    await prisma.dpp.update({
+      where: { id: dppId },
+      data: { updatedAt },
+    })
+
+    return NextResponse.json({ updatedAt: updatedAt.toISOString() })
+  } catch (error) {
+    console.error("[DPP Content API] POST error:", error)
+    return NextResponse.json(
+      { error: (error as Error)?.message || "Fehler beim Speichern" },
+      { status: 500 }
+    )
+  }
+}
+
+/**
  * PUT /api/app/dpp/[dppId]/content
- * 
+ *
  * Speichert template-basierte Feldwerte in dppContent
  */
 export async function PUT(

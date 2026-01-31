@@ -586,40 +586,58 @@ export default function ContentBlockCard({
             </div>
           </div>
         )}
-        {block.type === "image" && (
-          <div>
-            {(block.content as any)?.url && (
-              <div style={{
-                marginBottom: "0.5rem"
-              }}>
+        {block.type === "image" && (() => {
+          const c = block.content as { url?: string | string[]; alt?: string; caption?: string } | undefined
+          const urlRaw = c?.url
+          const urls = Array.isArray(urlRaw) ? urlRaw : urlRaw ? [urlRaw] : []
+          const hasImages = urls.length > 0 && urls.every((u): u is string => typeof u === "string" && u.length > 0)
+          if (!hasImages) {
+            return (
+              <div style={{ fontSize: "0.875rem", color: "#7A7A7A", fontStyle: "italic" }}>
+                Kein Bild
+              </div>
+            )
+          }
+          return (
+            <div style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+              alignItems: "flex-start"
+            }}>
+              {urls.slice(0, 6).map((src, i) => (
                 <img
-                  src={(block.content as any).url}
-                  alt={(block.content as any)?.alt || "Bild"}
+                  key={i}
+                  src={src}
+                  alt={c?.alt || `Bild ${i + 1}`}
                   style={{
-                    maxWidth: "100%",
-                    maxHeight: "150px",
-                    borderRadius: "6px"
+                    width: "auto",
+                    height: "80px",
+                    maxWidth: "120px",
+                    objectFit: "cover",
+                    borderRadius: "6px",
+                    backgroundColor: "#f0f0f0"
                   }}
                 />
-              </div>
-            )}
-            <div style={{
-              fontSize: "0.875rem",
-              color: "#0A0A0A"
-            }}>
-              {(block.content as any)?.alt || (block.content as any)?.url ? "Bild" : "Kein Bild"}
+              ))}
+              {urls.length > 6 && (
+                <div style={{
+                  width: "80px",
+                  height: "80px",
+                  borderRadius: "6px",
+                  backgroundColor: "#f0f0f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.75rem",
+                  color: "#7A7A7A"
+                }}>
+                  +{urls.length - 6}
+                </div>
+              )}
             </div>
-            {(block.content as any)?.caption && (
-              <div style={{
-                fontSize: "0.75rem",
-                color: "#7A7A7A",
-                marginTop: "0.25rem"
-              }}>
-                {(block.content as any).caption}
-              </div>
-            )}
-          </div>
-        )}
+          )
+        })()}
         {!["storytelling", "image_text", "text", "image", "video", "timeline", "accordion"].includes(block.type) && (
           <div style={{
             fontSize: "0.875rem",

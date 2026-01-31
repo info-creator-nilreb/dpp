@@ -5,8 +5,6 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { requireViewDPP, requireEditDPP } from "@/lib/api-permissions"
-import { generateVerificationToken } from "@/lib/email"
-import { sendSupplierDataRequestEmail } from "@/lib/email"
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
 
@@ -17,45 +15,57 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
  */
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ dppId: string }> }
+  context: { params?: Promise<{ dppId: string }> | { dppId: string } }
 ) {
   try {
     const session = await auth()
-    const resolvedParams = await params
+    const rawParams = context?.params
+    const resolvedParams = rawParams && typeof (rawParams as Promise<unknown>).then === "function"
+      ? await (rawParams as Promise<{ dppId: string }>)
+      : (rawParams as { dppId: string })
+    const dppId = resolvedParams?.dppId
+
+    if (!dppId) {
+      console.error("[supplier-invites GET] Missing dppId in params:", context)
+      return NextResponse.json({ invites: [] })
+    }
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
     }
 
-    const permissionError = await requireViewDPP(resolvedParams.dppId, session.user.id)
+    const permissionError = await requireViewDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
-    const invites = await prisma.dppSupplierInvite.findMany({
-      where: { dppId: resolvedParams.dppId },
-      orderBy: { createdAt: "desc" },
-    })
+    let invites
+    try {
+      invites = await prisma.dppSupplierInvite.findMany({
+        where: { dppId },
+        orderBy: { createdAt: "desc" },
+      })
+    } catch (dbError: unknown) {
+      const msg = dbError && typeof (dbError as { message?: string }).message === "string" ? (dbError as { message: string }).message : ""
+      const code = (dbError as { code?: string })?.code
+      console.warn("[supplier-invites GET] DB error:", code, msg)
+      return NextResponse.json({ invites: [] })
+    }
 
     const existingInvites = invites.map((inv) => ({
       id: inv.id,
       email: inv.email,
       partnerRole: inv.partnerRole,
-      blockIds: (inv.blockIds as string[]) || [],
-      fieldInstances: (inv.fieldInstances as Array<{ fieldId: string; instanceId: string; label?: string; assignedSupplier?: string }>) || [],
+      blockIds: Array.isArray(inv.blockIds) ? inv.blockIds : [],
+      fieldInstances: Array.isArray(inv.fieldInstances) ? inv.fieldInstances : [],
       supplierMode: inv.supplierMode === "input" ? "input" : inv.supplierMode === "declaration" ? "declaration" : "input",
       status: inv.status,
       emailSentAt: inv.emailSentAt ? inv.emailSentAt.toISOString() : null,
     }))
 
     return NextResponse.json({ invites: existingInvites })
-  } catch (error: any) {
-    console.error("Error fetching supplier invites:", error)
-    const message = error?.message || "Ein Fehler ist aufgetreten"
-    // Hinweis bei fehlender Tabelle (Migration nicht ausgeführt)
-    const isPrismaError = error?.code === "P2021" || (typeof message === "string" && message.includes("does not exist"))
-    return NextResponse.json(
-      { error: isPrismaError ? "Supplier-Invites-Tabelle fehlt. Bitte Migration ausführen: npx prisma migrate deploy" : message },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string; stack?: string }
+    console.error("[supplier-invites GET] Error:", err?.message, err?.code, err?.stack)
+    return NextResponse.json({ invites: [] })
   }
 }
 
@@ -116,6 +126,7 @@ export async function POST(
       return NextResponse.json({ error: "DPP nicht gefunden" }, { status: 404 })
     }
 
+    const { generateVerificationToken } = await import("@/lib/email")
     const token = generateVerificationToken()
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 14)
@@ -143,6 +154,7 @@ export async function POST(
     if (sendEmail) {
       const contributeUrl = `${baseUrl}/contribute/supplier/${token}`
       try {
+        const { sendSupplierDataRequestEmail } = await import("@/lib/email")
         await sendSupplierDataRequestEmail(invite.email, {
           organizationName: dpp.organization.name,
           productName: dpp.name,

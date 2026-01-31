@@ -2016,10 +2016,9 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
           mediaDetails: mediaDetails
         })
         
-        // Nur Medien für Template-Felder (blockId/fieldKey); Styling-Logo (role "logo" ohne Block/Feld) nicht anzeigen
+        // Logo (Styling) nur für Hero-Platzierung – nie in Pflichtdaten anzeigen
         const pflichtdatenMedia = (dpp.media ?? []).filter(
-          (m: { role?: string | null; blockId?: string | null; fieldKey?: string | null }) =>
-            !(m.role === "logo" && !m.blockId && !m.fieldKey)
+          (m: { role?: string | null }) => m.role !== "logo"
         )
         return (
           <TemplateBlocksSection
@@ -2211,9 +2210,6 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
       Falls benötigt, können sie aus der Git-Historie wiederhergestellt werden.
       */}
 
-      {/* Bottom padding für Sticky Save Bar + Floating Control */}
-      {/* Save Bar: ~140px + Floating Button: ~80px (mit Badge) + Extra: 20px = 240px */}
-      <div style={{ height: "180px" }} />
     </div>
 
     {/* Sticky Save Bar - nur wenn keine externen Handler (z. B. Tab-Header) */}

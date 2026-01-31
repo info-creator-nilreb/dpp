@@ -9,6 +9,8 @@ interface FileUploadAreaProps {
   disabled?: boolean
   label?: string
   description?: string
+  /** Kompakt: nur Plus-Kachel (z. B. für „weiteres Bild hinzufügen“) */
+  compact?: boolean
 }
 
 /**
@@ -21,6 +23,7 @@ export default function FileUploadArea({
   disabled = false,
   label,
   description,
+  compact = false,
 }: FileUploadAreaProps) {
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -139,7 +142,11 @@ export default function FileUploadArea({
         style={{
           border: `2px dashed ${isDragging ? "#24c598" : "#CDCDCD"}`,
           borderRadius: "8px",
-          padding: "2rem",
+          padding: compact ? "1rem" : "2rem",
+          minHeight: compact ? "150px" : undefined,
+          display: compact ? "flex" : "block",
+          alignItems: "center",
+          justifyContent: "center",
           textAlign: "center",
           backgroundColor: isDragging ? "#ECFDF5" : "#F5F5F5",
           cursor: disabled ? "not-allowed" : "pointer",
@@ -147,101 +154,92 @@ export default function FileUploadArea({
           opacity: disabled ? 0.5 : 1,
         }}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="48"
-          height="48"
-          fill="none"
-          stroke={isDragging ? "#24c598" : "#7A7A7A"}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          viewBox="0 0 24 24"
-          style={{
-            margin: "0 auto 1rem",
-            display: "block",
-          }}
-        >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
-        <p
-          style={{
-            color: isDragging ? "#24c598" : "#0A0A0A",
-            fontSize: "clamp(0.9rem, 2vw, 1rem)",
-            fontWeight: "600",
-            marginBottom: "0.5rem",
-            margin: 0,
-          }}
-        >
-          {isDragging ? "Datei hier ablegen" : "Klicken zum Auswählen oder Datei hier ablegen"}
-        </p>
-        {accept && (() => {
-          // Liste der erlaubten Formate basierend auf accept-String
-          const formatList: string[] = []
-          const acceptParts = accept.split(",").map(p => p.trim())
-          
-          for (const part of acceptParts) {
-            // Handle image/* wildcard - expandiere zu spezifischen Bildformaten
-            if (part === "image/*") {
-              formatList.push("jpg", "jpeg", "png", "gif", "webp")
-              continue
-            }
-            
-            // Handle spezifische MIME types
-            if (part === "application/pdf") {
-              formatList.push("pdf")
-            } else if (part === "application/msword") {
-              formatList.push("doc")
-            } else if (part.includes("wordprocessingml") || part === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-              formatList.push("docx")
-            } else if (part.startsWith("image/")) {
-              // Spezifische Bildformate
-              const ext = part.split("/")[1]
-              if (ext === "jpeg") {
-                formatList.push("jpg")
-              } else {
-                formatList.push(ext)
-              }
-            } else if (part.startsWith("video/")) {
-              // Spezifische Videoformate
-              const ext = part.split("/")[1]
-              if (ext === "quicktime") {
-                formatList.push("mov")
-              } else {
-                formatList.push(ext)
-              }
-            } else if (part.startsWith(".")) {
-              // Dateiendung ohne Punkt
-              formatList.push(part.substring(1))
-            } else if (!part.includes("/") && !part.includes("*")) {
-              // Direkte Dateiendung
-              formatList.push(part)
-            }
-            // Ignoriere andere Wildcards oder unbekannte Formate
-          }
-          
-          // Entferne Duplikate und sortiere
-          const uniqueFormats = Array.from(new Set(formatList))
-            .filter(f => f.length > 0)
-            .sort()
-          
-          if (uniqueFormats.length === 0) return null
-          
-          return (
+        {compact ? (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="40"
+            height="40"
+            fill="none"
+            stroke={isDragging ? "#24c598" : "#7A7A7A"}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        ) : (
+          <>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              fill="none"
+              stroke={isDragging ? "#24c598" : "#7A7A7A"}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              style={{
+                margin: "0 auto 1rem",
+                display: "block",
+              }}
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
             <p
               style={{
-                color: "#7A7A7A",
-                fontSize: "clamp(0.85rem, 1.8vw, 0.95rem)",
-                marginTop: "0.5rem",
+                color: isDragging ? "#24c598" : "#0A0A0A",
+                fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                fontWeight: "600",
+                marginBottom: "0.5rem",
                 margin: 0,
               }}
             >
-              Erlaubte Formate: {uniqueFormats.join(", ")}
+              {isDragging ? "Datei hier ablegen" : "Klicken zum Auswählen oder Datei hier ablegen"}
             </p>
-          )
-        })()}
+            {accept && (() => {
+              const formatList: string[] = []
+              const acceptParts = accept.split(",").map(p => p.trim())
+              for (const part of acceptParts) {
+                if (part === "image/*") {
+                  formatList.push("jpg", "jpeg", "png", "gif", "webp")
+                  continue
+                }
+                if (part === "application/pdf") {
+                  formatList.push("pdf")
+                } else if (part.startsWith("image/")) {
+                  const ext = part.split("/")[1]
+                  formatList.push(ext === "jpeg" ? "jpg" : ext)
+                } else if (part.startsWith("video/")) {
+                  const ext = part.split("/")[1]
+                  formatList.push(ext === "quicktime" ? "mov" : ext)
+                } else if (part.startsWith(".")) {
+                  formatList.push(part.substring(1))
+                } else if (!part.includes("/") && !part.includes("*")) {
+                  formatList.push(part)
+                }
+              }
+              const uniqueFormats = Array.from(new Set(formatList)).filter(f => f.length > 0).sort()
+              if (uniqueFormats.length === 0) return null
+              return (
+                <p
+                  style={{
+                    color: "#7A7A7A",
+                    fontSize: "clamp(0.85rem, 1.8vw, 0.95rem)",
+                    marginTop: "0.5rem",
+                    margin: 0,
+                  }}
+                >
+                  Erlaubte Formate: {uniqueFormats.join(", ")}
+                </p>
+              )
+            })()}
+          </>
+        )}
       </div>
     </div>
   )
