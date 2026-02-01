@@ -52,13 +52,13 @@ export default function HeroImageBlock({
         className="hero-image-responsive"
       />
       
-      {/* Schwarze Bildüberlagerung 60 % für ausreichenden Kontrast zur Headline */}
+      {/* Schwarze Bildüberlagerung 80 % Transparenz für Kontrast zur Headline */}
       <div
         aria-hidden
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: 'rgba(0, 0, 0, 0.2)',
           pointerEvents: 'none',
         }}
       />
