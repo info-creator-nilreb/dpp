@@ -126,10 +126,11 @@ export default function EditorialSpine({
         </div>
       )}
       
-      {/* Unter dem Hero: nur Beschreibung und/oder Basisdaten – kein HeadlineBlock (Produktname/Hersteller/Version stehen ausschließlich im Hero-Overlay) */}
+      {/* Unter dem Hero: nur Beschreibung und/oder Basisdaten – kein HeadlineBlock; Hintergrund immer Weiß, nie grauer Balken */}
       {showContentBelowHero && (storyText || hasBasicData) && (
         <Section 
           variant="contained"
+          backgroundColor="#FFFFFF"
           style={{ 
             paddingTop: editorialSpacing.xl,
             paddingBottom: editorialSpacing.xl 

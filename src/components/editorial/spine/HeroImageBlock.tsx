@@ -36,18 +36,27 @@ export default function HeroImageBlock({
   }
   
   return (
-    <div style={{ position: 'relative', width: '100%', minHeight: '500px' }}>
-      {/* Logo wird hier nicht gerendert - wird in EditorialDppViewRedesign gerendert */}
+    <div
+      className="hero-image-wrapper"
+      style={{
+        position: 'relative',
+        width: '100%',
+        /* Höhe folgt dem Bild – kein minHeight, damit auf kleinen Viewports (z. B. iPhone SE) kein Zwischenraum entsteht und nie ein grauer Balken sichtbar wird */
+      }}
+    >
+      {/* Logo wird hier nicht gerendert – wird in EditorialDppViewRedesign gerendert */}
       <Image
         src={imageUrl}
         alt={headline}
         aspectRatio="16:9"
         priority
         style={{
-          height: '80vh', // Desktop: Erhöhte Höhe, damit Text auf dem Bild steht
+          height: '80vh',
           minHeight: '500px',
           objectFit: 'cover',
           width: '100%',
+          display: 'block',
+          verticalAlign: 'bottom',
         }}
         className="hero-image-responsive"
       />
