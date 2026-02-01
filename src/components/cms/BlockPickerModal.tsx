@@ -129,19 +129,13 @@ export default function BlockPickerModal({
   onClose
 }: BlockPickerModalProps) {
   // Get available block types
-  // Filter by feature availability
-  // NOTE: If availableFeatures is empty, we still filter - empty means no features available
-  // Exclude legacy block types from the picker (they should not be created new)
-  const availableBlockTypes = Object.keys(BLOCK_TYPE_FEATURE_MAP).filter(type => {
-    // Exclude legacy block types from picker
-    if (type === "template_block") {
-      return false
-    }
-    const featureKey = BLOCK_TYPE_FEATURE_MAP[type as BlockTypeKey]
-    // Always require feature to be in availableFeatures list
-    // Empty availableFeatures means no features are available
-    return availableFeatures.length > 0 && availableFeatures.includes(featureKey)
-  }) as BlockTypeKey[]
+  // Bei leerem availableFeatures alle Blöcke anzeigen (Fail-open in Produktion/Trial), sonst nach Features filtern
+  const availableBlockTypes = (Object.keys(BLOCK_TYPE_FEATURE_MAP) as BlockTypeKey[]).filter(type => {
+    if (type === "template_block") return false
+    if (availableFeatures.length === 0) return true
+    const featureKey = BLOCK_TYPE_FEATURE_MAP[type]
+    return availableFeatures.includes(featureKey)
+  })
   
   // Debug: Log available features and block types (only in development)
   if (process.env.NODE_ENV === 'development') {
