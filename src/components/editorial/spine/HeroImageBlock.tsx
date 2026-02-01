@@ -52,7 +52,18 @@ export default function HeroImageBlock({
         className="hero-image-responsive"
       />
       
-      {/* Overlay mit Headline, Brand, Version - ohne Gradient */}
+      {/* Schwarze Bildüberlagerung 60 % für ausreichenden Kontrast zur Headline */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          pointerEvents: 'none',
+        }}
+      />
+      
+      {/* Overlay mit Headline, Brand, Version */}
       {/* WICHTIG: Overlay ist innerhalb des Bildes positioniert, damit Text immer im Bild bleibt */}
       <div
         style={{

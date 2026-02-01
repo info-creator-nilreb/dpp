@@ -18,6 +18,7 @@ interface EditorialDppViewRedesignProps {
   blocks: UnifiedContentBlock[]
   dppName: string
   dppId?: string
+  description?: string | null
   brandName?: string
   organizationName?: string
   organizationLogoUrl?: string
@@ -38,6 +39,7 @@ export default function EditorialDppViewRedesign({
   blocks,
   dppName,
   dppId,
+  description,
   brandName,
   organizationName,
   organizationLogoUrl,
@@ -52,6 +54,7 @@ export default function EditorialDppViewRedesign({
       <EditorialSpine
         blocks={blocks}
         dppName={dppName}
+        description={description}
         brandName={brandName}
         heroImageUrl={heroImageUrl}
         versionInfo={versionInfo}
@@ -65,10 +68,13 @@ export default function EditorialDppViewRedesign({
       <DataSectionsContainer 
         blocks={blocks} 
         dppId={dppId}
-        hasStoryText={blocks.some(b => 
-          b.presentation.layer === "spine" && 
-          Object.values(b.content.fields).some(f => f.type === 'textarea' || f.key === 'description')
-        )}
+        hasStoryText={
+          !!description ||
+          blocks.some(b => 
+            b.presentation.layer === "spine" && 
+            Object.values(b.content.fields).some(f => f.type === 'textarea' || f.key === 'description')
+          )
+        }
       />
       
       {/* Bottom Padding für Sticky Elements */}

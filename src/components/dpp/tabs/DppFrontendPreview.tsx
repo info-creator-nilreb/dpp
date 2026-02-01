@@ -238,6 +238,7 @@ export default function DppFrontendPreview({
       <EditorialDppViewRedesign
         blocks={unifiedBlocks}
         dppName={dpp.name || ""}
+        description={dpp.description ?? undefined}
         dppId={dpp.id}
         brandName={brandName}
         organizationName={organizationName}

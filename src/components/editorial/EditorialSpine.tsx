@@ -20,6 +20,7 @@ import Logo from './Logo'
 interface EditorialSpineProps {
   blocks: UnifiedContentBlock[]
   dppName: string
+  description?: string | null
   brandName?: string
   heroImageUrl?: string
   versionInfo?: {
@@ -39,6 +40,7 @@ interface EditorialSpineProps {
 export default function EditorialSpine({
   blocks,
   dppName,
+  description,
   brandName,
   heroImageUrl,
   versionInfo,
@@ -90,11 +92,17 @@ export default function EditorialSpine({
         .find(f => f.key === 'name' || f.type === 'text')?.value as string || dppName
     : dppName
   
-  // Extrahiere Story-Text
-  const storyText = storyBlock
+  // Story-Text: aus Block oder Fallback auf dpp.description (damit unter dem Hero immer Inhalt angezeigt wird)
+  const storyFromBlock = storyBlock
     ? Object.values(storyBlock.content.fields)
-        .find(f => f.type === 'textarea' || f.key === 'description')?.value as string
+        .find(f => f.type === 'textarea' || f.key === 'description')?.value as string | undefined
     : undefined
+  const storyText = (storyFromBlock && String(storyFromBlock).trim()) || (description && String(description).trim()) || ''
+  
+  // Immer einen Abschnitt unter dem Hero anzeigen, wenn Hero da ist – keine hardcodierte Beschränkung auf Name/Bild
+  const hasBasicData = basicData && (basicData.sku != null && basicData.sku !== '' || basicData.gtin != null && basicData.gtin !== '' || basicData.countryOfOrigin != null && basicData.countryOfOrigin !== '')
+  const showContentBelowHero = !!heroUrl || !!headline || !!storyText || hasBasicData
+  const headlineDisplay = (headline && String(headline).trim()) || dppName
   
   return (
     <>
@@ -125,16 +133,50 @@ export default function EditorialSpine({
         </Section>
       )}
       
-      {/* Story-Text mit Basisdaten */}
-      {storyText && (
+      {/* Unter dem Hero: immer Headline + Story/Basisdaten anzeigen (Fallback auf dpp.description) */}
+      {showContentBelowHero && (
         <Section 
           variant="contained"
           style={{ 
-            paddingTop: editorialSpacing.xl, // Einheitlicher Abstand nach Hero (wie zwischen StoryText und DataSections)
+            paddingTop: editorialSpacing.xl,
             paddingBottom: editorialSpacing.xl 
           }}
         >
-          <StoryTextBlock text={storyText} basicData={basicData} />
+          {storyText ? (
+            <StoryTextBlock text={storyText} basicData={basicData} />
+          ) : (
+            <>
+              <HeadlineBlock text={headlineDisplay} brandName={brandName} versionInfo={versionInfo} />
+              {hasBasicData && basicData && (
+                <>
+                  <div style={{
+                    width: '60px',
+                    height: '2px',
+                    backgroundColor: '#24c598',
+                    marginTop: editorialSpacing.xl,
+                    marginBottom: editorialSpacing.xl,
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                  }} />
+                  <div style={{
+                    maxWidth: '900px',
+                    margin: '0 auto',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '2rem',
+                    marginTop: editorialSpacing.lg,
+                    fontSize: '0.875rem',
+                    color: '#7A7A7A',
+                    textAlign: 'center',
+                  }}>
+                    {(basicData.sku != null && basicData.sku !== '') && <div><strong>SKU</strong><br />{basicData.sku}</div>}
+                    {(basicData.gtin != null && basicData.gtin !== '') && <div><strong>GTIN</strong><br />{basicData.gtin}</div>}
+                    {(basicData.countryOfOrigin != null && basicData.countryOfOrigin !== '') && <div><strong>Herkunftsland</strong><br />{basicData.countryOfOrigin}</div>}
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </Section>
       )}
     </>

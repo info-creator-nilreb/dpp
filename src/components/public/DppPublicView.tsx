@@ -118,6 +118,7 @@ export default async function DppPublicView({
     <EditorialDppViewRedesign
       blocks={unifiedBlocks}
       dppName={dpp.name || ""}
+      description={dpp.description ?? undefined}
       dppId={dppId}
       brandName={dpp.brand || ""}
       organizationName={dpp.organization?.name || ""}
