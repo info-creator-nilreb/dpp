@@ -15,18 +15,13 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
  */
 export async function GET(
   request: Request,
-  context: { params?: Promise<{ dppId: string }> | { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
-    const rawParams = context?.params
-    const resolvedParams = rawParams && typeof (rawParams as Promise<unknown>).then === "function"
-      ? await (rawParams as Promise<{ dppId: string }>)
-      : (rawParams as { dppId: string })
-    const dppId = resolvedParams?.dppId
 
     if (!dppId) {
-      console.error("[supplier-invites GET] Missing dppId in params:", context)
       return NextResponse.json({ invites: [] })
     }
 

@@ -7,6 +7,7 @@
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
@@ -101,7 +102,7 @@ export async function PUT(
     })
 
     // Get existing styling or create default (use system defaults)
-    const existingStyling = existingContent?.styling as StylingConfig | null
+    const existingStyling = (existingContent?.styling as unknown) as StylingConfig | null
     const currentStyling: StylingConfig = existingStyling || {
       colors: {
         primary: "#0A0A0A", // System default
@@ -145,7 +146,7 @@ export async function PUT(
       await prisma.dppContent.update({
         where: { id: existingContent.id },
         data: {
-          styling: updatedStyling,
+          styling: updatedStyling as unknown as Prisma.InputJsonValue,
           updatedAt: new Date()
         }
       })
@@ -154,7 +155,7 @@ export async function PUT(
         data: {
           dppId: resolvedParams.dppId,
           blocks: [],
-          styling: updatedStyling,
+          styling: updatedStyling as unknown as Prisma.InputJsonValue,
           isPublished: false,
           createdBy: session.user.id
         }

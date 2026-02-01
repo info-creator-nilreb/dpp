@@ -1,6 +1,7 @@
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { DPP_SECTIONS } from "@/lib/dpp-sections"
@@ -213,7 +214,7 @@ export async function POST(
           await prisma.dppContent.create({
             data: {
               dppId: contributorToken.dppId,
-              blocks: allBlocks,
+              blocks: allBlocks as unknown as Prisma.InputJsonValue,
               isPublished: false
             }
           })

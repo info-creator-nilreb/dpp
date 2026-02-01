@@ -9,7 +9,7 @@
  * - Clean, minimal UI
  */
 
-import { StylingConfig } from "@/lib/cms/types"
+import { StylingConfig, UpdateStylingRequest } from "@/lib/cms/types"
 import StylingEditor from "@/components/cms/StylingEditor"
 import { useNotification } from "@/components/NotificationProvider"
 
@@ -31,7 +31,7 @@ export default function DppBrandingTab({
   // Accept both cms_styling (Premium) and advanced_styling (Pro/Premium)
   const hasStyling = availableFeatures.includes("cms_styling") || availableFeatures.includes("advanced_styling")
 
-  async function handleUpdateStyling(updates: Partial<StylingConfig>) {
+  async function handleUpdateStyling(updates: UpdateStylingRequest) {
     try {
       const response = await fetch(`/api/app/dpp/${dppId}/content/styling`, {
         method: "PUT",

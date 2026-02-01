@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Block, StylingConfig } from "@/lib/cms/types"
+import { Block, StylingConfig, UpdateStylingRequest } from "@/lib/cms/types"
 import BlockList from "./BlockList"
 import BlockEditor from "./BlockEditor"
 import StylingEditor from "./StylingEditor"
@@ -203,7 +203,7 @@ export default function CmsEditor({ dppId, organizationId, userId }: CmsEditorPr
     }
   }
 
-  async function handleUpdateStyling(updates: Partial<StylingConfig>) {
+  async function handleUpdateStyling(updates: UpdateStylingRequest) {
     try {
       const response = await fetch(`/api/app/dpp/${dppId}/content/styling`, {
         method: "PUT",
@@ -317,6 +317,7 @@ export default function CmsEditor({ dppId, organizationId, userId }: CmsEditorPr
           <StylingEditor
             styling={styling}
             onUpdate={handleUpdateStyling}
+            dppId={dppId}
           />
         </div>
       )}

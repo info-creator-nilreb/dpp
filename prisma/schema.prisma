@@ -151,6 +151,7 @@ model Dpp {
   contributorTokens     ContributorToken[]
   blockSupplierConfigs DppBlockSupplierConfig[]
   supplierInvites     DppSupplierInvite[]
+  pollResponses       PollResponse[]
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([templateId])
@@ -247,9 +248,44 @@ model DppVersion {
   qrCodeImageUrl        String?
   createdBy             User     @relation(fields: [createdByUserId], references: [id])
   dpp                   Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  media                 DppVersionMedia[]
 
   @@unique([dppId, version])
   @@map("dpp_versions")
+}
+
+model DppVersionMedia {
+  id         String     @id @default(cuid())
+  versionId  String
+  fileName   String
+  fileType   String
+  fileSize   Int
+  storageUrl String
+  role       String?
+  blockId    String?
+  fieldKey   String?
+  uploadedAt DateTime   @default(now())
+  version    DppVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([versionId])
+  @@index([versionId, role])
+  @@index([blockId])
+  @@map("dpp_version_media")
+}
+
+model PollResponse {
+  id           String   @id @default(cuid())
+  pollBlockId String   // ID des Poll-Blocks im DppContent.blocks JSON (keine FK)
+  dppId       String
+  responses   Json     // Array von Antworten pro Frage
+  sessionId   String?
+  createdAt   DateTime @default(now())
+  dpp         Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+
+  @@index([pollBlockId])
+  @@index([dppId])
+  @@index([dppId, pollBlockId])
+  @@map("poll_responses")
 }
 
 model DppPermission {

@@ -36,15 +36,16 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
   // Fragen kommen aus block.content.fields.questions.value (vom CMS-Adapter gesetzt)
   const questionsField = block.content?.fields?.questions
   const questions: Question[] = questionsField && Array.isArray(questionsField.value)
-    ? questionsField.value
+    ? (questionsField.value as unknown as Question[])
     : []
   
   console.log('[MultiQuestionPollRenderer] Questions from fields:', questions)
   
-  // Completion Message aus fields
+  // Completion Message aus fields (value kann Union-Typ sein → immer als String rendern)
   const completionMessageField = block.content?.fields?.completionMessage
-  const completionMessage = completionMessageField?.value || 
-    'Vielen Dank für Ihre Teilnahme!'
+  const completionMessage = completionMessageField?.value != null
+    ? String(completionMessageField.value)
+    : 'Vielen Dank für Ihre Teilnahme!'
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})

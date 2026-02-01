@@ -512,7 +512,7 @@ export default function TemplateBlocksSection({
                   key={field.id}
                   field={field}
                   blockId={block.id}
-                  blockName={block.displayName}
+                  blockName={block.name}
                   dppId={dppId}
                   value={fieldValue}
                   onChange={(value) => {

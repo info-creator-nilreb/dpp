@@ -141,12 +141,9 @@ export default function DataSection({
             animation: 'fadeIn 0.3s ease',
           }}
         >
-          {console.log('[DataSection] Rendering content for:', block.displayName, 'Fields:', Object.keys(block.content?.fields || {}).length, 'isExpanded:', isExpanded)}
-          {console.log('[DataSection] Block content:', block.content ? 'exists' : 'missing', 'fields:', block.content?.fields ? Object.keys(block.content.fields).length : 'missing')}
           <SectionContent block={block} variant={variant} visualStyle={visualStyle} />
         </div>
       )}
-      {!isExpanded && console.log('[DataSection] NOT rendering content for:', block.displayName, 'isExpanded:', isExpanded)}
     </div>
   )
 }

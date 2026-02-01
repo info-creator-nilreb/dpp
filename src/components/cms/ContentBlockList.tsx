@@ -19,22 +19,26 @@ interface ContentBlockListProps {
 
 const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
   storytelling: "Storytelling",
+  multi_question_poll: "Umfrage",
   image_text: "Bild & Text",
   text: "Text",
   image: "Bild",
   video: "Video",
   accordion: "Akkordeon",
-  timeline: "Timeline"
+  timeline: "Timeline",
+  template_block: "Template-Block"
 }
 
 const BLOCK_TYPE_ICONS: Record<BlockTypeKey, string> = {
   storytelling: "📖",
+  multi_question_poll: "📊",
   image_text: "🖼️",
   text: "📝",
   image: "🖼️",
   video: "🎥",
   accordion: "📋",
-  timeline: "⏱️"
+  timeline: "⏱️",
+  template_block: "📄"
 }
 
 export default function ContentBlockList({

@@ -82,7 +82,7 @@ export default function ImageTextBlockEditor({
           <FileField
             label="Bild"
             value={data.image.url}
-            onChange={(url) => updateImage("url", url || "")}
+            onChange={(url) => updateImage("url", Array.isArray(url) ? url[0] ?? "" : (url ?? ""))}
             dppId={dppId}
             blockId={blockId}
             fieldKey="image"

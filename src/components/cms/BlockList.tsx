@@ -30,7 +30,8 @@ const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
   image: "Bild",
   video: "Video",
   accordion: "Akkordeon",
-  timeline: "Timeline"
+  timeline: "Timeline",
+  template_block: "Template-Block"
 }
 
 export default function BlockList({

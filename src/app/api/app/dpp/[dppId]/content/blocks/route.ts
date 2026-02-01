@@ -7,6 +7,7 @@
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
@@ -99,7 +100,7 @@ export async function POST(
       }
     })
 
-    const existingBlocks = (existingContent?.blocks as Block[]) || []
+    const existingBlocks = ((existingContent?.blocks as unknown) as Block[]) || []
     
     // Determine order (append if not provided)
     const blockOrder = order !== undefined 
@@ -138,7 +139,7 @@ export async function POST(
       await prisma.dppContent.update({
         where: { id: existingContent.id },
         data: {
-          blocks: updatedBlocks,
+          blocks: updatedBlocks as unknown as Prisma.InputJsonValue,
           updatedAt: new Date()
         }
       })
@@ -147,7 +148,7 @@ export async function POST(
       await prisma.dppContent.create({
         data: {
           dppId: resolvedParams.dppId,
-          blocks: updatedBlocks,
+          blocks: updatedBlocks as unknown as Prisma.InputJsonValue,
           isPublished: false,
           createdBy: session.user.id
         }

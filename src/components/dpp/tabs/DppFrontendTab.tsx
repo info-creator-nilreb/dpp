@@ -6,7 +6,7 @@
  * Branding & Styling (Premium only)
  */
 
-import { StylingConfig } from "@/lib/cms/types"
+import { StylingConfig, UpdateStylingRequest } from "@/lib/cms/types"
 import StylingEditor from "@/components/cms/StylingEditor"
 import { useNotification } from "@/components/NotificationProvider"
 
@@ -31,7 +31,7 @@ export default function DppFrontendTab({
   const { showNotification } = useNotification()
   const hasStyling = availableFeatures.includes("cms_styling")
 
-  async function handleUpdateStyling(updates: Partial<StylingConfig>) {
+  async function handleUpdateStyling(updates: UpdateStylingRequest) {
     try {
       const response = await fetch(`/api/app/dpp/${dppId}/content/styling`, {
         method: "PUT",
@@ -112,6 +112,7 @@ export default function DppFrontendTab({
           <StylingEditor
             styling={styling}
             onUpdate={handleUpdateStyling}
+            dppId={dppId}
           />
         </div>
       </div>

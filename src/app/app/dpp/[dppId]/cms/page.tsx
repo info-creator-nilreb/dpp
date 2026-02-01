@@ -14,9 +14,9 @@ import CmsEditor from "@/components/cms/CmsEditor"
 import AuthGate from "../../../_auth/AuthGate"
 
 async function CmsEditorPageContent({
-  params,
+  dppId,
 }: {
-  params: { dppId: string }
+  dppId: string
 }) {
   const session = await auth()
 
@@ -25,14 +25,14 @@ async function CmsEditorPageContent({
   }
 
   // Check permissions
-  const permissionError = await requireViewDPP(params.dppId, session.user.id)
+  const permissionError = await requireViewDPP(dppId, session.user.id)
   if (permissionError) {
     redirect("/app/dashboard")
   }
 
   // Load DPP to get organization
   const dpp = await prisma.dpp.findUnique({
-    where: { id: params.dppId },
+    where: { id: dppId },
     select: {
       id: true,
       organizationId: true
@@ -55,11 +55,12 @@ async function CmsEditorPageContent({
 export default async function CmsEditorPage({
   params,
 }: {
-  params: { dppId: string }
+  params: Promise<{ dppId: string }>
 }) {
+  const { dppId } = await params
   return (
     <AuthGate>
-      <CmsEditorPageContent params={params} />
+      <CmsEditorPageContent dppId={dppId} />
     </AuthGate>
   )
 }

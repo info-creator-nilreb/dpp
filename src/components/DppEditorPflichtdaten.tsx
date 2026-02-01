@@ -31,6 +31,10 @@ interface DppMedia {
   fileSize: number
   storageUrl: string
   uploadedAt: Date
+  role?: string | null
+  blockId?: string | null
+  fieldId?: string | null
+  fieldKey?: string | null
 }
 
 interface Dpp {
@@ -2018,7 +2022,7 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
         
         // Logo (Styling) nur für Hero-Platzierung – nie in Pflichtdaten anzeigen
         const pflichtdatenMedia = (dpp.media ?? []).filter(
-          (m: { role?: string | null }) => m.role !== "logo"
+          (m) => m.role !== "logo"
         )
         return (
           <TemplateBlocksSection

@@ -56,6 +56,7 @@ interface TemplateBlockFieldProps {
 export default function TemplateBlockField({
   field,
   blockId,
+  blockName,
   dppId,
   value,
   onChange,

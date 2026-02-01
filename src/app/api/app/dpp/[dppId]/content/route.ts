@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
@@ -81,8 +82,8 @@ export async function POST(
       await prisma.dppContent.update({
         where: { id: existingContent.id },
         data: {
-          blocks,
-          ...(styling !== undefined && { styling }),
+          blocks: blocks as unknown as Prisma.InputJsonValue,
+          ...(styling !== undefined && { styling: styling as unknown as Prisma.InputJsonValue }),
           updatedAt,
         },
       })
@@ -90,8 +91,8 @@ export async function POST(
       await prisma.dppContent.create({
         data: {
           dppId,
-          blocks,
-          ...(styling !== undefined && { styling }),
+          blocks: blocks as unknown as Prisma.InputJsonValue,
+          ...(styling !== undefined && { styling: styling as unknown as Prisma.InputJsonValue }),
           isPublished: false,
           createdBy: session.user.id,
           updatedAt,
@@ -269,7 +270,7 @@ export async function PUT(
       await prisma.dppContent.create({
         data: {
           dppId,
-          blocks: finalBlocks,
+          blocks: finalBlocks as unknown as Prisma.InputJsonValue,
           isPublished: false
         }
       })

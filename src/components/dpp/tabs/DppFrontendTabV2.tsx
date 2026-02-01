@@ -8,6 +8,7 @@
  * - Styling editor only for Premium users
  */
 
+import type { UpdateStylingRequest } from "@/lib/cms/types"
 import { StylingConfig, Block } from "@/lib/cms/types"
 import StylingEditor from "@/components/cms/StylingEditor"
 import DppFrontendPreview from "./DppFrontendPreview"
@@ -145,7 +146,7 @@ export default function DppFrontendTabV2({
     }
   })
 
-  async function handleUpdateStyling(updates: Partial<StylingConfig>) {
+  async function handleUpdateStyling(updates: UpdateStylingRequest) {
     // Optimistically update local state for immediate preview feedback
     const currentStyling = stylingRef.current || styling || {
       colors: {

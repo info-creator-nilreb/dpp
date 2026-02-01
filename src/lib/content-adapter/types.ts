@@ -8,7 +8,7 @@ export type EditorialLayer = "spine" | "data" | "deep"
 export type DensityLevel = "compact" | "normal" | "detailed"
 
 export interface FieldValue {
-  value: string | number | boolean | null
+  value: string | number | boolean | string[] | number[] | Record<string, unknown> | Record<string, unknown>[] | null
   type: string
   label: string
   key: string

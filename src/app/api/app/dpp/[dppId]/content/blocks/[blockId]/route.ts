@@ -8,6 +8,7 @@
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
@@ -84,7 +85,7 @@ export async function PUT(
       )
     }
 
-    const blocks = (existingContent.blocks as Block[]) || []
+    const blocks = ((existingContent.blocks as unknown) as Block[]) || []
     const blockIndex = blocks.findIndex(b => b.id === resolvedParams.blockId)
 
     if (blockIndex === -1) {
@@ -134,7 +135,7 @@ export async function PUT(
     await prisma.dppContent.update({
       where: { id: existingContent.id },
       data: {
-        blocks: updatedBlocks,
+        blocks: updatedBlocks as unknown as Prisma.InputJsonValue,
         updatedAt: new Date()
       }
     })
@@ -220,7 +221,7 @@ export async function DELETE(
       )
     }
 
-    const blocks = (existingContent.blocks as Block[]) || []
+    const blocks = ((existingContent.blocks as unknown) as Block[]) || []
     const filteredBlocks = blocks.filter(b => b.id !== resolvedParams.blockId)
 
     if (filteredBlocks.length === blocks.length) {
@@ -244,7 +245,7 @@ export async function DELETE(
     await prisma.dppContent.update({
       where: { id: existingContent.id },
       data: {
-        blocks: reorderedBlocks,
+        blocks: reorderedBlocks as unknown as Prisma.InputJsonValue,
         updatedAt: new Date()
       }
     })

@@ -132,7 +132,6 @@ export default function ContentBlockEditor({ block, onUpdate, dppId }: ContentBl
             content={content}
             onChange={handleContentChange}
             dppId={dppId}
-            blockId={block.id}
           />
         )
       case "multi_question_poll":

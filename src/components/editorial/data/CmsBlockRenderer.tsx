@@ -61,11 +61,12 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
   // Image Gallery
   if (blockType === 'image_gallery' || blockType === 'gallery') {
     const images = content.images?.value || content.imageUrls?.value || []
-    const imageUrls = Array.isArray(images) 
-      ? images 
-      : typeof images === 'string' 
-        ? images.split(',').map(url => url.trim())
+    const rawUrls = Array.isArray(images)
+      ? images
+      : typeof images === 'string'
+        ? images.split(',').map((url: string) => url.trim())
         : []
+    const imageUrls: string[] = rawUrls.filter((u): u is string => typeof u === 'string' && u.length > 0)
     
     if (imageUrls.length === 0) return null
     
@@ -76,7 +77,7 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
         gap: editorialSpacing.md,
         marginTop: editorialSpacing.md,
       }}>
-        {imageUrls.map((url: string, index: number) => (
+        {imageUrls.map((url, index) => (
           <Image
             key={index}
             src={url}
@@ -329,8 +330,8 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
           caption: caption ? String(caption) : undefined
         })
       } else if (Array.isArray(imageUrl)) {
-        // Mehrere Bilder
-        imageUrl.forEach((url: string, index: number) => {
+        // Mehrere Bilder (value kann string | number | Record<string, unknown> sein)
+        imageUrl.forEach((url: unknown) => {
           images.push({
             url: String(url),
             alt: alt ? String(alt) : undefined,

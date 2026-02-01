@@ -171,6 +171,7 @@ export default function GutenbergEditor({
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, index)}
                     onDragEnd={handleDragEnd}
+                    dppId={dppId}
                   />
                 </div>
               ))}

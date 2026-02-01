@@ -6,7 +6,8 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { adaptTemplateBlockToUnified, UnifiedContentBlock } from './template-adapter'
+import { UnifiedContentBlock } from './types'
+import { adaptTemplateBlockToUnified } from './template-adapter'
 import { adaptCmsBlockToUnified } from './cms-adapter'
 import { latestPublishedTemplate } from '@/lib/template-helpers'
 

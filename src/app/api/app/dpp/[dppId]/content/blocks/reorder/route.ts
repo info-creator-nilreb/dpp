@@ -7,6 +7,7 @@
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
@@ -21,9 +22,10 @@ import { Block, ReorderBlocksRequest } from "@/lib/cms/types"
  */
 export async function POST(
   request: Request,
-  { params }: { params: { dppId: string } }
+  { params }: { params: Promise<{ dppId: string }> }
 ) {
   try {
+    const { dppId } = await params
     const session = await auth()
 
     if (!session?.user?.id) {
@@ -34,14 +36,14 @@ export async function POST(
     }
 
     // Check permissions
-    const permissionError = await requireEditDPP(params.dppId, session.user.id)
+    const permissionError = await requireEditDPP(dppId, session.user.id)
     if (permissionError) {
       return permissionError
     }
 
     // Load DPP
     const dpp = await prisma.dpp.findUnique({
-      where: { id: params.dppId },
+      where: { id: dppId },
       select: { organizationId: true }
     })
 
@@ -79,7 +81,7 @@ export async function POST(
     // Load existing content
     const existingContent = await prisma.dppContent.findFirst({
       where: {
-        dppId: params.dppId,
+        dppId,
         isPublished: false
       }
     })
@@ -91,7 +93,7 @@ export async function POST(
       )
     }
 
-    const blocks = (existingContent.blocks as Block[]) || []
+    const blocks = ((existingContent.blocks as unknown) as Block[]) || []
 
     // Validate all block IDs exist
     const blockIdSet = new Set(blockIds)
@@ -130,7 +132,7 @@ export async function POST(
     await prisma.dppContent.update({
       where: { id: existingContent.id },
       data: {
-        blocks: reorderedBlocks,
+        blocks: reorderedBlocks as unknown as Prisma.InputJsonValue,
         updatedAt: new Date()
       }
     })
