@@ -126,15 +126,8 @@ export default function EditorialSpine({
         </div>
       )}
       
-      {/* Headline ohne Hero (wenn kein Hero-Bild) */}
-      {!heroUrl && headline && (
-        <Section variant="contained">
-          <HeadlineBlock text={headline} brandName={brandName} versionInfo={versionInfo} />
-        </Section>
-      )}
-      
-      {/* Unter dem Hero: immer Headline + Story/Basisdaten anzeigen (Fallback auf dpp.description) */}
-      {showContentBelowHero && (
+      {/* Unter dem Hero: nur Beschreibung und/oder Basisdaten – kein HeadlineBlock (Produktname/Hersteller/Version stehen ausschließlich im Hero-Overlay) */}
+      {showContentBelowHero && (storyText || hasBasicData) && (
         <Section 
           variant="contained"
           style={{ 
@@ -144,37 +137,46 @@ export default function EditorialSpine({
         >
           {storyText ? (
             <StoryTextBlock text={storyText} basicData={basicData} />
-          ) : (
+          ) : hasBasicData && basicData ? (
             <>
-              <HeadlineBlock text={headlineDisplay} brandName={brandName} versionInfo={versionInfo} />
-              {hasBasicData && basicData && (
-                <>
-                  <div style={{
-                    width: '60px',
-                    height: '2px',
-                    backgroundColor: '#24c598',
-                    marginTop: editorialSpacing.xl,
-                    marginBottom: editorialSpacing.xl,
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                  }} />
-                  <div style={{
-                    maxWidth: '900px',
-                    margin: '0 auto',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '2rem',
-                    marginTop: editorialSpacing.lg,
-                    fontSize: '0.875rem',
-                    color: '#7A7A7A',
-                    textAlign: 'center',
-                  }}>
-                    {(basicData.sku != null && basicData.sku !== '') && <div><strong>SKU</strong><br />{basicData.sku}</div>}
-                    {(basicData.gtin != null && basicData.gtin !== '') && <div><strong>GTIN</strong><br />{basicData.gtin}</div>}
-                    {(basicData.countryOfOrigin != null && basicData.countryOfOrigin !== '') && <div><strong>Herkunftsland</strong><br />{basicData.countryOfOrigin}</div>}
-                  </div>
-                </>
-              )}
+              <div style={{
+                width: '60px',
+                height: '2px',
+                backgroundColor: '#24c598',
+                marginBottom: editorialSpacing.xl,
+                marginLeft: 'auto',
+                marginRight: 'auto',
+              }} />
+              <div style={{
+                maxWidth: '900px',
+                margin: '0 auto',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '2rem',
+                fontSize: '0.875rem',
+                color: '#7A7A7A',
+                textAlign: 'center',
+              }}>
+                {(basicData.sku != null && basicData.sku !== '') && <div><strong>SKU</strong><br />{basicData.sku}</div>}
+                {(basicData.gtin != null && basicData.gtin !== '') && <div><strong>GTIN</strong><br />{basicData.gtin}</div>}
+                {(basicData.countryOfOrigin != null && basicData.countryOfOrigin !== '') && <div><strong>Herkunftsland</strong><br />{basicData.countryOfOrigin}</div>}
+              </div>
+            </>
+          ) : null}
+        </Section>
+      )}
+      {/* Headline-Bereich nur ohne Hero (z. B. wenn kein Produktbild) */}
+      {!heroUrl && showContentBelowHero && (
+        <Section variant="contained" style={{ paddingTop: editorialSpacing.xl, paddingBottom: editorialSpacing.xl }}>
+          <HeadlineBlock text={headlineDisplay} brandName={brandName} versionInfo={versionInfo} />
+          {hasBasicData && basicData && (
+            <>
+              <div style={{ width: '60px', height: '2px', backgroundColor: '#24c598', marginTop: editorialSpacing.xl, marginBottom: editorialSpacing.xl, marginLeft: 'auto', marginRight: 'auto' }} />
+              <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginTop: editorialSpacing.lg, fontSize: '0.875rem', color: '#7A7A7A', textAlign: 'center' }}>
+                {(basicData.sku != null && basicData.sku !== '') && <div><strong>SKU</strong><br />{basicData.sku}</div>}
+                {(basicData.gtin != null && basicData.gtin !== '') && <div><strong>GTIN</strong><br />{basicData.gtin}</div>}
+                {(basicData.countryOfOrigin != null && basicData.countryOfOrigin !== '') && <div><strong>Herkunftsland</strong><br />{basicData.countryOfOrigin}</div>}
+              </div>
             </>
           )}
         </Section>
