@@ -63,7 +63,8 @@ export default function DppFrontendTabV2({
     }
   }, [availableFeatures])
   
-  const hasStyling = availableFeatures.includes("cms_styling")
+  // Styling: bei leerem Capabilities-Ergebnis anzeigen (Fail-open in Produktion/Trial), sonst cms_styling oder advanced_styling
+  const hasStyling = availableFeatures.length === 0 || availableFeatures.includes("cms_styling") || availableFeatures.includes("advanced_styling")
   
   // Don't show styling section at all if not available - no upgrade hint
 

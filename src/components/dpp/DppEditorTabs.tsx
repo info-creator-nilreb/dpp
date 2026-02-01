@@ -99,8 +99,11 @@ export default function DppEditorTabs({
 
   // Check capabilities
   const hasCmsAccess = availableFeatures.length === 0 || availableFeatures.includes("cms_access") || availableFeatures.includes("block_storytelling") || availableFeatures.includes("block_image_text")
-  // Accept both cms_styling (Premium) and advanced_styling (Pro/Premium)
-  const hasStyling = availableFeatures.includes("cms_styling") || availableFeatures.includes("advanced_styling")
+  // Styling: bei leerem Capabilities-Ergebnis anzeigen (Fail-open in Produktion/Trial), sonst cms_styling oder advanced_styling
+  const hasStyling =
+    availableFeatures.length === 0 ||
+    availableFeatures.includes("cms_styling") ||
+    availableFeatures.includes("advanced_styling")
 
   const tabs = [
     {

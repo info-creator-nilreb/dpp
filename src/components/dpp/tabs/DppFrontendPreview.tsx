@@ -95,6 +95,7 @@ export default function DppFrontendPreview({
   const [mounted, setMounted] = useState(false)
   const [unifiedBlocks, setUnifiedBlocks] = useState<UnifiedContentBlock[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   // Mount effect - only run once
   useEffect(() => {
@@ -175,10 +176,28 @@ export default function DppFrontendPreview({
           backgroundColor: "#FFF5F5",
           border: "1px solid #FECACA",
           borderRadius: "8px",
-          color: "#991B1B"
+          color: "#991B1B",
+          textAlign: "center"
         }}>
           <p style={{ margin: 0, fontWeight: 600 }}>Fehler</p>
           <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem" }}>{error}</p>
+          <button
+            type="button"
+            onClick={() => { setError(null); setRetryCount((c) => c + 1) }}
+            style={{
+              marginTop: "1rem",
+              padding: "0.5rem 1rem",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              color: "#991B1B",
+              backgroundColor: "#FEE2E2",
+              border: "1px solid #FECACA",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}
+          >
+            Erneut versuchen
+          </button>
         </div>
       </div>
     )
