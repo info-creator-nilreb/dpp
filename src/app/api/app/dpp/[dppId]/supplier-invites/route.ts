@@ -1,6 +1,7 @@
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
@@ -141,7 +142,7 @@ export async function POST(
         message: message ? String(message).trim() || null : null,
         partnerRole: String(role).trim(),
         blockIds,
-        fieldInstances,
+        fieldInstances: fieldInstances as unknown as Prisma.InputJsonValue,
         supplierMode,
         status: "pending",
         token,
