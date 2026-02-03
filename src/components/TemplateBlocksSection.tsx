@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import TemplateBlockField from "@/components/TemplateBlockField"
 import RepeatableFieldGroup from "@/components/RepeatableFieldGroup"
 
@@ -67,7 +67,7 @@ function AccordionSection({
           position: "relative"
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", width: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: 1, minWidth: 0 }}>
           {typeof title === "string" ? (
             <h2 style={{
               fontSize: "clamp(0.9rem, 2vw, 1rem)",
@@ -86,7 +86,9 @@ function AccordionSection({
           <span style={{
             fontSize: "1.5rem",
             color: "#7A7A7A",
-            transition: "transform 0.2s"
+            transition: "transform 0.2s",
+            flexShrink: 0,
+            marginLeft: "1rem"
           }}>
             {isOpen ? "−" : "+"}
           </span>
@@ -323,6 +325,16 @@ export default function TemplateBlocksSection({
     new Set([template.blocks[0]?.id])
   )
 
+  // Mobile: nur "Zugewiesen" anzeigen, Blocktitel vollständig sichtbar
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)")
+    const handler = () => setIsMobile(mql.matches)
+    handler()
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [])
+
   const toggleBlock = (blockId: string) => {
     setOpenBlocks(prev => {
       const next = new Set(prev)
@@ -365,9 +377,11 @@ export default function TemplateBlocksSection({
               >
                 <span style={{ 
                   flex: 1, 
+                  minWidth: 0,
                   fontSize: "clamp(0.9rem, 2vw, 1rem)",
                   fontWeight: "600",
-                  color: "#0A0A0A"
+                  color: "#0A0A0A",
+                  wordBreak: "break-word"
                 }}>
                   {block.name}
                 </span>
@@ -407,7 +421,8 @@ export default function TemplateBlocksSection({
                           fontSize: "0.813rem",
                           fontWeight: "400",
                           marginLeft: "1.5rem",
-                          transition: "color 0.2s ease"
+                          transition: "color 0.2s ease",
+                          flexShrink: 0
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.color = "#DC2626"
@@ -417,7 +432,7 @@ export default function TemplateBlocksSection({
                         }}
                       >
                         <ConnectionIcon size={17} color="currentColor" />
-                        <span style={{ opacity: 0.85 }}>Verantwortung zugewiesen</span>
+                        <span style={{ opacity: 0.85 }}>{isMobile ? "Zugewiesen" : "Verantwortung zugewiesen"}</span>
                       </span>
                     ) : (
                       // Zustand A: Keine externe Verantwortung (span statt button, da innerhalb Accordion-Button)

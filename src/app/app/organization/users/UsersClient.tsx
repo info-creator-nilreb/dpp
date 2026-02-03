@@ -564,9 +564,10 @@ export default function UsersClient() {
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
+                          gap: "1rem",
                         }}
                       >
-                        <div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
                           <p style={{ margin: 0, fontWeight: "500", color: "#0A0A0A" }}>
                             {invitation.email}
                           </p>
@@ -576,18 +577,31 @@ export default function UsersClient() {
                         </div>
                         {invitation.status === "pending" && (
                           <button
+                            type="button"
                             onClick={() => handleDeleteInvitation(invitation.id)}
+                            title="Löschen"
                             style={{
-                              padding: "0.5rem 1rem",
+                              padding: "0.5rem",
                               backgroundColor: "transparent",
-                              border: "1px solid #CDCDCD",
+                              border: "none",
                               borderRadius: "6px",
-                              color: "#C33",
-                              fontSize: "0.9rem",
+                              color: "#DC2626",
                               cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FEF2F2"
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "transparent"
                             }}
                           >
-                            Löschen
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"/>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
                           </button>
                         )}
                       </div>
