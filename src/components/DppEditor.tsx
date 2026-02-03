@@ -6,7 +6,6 @@ import CountrySelect from "@/components/CountrySelect"
 import { useNotification } from "@/components/NotificationProvider"
 import InputField from "@/components/InputField"
 // StickySaveBar removed - using EditorHeader instead
-import { TrialBanner } from "@/components/TrialBanner"
 import { useCapabilities } from "@/hooks/useCapabilities"
 import { DPP_SECTIONS } from "@/lib/dpp-sections"
 import { useAutoSave } from "@/hooks/useAutoSave"
@@ -1086,14 +1085,6 @@ export default function DppEditor({
       }}>
         {isNew ? "Neuer Produktpass" : "Produktpass Editor"}
       </h1>
-
-      {/* Trial Banner */}
-      {!isNew && isTrial && subscription?.trialExpiresAt && (
-        <TrialBanner
-          organizationId={dpp.organizationId}
-          trialEndDate={subscription.trialExpiresAt}
-        />
-      )}
 
       {/* 1. Basis- & Produktdaten (immer offen, Pflichtfelder) */}
       <AccordionSection

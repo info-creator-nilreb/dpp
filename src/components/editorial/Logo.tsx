@@ -35,7 +35,7 @@ export default function Logo({
         position: 'absolute',
         top: 'clamp(16px, 2vw, 24px)',
         left: 'clamp(16px, 2vw, 24px)',
-        zIndex: 100,
+        zIndex: 10,
         width: 'clamp(100px, 12vw, 160px)',
         height: 'auto',
         pointerEvents: 'auto',

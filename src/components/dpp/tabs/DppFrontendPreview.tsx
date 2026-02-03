@@ -261,7 +261,7 @@ export default function DppFrontendPreview({
         backgroundColor: "#FFFFFF"
       }}
     >
-      {/* Preview Container - uses new EditorialDppViewRedesign */}
+      {/* Preview Container - uses new EditorialDppViewRedesign (isPreview: kein 100vh, weniger Abstand unten) */}
       <EditorialDppViewRedesign
         blocks={unifiedBlocks}
         dppName={dpp.name || ""}
@@ -272,6 +272,7 @@ export default function DppFrontendPreview({
         organizationLogoUrl={organizationLogoUrl}
         heroImageUrl={heroImage}
         styling={styling}
+        isPreview
         versionInfo={dpp.versions?.[0] ? {
           version: dpp.versions[0].version,
           createdAt: new Date(dpp.versions[0].createdAt)

@@ -36,6 +36,8 @@ interface EditorialDppViewRedesignProps {
   }
   /** Styling (Farben, Logo, Schrift) – wird in der Vorschau für Theme genutzt */
   styling?: StylingConfig | null
+  /** true = Editor-Vorschau (kein 100vh, weniger Abstand unten) */
+  isPreview?: boolean
 }
 
 export default function EditorialDppViewRedesign({
@@ -50,10 +52,11 @@ export default function EditorialDppViewRedesign({
   heroImageUrl,
   versionInfo,
   basicData,
-  styling
+  styling,
+  isPreview = false
 }: EditorialDppViewRedesignProps) {
   return (
-    <Page styling={styling ?? undefined}>
+    <Page styling={styling ?? undefined} fillViewport={!isPreview}>
       {/* Editorial Spine mit Logo */}
       <EditorialSpine
         blocks={blocks}
@@ -81,8 +84,8 @@ export default function EditorialDppViewRedesign({
         }
       />
       
-      {/* Bottom Padding für Sticky Elements */}
-      <div style={{ height: '120px' }} />
+      {/* Bottom Padding für Sticky Elements / Abschluss – in Vorschau reduziert */}
+      <div style={{ height: isPreview ? '2rem' : '120px' }} />
     </Page>
   )
 }

@@ -52,7 +52,7 @@ export default function SupplierInviteButton({
         right: "1.5rem",
         // Save Bar ist ca. 120-140px hoch (mit Padding, 2 Zeilen), 20px Abstand darüber
         bottom: "30px", // 30px Abstand
-        zIndex: 1000, // Über der Save Bar (z-index: 999)
+        zIndex: 1000, // Über Save Bar (z-index 20) und Mobile-Header (30)
         padding: "0.625rem",
         backgroundColor: "#FFFFFF",
         color: "#7A7A7A",

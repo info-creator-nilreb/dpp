@@ -7,7 +7,6 @@ import CountrySelect from "@/components/CountrySelect"
 import { useNotification } from "@/components/NotificationProvider"
 import InputField from "@/components/InputField"
 import StickySaveBar from "@/components/StickySaveBar"
-import { TrialBanner } from "@/components/TrialBanner"
 import { useCapabilities } from "@/hooks/useCapabilities"
 import { DPP_SECTIONS } from "@/lib/dpp-sections"
 import TemplateBlocksSection from "@/components/TemplateBlocksSection"
@@ -1713,16 +1712,6 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
       }}>
         {isNew ? "Neuer Produktpass" : "Produktpass Editor"}
       </h1>
-
-      {/* Trial Banner */}
-      {!isNew && isTrial && subscription?.trialExpiresAt && (
-        <div style={{ marginBottom: "20px" }}>
-          <TrialBanner
-            organizationId={dpp.organizationId}
-            trialEndDate={subscription.trialExpiresAt}
-          />
-        </div>
-      )}
 
       {/* Kategorie-Auswahl (immer sichtbar, für Template-Auswahl benötigt) */}
       <div style={{

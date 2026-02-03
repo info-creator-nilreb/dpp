@@ -16,9 +16,11 @@ interface PageProps {
   className?: string
   style?: React.CSSProperties
   styling?: StylingConfig | null
+  /** Wenn false (z. B. in der Editor-Vorschau): keine minHeight 100vh, Inhalt bestimmt Höhe. Veröffentlichte Seite: true. */
+  fillViewport?: boolean
 }
 
-export default function Page({ children, className = '', style = {}, styling }: PageProps) {
+export default function Page({ children, className = '', style = {}, styling, fillViewport = true }: PageProps) {
   // Resolve theme from styling config
   const theme = resolveTheme(styling || undefined)
   
@@ -40,7 +42,7 @@ export default function Page({ children, className = '', style = {}, styling }: 
         lineHeight: editorialTypography.lineHeight.normal,
         color: textPrimary,
         backgroundColor: editorialColors.background.primary,
-        minHeight: '100vh',
+        ...(fillViewport ? { minHeight: '100vh' } : {}),
         // CSS Variables for global theme access
         '--editorial-primary': primaryColor,
         '--editorial-secondary': secondaryColor || editorialColors.brand.secondary,

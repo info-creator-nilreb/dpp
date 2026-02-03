@@ -131,12 +131,24 @@ export default function EditorHeader({
           @media (max-width: 767px) {
             .editor-header {
               left: 0 !important;
+              top: 56px !important;
+              z-index: 25 !important;
+            }
+            .editor-header-main-row {
+              padding-top: 30px !important;
+            }
+            .editor-header-spacer {
+              height: 156px !important;
+              min-height: 156px !important;
             }
           }
           @media (min-width: 768px) {
             .editor-header {
               left: var(--sidebar-width, 280px) !important;
               transition: left 0.3s ease;
+            }
+            .editor-header-main-row {
+              padding-top: 0 !important;
             }
           }
         `
@@ -158,14 +170,17 @@ export default function EditorHeader({
           gap: "0.75rem"
         }}
       >
-        {/* Main Content Row */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "1rem"
-        }}>
+        {/* Main Content Row - auf Mobile padding-top, damit Mobile-Header den Inhalt nicht überdeckt */}
+        <div
+          className="editor-header-main-row"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "1rem"
+          }}
+        >
           {/* Status Section */}
           <div style={{
             display: "flex",
@@ -320,9 +335,8 @@ export default function EditorHeader({
           </div>
         )}
       </div>
-      {/* Spacer to prevent content from being hidden under header */}
-      {/* Height is dynamic based on content (status + optional trial banner) */}
-      <div style={{ height: "100px", minHeight: "100px" }} />
+      {/* Spacer to prevent content from being hidden under header (mobile: 56px header + 100px editor bar) */}
+      <div className="editor-header-spacer" style={{ height: "100px", minHeight: "100px" }} />
     </>
   )
 }
