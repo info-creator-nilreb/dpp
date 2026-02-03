@@ -36,7 +36,7 @@ export default function DataSection({
   const headerStyle = {
     fontSize: '0.875rem',
     fontWeight: 400,
-    color: editorialColors.text.secondary,
+    color: editorialColors.text.secondaryVar,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
   }
@@ -49,7 +49,7 @@ export default function DataSection({
           padding: '1.5rem 0',
           borderBottom: `1px solid ${editorialColors.border.light}`,
           paddingLeft: '1.5rem',
-          borderLeft: `2px solid ${editorialColors.brand.accent}`,
+          borderLeft: `2px solid ${editorialColors.brand.accentVar}`,
         }
       case 'background':
         return {
@@ -120,13 +120,13 @@ export default function DataSection({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: editorialColors.text.secondary,
+          color: editorialColors.text.secondaryVar,
           transition: 'transform 0.2s ease',
         }}>
           {isExpanded ? (
-            <ChevronUpIcon size={16} color={editorialColors.text.secondary} />
+            <ChevronUpIcon size={16} color={editorialColors.text.secondaryVar} />
           ) : (
-            <ChevronDownIcon size={16} color={editorialColors.text.secondary} />
+            <ChevronDownIcon size={16} color={editorialColors.text.secondaryVar} />
           )}
         </div>
       </button>

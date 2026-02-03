@@ -61,7 +61,7 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
         style={{
           width: '60px',
           height: '2px',
-          backgroundColor: editorialColors.brand.accent,
+          backgroundColor: editorialColors.brand.accentVar,
           marginTop: editorialSpacing.xl,
           marginBottom: editorialSpacing.xl, // Einheitlicher Abstand zu DataSectionsContainer
           marginLeft: 'auto',
@@ -87,7 +87,7 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
-                color: editorialColors.text.secondary,
+                color: editorialColors.text.secondaryVar,
                 marginBottom: '0.5rem',
               }}>
                 SKU
@@ -109,7 +109,7 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
-                color: editorialColors.text.secondary,
+                color: editorialColors.text.secondaryVar,
                 marginBottom: '0.5rem',
               }}>
                 GTIN/EAN
@@ -131,7 +131,7 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
-                color: editorialColors.text.secondary,
+                color: editorialColors.text.secondaryVar,
                 marginBottom: '0.5rem',
               }}>
                 Herkunftsland

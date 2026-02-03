@@ -27,7 +27,7 @@ export default function VersionInfoBlock({ version, createdAt }: VersionInfoBloc
     <p
       style={{
         fontSize: '0.875rem',
-        color: editorialColors.text.secondary,
+        color: editorialColors.text.secondaryVar,
         fontWeight: 400,
         marginTop: '0.5rem',
       }}

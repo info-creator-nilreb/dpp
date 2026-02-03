@@ -189,7 +189,7 @@ export default function DataSectionsContainer({
             style={{
               width: '60px',
               height: '2px',
-              backgroundColor: editorialColors.brand.accent,
+              backgroundColor: editorialColors.brand.accentVar,
             }}
           />
         </div>
@@ -234,7 +234,7 @@ export default function DataSectionsContainer({
             style={{
               width: '60px',
               height: '2px',
-              backgroundColor: editorialColors.brand.accent,
+              backgroundColor: editorialColors.brand.accentVar,
             }}
           />
         </div>

@@ -10,6 +10,7 @@
 import React from 'react'
 import { Page } from './index'
 import { UnifiedContentBlock } from '@/lib/content-adapter'
+import type { StylingConfig } from '@/lib/cms/types'
 import EditorialSpine from './EditorialSpine'
 import DataSectionsContainer from './data/DataSectionsContainer'
 import Logo from './Logo'
@@ -33,6 +34,8 @@ interface EditorialDppViewRedesignProps {
     gtin?: string | null
     countryOfOrigin?: string | null
   }
+  /** Styling (Farben, Logo, Schrift) – wird in der Vorschau für Theme genutzt */
+  styling?: StylingConfig | null
 }
 
 export default function EditorialDppViewRedesign({
@@ -46,10 +49,11 @@ export default function EditorialDppViewRedesign({
   organizationWebsite,
   heroImageUrl,
   versionInfo,
-  basicData
+  basicData,
+  styling
 }: EditorialDppViewRedesignProps) {
   return (
-    <Page>
+    <Page styling={styling ?? undefined}>
       {/* Editorial Spine mit Logo */}
       <EditorialSpine
         blocks={blocks}

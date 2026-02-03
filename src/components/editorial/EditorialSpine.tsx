@@ -10,6 +10,7 @@
 import React from 'react'
 import { UnifiedContentBlock } from '@/lib/content-adapter'
 import { Section, editorialSpacing } from './index'
+import { editorialColors } from './tokens/colors'
 import HeroImageBlock from './spine/HeroImageBlock'
 import HeadlineBlock from './spine/HeadlineBlock'
 import StoryTextBlock from './spine/StoryTextBlock'
@@ -143,7 +144,7 @@ export default function EditorialSpine({
               <div style={{
                 width: '60px',
                 height: '2px',
-                backgroundColor: '#24c598',
+                backgroundColor: editorialColors.brand.accentVar,
                 marginBottom: editorialSpacing.xl,
                 marginLeft: 'auto',
                 marginRight: 'auto',
@@ -155,7 +156,7 @@ export default function EditorialSpine({
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '2rem',
                 fontSize: '0.875rem',
-                color: '#7A7A7A',
+                color: editorialColors.text.secondaryVar,
                 textAlign: 'center',
               }}>
                 {(basicData.sku != null && basicData.sku !== '') && <div><strong>SKU</strong><br />{basicData.sku}</div>}
@@ -172,8 +173,8 @@ export default function EditorialSpine({
           <HeadlineBlock text={headlineDisplay} brandName={brandName} versionInfo={versionInfo} />
           {hasBasicData && basicData && (
             <>
-              <div style={{ width: '60px', height: '2px', backgroundColor: '#24c598', marginTop: editorialSpacing.xl, marginBottom: editorialSpacing.xl, marginLeft: 'auto', marginRight: 'auto' }} />
-              <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginTop: editorialSpacing.lg, fontSize: '0.875rem', color: '#7A7A7A', textAlign: 'center' }}>
+              <div style={{ width: '60px', height: '2px', backgroundColor: editorialColors.brand.accentVar, marginTop: editorialSpacing.xl, marginBottom: editorialSpacing.xl, marginLeft: 'auto', marginRight: 'auto' }} />
+              <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginTop: editorialSpacing.lg, fontSize: '0.875rem', color: editorialColors.text.secondaryVar, textAlign: 'center' }}>
                 {(basicData.sku != null && basicData.sku !== '') && <div><strong>SKU</strong><br />{basicData.sku}</div>}
                 {(basicData.gtin != null && basicData.gtin !== '') && <div><strong>GTIN</strong><br />{basicData.gtin}</div>}
                 {(basicData.countryOfOrigin != null && basicData.countryOfOrigin !== '') && <div><strong>Herkunftsland</strong><br />{basicData.countryOfOrigin}</div>}

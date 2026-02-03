@@ -29,7 +29,7 @@ const ACCENT_STYLES: Record<AccentType, React.CSSProperties> = {
   highlight: {
     height: '4px',
     width: '60px',
-    backgroundColor: editorialColors.brand.accent,
+    backgroundColor: editorialColors.brand.accentVar,
     marginTop: editorialSpacing.md,
     marginBottom: editorialSpacing.md,
     border: 'none',
@@ -38,14 +38,14 @@ const ACCENT_STYLES: Record<AccentType, React.CSSProperties> = {
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: editorialColors.brand.accent,
+    backgroundColor: editorialColors.brand.accentVar,
     display: 'inline-block',
     margin: `0 ${editorialSpacing.xs}`,
   },
   line: {
     width: '2px',
     height: '40px',
-    backgroundColor: editorialColors.brand.accent,
+    backgroundColor: editorialColors.brand.accentVar,
     marginTop: editorialSpacing.md,
     marginBottom: editorialSpacing.md,
   },
@@ -61,7 +61,7 @@ export default function Accent({
   
   // Use custom color if provided, otherwise use CSS variable, fallback to default
   const accentColor = color || (type === 'highlight' || type === 'dot' || type === 'line' 
-    ? `var(--editorial-accent, ${editorialColors.brand.accent})`
+    ? editorialColors.brand.accentVar
     : undefined)
 
   return (

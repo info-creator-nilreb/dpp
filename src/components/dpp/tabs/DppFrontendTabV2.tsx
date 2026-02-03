@@ -47,6 +47,7 @@ export default function DppFrontendTabV2({
   const [isMobile, setIsMobile] = useState(false)
   const stylingRef = useRef(styling)
   const hasChangesRef = useRef(false)
+  const mobileScrollRef = useRef<HTMLDivElement>(null)
 
   // Update ref when styling changes
   useEffect(() => {
@@ -76,6 +77,24 @@ export default function DppFrontendTabV2({
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
+
+  // Vorschau immer oben starten (Hero-Bild): Mobile-Scroll-Container auf 0 + verzögerte Fallbacks
+  useEffect(() => {
+    if (!isMobile) return
+    const scrollToTop = () => {
+      mobileScrollRef.current?.scrollTo(0, 0)
+      window.scrollTo(0, 0)
+    }
+    scrollToTop()
+    const t0 = setTimeout(scrollToTop, 0)
+    const t1 = setTimeout(scrollToTop, 100)
+    const t2 = setTimeout(scrollToTop, 300)
+    return () => {
+      clearTimeout(t0)
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [isMobile])
 
   // Auto-Save: Save styling changes
   const performAutoSave = async () => {
@@ -196,22 +215,21 @@ export default function DppFrontendTabV2({
     )
   }
 
-  // Mobile: Stack vertically
+  // Mobile: Stack vertically, gesamter Tab scrollbar – Styling-Block in voller Höhe ohne Inline-Scroll
   if (isMobile) {
     return (
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        overflow: "hidden",
-        minHeight: 0
-      }}>
-        {/* Preview Section - Always visible */}
-        <div style={{
+      <div
+        ref={mobileScrollRef}
+        style={{
+          display: "flex",
+          flexDirection: "column",
           flex: 1,
-          overflow: "hidden",
-          minHeight: 0
-        }}>
+          minHeight: 0,
+          overflowY: "auto"
+        }}
+      >
+        {/* Preview Section */}
+        <div style={{ flex: "0 0 auto" }}>
           <div style={{
             padding: "1rem",
             borderBottom: "1px solid #E5E5E5",
@@ -233,28 +251,26 @@ export default function DppFrontendTabV2({
               So wird Ihr Digitaler Produktpass angezeigt
             </p>
           </div>
-          <DppFrontendPreview
-            dpp={dpp}
-            blocks={blocks}
-            styling={styling}
-          />
+          <div style={{ minHeight: "50vh" }}>
+            <DppFrontendPreview
+              dpp={dpp}
+              blocks={blocks}
+              styling={styling}
+            />
+          </div>
         </div>
 
-        {/* Styling Editor Section - Only for Premium, shown below preview on mobile */}
+        {/* Styling Editor – unter der Vorschau, vollständig sichtbar ohne Inline-Scroll */}
         {hasStyling && (
           <div style={{
-            maxHeight: "50vh",
-            overflowY: "auto",
+            flex: "0 0 auto",
             backgroundColor: "#FFFFFF",
             borderTop: "1px solid #E5E5E5"
           }}>
             <div style={{
               padding: "1rem",
               borderBottom: "1px solid #E5E5E5",
-              backgroundColor: "#F9F9F9",
-              position: "sticky",
-              top: 0,
-              zIndex: 10
+              backgroundColor: "#F9F9F9"
             }}>
               <h3 style={{
                 fontSize: "0.875rem",

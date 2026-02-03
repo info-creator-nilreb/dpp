@@ -184,21 +184,21 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
 
   function handleRemoveColor(colorType: "secondary" | "accent") {
     if (colorType === "secondary") {
-      setSecondaryColor("")
-      // Use current values from state
+      setSecondaryColor(DEFAULT_SECONDARY)
       onUpdate({
         colors: {
           primary: primaryColor || DEFAULT_PRIMARY,
+          secondary: DEFAULT_SECONDARY,
           ...(accentColor && { accent: accentColor })
         }
       })
     } else {
-      setAccentColor("")
-      // Use current values from state
+      setAccentColor(DEFAULT_ACCENT)
       onUpdate({
         colors: {
           primary: primaryColor || DEFAULT_PRIMARY,
-          ...(secondaryColor && { secondary: secondaryColor })
+          ...(secondaryColor && { secondary: secondaryColor }),
+          accent: DEFAULT_ACCENT
         }
       })
     }
@@ -471,6 +471,7 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
           </div>
           {secondaryColor && (
             <button
+              type="button"
               onClick={() => handleRemoveColor("secondary")}
               style={{
                 padding: "0.5rem",
@@ -573,6 +574,7 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
           </div>
           {accentColor && (
             <button
+              type="button"
               onClick={() => handleRemoveColor("accent")}
               style={{
                 padding: "0.5rem",

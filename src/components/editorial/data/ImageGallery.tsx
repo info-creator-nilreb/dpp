@@ -135,8 +135,8 @@ export default function ImageGallery({ images, alignment = 'center' }: ImageGall
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = editorialColors.brand.accent
-                e.currentTarget.style.color = editorialColors.brand.accent
+                e.currentTarget.style.borderColor = editorialColors.brand.accentVar
+                e.currentTarget.style.color = editorialColors.brand.accentVar
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = editorialColors.border.light
@@ -242,8 +242,8 @@ export default function ImageGallery({ images, alignment = 'center' }: ImageGall
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = editorialColors.brand.accent
-                e.currentTarget.style.color = editorialColors.brand.accent
+                e.currentTarget.style.borderColor = editorialColors.brand.accentVar
+                e.currentTarget.style.color = editorialColors.brand.accentVar
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = editorialColors.border.light

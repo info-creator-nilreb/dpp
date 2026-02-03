@@ -10,12 +10,14 @@ export const editorialColors = {
     primary: '#0A0A0A',      // Deep black for premium feel
     secondary: '#7A7A7A',    // Warm gray
     accent: '#24c598',       // Mint accent (Easy Pass brand)
+    accentVar: 'var(--editorial-accent, #24c598)', // Theme-Akzent aus Styling
   },
 
-  // Semantic colors
+  // Semantic colors (secondary/tertiary nutzen Theme-Variable, wenn Page styling übergibt)
   text: {
     primary: '#0A0A0A',      // Main text
-    secondary: '#7A7A7A',    // Supporting text
+    secondary: '#7A7A7A',    // Supporting text (Fallback)
+    secondaryVar: 'var(--editorial-text-secondary, #7A7A7A)', // Theme-Sekundärfarbe aus Styling
     tertiary: '#9A9A9A',     // Muted text
     inverse: '#FFFFFF',      // Text on dark backgrounds
   },

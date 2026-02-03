@@ -131,12 +131,12 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
               width: '1rem',
               height: '1rem',
               borderRadius: '50%',
-              backgroundColor: editorialColors.brand.accent,
+              backgroundColor: editorialColors.brand.accentVar,
               border: `2px solid ${editorialColors.background.primary}`,
             }} />
             <div style={{
               fontSize: '0.75rem',
-              color: editorialColors.text.secondary,
+              color: editorialColors.text.secondaryVar,
               marginBottom: '0.25rem',
             }}>
               {event.date || event.timestamp}
@@ -152,7 +152,7 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
             {event.description && (
               <div style={{
                 fontSize: '0.875rem',
-                color: editorialColors.text.secondary,
+                color: editorialColors.text.secondaryVar,
                 lineHeight: 1.6,
               }}>
                 {event.description}
@@ -204,14 +204,14 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: editorialColors.text.secondary,
+                color: editorialColors.text.secondaryVar,
                 transition: 'transform 0.2s ease',
                 transform: expandedIndex === index ? 'rotate(180deg)' : 'rotate(0deg)',
               }}>
                 {expandedIndex === index ? (
-                  <ChevronUpIcon size={16} color={editorialColors.text.secondary} />
+                  <ChevronUpIcon size={16} color={editorialColors.text.secondaryVar} />
                 ) : (
-                  <ChevronDownIcon size={16} color={editorialColors.text.secondary} />
+                  <ChevronDownIcon size={16} color={editorialColors.text.secondaryVar} />
                 )}
               </div>
             </button>
@@ -219,7 +219,7 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
               <div style={{
                 padding: `0 ${editorialSpacing.md} ${editorialSpacing.md}`,
                 fontSize: '0.875rem',
-                color: editorialColors.text.secondary,
+                color: editorialColors.text.secondaryVar,
                 lineHeight: 1.6,
               }}>
                 {item.answer || item.content}
@@ -291,9 +291,9 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
               onClick={() => setSelectedOption(option)}
               style={{
                 padding: editorialSpacing.md,
-                backgroundColor: selectedOption === option ? editorialColors.brand.accent : 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: selectedOption === option ? editorialColors.brand.accentVar : 'rgba(255, 255, 255, 0.1)',
                 color: selectedOption === option ? editorialColors.text.inverse : editorialColors.text.inverse,
-                border: `1px solid ${selectedOption === option ? editorialColors.brand.accent : 'rgba(255, 255, 255, 0.2)'}`,
+                border: `1px solid ${selectedOption === option ? editorialColors.brand.accentVar : 'rgba(255, 255, 255, 0.2)'}`,
                 borderRadius: '8px',
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -390,7 +390,7 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
             {image.caption && (
               <div style={{
                 fontSize: '0.875rem',
-                color: editorialColors.text.secondary,
+                color: editorialColors.text.secondaryVar,
                 fontStyle: 'italic',
                 textAlign: textAlign as any,
                 marginTop: editorialSpacing.xs,

@@ -196,7 +196,7 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            backgroundColor: editorialColors.brand.accent,
+            backgroundColor: editorialColors.brand.accentVar,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -267,9 +267,9 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
                 height: '8px',
                 borderRadius: '4px',
                 backgroundColor: index === currentQuestionIndex 
-                  ? editorialColors.brand.accent 
+                  ? editorialColors.brand.accentVar 
                   : index < currentQuestionIndex
-                    ? editorialColors.brand.accent
+                    ? editorialColors.brand.accentVar
                     : 'rgba(255, 255, 255, 0.3)',
                 transition: 'all 0.3s ease',
               }}
@@ -344,10 +344,10 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
                       style={{
                         padding: `${editorialSpacing.sm} ${editorialSpacing.md}`, // Kompakteres Padding
                         backgroundColor: isSelected 
-                          ? editorialColors.brand.accent 
+                          ? editorialColors.brand.accentVar 
                           : 'rgba(255, 255, 255, 0.1)',
                         color: editorialColors.text.inverse,
-                        border: `1px solid ${isSelected ? editorialColors.brand.accent : 'rgba(255, 255, 255, 0.2)'}`,
+                        border: `1px solid ${isSelected ? editorialColors.brand.accentVar : 'rgba(255, 255, 255, 0.2)'}`,
                         borderRadius: '8px',
                         cursor: isSubmitted ? 'not-allowed' : 'pointer',
                         textAlign: 'left',
@@ -397,7 +397,7 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
                           top: '-2.5rem',
                           left: '50%',
                           transform: 'translateX(-50%)',
-                          backgroundColor: editorialColors.brand.accent,
+                          backgroundColor: editorialColors.brand.accentVar,
                           color: editorialColors.text.inverse,
                           padding: '0.5rem 1rem',
                           borderRadius: '6px',
@@ -469,12 +469,12 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
           style={{
             padding: `${editorialSpacing.sm} ${editorialSpacing.md}`,
             backgroundColor: canGoNext && !isSubmitting
-              ? editorialColors.brand.accent
+              ? editorialColors.brand.accentVar
               : 'rgba(255, 255, 255, 0.1)',
             color: canGoNext && !isSubmitting
               ? editorialColors.text.inverse
               : 'rgba(255, 255, 255, 0.3)',
-            border: `1px solid ${canGoNext && !isSubmitting ? editorialColors.brand.accent : 'rgba(255, 255, 255, 0.1)'}`,
+            border: `1px solid ${canGoNext && !isSubmitting ? editorialColors.brand.accentVar : 'rgba(255, 255, 255, 0.1)'}`,
             borderRadius: '8px',
             cursor: canGoNext && !isSubmitting ? 'pointer' : 'not-allowed',
             fontSize: '0.875rem',

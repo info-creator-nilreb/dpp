@@ -188,7 +188,7 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
                     style={{
                       fontSize: '0.75rem',
                       fontWeight: 500,
-                      color: editorialColors.text.secondary,
+                      color: editorialColors.text.secondaryVar,
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                     }}
@@ -227,7 +227,7 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
               <div style={{
                 fontSize: '0.75rem',
                 fontWeight: 500,
-                color: editorialColors.text.secondary,
+                color: editorialColors.text.secondaryVar,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 marginBottom: editorialSpacing.sm,
@@ -284,7 +284,7 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
                 alignItems: 'center',
                 gap: editorialSpacing.sm,
                 padding: `${editorialSpacing.sm} 0`,
-                color: editorialColors.brand.accent,
+                color: editorialColors.brand.accentVar,
                 textDecoration: 'none',
                 fontSize: '0.875rem',
                 fontWeight: 500,

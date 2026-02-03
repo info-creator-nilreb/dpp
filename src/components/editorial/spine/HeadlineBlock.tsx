@@ -32,7 +32,7 @@ export default function HeadlineBlock({ text, brandName, versionInfo }: Headline
         <p
           style={{
             fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
-            color: editorialColors.text.secondary,
+            color: editorialColors.text.secondaryVar,
             fontWeight: 500,
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
@@ -58,7 +58,7 @@ export default function HeadlineBlock({ text, brandName, versionInfo }: Headline
       <p
         style={{
           fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-          color: editorialColors.text.secondary,
+          color: editorialColors.text.secondaryVar,
           fontWeight: 400,
           margin: 0,
         }}

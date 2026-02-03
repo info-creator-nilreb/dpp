@@ -7,7 +7,7 @@
  * Uses the new EditorialDppViewRedesign for consistency with public view
  */
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useLayoutEffect, useRef } from "react"
 import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRedesign"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { Block, StylingConfig } from "@/lib/cms/types"
@@ -96,6 +96,7 @@ export default function DppFrontendPreview({
   const [unifiedBlocks, setUnifiedBlocks] = useState<UnifiedContentBlock[]>([])
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const previewScrollRef = useRef<HTMLDivElement>(null)
 
   // Mount effect - only run once
   useEffect(() => {
@@ -142,6 +143,29 @@ export default function DppFrontendPreview({
       loadUnifiedBlocks()
     }
   }, [dpp?.id, blocks, mounted]) // Re-load when dpp or blocks change
+
+  // Immer am Hero-Bild starten: Scroll auf 0 wenn Vorschau geladen (verhindert Sprung zu Basisdaten / Browser-Scroll-Restoration)
+  const scrollPreviewToTop = () => {
+    previewScrollRef.current?.scrollTo(0, 0)
+    window.scrollTo(0, 0)
+  }
+  useLayoutEffect(() => {
+    if (isLoading || error) return
+    scrollPreviewToTop()
+    const t0 = setTimeout(scrollPreviewToTop, 0)
+    const t1 = requestAnimationFrame(() => {
+      scrollPreviewToTop()
+      requestAnimationFrame(scrollPreviewToTop)
+    })
+    const t2 = setTimeout(scrollPreviewToTop, 100)
+    const t3 = setTimeout(scrollPreviewToTop, 300)
+    return () => {
+      clearTimeout(t0)
+      clearTimeout(t2)
+      clearTimeout(t3)
+      cancelAnimationFrame(t1)
+    }
+  }, [isLoading, error, unifiedBlocks.length])
 
   if (!mounted || !dpp) {
     return (
@@ -229,11 +253,14 @@ export default function DppFrontendPreview({
   const organizationLogoUrl = styling?.logo?.url || undefined
 
   return (
-    <div style={{
-      flex: 1,
-      overflowY: "auto",
-      backgroundColor: "#FFFFFF"
-    }}>
+    <div
+      ref={previewScrollRef}
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        backgroundColor: "#FFFFFF"
+      }}
+    >
       {/* Preview Container - uses new EditorialDppViewRedesign */}
       <EditorialDppViewRedesign
         blocks={unifiedBlocks}
@@ -244,6 +271,7 @@ export default function DppFrontendPreview({
         organizationName={organizationName}
         organizationLogoUrl={organizationLogoUrl}
         heroImageUrl={heroImage}
+        styling={styling}
         versionInfo={dpp.versions?.[0] ? {
           version: dpp.versions[0].version,
           createdAt: new Date(dpp.versions[0].createdAt)
