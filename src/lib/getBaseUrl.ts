@@ -16,7 +16,10 @@ export function getBaseUrl(): string {
   }
 
   // Vercel Preview / Production Fallback
-  // Wird automatisch von Vercel gesetzt (z.B. "dpp-kappa.vercel.app" oder "dpp-kappa-git-main.vercel.app")
+  // Alte Vercel-Domain auf Produktions-Domain mappen (URLs/QR-Codes zeigen easyproductpass.com)
+  if (process.env.VERCEL_URL === "dpp-kappa.vercel.app") {
+    return "https://easyproductpass.com"
+  }
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`
   }

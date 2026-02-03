@@ -14,10 +14,10 @@ export function getPublicUrl(publicPathOrUrl: string | null | undefined): string
     return null
   }
 
-  // Wenn bereits absolute URL (beginnt mit http:// oder https://), direkt verwenden
-  // Dies unterstützt bestehende Einträge in der DB (Backward-Kompatibilität)
+  // Wenn bereits absolute URL: Domain für Anzeige/QR auf easyproductpass.com normalisieren
   if (publicPathOrUrl.startsWith("http://") || publicPathOrUrl.startsWith("https://")) {
-    return publicPathOrUrl
+    const url = publicPathOrUrl.replace(/https?:\/\/dpp-kappa\.vercel\.app(\/|$)/gi, "https://easyproductpass.com$1")
+    return url
   }
 
   // Relativer Pfad: Generiere absolute URL mit getBaseUrl()

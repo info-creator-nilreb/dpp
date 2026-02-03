@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import DppViewer from "@/components/DppViewer"
 import VersionQrCodeSection from "@/components/VersionQrCodeSection"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 
@@ -249,36 +248,13 @@ export default function VersionViewContent({ id, versionNumber }: VersionViewCon
         Veröffentlicht am {formatDate(new Date(version.createdAt))} von {version.createdBy.name || version.createdBy.email}
       </p>
 
-      {/* Public URL & QR-Code */}
+      {/* Öffentlicher Zugriff: URL, QR-Code, Download, Public-View-Button (Pflichtdaten-Vorschau entfällt – gibt es im Editor) */}
       <VersionQrCodeSection
         publicUrl={version.publicUrl}
         qrCodeImageUrl={version.qrCodeImageUrl}
         dppId={id}
         version={version.version}
       />
-
-      <DppViewer version={{
-        id: version.id,
-        version: version.version,
-        name: version.name,
-        description: version.description,
-        category: version.category,
-        sku: version.sku,
-        gtin: version.gtin,
-        brand: version.brand,
-        countryOfOrigin: version.countryOfOrigin,
-        materials: version.materials,
-        materialSource: version.materialSource,
-        careInstructions: version.careInstructions,
-        isRepairable: version.isRepairable,
-        sparePartsAvailable: version.sparePartsAvailable,
-        lifespan: version.lifespan,
-        conformityDeclaration: version.conformityDeclaration,
-        disposalInfo: version.disposalInfo,
-        takebackOffered: version.takebackOffered,
-        takebackContact: version.takebackContact,
-        secondLifeInfo: version.secondLifeInfo
-      }} />
     </div>
   )
 }
