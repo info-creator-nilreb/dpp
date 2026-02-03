@@ -2118,13 +2118,10 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  configs: {
-                    [blockId]: {
-                      enabled,
-                      mode: mode || "input",
-                      allowedRoles: []
-                    }
-                  }
+                  blockId,
+                  enabled,
+                  mode: mode || "input",
+                  allowedRoles: []
                 })
               })
 

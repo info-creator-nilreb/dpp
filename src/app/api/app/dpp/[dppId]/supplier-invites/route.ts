@@ -107,11 +107,15 @@ export async function POST(
     if (!mode || (mode !== "contribute" && mode !== "review")) {
       return NextResponse.json({ error: "Modus muss 'contribute' oder 'review' sein" }, { status: 400 })
     }
-    const blockIds = Array.isArray(selectedBlocks) ? selectedBlocks : []
-    const fieldInstances = Array.isArray(selectedFieldInstances) ? selectedFieldInstances : []
-    if (blockIds.length === 0 && fieldInstances.length === 0) {
+    const blockIdsRaw = Array.isArray(selectedBlocks) ? selectedBlocks : []
+    const fieldInstancesRaw = Array.isArray(selectedFieldInstances) ? selectedFieldInstances : []
+    if (blockIdsRaw.length === 0 && fieldInstancesRaw.length === 0) {
       return NextResponse.json({ error: "Mindestens ein Block oder Feld muss ausgewählt sein" }, { status: 400 })
     }
+
+    // Prisma Json-Felder: sauber serialisierbare Arrays übergeben (vermeidet Prisma-Fehler)
+    const blockIds = JSON.parse(JSON.stringify(blockIdsRaw)) as string[]
+    const fieldInstances = JSON.parse(JSON.stringify(fieldInstancesRaw)) as unknown[]
 
     const dpp = await prisma.dpp.findUnique({
       where: { id: resolvedParams.dppId },
@@ -134,7 +138,7 @@ export async function POST(
         email: String(email).trim().toLowerCase(),
         name: name ? String(name).trim() : null,
         company: company ? String(company).trim() : null,
-        message: message ? String(message).trim() : null,
+        message: message ? String(message).trim() || null : null,
         partnerRole: String(role).trim(),
         blockIds,
         fieldInstances,
@@ -142,7 +146,6 @@ export async function POST(
         status: "pending",
         token,
         expiresAt,
-        emailSentAt: sendEmail ? undefined : undefined,
       },
     })
 
@@ -177,10 +180,14 @@ export async function POST(
       emailSentAt: invite.emailSentAt ? invite.emailSentAt.toISOString() : null,
     }
     return NextResponse.json({ invite: out })
-  } catch (error: any) {
-    console.error("Error creating supplier invite:", error)
+  } catch (error: unknown) {
+    const prismaError = error as { message?: string; code?: string; meta?: unknown }
+    console.error("Error creating supplier invite:", prismaError?.message, prismaError?.code, prismaError?.meta)
+    const message =
+      prismaError?.message ||
+      (typeof error === "string" ? error : "Ein Fehler ist aufgetreten")
     return NextResponse.json(
-      { error: error?.message || "Ein Fehler ist aufgetreten" },
+      { error: message },
       { status: 500 }
     )
   }
