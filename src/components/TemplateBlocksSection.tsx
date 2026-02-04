@@ -146,7 +146,8 @@ interface TemplateBlocksSectionProps {
     mode: "input" | "declaration" | null
     allowedRoles?: string[]
   }> // Supplier-Configs pro Block (von DPP)
-  // ENTFERNT: onSupplierConfigUpdate - wird jetzt über globales Modal gehandhabt
+  /** Wenn false, wird die Zuweisung im Block-Header nicht angezeigt (konfigurierbar unter /super-admin/pricing) */
+  supplierInvitationEnabled?: boolean
   fieldInstances?: Record<string, Array<{
     instanceId: string
     values: Record<string, string | string[]>
@@ -181,6 +182,7 @@ export default function TemplateBlocksSection({
   media,
   onMediaChange,
   blockSupplierConfigs = {},
+  supplierInvitationEnabled = true,
   fieldInstances = {},
   onFieldInstancesChange,
   fieldValues = {},
@@ -385,8 +387,8 @@ export default function TemplateBlocksSection({
                 }}>
                   {block.name}
                 </span>
-                {/* Block-Ebene: Connection-Icon (immer sichtbar) */}
-                {!isFirstBlock && onSupplierConfigUpdate && (
+                {/* Block-Ebene: Zuweisung nur wenn supplier_invitation unter /super-admin/pricing aktiviert */}
+                {!isFirstBlock && supplierInvitationEnabled && onSupplierConfigUpdate && (
                   <>
                     {isSupplierEnabled ? (
                       // Zustand B: Verantwortung zugewiesen - Klick entfernt die Verantwortung (span statt button, da innerhalb Accordion-Button)

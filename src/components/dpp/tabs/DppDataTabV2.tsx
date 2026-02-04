@@ -13,6 +13,7 @@ interface DppDataTabV2Props {
   dpp: any
   isNew?: boolean
   availableCategories?: Array<{ categoryKey: string; label: string }>
+  availableFeatures?: string[]
   onSave?: () => Promise<void>
   onPublish?: () => Promise<void>
   onStatusChange?: (status: "idle" | "saving" | "saved" | "publishing" | "error") => void
@@ -25,6 +26,7 @@ export default function DppDataTabV2({
   dpp,
   isNew = false,
   availableCategories,
+  availableFeatures,
   onSave,
   onPublish,
   onStatusChange,
@@ -53,6 +55,7 @@ export default function DppDataTabV2({
           dpp={dpp}
           isNew={isNew}
           availableCategories={availableCategories}
+          availableFeatures={availableFeatures}
           onSave={onSave}
           onPublish={onPublish}
           onDppUpdate={onDppUpdate}

@@ -72,6 +72,8 @@ interface DppEditorPflichtdatenProps {
   isNew?: boolean
   onUnsavedChangesChange?: (hasChanges: boolean) => void
   availableCategories?: Array<{ categoryKey: string; label: string }>
+  /** Features aus /api/app/capabilities/check (konfigurierbar unter /super-admin/pricing) */
+  availableFeatures?: string[]
   /** Wenn gesetzt (z. B. im Tab): Save/Publish über Parent, kein StickySaveBar */
   onSave?: () => Promise<void>
   onPublish?: () => Promise<void>
@@ -170,9 +172,12 @@ function AccordionSection({
  * 4. Rechtliches & Konformität (einklappbar)
  * 5. Rücknahme & Second Life (einklappbar)
  */
-export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, onUnsavedChangesChange, availableCategories: propCategories, onSave: externalOnSave, onPublish: externalOnPublish, onDppUpdate }: DppEditorPflichtdatenProps) {
+export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, onUnsavedChangesChange, availableCategories: propCategories, availableFeatures = [], onSave: externalOnSave, onPublish: externalOnPublish, onDppUpdate }: DppEditorPflichtdatenProps) {
   const router = useRouter()
   const { showNotification } = useNotification()
+
+  /** Lieferanten-Zuweisung im Block-Header nur anzeigen, wenn unter /super-admin/pricing aktiviert */
+  const hasSupplierInvitation = availableFeatures.includes("supplier_invitation")
   
   // Debug: Log initialDpp beim ersten Render
   console.log("[DppEditor] Component mounted with initialDpp:", {
@@ -1822,8 +1827,8 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
           )}
         </div>
 
-      {/* Globaler Lieferanten-Button */}
-      {template && !templateLoading && (
+      {/* Globaler Button „Zuständigkeiten verwalten“ – nur wenn supplier_invitation für Tarif aktiviert */}
+      {template && !templateLoading && hasSupplierInvitation && (
         <SupplierInviteButton
           onClick={handleSupplierInviteClick}
           supplierEnabledBlocksCount={template.blocks.filter(
@@ -2010,6 +2015,7 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
             media={pflichtdatenMedia}
             onMediaChange={refreshMedia}
             blockSupplierConfigs={blockSupplierConfigs}
+            supplierInvitationEnabled={hasSupplierInvitation}
             fieldInstances={fieldInstances}
             onFieldInstancesChange={(fieldKey, instances) => {
               setFieldInstances(prev => ({

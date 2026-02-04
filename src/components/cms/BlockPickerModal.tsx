@@ -128,13 +128,11 @@ export default function BlockPickerModal({
   onSelectBlock,
   onClose
 }: BlockPickerModalProps) {
-  // Get available block types
-  // Bei leerem availableFeatures alle Blöcke anzeigen (Fail-open in Produktion/Trial), sonst nach Features filtern
+  // Get available block types – nur anzeigen wenn Feature für Tarif aktiviert (kein Fail-Open)
   const availableBlockTypes = (Object.keys(BLOCK_TYPE_FEATURE_MAP) as BlockTypeKey[]).filter(type => {
     if (type === "template_block") return false
-    if (availableFeatures.length === 0) return true
     const featureKey = BLOCK_TYPE_FEATURE_MAP[type]
-    return availableFeatures.includes(featureKey)
+    return featureKey ? availableFeatures.includes(featureKey) : false
   })
   
   // Debug: Log available features and block types (only in development)
