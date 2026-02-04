@@ -168,9 +168,7 @@ export async function getAvailableFeatures(
               },
             },
           },
-          trialFeatureOverrides: {
-            where: { enabled: true },
-          },
+          trialFeatureOverrides: true,
         },
       },
     },
@@ -291,6 +289,13 @@ export async function getAvailableFeatures(
         availableFeatures.push(freeFeature.key)
       }
     }
+  }
+
+  // Content-Block-Features sind nur verfügbar, wenn der Mehrwert-Tab aktiviert ist
+  const hasContentTab = availableFeatures.includes("content_tab")
+  if (!hasContentTab) {
+    const filtered = availableFeatures.filter((key) => !key.startsWith("block_"))
+    return filtered
   }
 
   return availableFeatures

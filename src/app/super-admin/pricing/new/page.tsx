@@ -9,6 +9,7 @@ import { getSuperAdminSession } from "@/lib/super-admin-auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
+import { getFeatureDefinition } from "@/features/feature-manifest"
 import NewPricingPlanContent from "./NewPricingPlanContent"
 import { getAllEntitlementDefinitions } from "@/lib/pricing/entitlement-definitions"
 
@@ -21,8 +22,8 @@ export default async function NewPricingPlanPage() {
     redirect("/super-admin/login")
   }
 
-  // Load all available features from Feature Registry (read-only)
-  const availableFeatures = await prisma.featureRegistry.findMany({
+  // Load all available features from Feature Registry (read-only); nur billable Features
+  const allFeatures = await prisma.featureRegistry.findMany({
     where: {
       enabled: true
     },
@@ -37,6 +38,9 @@ export default async function NewPricingPlanPage() {
       category: true
     }
   })
+  const availableFeatures = allFeatures.filter(
+    (f) => getFeatureDefinition(f.key)?.isBillable !== false
+  )
 
   // Use predefined entitlement definitions instead of database entries
   // These are the system-wide limit types that can be configured

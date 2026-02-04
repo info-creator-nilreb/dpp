@@ -99,15 +99,25 @@ export default function DppEditorTabs({
     }
   }
 
-  // Check capabilities
-  const hasCmsAccess = availableFeatures.length === 0 || availableFeatures.includes("cms_access") || availableFeatures.includes("block_storytelling") || availableFeatures.includes("block_image_text")
-  // Styling: bei leerem Capabilities-Ergebnis anzeigen (Fail-open in Produktion/Trial), sonst cms_styling oder advanced_styling
+  // Check capabilities – nur anzeigen wenn für Tarif aktiviert (kein Fail-Open)
+  const hasContentTab = availableFeatures.includes("content_tab")
+  const hasCmsAccess =
+    hasContentTab ||
+    availableFeatures.includes("cms_access") ||
+    availableFeatures.some((k) => k.startsWith("block_"))
   const hasStyling =
-    availableFeatures.length === 0 ||
     availableFeatures.includes("cms_styling") ||
     availableFeatures.includes("advanced_styling")
 
   const isNewDpp = dpp?.id === "new" || !dpp?.id
+
+  // Wenn Mehrwert-Tab deaktiviert ist, nicht auf „content“ bleiben
+  useEffect(() => {
+    if (!hasContentTab && activeTab === "content") {
+      setActiveTab("data")
+    }
+  }, [hasContentTab, activeTab])
+
   const tabs = [
     {
       id: "data" as TabId,
@@ -115,12 +125,14 @@ export default function DppEditorTabs({
       enabled: true,
       icon: null
     },
-    {
-      id: "content" as TabId,
-      label: "Mehrwert",
-      enabled: hasCmsAccess && !isNewDpp,
-      icon: null
-    },
+    ...(hasContentTab
+      ? [{
+          id: "content" as TabId,
+          label: "Mehrwert",
+          enabled: hasCmsAccess && !isNewDpp,
+          icon: null
+        }]
+      : []),
     {
       id: "frontend" as TabId,
       label: "Vorschau",
@@ -202,6 +214,7 @@ export default function DppEditorTabs({
             dpp={dpp}
             isNew={isNewDpp}
             availableCategories={availableCategories}
+            availableFeatures={availableFeatures}
             onSave={onSave}
             onPublish={onPublish}
             onStatusChange={onStatusChange}

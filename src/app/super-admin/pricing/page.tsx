@@ -9,6 +9,7 @@ import { getSuperAdminSession } from "@/lib/super-admin-auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
+import { getFeatureDefinition } from "@/features/feature-manifest"
 import PricingManagementContent from "./PricingManagementContent"
 
 export const dynamic = "force-dynamic"
@@ -67,8 +68,8 @@ export default async function SuperAdminPricingPage() {
     }
   })
 
-  // Load all available features from Feature Registry (read-only)
-  const availableFeatures = await prisma.featureRegistry.findMany({
+  // Load all available features from Feature Registry (read-only); nur billable Features in Tarif-Übersicht
+  const allFeatures = await prisma.featureRegistry.findMany({
     where: {
       enabled: true
     },
@@ -83,6 +84,9 @@ export default async function SuperAdminPricingPage() {
       category: true
     }
   })
+  const availableFeatures = allFeatures.filter(
+    (f) => getFeatureDefinition(f.key)?.isBillable !== false
+  )
 
   // Load all entitlements (exclude deprecated max_dpp)
   const entitlements = await prisma.entitlement.findMany({

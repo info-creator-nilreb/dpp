@@ -538,6 +538,20 @@ export default function PricingPlanEditor({
             }}>
               Wählen Sie Features aus dem Feature Registry aus (read-only)
             </p>
+            {formData.selectedFeatures.some((k) => k.startsWith("block_")) &&
+             !formData.selectedFeatures.includes("content_tab") && (
+              <div style={{
+                padding: "0.75rem 1rem",
+                marginBottom: "1rem",
+                backgroundColor: "#FEF3C7",
+                border: "1px solid #F59E0B",
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                color: "#92400E"
+              }}>
+                Content-Blöcke (z. B. Text, Bild, Akkordeon, Timeline) sind nur nutzbar, wenn der <strong>Mehrwert-Tab</strong> aktiviert ist. Bitte aktivieren Sie den Mehrwert-Tab, damit die gewählten Blöcke für Nutzer sichtbar sind.
+              </div>
+            )}
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",

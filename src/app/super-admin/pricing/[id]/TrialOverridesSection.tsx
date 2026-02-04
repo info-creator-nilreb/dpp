@@ -238,15 +238,7 @@ export default function TrialOverridesSection({
                     type="checkbox"
                     checked={override ? override.enabled : false}
                     onChange={(e) => {
-                      if (override) {
-                        if (e.target.checked) {
-                          handleFeatureToggle(feature.key, true)
-                        } else {
-                          handleRemoveFeatureOverride(feature.key)
-                        }
-                      } else {
-                        handleFeatureToggle(feature.key, e.target.checked)
-                      }
+                      handleFeatureToggle(feature.key, e.target.checked)
                     }}
                     disabled={loading}
                   />
@@ -257,6 +249,11 @@ export default function TrialOverridesSection({
                     {feature.description && (
                       <div style={{ fontSize: "0.75rem", color: "#7A7A7A", marginTop: "0.25rem" }}>
                         {getFeatureDescription(feature.key, feature.description)}
+                      </div>
+                    )}
+                    {feature.key.startsWith("block_") && (
+                      <div style={{ fontSize: "0.7rem", color: "#6B7280", marginTop: "0.35rem" }}>
+                        Nur nutzbar, wenn der Mehrwert-Tab im Tarif aktiviert ist.
                       </div>
                     )}
                   </div>

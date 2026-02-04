@@ -24,14 +24,14 @@ export interface ValidationResult {
  */
 export const BLOCK_TYPE_FEATURE_MAP: Record<BlockTypeKey, string> = {
   storytelling: "block_storytelling",
-  multi_question_poll: "block_quick_poll", // TODO: Migrate to interaction_blocks after feature migration
+  multi_question_poll: "block_quick_poll",
   image_text: "block_image_text",
-  text: "cms_access", // Basic text blocks are always available
-  image: "cms_access",
-  video: "cms_access",
-  accordion: "cms_access",
-  timeline: "cms_access",
-  template_block: "cms_access" // Legacy block type from template system - treat as basic CMS block
+  text: "block_text",
+  image: "block_image",
+  video: "block_video",
+  accordion: "block_accordion",
+  timeline: "block_timeline",
+  template_block: "cms_access" // Legacy block type from template system
 }
 
 /**
