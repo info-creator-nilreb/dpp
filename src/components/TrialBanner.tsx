@@ -5,9 +5,11 @@ import Link from "next/link"
 interface TrialBannerProps {
   organizationId: string
   trialEndDate: string
+  /** Wenn true, kein unterer Abstand (z. B. wenn direkt ein Hinweis folgt) */
+  noBottomMargin?: boolean
 }
 
-function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
+function TrialBanner({ organizationId, trialEndDate, noBottomMargin }: TrialBannerProps) {
   // Calculate days remaining
   const now = new Date()
   const expiresAt = new Date(trialEndDate)
@@ -24,7 +26,7 @@ function TrialBanner({ organizationId, trialEndDate }: TrialBannerProps) {
       alignItems: "center",
       flexWrap: "wrap",
       gap: "1rem",
-      marginBottom: "24px"
+      marginBottom: noBottomMargin ? 0 : "24px"
     }}>
       <div style={{ flex: 1, minWidth: "200px" }}>
         <div style={{

@@ -11,6 +11,8 @@ import DppEditorPflichtdaten from "@/components/DppEditorPflichtdaten"
 
 interface DppDataTabV2Props {
   dpp: any
+  isNew?: boolean
+  availableCategories?: Array<{ categoryKey: string; label: string }>
   onSave?: () => Promise<void>
   onPublish?: () => Promise<void>
   onStatusChange?: (status: "idle" | "saving" | "saved" | "publishing" | "error") => void
@@ -21,6 +23,8 @@ interface DppDataTabV2Props {
 
 export default function DppDataTabV2({
   dpp,
+  isNew = false,
+  availableCategories,
   onSave,
   onPublish,
   onStatusChange,
@@ -47,7 +51,8 @@ export default function DppDataTabV2({
       >
         <DppEditorPflichtdaten
           dpp={dpp}
-          isNew={false}
+          isNew={isNew}
+          availableCategories={availableCategories}
           onSave={onSave}
           onPublish={onPublish}
           onDppUpdate={onDppUpdate}

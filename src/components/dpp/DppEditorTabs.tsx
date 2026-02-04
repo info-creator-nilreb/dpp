@@ -21,6 +21,7 @@ interface DppEditorTabsProps {
   organizationId: string
   userId: string
   availableFeatures: string[]
+  availableCategories?: Array<{ categoryKey: string; label: string }>
   onSave?: () => Promise<void>
   onPublish?: () => Promise<void>
   onStatusChange?: (status: "idle" | "saving" | "saved" | "publishing" | "error") => void
@@ -36,6 +37,7 @@ export default function DppEditorTabs({
   organizationId,
   userId,
   availableFeatures,
+  availableCategories,
   onSave,
   onPublish,
   onStatusChange,
@@ -105,6 +107,7 @@ export default function DppEditorTabs({
     availableFeatures.includes("cms_styling") ||
     availableFeatures.includes("advanced_styling")
 
+  const isNewDpp = dpp?.id === "new" || !dpp?.id
   const tabs = [
     {
       id: "data" as TabId,
@@ -115,13 +118,13 @@ export default function DppEditorTabs({
     {
       id: "content" as TabId,
       label: "Mehrwert",
-      enabled: hasCmsAccess,
+      enabled: hasCmsAccess && !isNewDpp,
       icon: null
     },
     {
       id: "frontend" as TabId,
       label: "Vorschau",
-      enabled: true, // Preview is available for all
+      enabled: !isNewDpp,
       icon: null
     }
   ]
@@ -197,6 +200,8 @@ export default function DppEditorTabs({
         {activeTab === "data" && (
           <DppDataTabV2 
             dpp={dpp}
+            isNew={isNewDpp}
+            availableCategories={availableCategories}
             onSave={onSave}
             onPublish={onPublish}
             onStatusChange={onStatusChange}
@@ -206,7 +211,7 @@ export default function DppEditorTabs({
           />
         )}
         
-        {activeTab === "content" && dpp?.id && (
+        {activeTab === "content" && dpp?.id && dpp.id !== "new" && (
           <DppContentTabV2
             dppId={dpp.id}
             organizationId={organizationId}
@@ -221,7 +226,7 @@ export default function DppEditorTabs({
           />
         )}
         
-        {activeTab === "frontend" && dpp?.id && (
+        {activeTab === "frontend" && dpp?.id && dpp.id !== "new" && (
           <DppFrontendTabV2
             dpp={dpp}
             dppId={dpp.id}

@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import DppEditorTabs from "@/components/dpp/DppEditorTabs"
-import { LoadingSpinner } from "@/components/LoadingSpinner"
 import EditorHeader from "@/components/dpp/EditorHeader"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface DppEditorContentProps {
   id: string
@@ -144,7 +144,7 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
         setLoading(false)
       }
     }
-    
+
     if (id) {
       loadDpp()
     } else {
@@ -348,13 +348,13 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
         onRetrySave={saveStatus === "error" ? handleSave : undefined}
       />
 
-      {/* Breadcrumb Navigation - positioned below header */}
+      {/* Breadcrumb: weniger Abstand wenn kein Trial-Banner im Header (subscriptionCanPublish) */}
       <div style={{
         marginBottom: "1rem",
         padding: "0 1.5rem",
-        paddingTop: "1.5rem",
+        paddingTop: subscriptionCanPublish ? "16px" : "1.5rem",
         flexShrink: 0,
-        marginTop: "20px" // Space for fixed header (reduced for better spacing)
+        marginTop: subscriptionCanPublish ? "16px" : "20px",
       }}>
         <Link
           href="/app/dpps"

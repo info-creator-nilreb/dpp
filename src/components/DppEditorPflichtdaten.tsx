@@ -627,11 +627,6 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
         label: cat.label
       }))
       setAvailableCategories(categoryOptions)
-      // Setze erste verfügbare Kategorie als Standard für neue DPPs, wenn noch keine gesetzt ist
-      if (isNew && (!category || category === "") && categoryOptions.length > 0) {
-        setCategory(categoryOptions[0].value)
-        setPreviousCategory(categoryOptions[0].value)
-      }
       return
     }
 
@@ -646,11 +641,6 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
             label: cat.label
           }))
           setAvailableCategories(categoryOptions)
-          // Setze erste verfügbare Kategorie als Standard für neue DPPs, wenn noch keine gesetzt ist
-          if (isNew && (!category || category === "") && categoryOptions.length > 0) {
-            setCategory(categoryOptions[0].value)
-            setPreviousCategory(categoryOptions[0].value)
-          }
         } else {
           // Kein Fallback mehr - wenn keine Kategorien geladen werden können, bleibt die Liste leer
           setAvailableCategories([])
@@ -1746,7 +1736,7 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
               dpp.status === "PUBLISHED" || // ESPR: Unveränderbar nach Veröffentlichung
               (!isNew && availableCategories.length === 0)
             }
-            options={availableCategories}
+            options={isNew ? [{ value: "", label: "Bitte auswählen" }, ...availableCategories] : availableCategories}
           />
           {dpp.status === "PUBLISHED" && (
             <p style={{
