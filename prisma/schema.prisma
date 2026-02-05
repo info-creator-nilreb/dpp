@@ -844,16 +844,23 @@ model JoinRequest {
   @@map("join_requests")
 }
 
-// Notification: To-Do notifications for users
+// Notification: User notifications with deep linking (event types in lib/notifications)
 model Notification {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          String // join_request | invitation_accepted | subscription_warning | etc.
-  referenceType String? // e.g., "join_request", "invitation", "subscription"
-  referenceId   String? // ID of the referenced entity
-  read          Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            String // event key from NOTIFICATION_EVENT_KEYS
+  referenceType   String?   // legacy / e.g. "join_request", "invitation"
+  referenceId     String?   // legacy entity id
+  read            Boolean   @default(false)
+  readAt          DateTime? // set when marked as read (audit-friendly)
+  createdAt       DateTime  @default(now())
+  message         String?   // optional override for default template
+  targetRoute     String?   // primary deep link e.g. /app/dpps/123
+  targetEntityId  String?   // DPP id, org id, invitation id, etc.
+  targetTab       String?   // optional tab/section
+  organisationId  String?
+  actorRole       String?   // supplier | editor | owner | admin | system
 
   @@index([userId])
   @@index([userId, read])

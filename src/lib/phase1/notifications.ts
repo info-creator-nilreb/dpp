@@ -1,10 +1,16 @@
 /**
  * Phase 1: Notification-System
- * 
- * To-Do-Hinweise für User
+ *
+ * To-Do-Hinweise für User. Erweiterbar um Payload (targetRoute, actorRole, etc.)
+ * Event-Typen und Defaults: @/lib/notifications/event-types
  */
 
 import { prisma } from "@/lib/prisma"
+import {
+  getNotificationMessage,
+  getNotificationTargetRoute,
+  type NotificationEventPayload,
+} from "@/lib/notifications/event-types"
 
 export type NotificationType =
   | "join_request"
@@ -14,9 +20,10 @@ export type NotificationType =
   | "user_removed"
   | "organization_updated"
   | "supplier_data_submitted"
+  | string
 
 /**
- * Erstellt eine Notification
+ * Erstellt eine Notification (legacy: nur type + reference).
  */
 export async function createNotification(
   userId: string,
@@ -31,6 +38,40 @@ export async function createNotification(
       referenceType,
       referenceId,
       read: false,
+      message: getNotificationMessage(type, null),
+      targetRoute: getNotificationTargetRoute(type, null),
+    },
+  })
+
+  return { notificationId: notification.id }
+}
+
+/**
+ * Erstellt eine Notification mit vollem Payload (Deep-Link, Actor, Organisation).
+ */
+export async function createNotificationWithPayload(
+  userId: string,
+  type: string,
+  payload?: NotificationEventPayload | null,
+  referenceType?: string,
+  referenceId?: string
+): Promise<{ notificationId: string }> {
+  const message = payload?.messageOverride ?? getNotificationMessage(type, null)
+  const targetRoute = getNotificationTargetRoute(type, payload ?? undefined)
+
+  const notification = await prisma.notification.create({
+    data: {
+      userId,
+      type,
+      referenceType,
+      referenceId,
+      read: false,
+      message,
+      targetRoute,
+      targetEntityId: payload?.targetEntityId ?? null,
+      targetTab: payload?.targetTab ?? null,
+      organisationId: payload?.organisationId ?? null,
+      actorRole: payload?.actorRole ?? null,
     },
   })
 
@@ -100,12 +141,12 @@ export async function countUnreadNotifications(userId: string): Promise<number> 
 }
 
 /**
- * Markiert Notification als gelesen
+ * Markiert Notification als gelesen (setzt readAt für Audit).
  */
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
   await prisma.notification.update({
     where: { id: notificationId },
-    data: { read: true },
+    data: { read: true, readAt: new Date() },
   })
 }
 

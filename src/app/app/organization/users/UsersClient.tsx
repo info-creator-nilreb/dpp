@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
+import ConfirmDialog from "@/components/ConfirmDialog"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { getRoleLabel, PHASE1_ROLES, ROLE_LABELS } from "@/lib/phase1/roles"
 
@@ -52,6 +53,9 @@ export default function UsersClient() {
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRole, setInviteRole] = useState("VIEWER")
   const [inviting, setInviting] = useState(false)
+
+  const [confirmDeleteInvitationId, setConfirmDeleteInvitationId] = useState<string | null>(null)
+  const [confirmRemoveUserId, setConfirmRemoveUserId] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -168,11 +172,7 @@ export default function UsersClient() {
     }
   }
 
-  async function handleDeleteInvitation(invitationId: string) {
-    if (!confirm("Möchten Sie diese Einladung wirklich löschen?")) {
-      return
-    }
-
+  async function doDeleteInvitation(invitationId: string) {
     try {
       const response = await fetch(`/api/app/organization/invitations/${invitationId}`, {
         method: "DELETE",
@@ -184,10 +184,12 @@ export default function UsersClient() {
       }
 
       setSuccess("Einladung gelöscht")
+      setConfirmDeleteInvitationId(null)
       await loadData()
       setTimeout(() => setSuccess(""), 3000)
     } catch (err: any) {
       setError(err.message || "Fehler beim Löschen der Einladung")
+      setConfirmDeleteInvitationId(null)
     }
   }
 
@@ -214,11 +216,7 @@ export default function UsersClient() {
     }
   }
 
-  async function handleRemoveUser(userId: string) {
-    if (!confirm("Möchten Sie diesen Benutzer wirklich aus der Organisation entfernen?")) {
-      return
-    }
-
+  async function doRemoveUser(userId: string) {
     try {
       const response = await fetch(`/api/app/organization/users/${userId}`, {
         method: "DELETE",
@@ -230,10 +228,12 @@ export default function UsersClient() {
       }
 
       setSuccess("Benutzer erfolgreich entfernt")
+      setConfirmRemoveUserId(null)
       await loadData()
       setTimeout(() => setSuccess(""), 3000)
     } catch (err: any) {
       setError(err.message || "Fehler beim Entfernen des Benutzers")
+      setConfirmRemoveUserId(null)
     }
   }
 
@@ -425,7 +425,7 @@ export default function UsersClient() {
                       </div>
                       {!user.isCurrentUser && (
                         <button
-                          onClick={() => handleRemoveUser(user.id)}
+                          onClick={() => setConfirmRemoveUserId(user.id)}
                           style={{
                             padding: "0.5rem 1rem",
                             backgroundColor: "transparent",
@@ -578,7 +578,7 @@ export default function UsersClient() {
                         {invitation.status === "pending" && (
                           <button
                             type="button"
-                            onClick={() => handleDeleteInvitation(invitation.id)}
+                            onClick={() => setConfirmDeleteInvitationId(invitation.id)}
                             title="Löschen"
                             style={{
                               padding: "0.5rem",
@@ -691,6 +691,30 @@ export default function UsersClient() {
           )}
         </>
       )}
+
+      {/* Bestätigung: Einladung löschen */}
+      <ConfirmDialog
+        isOpen={confirmDeleteInvitationId !== null}
+        title="Einladung löschen"
+        message="Möchten Sie diese Einladung wirklich löschen?"
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="danger"
+        onConfirm={() => confirmDeleteInvitationId && doDeleteInvitation(confirmDeleteInvitationId)}
+        onCancel={() => setConfirmDeleteInvitationId(null)}
+      />
+
+      {/* Bestätigung: Benutzer aus Organisation entfernen */}
+      <ConfirmDialog
+        isOpen={confirmRemoveUserId !== null}
+        title="Benutzer entfernen"
+        message="Möchten Sie diesen Benutzer wirklich aus der Organisation entfernen?"
+        confirmLabel="Entfernen"
+        cancelLabel="Abbrechen"
+        variant="danger"
+        onConfirm={() => confirmRemoveUserId && doRemoveUser(confirmRemoveUserId)}
+        onCancel={() => setConfirmRemoveUserId(null)}
+      />
     </div>
   )
 }
