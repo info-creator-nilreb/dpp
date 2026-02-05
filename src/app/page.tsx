@@ -5,12 +5,51 @@ import { getCheapestPrice } from '@/lib/pricing/get-cheapest-price'
 
 export const dynamic = "force-dynamic"
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easyproductpass.com"
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${baseUrl}/#website`,
+      url: baseUrl,
+      name: "Easy Product Pass",
+      description: "Erstellen Sie Ihren Digitalen Produktpass - ESPR-konform, einfach und schnell. Einfach, transparent, nachhaltig.",
+      publisher: { "@id": `${baseUrl}/#organization` },
+      inLanguage: "de-DE",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: { "@type": "EntryPoint", url: `${baseUrl}/login` },
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${baseUrl}/#organization`,
+      name: "Easy Product Pass",
+      url: baseUrl,
+      logo: { "@type": "ImageObject", url: `${baseUrl}/icon` },
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "Digitaler Produktpass",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description: "Erstellen Sie Ihren Digitalen Produktpass - ESPR-konform, einfach und schnell. Jetzt kostenlos testen.",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+    },
+  ],
+}
+
 export default async function Home() {
   // Get cheapest price for teaser
   const cheapestPrice = await getCheapestPrice()
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF', overflowX: 'hidden' }}>
-
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Hero Section */}
       <section style={{
         backgroundColor: '#F5F5F5',

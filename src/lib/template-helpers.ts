@@ -271,6 +271,28 @@ export async function getCategoriesWithLabels(): Promise<Map<string, { label: st
 }
 
 /**
+ * Liefert die Labels aller Template-Kategorien für SEO-Keywords (z. B. Meta-Keywords).
+ * Basiert auf allen Kategorien, für die mindestens ein Template existiert (unabhängig vom Status).
+ */
+export async function getTemplateCategoryKeywordsForSeo(): Promise<string[]> {
+  try {
+    const templates = await prisma.template.findMany({
+      select: { category: true, categoryLabel: true },
+      distinct: ["category"],
+    })
+    const labels = templates
+      .filter((t) => t.category)
+      .map((t) => (t.categoryLabel && t.categoryLabel.trim() ? t.categoryLabel : t.category))
+    return [...new Set(labels)]
+  } catch (error: unknown) {
+    if (error && typeof error === "object" && "message" in error && String((error as Error).message).includes("Can't reach database server")) {
+      return []
+    }
+    throw error
+  }
+}
+
+/**
  * Gibt alle veröffentlichten Templates zurück
  * Single source of truth für Template-Abfragen
  * 

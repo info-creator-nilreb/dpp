@@ -1,0 +1,8 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Für KI-Crawler: Kurzbeschreibung der Seite
+# ai.txt: https://www.easyproductpass.com/ai.txt
+
+Sitemap: https://www.easyproductpass.com/sitemap.xml

@@ -1,0 +1,23 @@
+# Easy Product Pass
+
+> Erstellen Sie Ihren Digitalen Produktpass - ESPR-konform, einfach und schnell.
+
+## Was wir anbieten
+
+Easy Product Pass ist eine Web-Anwendung zur Erstellung von Digitalen Produktpässen (DPP) gemäß EU-Verordnung ESPR. Zielgruppe: Hersteller und Händler von Textil und Möbeln.
+
+- Erstellung von DPPs in wenigen Minuten
+- ESPR-konform, für Textil & Möbel
+- Import per CSV, einfache Pflichtangaben und optionale Mehrwert-Inhalte (Storytelling, Umfragen, Bilder, Video, Akkordeon, Timeline)
+- Kostenlos testen, transparente Preise
+
+## Wichtige URLs
+
+- Startseite: /
+- Login: /login
+- Registrierung: /signup
+- Preise: /pricing
+
+## Stichworte
+
+Digitaler Produktpass, DPP, ESPR, EU-Verordnung, Textil, Möbel, Nachhaltigkeit, Produktpass, Sorgfaltspflichten, Lieferkettentransparenz.
