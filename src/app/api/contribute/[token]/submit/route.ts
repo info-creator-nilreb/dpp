@@ -330,7 +330,7 @@ export async function POST(
     for (const membership of orgMemberships) {
       await createNotification(
         membership.userId,
-        "supplier_data_submitted",
+        "supplier_submitted_data",
         "contributor_token",
         contributorToken.id
       )

@@ -12,6 +12,7 @@ import { getPublishedDppCount, canPublishDpp } from "@/lib/pricing/entitlements"
 import { logDppAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-service"
 import { getClientIp } from "@/lib/audit/get-client-ip"
 import { getOrganizationRole } from "@/lib/permissions"
+import { createNotificationWithPayload } from "@/lib/phase1/notifications"
 
 /**
  * POST /api/app/dpp/[dppId]/publish
@@ -242,6 +243,12 @@ export async function POST(
       complianceRelevant: true, // Veröffentlichung ist immer compliance-relevant
       versionId: result.id,
       ipAddress,
+    })
+
+    await createNotificationWithPayload(session.user.id, "dpp_published", {
+      targetRoute: `/app/dpps/${dppId}`,
+      targetEntityId: dppId,
+      organisationId: dpp.organizationId,
     })
 
     // Hole Version mit User-Informationen (zur Verifizierung)

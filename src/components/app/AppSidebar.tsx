@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { signOut } from "next-auth/react"
 import TPassLogo from "@/app/super-admin/components/TPassLogo"
 import { AuditLogsIcon } from "@/app/super-admin/components/Icons"
@@ -40,6 +40,21 @@ export default function AppSidebar({
   onToggleCollapse
 }: AppSidebarProps) {
   const pathname = usePathname()
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0)
+
+  // Bei Navigation (z. B. nach Lesen auf der Benachrichtigungsseite) Zähler neu laden
+  useEffect(() => {
+    let cancelled = false
+    fetch("/api/app/notifications", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data && typeof data.unreadCount === "number") {
+          setNotificationUnreadCount(data.unreadCount)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [pathname])
 
   // Define navigation items - ALL items are always visible, disabled-state is computed
   const navigationItems: NavigationItem[] = [
@@ -150,6 +165,26 @@ export default function AppSidebar({
       label: "Audit Logs",
       icon: <AuditLogsIcon />,
       featureKey: "audit_logs",
+    },
+    {
+      href: "/app/notifications",
+      label: "Benachrichtigungen",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 24 24"
+        >
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      ),
     },
   ]
 
@@ -267,6 +302,7 @@ export default function AppSidebar({
           navigationItems={visibleNavigationItems}
           onToggleCollapse={onToggleCollapse}
           onMobileClose={undefined}
+          notificationUnreadCount={notificationUnreadCount}
         />
       </nav>
     </>
@@ -283,6 +319,7 @@ function SidebarContent({
   navigationItems,
   onToggleCollapse,
   onMobileClose,
+  notificationUnreadCount = 0,
 }: { 
   pathname: string
   userEmail?: string
@@ -293,7 +330,9 @@ function SidebarContent({
   navigationItems: NavigationItem[]
   onToggleCollapse?: () => void
   onMobileClose?: () => void
+  notificationUnreadCount?: number
 }) {
+  const [notificationsLinkHovered, setNotificationsLinkHovered] = useState(false)
   // Get initial from last name, fallback to first name, then email
   const getInitial = () => {
     if (userLastName) {
@@ -338,9 +377,9 @@ function SidebarContent({
         )}
       </div>
 
-      {/* Navigation Items - Only visible items are shown */}
+      {/* Navigation Items - ohne Benachrichtigungen (nur Mint-Glocke unten) */}
       <div style={{ padding: isCollapsed ? "1rem 0" : "1.5rem 0" }}>
-        {navigationItems.map((item) => {
+        {navigationItems.filter((item) => item.href !== "/app/notifications").map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
           return (
             <Link
@@ -406,14 +445,16 @@ function SidebarContent({
               }}
               title={isCollapsed ? item.label : undefined}
             >
-              <span style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center",
-                width: "20px",
-                height: "20px",
-                flexShrink: 0,
-              }}>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "20px",
+                  height: "20px",
+                  flexShrink: 0,
+                }}
+              >
                 {item.icon}
               </span>
               {!isCollapsed && <span style={{ color: "inherit" }}>{item.label}</span>}
@@ -422,15 +463,89 @@ function SidebarContent({
         })}
       </div>
 
-      {/* Bottom Section - User Info & Logout */}
+      {/* Bottom Section - Benachrichtigungen (nahe am Initial) + User Info & Logout */}
       <div style={{ 
         marginTop: "auto", 
         padding: isCollapsed ? "1rem 0" : "1.5rem",
       }}>
+        {/* Glocke: kein Mint-Balken; bei Hover Glocke + Badge farblich invertieren */}
+        {navigationItems.some((i) => i.href === "/app/notifications") && (() => {
+          const notificationsItem = navigationItems.find((i) => i.href === "/app/notifications")!
+          const isActive = pathname === "/app/notifications" || pathname?.startsWith("/app/notifications/")
+          const circleSize = isCollapsed ? "32px" : "40px"
+          const inverted = notificationsLinkHovered
+          return (
+            <Link
+              href="/app/notifications"
+              onClick={onMobileClose}
+              onMouseEnter={() => setNotificationsLinkHovered(true)}
+              onMouseLeave={() => setNotificationsLinkHovered(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: isCollapsed ? "center" : "flex-start",
+                gap: "0.75rem",
+                padding: isCollapsed ? "0.75rem" : "0.75rem 1.5rem 0.75rem 0",
+                marginBottom: "0.5rem",
+                color: isActive ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)",
+                backgroundColor: "transparent",
+                textDecoration: "none",
+                fontSize: "0.95rem",
+                fontWeight: isActive ? "600" : "400",
+                borderLeft: "3px solid transparent",
+                transition: "color 0.15s ease",
+                cursor: "pointer",
+              }}
+              title={isCollapsed ? notificationsItem.label : undefined}
+            >
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: circleSize,
+                  height: circleSize,
+                  flexShrink: 0,
+                  position: "relative",
+                  borderRadius: "50%",
+                  backgroundColor: inverted ? "#24c598" : "#FFFFFF",
+                  transition: "background-color 0.15s ease",
+                }}
+              >
+                <span style={{ color: inverted ? "#FFFFFF" : "#24c598", display: "flex", transition: "color 0.15s ease" }}>{notificationsItem.icon}</span>
+                {notificationUnreadCount > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "-10px",
+                      right: "-10px",
+                      minWidth: "18px",
+                      height: "18px",
+                      padding: "0 5px",
+                      fontSize: "0.7rem",
+                      fontWeight: "700",
+                      color: inverted ? "#24c598" : "#FFFFFF",
+                      backgroundColor: inverted ? "#FFFFFF" : "#24c598",
+                      borderRadius: "9px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "color 0.15s ease, background-color 0.15s ease",
+                    }}
+                  >
+                    {notificationUnreadCount > 99 ? "99+" : notificationUnreadCount}
+                  </span>
+                )}
+              </span>
+              {!isCollapsed && <span style={{ color: "inherit" }}>{notificationsItem.label}</span>}
+            </Link>
+          )
+        })()}
+
         {/* User Info (Shopware-style) - Always render if session is available, even without full profile data */}
         {userEmail && (
           <div style={{ 
-            marginTop: "0.5rem", 
+            marginTop: "0.25rem", 
             paddingTop: "0.75rem", 
             borderTop: "1px solid rgba(255, 255, 255, 0.1)",
             display: "flex",
@@ -482,62 +597,49 @@ function SidebarContent({
           </div>
         )}
 
-        {/* Logout Button */}
-        {!isCollapsed && (
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                // Use NextAuth signOut (without redirect, then manual redirect)
-                await signOut({ redirect: false })
-                // Always redirect to login
-                window.location.href = "/login"
-              } catch (error) {
-                console.error("Error during logout:", error)
-                // Even on error, redirect to login
-                window.location.href = "/login"
-              }
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-start",
-              gap: "0.75rem",
-              padding: "0.75rem 0",
-              color: "rgba(255, 255, 255, 0.7)",
-              backgroundColor: "transparent",
-              border: "none",
-              fontSize: "0.95rem",
-              cursor: "pointer",
-              width: "100%",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)"
-              e.currentTarget.style.color = "#FFFFFF"
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent"
-              e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)"
-            }}
+        {/* Logout Button – in beiden Sidebar-Zuständen sichtbar (eingeklappt nur Icon) */}
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await signOut({ redirect: false })
+              window.location.href = "/login"
+            } catch (error) {
+              console.error("Error during logout:", error)
+              window.location.href = "/login"
+            }
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: isCollapsed ? "center" : "flex-start",
+            gap: "0.75rem",
+            padding: "1.5rem 0 0.75rem 0",
+            color: "rgba(255, 255, 255, 0.7)",
+            backgroundColor: "transparent",
+            border: "none",
+            fontSize: "0.95rem",
+            cursor: "pointer",
+            width: "100%",
+          }}
+          title={isCollapsed ? "Abmelden" : undefined}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>Abmelden</span>
-          </button>
-        )}
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          {!isCollapsed && <span>Abmelden</span>}
+        </button>
 
         {/* Toggle Button */}
         {onToggleCollapse && (

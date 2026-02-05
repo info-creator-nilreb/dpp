@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ORGANIZATION_ROLES } from "@/lib/permissions"
 import { hasFeature } from "@/lib/capabilities/resolver"
 import { latestPublishedTemplate, normalizeCategory } from "@/lib/template-helpers"
+import { createNotificationWithPayload } from "@/lib/phase1/notifications"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -155,6 +156,12 @@ export async function POST(request: Request) {
       }
     })
 
+    await createNotificationWithPayload(session.user.id, "import_finished_success", {
+      targetRoute: "/app/dpps",
+      targetEntityId: createdIds[0] ?? undefined,
+      organisationId: resolvedOrganizationId,
+    })
+
     return NextResponse.json({
       success: true,
       createdIds,
@@ -162,6 +169,19 @@ export async function POST(request: Request) {
     }, { status: 200 })
   } catch (error: any) {
     console.error("Error importing DPPs:", error)
+    try {
+      const sessionInCatch = await auth()
+      if (sessionInCatch?.user?.id) {
+        const membership = await prisma.membership.findFirst({
+          where: { userId: sessionInCatch.user.id },
+          select: { organizationId: true },
+        })
+        await createNotificationWithPayload(sessionInCatch.user.id, "import_finished_error", {
+          targetRoute: "/app/dpps",
+          organisationId: membership?.organizationId ?? undefined,
+        })
+      }
+    } catch (_) { /* ignore */ }
     return NextResponse.json(
       { error: "Ein Fehler ist aufgetreten beim Import", details: error.message },
       { status: 500 }
