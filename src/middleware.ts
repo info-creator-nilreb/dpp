@@ -1,7 +1,13 @@
 import { auth } from "@/auth"
 import { NextResponse } from "next/server"
 import { superAdminMiddleware } from "./middleware-super-admin"
-import { hasPasswordProtectionAccessEdge } from "./lib/password-protection-edge"
+
+/** Setzt x-pathname auf dem Request-Header, damit PasswordProtectionWrapper (Server Component) die Route erkennt */
+function nextWithPathname(req: Request, pathname: string) {
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set("x-pathname", pathname)
+  return NextResponse.next({ request: { headers: requestHeaders } })
+}
 
 export default auth(async (req) => {
   const { pathname } = req.nextUrl
@@ -12,7 +18,6 @@ export default auth(async (req) => {
     pathname.startsWith("/api/super-admin")
   ) {
     const superAdminResponse = await superAdminMiddleware(req)
-    // Set pathname header for Super-Admin routes too (so PasswordProtectionWrapper can skip them)
     superAdminResponse.headers.set("x-pathname", pathname)
     return superAdminResponse
   }
@@ -28,16 +33,13 @@ export default auth(async (req) => {
     "/api/auth/forgot-password",
   ]
   if (publicApiRoutes.includes(pathname)) {
-    const response = NextResponse.next()
-    response.headers.set("x-pathname", pathname)
-    return response
+    return nextWithPathname(req, pathname)
   }
 
   // PASSWORD PROTECTION: Skip check in middleware (Edge Runtime can't use Prisma)
   // Full check is done in PasswordProtectionWrapper (Server Component with Prisma access)
-  // Set header with pathname so Server Components can access it
-  const response = NextResponse.next()
-  response.headers.set("x-pathname", pathname)
+  // Pathname an Request weitergeben, damit Wrapper /login und /pricing prüfen kann
+  const response = nextWithPathname(req, pathname)
 
   // Continue with tenant/user auth (existing logic)
   const session = req.auth

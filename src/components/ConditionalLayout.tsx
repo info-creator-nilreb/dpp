@@ -20,9 +20,10 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   const isAppRoute = pathname?.startsWith("/app")
   const isPublicEditorialRoute = pathname?.startsWith("/public/dpp")
   const isContributeRoute = pathname?.startsWith("/contribute")
+  const isPasswordGateRoute = pathname === "/password"
 
-  // Super-admin, app, public editorial, and contribute routes use their own layout - don't wrap with PublicLayoutClient
-  if (isSuperAdminRoute || isAppRoute || isPublicEditorialRoute || isContributeRoute) {
+  // Super-admin, app, public editorial, contribute und Passwort-Gate ohne Burger-Menü
+  if (isSuperAdminRoute || isAppRoute || isPublicEditorialRoute || isContributeRoute || isPasswordGateRoute) {
     return <>{children}</>
   }
 
