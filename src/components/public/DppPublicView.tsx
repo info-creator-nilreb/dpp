@@ -92,21 +92,40 @@ export default async function DppPublicView({
     fieldKey: m.fieldKey ?? m.fieldId ?? undefined,
     fileName: m.fileName ?? (m.originalFileName as string) ?? "",
   }))
+  const basisdatenBlockId = unifiedBlocks.find(
+    (b: { presentation?: { layer?: string } }) => b.presentation?.layer === "spine"
+  )?.id
   const heroFromBasisdaten = getHeroImage(mediaList)
-  const basisdatenBlockId = unifiedBlocks.find((b: { order?: number }) => b.order === 0)?.id
   const fallbackHeroFromBlock =
     basisdatenBlockId &&
+    withoutLogo.find((m: any) => {
+      if (!(m.fileType || "").startsWith("image/")) return false
+      return m.blockId === basisdatenBlockId || m.blockId == null || m.blockId === ""
+    })
+  const fallbackHeroLegacy =
+    !heroFromBasisdaten &&
+    !fallbackHeroFromBlock &&
     withoutLogo.find(
       (m: any) =>
-        m.blockId === basisdatenBlockId && (m.fileType || "").startsWith("image/")
+        (m.fileType || "").startsWith("image/") &&
+        (m.blockId == null || m.blockId === "")
     )
   const heroImage =
     heroFromBasisdaten?.storageUrl ??
     (fallbackHeroFromBlock?.storageUrl as string | undefined) ??
+    (fallbackHeroLegacy?.storageUrl as string | undefined) ??
     undefined
 
-  // Galerie: weitere Basisdaten-Bilder (2+) + Bilder aus Mehrwert-Blöcken
-  const galleryFromBasisdaten = getGalleryImages(mediaList)
+  const galleryFromBasisdatenRaw = getGalleryImages(mediaList)
+  const galleryFromBasisdaten =
+    basisdatenBlockId != null
+      ? galleryFromBasisdatenRaw.filter(
+          (m) =>
+            m.blockId === basisdatenBlockId ||
+            m.blockId == null ||
+            m.blockId === ""
+        )
+      : galleryFromBasisdatenRaw
   const galleryFromMehrwert = unifiedBlocks
     .filter((b: { blockKey?: string }) => b.blockKey === "image")
     .map((b: { content?: { fields?: { url?: { value?: string }; alt?: { value?: string }; caption?: { value?: string } } } }) => {

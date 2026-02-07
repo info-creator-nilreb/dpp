@@ -142,7 +142,7 @@ export default function DppFrontendPreview({
     if (mounted && dpp?.id) {
       loadUnifiedBlocks()
     }
-  }, [dpp?.id, blocks, mounted]) // Re-load when dpp or blocks change
+  }, [dpp?.id, mounted]) // Nur bei dpp.id laden – kein Refetch bei blocks-Änderung, damit Galerie und Mehrwert-Blöcke gemeinsam erscheinen
 
   // Immer am Hero-Bild starten: Scroll auf 0 wenn Vorschau geladen (verhindert Sprung zu Basisdaten / Browser-Scroll-Restoration)
   const scrollPreviewToTop = () => {
@@ -231,7 +231,7 @@ export default function DppFrontendPreview({
   const organizationName = dpp.organization?.name || ""
   const brandName = dpp.brand || organizationName || ""
 
-  // Hero = erstes Bild aus Basis- & Produktdaten (role "primary_product_image"). Fallback: erstes Bild mit blockId = Basisdaten-Block (falls role fehlt, z. B. ältere Uploads).
+  // Hero = erstes Bild aus Basis- & Produktdaten (role "primary_product_image"). Fallbacks: blockId/Legacy, zuletzt erstes Bild.
   const withoutLogo = (dpp.media || []).filter((m: any) => m.role !== "logo")
   const mediaList: MediaItem[] = withoutLogo.map((m: any) => ({
     id: m.id,
@@ -242,37 +242,75 @@ export default function DppFrontendPreview({
     fieldKey: m.fieldKey ?? m.fieldId ?? undefined,
     fileName: m.fileName ?? (m.originalFileName as string) ?? "",
   }))
+  const spineBlock = unifiedBlocks.find(
+    (b: { presentation?: { layer?: string } }) => b.presentation?.layer === "spine"
+  )
+  const basisdatenBlockId = spineBlock?.id
+  // Alle Bilder, die zum Spine/Basisdaten-Block gehören (blockId passend oder ohne blockId)
+  const spineImages = withoutLogo.filter((m: any) => {
+    if (!(m.fileType || "").startsWith("image/")) return false
+    if (basisdatenBlockId) return m.blockId === basisdatenBlockId || m.blockId == null || m.blockId === ""
+    return true
+  })
   const heroFromBasisdaten = getHeroImage(mediaList)
-  const basisdatenBlockId = unifiedBlocks.find((b: { order?: number }) => b.order === 0)?.id
-  const fallbackHeroFromBlock =
-    basisdatenBlockId &&
+  const fallbackHeroFromBlock = spineImages[0]
+  const fallbackHeroLegacy =
+    !heroFromBasisdaten &&
+    !fallbackHeroFromBlock &&
     withoutLogo.find(
       (m: any) =>
-        m.blockId === basisdatenBlockId && (m.fileType || "").startsWith("image/")
+        (m.fileType || "").startsWith("image/") &&
+        (m.blockId == null || m.blockId === "")
     )
+  const heroMedia =
+    heroFromBasisdaten ??
+    (fallbackHeroFromBlock ? { storageUrl: (fallbackHeroFromBlock as any).storageUrl } : null) ??
+    (fallbackHeroLegacy ? { storageUrl: (fallbackHeroLegacy as any).storageUrl } : null)
   const heroImage =
-    heroFromBasisdaten?.storageUrl ??
-    (fallbackHeroFromBlock?.storageUrl as string | undefined) ??
+    heroMedia?.storageUrl ??
+    (withoutLogo.find((m: any) => (m.fileType || "").startsWith("image/")) as any)?.storageUrl ??
     undefined
 
-  // Galerie: weitere Bilder aus Basisdaten (role "gallery_image") + Bilder aus Mehrwert-Blöcken (unifiedBlocks)
-  const galleryFromBasisdaten = getGalleryImages(mediaList)
-  const galleryFromMehrwert = unifiedBlocks
-    .filter((b: { blockKey?: string }) => b.blockKey === "image")
-    .map((b: { content?: { fields?: { url?: { value?: string }; alt?: { value?: string }; caption?: { value?: string } } } }) => {
-      const url = b.content?.fields?.url?.value
-      if (!url || typeof url !== "string") return null
-      return {
-        url: String(url),
-        alt: b.content?.fields?.alt?.value ? String(b.content.fields.alt.value) : undefined,
-        caption: b.content?.fields?.caption?.value ? String(b.content.fields.caption.value) : undefined,
-      }
-    })
-    .filter((x): x is NonNullable<typeof x> => x != null)
-  const galleryImages = [
-    ...galleryFromBasisdaten.map((m) => ({ url: m.storageUrl, alt: m.fileName })),
-    ...galleryFromMehrwert,
+  // Galerie: alle Spine-Bilder außer dem Hero + Bilder mit role "gallery_image"
+  const galleryByRole = getGalleryImages(mediaList)
+  const spineGalleryFiltered =
+    basisdatenBlockId != null
+      ? galleryByRole.filter(
+          (m) =>
+            m.blockId === basisdatenBlockId ||
+            m.blockId == null ||
+            m.blockId === ""
+        )
+      : galleryByRole
+  const heroUrl = heroImage
+  const galleryFromBasisdaten = [
+    ...spineImages
+      .filter((m: any) => (m as any).storageUrl !== heroUrl)
+      .map((m: any) => ({ storageUrl: m.storageUrl, fileName: m.fileName ?? "" })),
+    ...spineGalleryFiltered.filter((m) => m.storageUrl !== heroUrl).map((m) => ({ storageUrl: m.storageUrl, fileName: m.fileName ?? "" })),
   ]
+  const seen = new Set<string>()
+  const galleryFromBasisdatenDedup = galleryFromBasisdaten.filter((m) => {
+    if (seen.has(m.storageUrl)) return false
+    seen.add(m.storageUrl)
+    return true
+  })
+  // Nur Basisdaten-Galerie ans Ende; Mehrwert-Bildblöcke werden in DataSectionsContainer an ihrer Position gerendert
+  const galleryImages = galleryFromBasisdatenDedup.map((m) => ({ url: m.storageUrl, alt: m.fileName }))
+
+  // basicData: dpp (Client-State) zuerst, damit ungespeicherte Änderungen (z. B. geleertes EAN) in der Vorschau sichtbar sind
+  const spineFields = spineBlock?.content?.fields as Record<string, { value?: string | null }> | undefined
+  const fromBlock = (key: string) => {
+    if (!spineFields) return undefined
+    const v = spineFields[key]?.value ?? spineFields[key.toLowerCase()]?.value
+    return v != null && String(v).trim() !== "" ? String(v).trim() : undefined
+  }
+  // dpp zuerst (?? behält "" bei), damit geleerte Felder in der Vorschau nicht mehr angezeigt werden
+  const basicData = {
+    sku: dpp.sku ?? fromBlock("sku") ?? undefined,
+    gtin: dpp.gtin ?? fromBlock("gtin") ?? fromBlock("ean") ?? undefined,
+    countryOfOrigin: dpp.countryOfOrigin ?? fromBlock("countryOfOrigin") ?? fromBlock("herstellungsland") ?? undefined,
+  }
 
   // Get logo from styling config
   const organizationLogoUrl = styling?.logo?.url || undefined
@@ -303,11 +341,7 @@ export default function DppFrontendPreview({
           version: dpp.versions[0].version,
           createdAt: new Date(dpp.versions[0].createdAt)
         } : undefined}
-        basicData={{
-          sku: dpp.sku,
-          gtin: dpp.gtin,
-          countryOfOrigin: dpp.countryOfOrigin
-        }}
+        basicData={basicData}
       />
     </div>
   )

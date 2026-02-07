@@ -78,43 +78,30 @@ export default function DataSectionsContainer({
     return !hasContent // Block ist leer wenn kein Feld einen Wert hat
   }
   
-  // Trenne Template-Blöcke (Pflichtdaten) von CMS-Blöcken (Mehrwertinformationen)
-  const { templateBlocks, cmsBlocks } = useMemo(() => {
+  // Eine gemeinsame, nach order sortierte Liste: Template- und CMS-Blöcke gemischt, damit Position = Mehrwert-Tab
+  const cmsBlockTypes = ['text_block', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll']
+  
+  const { templateBlocks, orderedBlocks } = useMemo(() => {
     const template: UnifiedContentBlock[] = []
-    const cms: UnifiedContentBlock[] = []
-    
-    // Bekannte CMS-Block-Typen (aus BlockType.key)
-    const cmsBlockTypes = ['text_block', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll']
+    const ordered: Array<{ type: 'template' | 'cms'; block: UnifiedContentBlock }> = []
     
     dataBlocks.forEach(block => {
-      // CMS-Blöcke haben bekannte BlockType-Keys (wie "timeline", "accordion", etc.)
       const isCmsBlock = block.blockKey && cmsBlockTypes.includes(block.blockKey.toLowerCase())
-      // Mehrwert-Bilder (blockKey "image") nur in der Galerie anzeigen, nicht hier – sonst doppelte Galerie
-      const isImageBlock = block.blockKey?.toLowerCase() === 'image'
-      console.log('[DataSectionsContainer] Block classification:', {
-        id: block.id,
-        blockKey: block.blockKey,
-        displayName: block.displayName,
-        isCmsBlock,
-        isImageBlock,
-        inList: block.blockKey ? cmsBlockTypes.includes(block.blockKey.toLowerCase()) : false
-      })
-      if (isCmsBlock && !isImageBlock) {
-        cms.push(block)
-      } else if (isImageBlock) {
-        // Image-Blöcke werden in der zentralen Galerie (EditorialDppViewRedesign) gerendert, nicht hier
-      } else {
-        // Alles andere sind Template-Blöcke (Pflichtdaten)
-        // Filtere leere Blöcke aus (außer Basisdaten)
+      const isRedundantBasisdaten =
+        block.displayName === 'Basis- & Produktdaten' ||
+        (block.order === 1 && /basis|produktdaten/i.test(block.displayName || ''))
+      
+      if (isCmsBlock) {
+        ordered.push({ type: 'cms', block })
+      } else if (!isRedundantBasisdaten) {
         if (!isBlockEmpty(block)) {
           template.push(block)
-        } else {
-          console.log('[DataSectionsContainer] Filtering out empty block:', block.displayName)
+          ordered.push({ type: 'template', block })
         }
       }
     })
     
-    return { templateBlocks: template, cmsBlocks: cms }
+    return { templateBlocks: template, orderedBlocks: ordered }
   }, [dataBlocks])
   
   // State für expanded Sections (nur Template-Blöcke)
@@ -180,38 +167,40 @@ export default function DataSectionsContainer({
     }}
     className="data-sections-container"
     >
-      {/* Mintfarbene Linie als Trenner zwischen Beschreibung und Akkordeon-Abschnitten - zentriert */}
-      {/* WICHTIG: Diese Linie wird nur angezeigt, wenn KEIN StoryTextBlock vorhanden ist */}
-      {/* (StoryTextBlock hat bereits eine mintfarbene Linie am Ende) */}
-      {templateBlocks.length > 0 && !hasStoryText && (
+      {/* Mintfarbene Linie als Trenner – nur wenn Blöcke vorhanden und kein StoryText */}
+      {orderedBlocks.length > 0 && !hasStoryText && (
         <div style={{
           marginTop: editorialSpacing.xl,
-          marginBottom: editorialSpacing.xl, // Einheitlicher Abstand
+          marginBottom: editorialSpacing.xl,
           display: 'flex',
           justifyContent: 'center',
         }}>
-          <div
-            style={{
-              width: '60px',
-              height: '2px',
-              backgroundColor: editorialColors.brand.accentVar,
-            }}
-          />
+          <div style={{ width: '60px', height: '2px', backgroundColor: editorialColors.brand.accentVar }} />
         </div>
       )}
       
-      {/* Pflichtdaten (Template-Blöcke) - Im Akkordion */}
-      {templateBlocks.length > 0 && (
-        <>
-          {templateBlocks.map((block, index) => {
+      {/* Alle Blöcke in einer Reihenfolge (wie im Mehrwert-Tab): Template = Akkordion, CMS = direkt, Image = Galerie an Position */}
+      {orderedBlocks.length > 0 && (() => {
+        const blockToImages = (block: UnifiedContentBlock): Array<{ url: string; alt?: string; caption?: string }> => {
+          const urlVal = block.content?.fields?.url?.value
+          const alt = block.content?.fields?.alt?.value
+          const caption = block.content?.fields?.caption?.value
+          const urls = Array.isArray(urlVal) ? urlVal : (urlVal ? [urlVal] : [])
+          return urls
+            .filter((u): u is string => typeof u === 'string' && u.length > 0)
+            .map(url => ({
+              url: String(url),
+              alt: alt != null && String(alt).trim() ? String(alt) : undefined,
+              caption: caption != null && String(caption).trim() ? String(caption) : undefined
+            }))
+        }
+        let templateIndex = 0
+        return orderedBlocks.map((item) => {
+          if (item.type === 'template') {
+            const block = item.block
+            const index = templateIndex++
             const visualStyle = getVisualStyle(index, block)
             const isExpanded = expandedSections.has(block.id)
-            console.log(`[DataSectionsContainer] Rendering Section ${index}:`, {
-              id: block.id,
-              name: block.displayName,
-              isExpanded,
-              fieldsCount: Object.keys(block.content?.fields || {}).length
-            })
             return (
               <DataSection
                 key={block.id}
@@ -223,100 +212,20 @@ export default function DataSectionsContainer({
                 visualStyle={visualStyle}
               />
             )
-          })}
-        </>
-      )}
-      
-      {/* Mintfarbene Linie als Trenner zwischen Pflichtdaten und Mehrwertinformationen */}
-      {templateBlocks.length > 0 && cmsBlocks.length > 0 && (
-        <div style={{
-          marginTop: editorialSpacing.xl,
-          marginBottom: editorialSpacing.xl, // Einheitlicher Abstand
-          display: 'flex',
-          justifyContent: 'center',
-        }}>
-          <div
-            style={{
-              width: '60px',
-              height: '2px',
-              backgroundColor: editorialColors.brand.accentVar,
-            }}
-          />
-        </div>
-      )}
-      
-      {/* Mehrwertinformationen (CMS-Blöcke) - Direkt gerendert, kein Akkordion */}
-      {cmsBlocks.length > 0 && (
-        <>
-          {(() => {
-            // Gruppiere aufeinanderfolgende Image-Blöcke zu einer Galerie
-            const groupedBlocks: Array<UnifiedContentBlock | UnifiedContentBlock[]> = []
-            let currentImageGroup: UnifiedContentBlock[] = []
-            
-            cmsBlocks.forEach((block, index) => {
-              if (block.blockKey === 'image') {
-                currentImageGroup.push(block)
-                // Wenn letzter Block oder nächster Block ist kein Image, schließe Gruppe
-                if (index === cmsBlocks.length - 1 || cmsBlocks[index + 1].blockKey !== 'image') {
-                  if (currentImageGroup.length > 1) {
-                    // Mehrere Image-Blöcke: Als Gruppe speichern
-                    groupedBlocks.push([...currentImageGroup])
-                  } else {
-                    // Einzelner Image-Block: Normal rendern
-                    groupedBlocks.push(currentImageGroup[0])
-                  }
-                  currentImageGroup = []
-                }
-              } else {
-                // Wenn es eine offene Image-Gruppe gibt, schließe sie zuerst
-                if (currentImageGroup.length > 0) {
-                  if (currentImageGroup.length > 1) {
-                    groupedBlocks.push([...currentImageGroup])
-                  } else {
-                    groupedBlocks.push(currentImageGroup[0])
-                  }
-                  currentImageGroup = []
-                }
-                // Normaler Block
-                groupedBlocks.push(block)
-              }
-            })
-            
-            return groupedBlocks.map((blockOrGroup, index) => {
-              if (Array.isArray(blockOrGroup)) {
-                // Mehrere Image-Blöcke: Als Galerie rendern
-                const images = blockOrGroup.map(block => {
-                  const url = block.content?.fields?.url?.value || ''
-                  const alt = block.content?.fields?.alt?.value || ''
-                  const caption = block.content?.fields?.caption?.value || ''
-                  return {
-                    url: String(url),
-                    alt: alt ? String(alt) : undefined,
-                    caption: caption ? String(caption) : undefined
-                  }
-                }).filter(img => img.url)
-                
-                if (images.length === 0) return null
-                
-                return (
-                  <div key={`image-group-${index}`} style={{ marginBottom: editorialSpacing.xl }}>
-                    <ImageGallery images={images} alignment="center" />
-                  </div>
-                )
-              } else {
-                // Einzelner Block: Normal rendern
-                return (
-                  <CmsBlockDirect 
-                    key={blockOrGroup.id} 
-                    block={blockOrGroup} 
-                    dppId={dppId} 
-                  />
-                )
-              }
-            })
-          })()}
-        </>
-      )}
+          }
+          const block = item.block
+          if (block.blockKey?.toLowerCase() === 'image') {
+            const images = blockToImages(block)
+            if (images.length === 0) return null
+            return (
+              <div key={block.id} style={{ marginBottom: editorialSpacing.xl }}>
+                <ImageGallery images={images} alignment="center" />
+              </div>
+            )
+          }
+          return <CmsBlockDirect key={block.id} block={block} dppId={dppId} />
+        })
+      })()}
     </div>
   )
 }

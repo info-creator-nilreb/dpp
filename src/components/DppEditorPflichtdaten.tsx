@@ -744,7 +744,7 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
     }
   }
 
-  // Aktualisiere Medien-Liste nach Upload/Delete
+  // Aktualisiere Medien-Liste nach Upload/Delete und sync mit Parent, damit Vorschau aktuelle Medien hat
   const refreshMedia = async () => {
     if (!dpp.id || dpp.id === "new") return
     try {
@@ -757,7 +757,10 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
       })
       if (response.ok) {
         const data = await response.json()
-        setDpp(prev => ({ ...prev, media: data.media || [] }))
+        const mediaList = data.media || []
+        const updated = { ...dpp, media: mediaList }
+        setDpp(updated)
+        onDppUpdate?.(updated)
       }
     } catch (error) {
       console.error("[DppEditor] Error refreshing media:", error)
@@ -1044,17 +1047,16 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
   }
   
   // Extrahiere DPP-Feldwerte aus fieldValues und State
-  // Priorität: fieldValues (Template-Felder) > State (direkte Felder)
+  // Priorität: fieldValues (Template-Felder, inkl. bewusst leer) > State (direkte Felder)
   const extractDppFieldValue = (dppFieldName: string): string => {
     // 1. Versuche aus fieldValues zu extrahieren (durchsuche alle Template-Keys)
+    // Wenn ein Mapping existiert und der Key in fieldValues vorkommt, diesen Wert nutzen (auch "").
     if (fieldValues) {
       for (const [templateKey, value] of Object.entries(fieldValues)) {
         const mappedField = mapTemplateKeyToDppField(templateKey)
-        if (mappedField === dppFieldName && value) {
-          const stringValue = Array.isArray(value) ? value.join(", ") : String(value)
-          if (stringValue.trim()) {
-            return stringValue.trim()
-          }
+        if (mappedField === dppFieldName) {
+          const stringValue = Array.isArray(value) ? value.join(", ") : String(value ?? "")
+          return stringValue.trim()
         }
       }
     }
@@ -2084,6 +2086,9 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
             
             const englishKey = englishKeyMapping[templateKey.toLowerCase()] || templateKey
             
+            const strValue = (typeof value === "string" ? value : Array.isArray(value) ? value.join(", ") : String(value ?? "")).trim()
+            const normalized = strValue || null
+            
             setFieldValues(prev => {
               // Speichere mit Template-Key (für Content-API)
               const updated = {
@@ -2101,6 +2106,29 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
               
               return updated
             })
+            
+            // Flachen State und Parent-DPP synchron halten, damit Vorschau und Save den aktuellen Wert nutzen
+            const flatUpdates: Record<string, string> = {}
+            if (englishKey === "name") { setName(strValue); flatUpdates.name = strValue }
+            else if (englishKey === "description") { setDescription(strValue); flatUpdates.description = strValue }
+            else if (englishKey === "sku") { setSku(strValue); flatUpdates.sku = strValue }
+            else if (englishKey === "gtin") { setGtin(strValue); flatUpdates.gtin = strValue }
+            else if (englishKey === "brand") { setBrand(strValue); flatUpdates.brand = strValue }
+            else if (englishKey === "countryOfOrigin") { setCountryOfOrigin(strValue); flatUpdates.countryOfOrigin = strValue }
+            else if (englishKey === "materials") { setMaterials(strValue); flatUpdates.materials = strValue }
+            else if (englishKey === "materialSource") { setMaterialSource(strValue); flatUpdates.materialSource = strValue }
+            else if (englishKey === "careInstructions") { setCareInstructions(strValue); flatUpdates.careInstructions = strValue }
+            else if (englishKey === "isRepairable") { setIsRepairable(strValue); flatUpdates.isRepairable = strValue }
+            else if (englishKey === "sparePartsAvailable") { setSparePartsAvailable(strValue); flatUpdates.sparePartsAvailable = strValue }
+            else if (englishKey === "lifespan") { setLifespan(strValue); flatUpdates.lifespan = strValue }
+            else if (englishKey === "conformityDeclaration") { setConformityDeclaration(strValue); flatUpdates.conformityDeclaration = strValue }
+            else if (englishKey === "disposalInfo") { setDisposalInfo(strValue); flatUpdates.disposalInfo = strValue }
+            else if (englishKey === "takebackOffered") { setTakebackOffered(strValue); flatUpdates.takebackOffered = strValue }
+            else if (englishKey === "takebackContact") { setTakebackContact(strValue); flatUpdates.takebackContact = strValue }
+            else if (englishKey === "secondLifeInfo") { setSecondLifeInfo(strValue); flatUpdates.secondLifeInfo = strValue }
+            if (Object.keys(flatUpdates).length > 0 && onDppUpdate) {
+              onDppUpdate({ ...dpp, ...flatUpdates })
+            }
           }}
           onEditSupplierConfig={(blockId) => {
             // Öffne Modal für Bearbeitung/Anzeige (Block-spezifisch)

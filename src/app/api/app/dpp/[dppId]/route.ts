@@ -161,12 +161,13 @@ export async function GET(
       "secondLifeInfo": "secondLifeInfo"
     }
 
-    // Ergänze fieldValues mit direkten DPP-Spalten, wenn sie noch nicht vorhanden sind
+    // Ergänze fieldValues mit direkten DPP-Spalten nur wenn das Feld fehlt (nicht bei leerem String)
+    // Sonst würde ein bewusst geleertes Feld (z. B. EAN) wieder mit dem alten DB-Wert überschrieben
     Object.keys(directFieldMapping).forEach(dppColumn => {
       const fieldKey = directFieldMapping[dppColumn]
       const value = (dppWithMedia as any)[dppColumn]
-      // Ergänze nur, wenn Wert vorhanden ist UND noch nicht in fieldValues
-      if (value !== null && value !== undefined && value !== "" && !fieldValues[fieldKey]) {
+      const keyExists = fieldKey in fieldValues
+      if (value !== null && value !== undefined && value !== "" && !keyExists) {
         fieldValues[fieldKey] = value
         console.log("[DPP API] Fallback: Added", dppColumn, "->", fieldKey, "=", value)
       }
