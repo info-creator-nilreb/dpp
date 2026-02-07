@@ -118,7 +118,7 @@ export default async function DppPublicView({
         caption: b.content?.fields?.caption?.value ? String(b.content.fields.caption.value) : undefined,
       }
     })
-    .filter((x): x is { url: string; alt?: string; caption?: string } => x != null)
+    .filter((x): x is NonNullable<typeof x> => x != null)
   const galleryImages = [
     ...galleryFromBasisdaten.map((m) => ({ url: m.storageUrl, alt: m.fileName })),
     ...galleryFromMehrwert,
