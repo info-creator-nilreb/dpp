@@ -566,7 +566,7 @@ export default function TemplateBlocksSection({
                   showCo2CalculateButton={field.type === "co2_emissions" && co2CalculationEnabled && !readOnly && !!onOpenCo2Calculate}
                   onOpenCo2Calculate={field.type === "co2_emissions" && onOpenCo2Calculate ? () => onOpenCo2Calculate(field.key) : undefined}
                   showCo2PremiumHint={field.type === "co2_emissions" && !co2CalculationEnabled && !readOnly}
-                  showHeroHint={isBasisdatenBlock && firstImageFieldKey === field.key}
+                  showHeroHint={!!(isBasisdatenBlock && firstImageFieldKey === field.key)}
                 />
               )
             })
