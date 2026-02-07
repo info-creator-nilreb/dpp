@@ -311,7 +311,7 @@ export default function TemplateBlocksSection({
       }
     }
     return acc
-  }, {} as Record<string, string | string[]>)
+  }, {} as Record<string, string | string[] | Co2EmissionsValue>)
   
   // WICHTIG: Erweitere mappedFieldValues um Reverse-Mapping (Template-Key → englischer Key)
   // Dies stellt sicher, dass Werte auch gefunden werden, wenn sie mit englischen Keys gespeichert sind
