@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import ConfirmDialog from "@/components/ConfirmDialog"
+import type { Co2EmissionsValue } from "@/lib/co2-emissions-types"
 
 interface TemplateBlock {
   id: string
@@ -71,7 +72,7 @@ interface SupplierInviteModalProps {
   loading?: boolean
   fieldInstances?: Record<string, Array<{
     instanceId: string
-    values: Record<string, string | string[]>
+    values: Record<string, string | string[] | Co2EmissionsValue>
   }>>
 }
 
