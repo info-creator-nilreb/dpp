@@ -33,6 +33,8 @@ interface EditorialDppViewRedesignProps {
   organizationLogoUrl?: string
   organizationWebsite?: string
   heroImageUrl?: string
+  /** Alle Basisdaten-Bilder in Reihenfolge (für Hero + Thumbnail-Strip) */
+  basisdatenHeroImages?: HeroImageItem[]
   /** Galerie: weitere Bilder aus Basisdaten (2+) + Bilder aus Mehrwert-Blöcken */
   galleryImages?: GalleryImageItem[]
   versionInfo?: {
