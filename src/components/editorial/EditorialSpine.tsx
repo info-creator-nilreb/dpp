@@ -12,6 +12,7 @@ import { UnifiedContentBlock } from '@/lib/content-adapter'
 import { Section, editorialSpacing } from './index'
 import { editorialColors } from './tokens/colors'
 import HeroImageBlock from './spine/HeroImageBlock'
+import type { HeroImageItem } from './spine/HeroImageBlock'
 import HeadlineBlock from './spine/HeadlineBlock'
 import StoryTextBlock from './spine/StoryTextBlock'
 import VersionInfoBlock from './spine/VersionInfoBlock'
@@ -24,6 +25,8 @@ interface EditorialSpineProps {
   description?: string | null
   brandName?: string
   heroImageUrl?: string
+  /** Alle Basisdaten-Bilder in Reihenfolge (für Hero + Thumbnail-Strip) */
+  basisdatenHeroImages?: HeroImageItem[]
   versionInfo?: {
     version: number
     createdAt: Date
