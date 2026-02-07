@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import TemplateBlockField from "@/components/TemplateBlockField"
 import RepeatableFieldGroup from "@/components/RepeatableFieldGroup"
+import type { Co2EmissionsValue } from "@/lib/co2-emissions-types"
 
 // Connection/Network Icon für Block-Ebene (Datenherkunft / Verantwortung)
 // Minimalistisches Link/Network-Icon: "Dieser Block ist extern angebunden"
@@ -150,14 +151,14 @@ interface TemplateBlocksSectionProps {
   supplierInvitationEnabled?: boolean
   fieldInstances?: Record<string, Array<{
     instanceId: string
-    values: Record<string, string | string[]>
+    values: Record<string, string | string[] | Co2EmissionsValue>
   }>> // Instanzen für wiederholbare Felder (fieldKey -> instances[])
   onFieldInstancesChange?: (fieldKey: string, instances: Array<{
     instanceId: string
-    values: Record<string, string | string[]>
+    values: Record<string, string | string[] | Co2EmissionsValue>
   }>) => void
-  fieldValues?: Record<string, string | string[]> // Werte für normale Felder (fieldKey -> value)
-  onFieldValueChange?: (fieldKey: string, value: string | string[]) => void // Callback für Feldwert-Änderungen
+  fieldValues?: Record<string, string | string[] | Co2EmissionsValue> // Werte für normale Felder (fieldKey -> value)
+  onFieldValueChange?: (fieldKey: string, value: string | string[] | Co2EmissionsValue) => void // Callback für Feldwert-Änderungen
   onSupplierConfigUpdate?: (blockId: string, enabled: boolean, mode?: "input" | "declaration") => void
   onEditSupplierConfig?: (blockId: string) => void // Öffnet Modal für Bearbeitung/Anzeige
   pendingFiles?: Array<{

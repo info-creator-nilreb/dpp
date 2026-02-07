@@ -2,6 +2,10 @@
 
 import { useState } from "react"
 import TemplateBlockField from "@/components/TemplateBlockField"
+import type { Co2EmissionsValue } from "@/lib/co2-emissions-types"
+
+/** Wert eines Felds in einer wiederholbaren Instanz (TemplateBlockField kann auch Co2EmissionsValue liefern) */
+type RepeatableFieldValue = string | string[] | Co2EmissionsValue
 
 interface RepeatableFieldGroupProps {
   field: {
@@ -16,11 +20,11 @@ interface RepeatableFieldGroupProps {
   dppId: string | null
   instances: Array<{
     instanceId: string
-    values: Record<string, string | string[]>
+    values: Record<string, RepeatableFieldValue>
   }>
   onInstancesChange: (instances: Array<{
     instanceId: string
-    values: Record<string, string | string[]>
+    values: Record<string, RepeatableFieldValue>
   }>) => void
   media?: Array<{
     id: string
@@ -63,7 +67,7 @@ export default function RepeatableFieldGroup({
     onInstancesChange(instances.filter(inst => inst.instanceId !== instanceId))
   }
 
-  const updateInstanceValue = (instanceId: string, value: string | string[]) => {
+  const updateInstanceValue = (instanceId: string, value: RepeatableFieldValue) => {
     onInstancesChange(
       instances.map(inst =>
         inst.instanceId === instanceId

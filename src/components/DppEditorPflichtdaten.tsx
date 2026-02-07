@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, Fragment } from "react"
+import { useRef } from "react"
 import { useRouter } from "next/navigation"
 import DppMediaSection from "@/components/DppMediaSection"
 import CountrySelect from "@/components/CountrySelect"
@@ -13,7 +14,9 @@ import TemplateBlocksSection from "@/components/TemplateBlocksSection"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import SupplierInviteButton from "@/components/SupplierInviteButton"
 import SupplierInviteModal from "@/components/SupplierInviteModal"
+import Co2CalculationModal from "@/components/Co2CalculationModal"
 import ConfirmDialog from "@/components/ConfirmDialog"
+import type { Co2EmissionsValue } from "@/lib/co2-emissions-types"
 
 interface PendingFile {
   id: string
@@ -178,7 +181,11 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
 
   /** Lieferanten-Zuweisung im Block-Header nur anzeigen, wenn unter /super-admin/pricing aktiviert */
   const hasSupplierInvitation = availableFeatures.includes("supplier_invitation")
-  
+  const hasCo2Calculation = availableFeatures.includes("co2_calculation")
+  const [showCo2Modal, setShowCo2Modal] = useState(false)
+  const [co2ModalFieldKey, setCo2ModalFieldKey] = useState<string | null>(null)
+  const [co2ModalInitialMaterial, setCo2ModalInitialMaterial] = useState<string | null>(null)
+
   // Debug: Log initialDpp beim ersten Render
   console.log("[DppEditor] Component mounted with initialDpp:", {
     id: initialDpp?.id,
@@ -214,64 +221,64 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
   const [showCategoryChangeWarning, setShowCategoryChangeWarning] = useState(false)
   const [pendingCategoryChange, setPendingCategoryChange] = useState<string | null>(null)
 
+  // Ref: Nur einmal pro DPP-ID aus initialDpp syncen, damit Nutzerauswahl (z. B. Kategorie) nicht überschrieben wird
+  const lastSyncedDppIdRef = useRef<string | null>(null)
+
   // Update state when initialDpp prop changes (z.B. nach asynchronem Laden)
-  // WICHTIG: Dieser useEffect muss auch beim ersten Laden ausgeführt werden
+  // WICHTIG: Sync nur bei Wechsel der DPP-ID, nicht bei jedem Re-Render (sonst wird Kategorie-Auswahl zurückgesetzt)
   useEffect(() => {
-    // Prüfe, ob initialDpp gültig ist
-    if (initialDpp && initialDpp.id) {
-      // Aktualisiere State immer, wenn sich die ID geändert hat ODER beim ersten Laden
-      const isFirstLoad = !dpp.id || dpp.id === "new" || dpp.id !== initialDpp.id
-      
-      if (isFirstLoad) {
-        console.log("[DppEditor] Initializing/updating state from initialDpp:", {
-          id: initialDpp.id,
-          name: initialDpp.name,
-          description: initialDpp.description,
-          hasFieldValues: !!(initialDpp as any)._fieldValues,
-          hasFieldInstances: !!(initialDpp as any)._fieldInstances
-        })
-        setDpp(initialDpp)
-        setName(initialDpp.name || "")
-        setDescription(initialDpp.description || "")
-        setCategory(initialDpp.category || "")
-        setSku(initialDpp.sku || "")
-        setGtin(initialDpp.gtin || "")
-        setBrand(initialDpp.brand || "")
-        setCountryOfOrigin(initialDpp.countryOfOrigin || "")
-        setMaterials(initialDpp.materials || "")
-        setMaterialSource(initialDpp.materialSource || "")
-        setCareInstructions(initialDpp.careInstructions || "")
-        setIsRepairable(initialDpp.isRepairable || "")
-        setSparePartsAvailable(initialDpp.sparePartsAvailable || "")
-        setLifespan(initialDpp.lifespan || "")
-        setConformityDeclaration(initialDpp.conformityDeclaration || "")
-        setDisposalInfo(initialDpp.disposalInfo || "")
-        setTakebackOffered(initialDpp.takebackOffered || "")
-        setTakebackContact(initialDpp.takebackContact || "")
-        setSecondLifeInfo(initialDpp.secondLifeInfo || "")
-        setPreviousCategory(initialDpp.category || "")
-        
-        // Lade Feldwerte aus DppContent, falls vorhanden
-        if ((initialDpp as any)._fieldValues || (initialDpp as any)._fieldInstances) {
-          console.log("[DppEditor] Loading field values from DppContent (initialDpp)")
-          if ((initialDpp as any)._fieldValues) {
-            const loadedFieldValues = (initialDpp as any)._fieldValues
-            setFieldValues(loadedFieldValues)
-            console.log("[DppEditor] Loaded field values:", Object.keys(loadedFieldValues).length, "fields")
-            console.log("[DppEditor] Field value keys:", Object.keys(loadedFieldValues))
-            console.log("[DppEditor] Field values:", loadedFieldValues)
-          }
-          if ((initialDpp as any)._fieldInstances) {
-            setFieldInstances((initialDpp as any)._fieldInstances)
-            console.log("[DppEditor] Loaded field instances:", Object.keys((initialDpp as any)._fieldInstances).length, "repeatable fields", Object.keys((initialDpp as any)._fieldInstances))
-          }
-        } else {
-          console.log("[DppEditor] No _fieldValues or _fieldInstances in initialDpp, will load from API if needed")
-          // Fallback: Lade Feldwerte direkt von der API (nur wenn DPP bereits existiert)
-          if (initialDpp.id && initialDpp.id !== "new") {
-            loadFieldValuesFromContent(initialDpp.id)
-          }
-        }
+    if (!initialDpp?.id) return
+    const dppId = initialDpp.id
+    // Bereits für diese DPP-ID gesynct → Nutzerauswahl (z. B. Kategorie) nicht überschreiben
+    if (lastSyncedDppIdRef.current === dppId) return
+    lastSyncedDppIdRef.current = dppId
+
+    console.log("[DppEditor] Initializing/updating state from initialDpp:", {
+      id: initialDpp.id,
+      name: initialDpp.name,
+      description: initialDpp.description,
+      hasFieldValues: !!(initialDpp as any)._fieldValues,
+      hasFieldInstances: !!(initialDpp as any)._fieldInstances
+    })
+    setDpp(initialDpp)
+    setName(initialDpp.name || "")
+    setDescription(initialDpp.description || "")
+    setCategory(initialDpp.category || "")
+    setSku(initialDpp.sku || "")
+    setGtin(initialDpp.gtin || "")
+    setBrand(initialDpp.brand || "")
+    setCountryOfOrigin(initialDpp.countryOfOrigin || "")
+    setMaterials(initialDpp.materials || "")
+    setMaterialSource(initialDpp.materialSource || "")
+    setCareInstructions(initialDpp.careInstructions || "")
+    setIsRepairable(initialDpp.isRepairable || "")
+    setSparePartsAvailable(initialDpp.sparePartsAvailable || "")
+    setLifespan(initialDpp.lifespan || "")
+    setConformityDeclaration(initialDpp.conformityDeclaration || "")
+    setDisposalInfo(initialDpp.disposalInfo || "")
+    setTakebackOffered(initialDpp.takebackOffered || "")
+    setTakebackContact(initialDpp.takebackContact || "")
+    setSecondLifeInfo(initialDpp.secondLifeInfo || "")
+    setPreviousCategory(initialDpp.category || "")
+
+    // Lade Feldwerte aus DppContent, falls vorhanden
+    if ((initialDpp as any)._fieldValues || (initialDpp as any)._fieldInstances) {
+      console.log("[DppEditor] Loading field values from DppContent (initialDpp)")
+      if ((initialDpp as any)._fieldValues) {
+        const loadedFieldValues = (initialDpp as any)._fieldValues
+        setFieldValues(loadedFieldValues)
+        console.log("[DppEditor] Loaded field values:", Object.keys(loadedFieldValues).length, "fields")
+        console.log("[DppEditor] Field value keys:", Object.keys(loadedFieldValues))
+        console.log("[DppEditor] Field values:", loadedFieldValues)
+      }
+      if ((initialDpp as any)._fieldInstances) {
+        setFieldInstances((initialDpp as any)._fieldInstances)
+        console.log("[DppEditor] Loaded field instances:", Object.keys((initialDpp as any)._fieldInstances).length, "repeatable fields", Object.keys((initialDpp as any)._fieldInstances))
+      }
+    } else {
+      console.log("[DppEditor] No _fieldValues or _fieldInstances in initialDpp, will load from API if needed")
+      if (initialDpp.id && initialDpp.id !== "new") {
+        loadFieldValuesFromContent(initialDpp.id)
       }
     }
   }, [initialDpp?.id, dpp.id]) // Reagiere auf ID-Änderung und initiales Laden
@@ -350,14 +357,34 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
   }>>({})
   const [supplierConfigLoading, setSupplierConfigLoading] = useState(false)
   
-  // Field Instances State (für wiederholbare Felder)
+  // Field Instances State (für wiederholbare Felder; values kann Co2EmissionsValue enthalten)
   const [fieldInstances, setFieldInstances] = useState<Record<string, Array<{
     instanceId: string
-    values: Record<string, string | string[]>
+    values: Record<string, string | string[] | Co2EmissionsValue>
   }>>>((initialDpp as any)?._fieldInstances || {})
   
   // Field Values State (für normale template-basierte Felder)
-  const [fieldValues, setFieldValues] = useState<Record<string, string | string[]>>((initialDpp as any)?._fieldValues || {})
+  const [fieldValues, setFieldValues] = useState<Record<string, string | string[] | Co2EmissionsValue>>((initialDpp as any)?._fieldValues || {})
+
+  /** Wert des Pflichtfelds „Material“ / „Materialien“ für Vorauswahl im CO₂-Modal. */
+  const getMaterialFieldValue = useCallback((): string | null => {
+    if (!template) return null
+    const field = template.blocks
+      .flatMap((b) => b.fields)
+      .find(
+        (f) =>
+          f.key === "material" ||
+          f.key === "materialien" ||
+          f.key?.toLowerCase() === "material" ||
+          (typeof f.label === "string" && f.label.toLowerCase().includes("material"))
+      )
+    if (!field) return null
+    const raw = fieldValues[field.key]
+    if (raw == null) return null
+    if (typeof raw === "string") return raw.trim() || null
+    if (Array.isArray(raw)) return (raw[0] && String(raw[0]).trim()) || null
+    return null
+  }, [template, fieldValues])
 
   // Accordion State (Sektion 1 immer offen)
   const [section2Open, setSection2Open] = useState(false)
@@ -1590,9 +1617,10 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
           WebkitAppearance: "none",
           cursor: disabled ? "not-allowed" : "pointer",
           MozAppearance: "none",
-          backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
+          backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237A7A7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
           backgroundRepeat: "no-repeat",
-          backgroundPosition: "right clamp(0.75rem, 2vw, 1rem) center"
+          backgroundPosition: "right clamp(0.75rem, 2vw, 1rem) center",
+          backgroundSize: "20px 20px"
         }}
       >
         {options.map(opt => (
@@ -2016,6 +2044,12 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
             onMediaChange={refreshMedia}
             blockSupplierConfigs={blockSupplierConfigs}
             supplierInvitationEnabled={hasSupplierInvitation}
+            co2CalculationEnabled={hasCo2Calculation}
+            onOpenCo2Calculate={(fieldKey) => {
+              setCo2ModalFieldKey(fieldKey)
+              setCo2ModalInitialMaterial(getMaterialFieldValue())
+              setShowCo2Modal(true)
+            }}
             fieldInstances={fieldInstances}
             onFieldInstancesChange={(fieldKey, instances) => {
               setFieldInstances(prev => ({
@@ -2463,6 +2497,28 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
         fieldInstances={fieldInstances}
       />
     )}
+
+    {/* CO₂-Berechnung (Premium): Modal für co2_emissions-Felder */}
+    <Co2CalculationModal
+      isOpen={showCo2Modal}
+      onClose={() => {
+        setShowCo2Modal(false)
+        setCo2ModalFieldKey(null)
+        setCo2ModalInitialMaterial(null)
+      }}
+      onApply={(value) => {
+        if (co2ModalFieldKey) {
+          setFieldValues((prev) => ({
+            ...prev,
+            [co2ModalFieldKey]: value,
+          }))
+          setShowCo2Modal(false)
+          setCo2ModalFieldKey(null)
+          setCo2ModalInitialMaterial(null)
+        }
+      }}
+      initialMaterialFromDpp={co2ModalInitialMaterial ?? undefined}
+    />
 
     </>
   )
