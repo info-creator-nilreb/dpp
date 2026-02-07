@@ -141,6 +141,8 @@ interface TemplateBlocksSectionProps {
     fieldId?: string | null
   }>
   onMediaChange: () => void
+  /** Reihenfolge der Produktbilder speichern (z. B. erstes = Hero). Wird an TemplateBlockField durchgereicht. */
+  onMediaReorder?: (orderedMediaIds: string[]) => void | Promise<void>
   // ENTFERNT: onInviteSupplier - wird jetzt über globales Modal gehandhabt
   blockSupplierConfigs?: Record<string, {
     enabled: boolean
@@ -188,6 +190,7 @@ export default function TemplateBlocksSection({
   dppId,
   media,
   onMediaChange,
+  onMediaReorder,
   blockSupplierConfigs = {},
   supplierInvitationEnabled = true,
   fieldInstances = {},
@@ -567,6 +570,7 @@ export default function TemplateBlocksSection({
                   onOpenCo2Calculate={field.type === "co2_emissions" && onOpenCo2Calculate ? () => onOpenCo2Calculate(field.key) : undefined}
                   showCo2PremiumHint={field.type === "co2_emissions" && !co2CalculationEnabled && !readOnly}
                   showHeroHint={!!(isBasisdatenBlock && firstImageFieldKey === field.key)}
+                  onMediaReorder={onMediaReorder}
                 />
               )
             })

@@ -767,6 +767,25 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
     }
   }
 
+  const handleMediaReorder = async (orderedMediaIds: string[]) => {
+    if (!dpp.id || dpp.id === "new" || orderedMediaIds.length === 0) return
+    try {
+      const response = await fetch(`/api/app/dpp/${dpp.id}/media`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaIds: orderedMediaIds })
+      })
+      if (response.ok) await refreshMedia()
+      else {
+        const data = await response.json().catch(() => ({}))
+        showNotification(data.error || "Reihenfolge konnte nicht gespeichert werden", "error")
+      }
+    } catch (error) {
+      console.error("[DppEditor] Error reordering media:", error)
+      showNotification("Reihenfolge konnte nicht gespeichert werden", "error")
+    }
+  }
+
   // Lade Medien beim ersten Laden eines bestehenden DPPs (falls nicht bereits geladen)
   useEffect(() => {
     if (!isNew && dpp.id && dpp.id !== "new") {
@@ -2044,6 +2063,7 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
             dppId={dpp.id && dpp.id !== "new" ? dpp.id : null}
             media={pflichtdatenMedia}
             onMediaChange={refreshMedia}
+            onMediaReorder={handleMediaReorder}
             blockSupplierConfigs={blockSupplierConfigs}
             supplierInvitationEnabled={hasSupplierInvitation}
             co2CalculationEnabled={hasCo2Calculation}

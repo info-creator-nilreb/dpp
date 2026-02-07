@@ -12,6 +12,7 @@ import { Page, Section } from './index'
 import { UnifiedContentBlock } from '@/lib/content-adapter'
 import type { StylingConfig } from '@/lib/cms/types'
 import EditorialSpine from './EditorialSpine'
+import type { HeroImageItem } from './EditorialSpine'
 import DataSectionsContainer from './data/DataSectionsContainer'
 import ImageGallery from './data/ImageGallery'
 import { editorialSpacing } from './tokens/spacing'
@@ -59,6 +60,7 @@ export default function EditorialDppViewRedesign({
   organizationLogoUrl,
   organizationWebsite,
   heroImageUrl,
+  basisdatenHeroImages,
   galleryImages = [],
   versionInfo,
   basicData,
@@ -74,6 +76,7 @@ export default function EditorialDppViewRedesign({
         description={description}
         brandName={brandName}
         heroImageUrl={heroImageUrl}
+        basisdatenHeroImages={basisdatenHeroImages}
         versionInfo={versionInfo}
         organizationLogoUrl={organizationLogoUrl}
         organizationName={organizationName}

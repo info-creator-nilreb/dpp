@@ -61,6 +61,8 @@ interface TemplateBlockFieldProps {
   showCo2PremiumHint?: boolean
   /** UX: Hinweis anzeigen, dass das erste Bild in der Vorschau als Hero angezeigt wird (nur bei Basis- & Produktdaten) */
   showHeroHint?: boolean
+  /** Reihenfolge der Medien per Drag & Drop ändern (z. B. erstes Bild = Hero). Nur bei showHeroHint + file-image. */
+  onMediaReorder?: (orderedMediaIds: string[]) => void | Promise<void>
 }
 
 /**
@@ -86,10 +88,12 @@ export default function TemplateBlockField({
   onOpenCo2Calculate,
   showCo2PremiumHint = false,
   showHeroHint = false,
+  onMediaReorder,
 }: TemplateBlockFieldProps) {
   const { showNotification } = useNotification()
   const [uploading, setUploading] = useState(false)
   const [deleteConfirmMediaId, setDeleteConfirmMediaId] = useState<string | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   // Debug: Log value prop
   console.log(`[TemplateBlockField] Field ${field.key} (${field.label}): value=`, value, "type:", typeof value, "supplierInfo:", supplierInfo)
@@ -349,7 +353,7 @@ export default function TemplateBlockField({
             color: "#7A7A7A",
             marginBottom: "0.5rem",
           }}>
-            Das erste Bild wird in der Vorschau als Hero-Bild angezeigt.
+            Das erste Bild ist das Hero-Bild. Weitere Bilder erscheinen als Thumbnails unter dem Hero. Reihenfolge kannst du per Drag &amp; Drop ändern.
           </p>
         )}
         
@@ -551,15 +555,44 @@ export default function TemplateBlockField({
               </div>
             ))}
             
-            {/* Hochgeladene Medien */}
-            {fieldMedia.map((mediaItem) => (
+            {/* Hochgeladene Medien (mit Drag & Drop wenn showHeroHint + onMediaReorder) */}
+            {fieldMedia.map((mediaItem, mediaIndex) => {
+              const canReorder = !readOnly && showHeroHint && field.type === "file-image" && onMediaReorder && fieldMedia.length > 1
+              return (
               <div
                 key={mediaItem.id}
+                data-drag-index={mediaIndex}
+                draggable={canReorder}
+                onDragStart={canReorder ? (e) => {
+                  e.dataTransfer.setData("text/plain", mediaItem.id)
+                  e.dataTransfer.effectAllowed = "move"
+                } : undefined}
+                onDragOver={canReorder ? (e) => {
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = "move"
+                  setDragOverIndex(mediaIndex)
+                } : undefined}
+                onDragLeave={canReorder ? () => setDragOverIndex(null) : undefined}
+                onDrop={canReorder ? (e) => {
+                  e.preventDefault()
+                  setDragOverIndex(null)
+                  const dragId = e.dataTransfer.getData("text/plain")
+                  if (!dragId || dragId === mediaItem.id) return
+                  const ids = fieldMedia.map((m) => m.id)
+                  const fromIdx = ids.indexOf(dragId)
+                  const toIdx = mediaIndex
+                  if (fromIdx === -1 || fromIdx === toIdx) return
+                  const reordered = ids.filter((id) => id !== dragId)
+                  reordered.splice(toIdx, 0, dragId)
+                  onMediaReorder?.(reordered)
+                } : undefined}
                 style={{
                   position: "relative",
                   border: "1px solid #CDCDCD",
                   borderRadius: "8px",
-                  overflow: "hidden"
+                  overflow: "hidden",
+                  ...(canReorder && { cursor: "grab" }),
+                  ...(dragOverIndex === mediaIndex && { boxShadow: "0 0 0 2px var(--color-accent, #2563eb)" })
                 }}
               >
                 {mediaItem.fileType.startsWith("image/") ? (
@@ -675,7 +708,8 @@ export default function TemplateBlockField({
                   )}
                 </div>
               </div>
-            ))}
+            )
+            })}
             {/* Plus-Slot zum Hinzufügen weiterer Dateien (rechts von den Thumbnails) */}
             {!readOnly && (
               <FileUploadArea

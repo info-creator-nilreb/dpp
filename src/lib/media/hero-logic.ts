@@ -31,45 +31,33 @@ export function isFromProductDataBlock(media: MediaItem, blockName?: string): bo
 }
 
 /**
- * Gibt das Hero-Bild zurück (erstes Bild mit Rolle "primary_product_image")
- * Nur aus "Basis- & Produktdaten"-Block
+ * Gibt das Hero-Bild zurück (erstes Bild in der Reihenfolge = sortOrder vom Server).
+ * Nur aus "Basis- & Produktdaten"-Block. Die Medienliste wird vom Server bereits nach sortOrder sortiert geliefert.
  */
 export function getHeroImage(
   media: MediaItem[], 
   blockName?: string
 ): MediaItem | null {
-  // Filtere nur Medien aus "Basis- & Produktdaten"-Block
   const productDataMedia = media.filter(m => 
     isFromProductDataBlock(m, blockName) &&
     m.fileType?.startsWith("image/")
   )
-  
-  // Erstes Bild mit Rolle "primary_product_image"
-  const heroImage = productDataMedia.find(m => 
-    m.role === "primary_product_image"
-  )
-  
-  return heroImage || null
+  return productDataMedia[0] ?? null
 }
 
 /**
- * Gibt alle Galerie-Bilder zurück (Bilder mit Rolle "gallery_image")
- * Nur aus "Basis- & Produktdaten"-Block
+ * Gibt alle Galerie-Bilder zurück (alle Produktbilder in Reihenfolge; erstes = Hero, Rest = Galerie).
+ * Nur aus "Basis- & Produktdaten"-Block. Liste ist bereits nach sortOrder sortiert.
  */
 export function getGalleryImages(
   media: MediaItem[], 
   blockName?: string
 ): MediaItem[] {
-  // Filtere nur Medien aus "Basis- & Produktdaten"-Block
   const productDataMedia = media.filter(m => 
     isFromProductDataBlock(m, blockName) &&
     m.fileType?.startsWith("image/")
   )
-  
-  // Alle Bilder mit Rolle "gallery_image"
-  return productDataMedia.filter(m => 
-    m.role === "gallery_image"
-  )
+  return productDataMedia
 }
 
 /**

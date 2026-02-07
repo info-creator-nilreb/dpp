@@ -207,6 +207,7 @@ model DppMedia {
   fileSize   Int
   storageUrl String
   uploadedAt DateTime @default(now())
+  sortOrder  Int      @default(0) // Reihenfolge für Anzeige (erstes Bild = Hero)
   // Semantische Rolle: primary_product_image (Hero), gallery_image, certificate, logo, etc.
   role       String?
   // Zuordnung zu Template-Block und -Feld (optional für Legacy-Medien)

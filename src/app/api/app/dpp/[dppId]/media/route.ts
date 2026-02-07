@@ -111,7 +111,8 @@ export async function POST(
           fileType: media.fileType,
           fileSize: media.fileSize,
           storageUrl: media.storageUrl,
-          uploadedAt: media.uploadedAt
+          uploadedAt: media.uploadedAt,
+          sortOrder: media.sortOrder
         }
       },
       { status: 201 }
@@ -153,17 +154,91 @@ export async function GET(
     const permissionError = await requireViewDPP(dppId, session.user.id)
     if (permissionError) return permissionError
 
-    // Hole alle Medien des DPPs
-    const media = await prisma.dppMedia.findMany({
-      where: { dppId },
-      orderBy: { uploadedAt: "desc" }
-    })
+    // Hole alle Medien sortiert per Raw-SQL (sortOrder, dann uploadedAt) – unabhängig vom Prisma-Client
+    const media = await prisma.$queryRaw<
+      Array<{
+        id: string
+        dppId: string
+        fileName: string
+        fileType: string
+        fileSize: number
+        storageUrl: string
+        uploadedAt: Date
+        sortOrder: number
+        role: string | null
+        blockId: string | null
+        fieldId: string | null
+        fieldKey: string | null
+      }>
+    >`
+      SELECT id, "dppId", "fileName", "fileType", "fileSize", "storageUrl", "uploadedAt", "sortOrder", role, "blockId", "fieldId", "fieldKey"
+      FROM dpp_media
+      WHERE "dppId" = ${dppId}
+      ORDER BY "sortOrder" ASC, "uploadedAt" DESC
+    `
 
     return NextResponse.json({ media }, { status: 200 })
   } catch (error: any) {
     console.error("Error fetching media:", error)
     return NextResponse.json(
       { error: "Ein Fehler ist aufgetreten" },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PATCH /api/app/dpp/[dppId]/media
+ *
+ * Reihenfolge der Medien aktualisieren (z. B. für Hero = erstes Bild).
+ * Body: { mediaIds: string[] } – IDs in der gewünschten Reihenfolge.
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ dppId: string }> }
+) {
+  try {
+    const { dppId } = await params
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Nicht autorisiert" },
+        { status: 401 }
+      )
+    }
+
+    const permissionError = await requireEditDPP(dppId, session.user.id)
+    if (permissionError) return permissionError
+
+    const body = await request.json()
+    const mediaIds = Array.isArray(body.mediaIds) ? body.mediaIds : []
+
+    if (mediaIds.length === 0) {
+      return NextResponse.json(
+        { error: "mediaIds (Array) erforderlich" },
+        { status: 400 }
+      )
+    }
+
+    // Reihenfolge per Raw-SQL setzen (unabhängig vom generierten Prisma-Client)
+    await prisma.$transaction(
+      mediaIds.map((id: string, index: number) =>
+        prisma.$executeRaw`
+          UPDATE dpp_media SET "sortOrder" = ${index}
+          WHERE id = ${id} AND "dppId" = ${dppId}
+        `
+      )
+    )
+
+    return NextResponse.json(
+      { message: "Reihenfolge aktualisiert" },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error("Media reorder error:", error)
+    return NextResponse.json(
+      { error: error?.message ?? "Ein Fehler ist aufgetreten" },
       { status: 500 }
     )
   }

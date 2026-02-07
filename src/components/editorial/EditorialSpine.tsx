@@ -46,6 +46,7 @@ export default function EditorialSpine({
   description,
   brandName,
   heroImageUrl,
+  basisdatenHeroImages,
   versionInfo,
   organizationLogoUrl,
   organizationName,
@@ -110,10 +111,9 @@ export default function EditorialSpine({
   
   return (
     <>
-      {/* Hero Section mit Overlay und Logo - ohne Section-Wrapper, um grauen Balken zu vermeiden */}
+      {/* Mit Hero: Hero-Bereich (Bild + Produktname) ganz oben */}
       {heroUrl && (
         <div style={{ position: 'relative', width: '100%' }}>
-          {/* Logo (Top-Left) */}
           {organizationLogoUrl && (
             <Logo
               logoUrl={organizationLogoUrl}
@@ -123,6 +123,7 @@ export default function EditorialSpine({
           )}
           <HeroImageBlock
             imageUrl={heroUrl}
+            images={basisdatenHeroImages && basisdatenHeroImages.length > 1 ? basisdatenHeroImages : undefined}
             headline={headline}
             brandName={brandName}
             versionInfo={versionInfo}
@@ -130,7 +131,27 @@ export default function EditorialSpine({
         </div>
       )}
       
-      {/* Unter dem Hero: nur Beschreibung und/oder Basisdaten – kein HeadlineBlock; Hintergrund immer Weiß, nie grauer Balken */}
+      {/* Ohne Hero: Produktname/Headline ganz oben, darunter Platzhalter-Hinweis, darunter Basisdaten */}
+      {!heroUrl && showContentBelowHero && (
+        <Section variant="contained" style={{ paddingTop: editorialSpacing.xl, paddingBottom: editorialSpacing.xl }}>
+          <HeadlineBlock text={headlineDisplay} brandName={brandName} versionInfo={versionInfo} />
+          {isPreview && (
+            <p style={{
+              marginTop: editorialSpacing.lg,
+              fontSize: '0.875rem',
+              color: editorialColors.text.secondaryVar,
+              textAlign: 'center',
+              maxWidth: '480px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}>
+              Laden Sie in den Pflichtdaten unter „Basis- & Produktdaten“ mindestens ein Produktbild hoch – es wird hier als Hero angezeigt.
+            </p>
+          )}
+        </Section>
+      )}
+      
+      {/* Unter Hero bzw. unter Headline: Beschreibung und/oder Basisdaten (GTIN, Herkunftsland) */}
       {showContentBelowHero && (storyText || hasBasicData) && (
         <Section 
           variant="contained"
@@ -168,25 +189,6 @@ export default function EditorialSpine({
               </div>
             </>
           ) : null}
-        </Section>
-      )}
-      {/* Headline-Bereich nur ohne Hero (z. B. wenn kein Produktbild). Basisdaten (GTIN etc.) nicht doppelt – werden bereits oben in StoryTextBlock bzw. erster Section gezeigt. */}
-      {!heroUrl && showContentBelowHero && (
-        <Section variant="contained" style={{ paddingTop: editorialSpacing.xl, paddingBottom: editorialSpacing.xl }}>
-          <HeadlineBlock text={headlineDisplay} brandName={brandName} versionInfo={versionInfo} />
-          {isPreview && (
-            <p style={{
-              marginTop: editorialSpacing.lg,
-              fontSize: '0.875rem',
-              color: editorialColors.text.secondaryVar,
-              textAlign: 'center',
-              maxWidth: '480px',
-              marginLeft: 'auto',
-              marginRight: 'auto',
-            }}>
-              Laden Sie in den Pflichtdaten unter „Basis- & Produktdaten“ mindestens ein Produktbild hoch – es wird hier als Hero angezeigt.
-            </p>
-          )}
         </Section>
       )}
     </>
