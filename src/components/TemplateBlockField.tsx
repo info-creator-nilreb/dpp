@@ -6,6 +6,11 @@ import InputField from "@/components/InputField"
 import CountrySelect from "@/components/CountrySelect"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import { useNotification } from "@/components/NotificationProvider"
+import {
+  type Co2EmissionsValue,
+  defaultCo2EmissionsValue,
+  normalizeCo2EmissionsValue,
+} from "@/lib/co2-emissions-types"
 
 interface PendingFile {
   id: string
@@ -25,8 +30,8 @@ interface TemplateBlockFieldProps {
   blockId: string
   blockName?: string // z. B. "Basis- & Produktdaten" für Hero-Rolle
   dppId: string | null
-  value?: string | string[] // Für file-Felder: Array von Media-IDs oder URLs
-  onChange?: (value: string | string[]) => void
+  value?: string | string[] | Co2EmissionsValue // Für co2_emissions: Objekt
+  onChange?: (value: string | string[] | Co2EmissionsValue) => void
   media?: Array<{
     id: string
     fileName: string
@@ -48,6 +53,14 @@ interface TemplateBlockFieldProps {
   } | null // Information über den Beteiligten, der dieses Feld bereitgestellt hat
   onSupplierInfoConfirm?: (fieldKey: string) => void // TEIL 6: Callback für Bestätigung
   readOnly?: boolean // Felder read-only machen (für Prüf-Modus)
+  /** Premium: Button "CO₂ automatisch berechnen" anzeigen (nur Entwurf, nicht read-only) */
+  showCo2CalculateButton?: boolean
+  /** Klick auf "CO₂ automatisch berechnen" */
+  onOpenCo2Calculate?: () => void
+  /** Hinweis für Nicht-Premium: "Automatische CO₂-Berechnung verfügbar in Premium." */
+  showCo2PremiumHint?: boolean
+  /** UX: Hinweis anzeigen, dass das erste Bild in der Vorschau als Hero angezeigt wird (nur bei Basis- & Produktdaten) */
+  showHeroHint?: boolean
 }
 
 /**
@@ -68,7 +81,11 @@ export default function TemplateBlockField({
   hideLabel = false,
   supplierInfo = null,
   onSupplierInfoConfirm,
-  readOnly = false
+  readOnly = false,
+  showCo2CalculateButton = false,
+  onOpenCo2Calculate,
+  showCo2PremiumHint = false,
+  showHeroHint = false,
 }: TemplateBlockFieldProps) {
   const { showNotification } = useNotification()
   const [uploading, setUploading] = useState(false)
@@ -326,6 +343,15 @@ export default function TemplateBlockField({
           {/* TEIL 6: Bestätigungsfunktion - in derselben Zeile wie Label */}
           {renderSupplierInfo()}
         </label>
+        {showHeroHint && field.type === "file-image" && (
+          <p style={{
+            fontSize: "0.8rem",
+            color: "#7A7A7A",
+            marginBottom: "0.5rem",
+          }}>
+            Das erste Bild wird in der Vorschau als Hero-Bild angezeigt.
+          </p>
+        )}
         
         {/* Upload-Bereich: Großes Feld nur wenn noch keine Datei; sonst nur Plus/Drag (wie Mehrwert-Tab) */}
         {!readOnly && (fieldMedia.length === 0 && fieldPendingFiles.length === 0) && (
@@ -808,6 +834,98 @@ export default function TemplateBlockField({
             boxSizing: "border-box"
           }}
         />
+      </div>
+    )
+  }
+
+  // CO₂-Emissionen-Feld (kg CO₂e, manuell oder berechnet)
+  if (field.type === "co2_emissions") {
+    const co2 = normalizeCo2EmissionsValue(value)
+    const numStr = co2.value !== null ? String(co2.value) : ""
+    return (
+      <div style={{ marginBottom: "1.5rem" }}>
+        <label htmlFor={`field-${field.id}`} style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+          fontWeight: "600",
+          color: "#0A0A0A",
+          marginBottom: "0.5rem"
+        }}>
+          {!hideLabel && <span>{field.label}</span>}
+          {field.required && <span style={{ color: "#24c598" }}>*</span>}
+          {renderSupplierInfo()}
+        </label>
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: "0.75rem"
+        }}>
+          <div style={{ flex: "1 1 200px", minWidth: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <input
+              id={`field-${field.id}`}
+              type="number"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              value={numStr}
+              onChange={(e) => {
+                const raw = e.target.value
+                const num = raw === "" ? null : parseFloat(raw)
+                if (num !== null && Number.isNaN(num)) return
+                onChange?.(defaultCo2EmissionsValue({ ...co2, value: num, source: "manual" }))
+              }}
+              required={field.required}
+              readOnly={readOnly}
+              style={{
+                width: "100%",
+                padding: "clamp(0.75rem, 2vw, 1rem)",
+                fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                border: "1px solid #CDCDCD",
+                borderRadius: "8px",
+                boxSizing: "border-box"
+              }}
+            />
+            <span style={{ fontSize: "0.9rem", color: "#7A7A7A", whiteSpace: "nowrap" }}>kg CO₂e</span>
+          </div>
+          {!readOnly && showCo2CalculateButton && onOpenCo2Calculate && (
+            <button
+              type="button"
+              onClick={onOpenCo2Calculate}
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: "0.875rem",
+                fontWeight: "500",
+                color: "#24c598",
+                backgroundColor: "transparent",
+                border: "1px solid #24c598",
+                borderRadius: "8px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0
+              }}
+            >
+              {co2.source === "calculated" ? "CO₂ erneut berechnen" : "CO₂ automatisch berechnen"}
+            </button>
+          )}
+        </div>
+        {!readOnly && showCo2PremiumHint && !showCo2CalculateButton && (
+          <p style={{ fontSize: "0.8rem", color: "#7A7A7A", marginTop: "0.5rem", marginBottom: 0 }}>
+            Automatische CO₂-Berechnung verfügbar in Premium.
+          </p>
+        )}
+        {(co2.source || co2.methodology) && (
+          <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#7A7A7A" }}>
+            {co2.source === "calculated" && <span>Quelle: berechnet</span>}
+            {co2.source === "manual" && <span>Quelle: manuell</span>}
+            {co2.methodology && (
+              <span style={{ marginLeft: co2.source ? "0.75rem" : 0 }}>Methodik: {co2.methodology}</span>
+            )}
+          </div>
+        )}
       </div>
     )
   }

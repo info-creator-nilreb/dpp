@@ -9,7 +9,7 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { transformDppToUnified } from "@/lib/content-adapter/dpp-transformer"
 import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRedesign"
-import { getHeroImage, type MediaItem } from "@/lib/media/hero-logic"
+import { getHeroImage, getGalleryImages, type MediaItem } from "@/lib/media/hero-logic"
 
 interface DppPublicViewProps {
   dppId: string
@@ -81,7 +81,7 @@ export default async function DppPublicView({
     createdAt: dpp.versions[0].createdAt
   } : undefined
 
-  // Hero = Produktbild aus Basisdaten (niemals Logo). Logo nur für Platzierung oben links.
+  // Hero = erstes Bild aus Basis- & Produktdaten (role "primary_product_image"). Fallback: erstes Bild mit blockId = Basisdaten-Block.
   const withoutLogo = ((dpp.media || []) as any[]).filter((m: any) => m.role !== "logo")
   const mediaList: MediaItem[] = withoutLogo.map((m: any) => ({
     id: m.id,
@@ -93,11 +93,36 @@ export default async function DppPublicView({
     fileName: m.fileName ?? (m.originalFileName as string) ?? "",
   }))
   const heroFromBasisdaten = getHeroImage(mediaList)
+  const basisdatenBlockId = unifiedBlocks.find((b: { order?: number }) => b.order === 0)?.id
+  const fallbackHeroFromBlock =
+    basisdatenBlockId &&
+    withoutLogo.find(
+      (m: any) =>
+        m.blockId === basisdatenBlockId && (m.fileType || "").startsWith("image/")
+    )
   const heroImage =
     heroFromBasisdaten?.storageUrl ??
-    withoutLogo.find((m: any) => m.role === "hero_image" || m.role === "product_image")?.storageUrl ??
-    withoutLogo.find((m: any) => m.blockId && (m.fileType || "").startsWith("image/"))?.storageUrl ??
-    withoutLogo.find((m: any) => (m.fileType || "").startsWith("image/"))?.storageUrl
+    (fallbackHeroFromBlock?.storageUrl as string | undefined) ??
+    undefined
+
+  // Galerie: weitere Basisdaten-Bilder (2+) + Bilder aus Mehrwert-Blöcken
+  const galleryFromBasisdaten = getGalleryImages(mediaList)
+  const galleryFromMehrwert = unifiedBlocks
+    .filter((b: { blockKey?: string }) => b.blockKey === "image")
+    .map((b: { content?: { fields?: { url?: { value?: string }; alt?: { value?: string }; caption?: { value?: string } } } }) => {
+      const url = b.content?.fields?.url?.value
+      if (!url || typeof url !== "string") return null
+      return {
+        url: String(url),
+        alt: b.content?.fields?.alt?.value ? String(b.content.fields.alt.value) : undefined,
+        caption: b.content?.fields?.caption?.value ? String(b.content.fields.caption.value) : undefined,
+      }
+    })
+    .filter((x): x is { url: string; alt?: string; caption?: string } => x != null)
+  const galleryImages = [
+    ...galleryFromBasisdaten.map((m) => ({ url: m.storageUrl, alt: m.fileName })),
+    ...galleryFromMehrwert,
+  ]
 
   // Get logo from published content styling
   const publishedContent = await prisma.dppContent.findFirst({
@@ -113,7 +138,7 @@ export default async function DppPublicView({
   const styling = publishedContent?.styling as any
   const organizationLogoUrl = styling?.logo?.url || undefined
 
-  // Render using new EditorialDppViewRedesign
+  // Render using new EditorialDppViewRedesign (wie Vorschau: Hero nur aus Basisdaten, Galerie inkl. Mehrwert)
   return (
     <EditorialDppViewRedesign
       blocks={unifiedBlocks}
@@ -124,6 +149,8 @@ export default async function DppPublicView({
       organizationName={dpp.organization?.name || ""}
       organizationLogoUrl={organizationLogoUrl}
       heroImageUrl={heroImage}
+      galleryImages={galleryImages}
+      styling={styling ?? null}
       versionInfo={versionInfo}
       basicData={{
         sku: dpp.sku,

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import PublicLayoutClient from "./PublicLayoutClient"
 
@@ -9,26 +10,32 @@ interface ConditionalLayoutProps {
 
 /**
  * Conditional Layout Wrapper
- * 
- * Wraps children with PublicLayoutClient only for non-super-admin routes.
- * Super-admin routes, app routes, and public editorial routes use their own layout 
- * and should not have the public sidebar/burger menu.
+ *
+ * Always wraps with PublicLayoutClient so server and client render the same DOM
+ * (avoids hydration mismatch). useChrome=false hides sidebar/header for app,
+ * super-admin, public/dpp, contribute, password routes.
  */
 export default function ConditionalLayout({ children }: ConditionalLayoutProps) {
-  const pathname = usePathname()
-  const isSuperAdminRoute = pathname?.startsWith("/super-admin")
-  const isAppRoute = pathname?.startsWith("/app")
-  const isPublicEditorialRoute = pathname?.startsWith("/public/dpp")
-  const isContributeRoute = pathname?.startsWith("/contribute")
-  const isPasswordGateRoute = pathname === "/password"
+  const pathnameFromRouter = usePathname()
+  const [pathname, setPathname] = useState<string | null>(null)
 
-  // Super-admin, app, public editorial, contribute und Passwort-Gate ohne Burger-Menü
-  if (isSuperAdminRoute || isAppRoute || isPublicEditorialRoute || isContributeRoute || isPasswordGateRoute) {
-    return <>{children}</>
-  }
+  useEffect(() => {
+    setPathname(pathnameFromRouter ?? null)
+  }, [pathnameFromRouter])
 
-  // All other routes use PublicLayoutClient (includes /login, /signup, /pricing, etc.)
-  return <PublicLayoutClient>{children}</PublicLayoutClient>
+  const useChrome =
+    pathname === null ||
+    (!pathname.startsWith("/super-admin") &&
+      !pathname.startsWith("/app") &&
+      !pathname.startsWith("/public/dpp") &&
+      !pathname.startsWith("/contribute") &&
+      pathname !== "/password")
+
+  return (
+    <PublicLayoutClient useChrome={useChrome}>
+      {children}
+    </PublicLayoutClient>
+  )
 }
 
 

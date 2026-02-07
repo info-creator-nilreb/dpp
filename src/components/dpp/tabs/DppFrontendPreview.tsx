@@ -12,7 +12,7 @@ import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRed
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { Block, StylingConfig } from "@/lib/cms/types"
 import { UnifiedContentBlock } from "@/lib/content-adapter"
-import { getHeroImage, type MediaItem } from "@/lib/media/hero-logic"
+import { getHeroImage, getGalleryImages, type MediaItem } from "@/lib/media/hero-logic"
 
 interface DppFrontendPreviewProps {
   dpp: any
@@ -231,7 +231,7 @@ export default function DppFrontendPreview({
   const organizationName = dpp.organization?.name || ""
   const brandName = dpp.brand || organizationName || ""
 
-  // Hero = Produktbild aus Basisdaten (niemals Logo). Logo (role "logo") nur für Platzierung oben links.
+  // Hero = erstes Bild aus Basis- & Produktdaten (role "primary_product_image"). Fallback: erstes Bild mit blockId = Basisdaten-Block (falls role fehlt, z. B. ältere Uploads).
   const withoutLogo = (dpp.media || []).filter((m: any) => m.role !== "logo")
   const mediaList: MediaItem[] = withoutLogo.map((m: any) => ({
     id: m.id,
@@ -243,11 +243,36 @@ export default function DppFrontendPreview({
     fileName: m.fileName ?? (m.originalFileName as string) ?? "",
   }))
   const heroFromBasisdaten = getHeroImage(mediaList)
+  const basisdatenBlockId = unifiedBlocks.find((b: { order?: number }) => b.order === 0)?.id
+  const fallbackHeroFromBlock =
+    basisdatenBlockId &&
+    withoutLogo.find(
+      (m: any) =>
+        m.blockId === basisdatenBlockId && (m.fileType || "").startsWith("image/")
+    )
   const heroImage =
     heroFromBasisdaten?.storageUrl ??
-    withoutLogo.find((m: any) => m.role === "hero_image" || m.role === "product_image")?.storageUrl ??
-    withoutLogo.find((m: any) => m.blockId && (m.fileType || "").startsWith("image/"))?.storageUrl ??
-    withoutLogo.find((m: any) => (m.fileType || "").startsWith("image/"))?.storageUrl
+    (fallbackHeroFromBlock?.storageUrl as string | undefined) ??
+    undefined
+
+  // Galerie: weitere Bilder aus Basisdaten (role "gallery_image") + Bilder aus Mehrwert-Blöcken (unifiedBlocks)
+  const galleryFromBasisdaten = getGalleryImages(mediaList)
+  const galleryFromMehrwert = unifiedBlocks
+    .filter((b: { blockKey?: string }) => b.blockKey === "image")
+    .map((b: { content?: { fields?: { url?: { value?: string }; alt?: { value?: string }; caption?: { value?: string } } } }) => {
+      const url = b.content?.fields?.url?.value
+      if (!url || typeof url !== "string") return null
+      return {
+        url: String(url),
+        alt: b.content?.fields?.alt?.value ? String(b.content.fields.alt.value) : undefined,
+        caption: b.content?.fields?.caption?.value ? String(b.content.fields.caption.value) : undefined,
+      }
+    })
+    .filter((x): x is { url: string; alt?: string; caption?: string } => x != null)
+  const galleryImages = [
+    ...galleryFromBasisdaten.map((m) => ({ url: m.storageUrl, alt: m.fileName })),
+    ...galleryFromMehrwert,
+  ]
 
   // Get logo from styling config
   const organizationLogoUrl = styling?.logo?.url || undefined
@@ -271,6 +296,7 @@ export default function DppFrontendPreview({
         organizationName={organizationName}
         organizationLogoUrl={organizationLogoUrl}
         heroImageUrl={heroImage}
+        galleryImages={galleryImages}
         styling={styling}
         isPreview
         versionInfo={dpp.versions?.[0] ? {

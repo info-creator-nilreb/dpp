@@ -8,17 +8,19 @@ import { MenuIcon } from "./PublicIcons"
 
 interface PublicLayoutClientProps {
   children: React.ReactNode
+  /** When false, only render main content (no sidebar/header). Keeps DOM structure identical to avoid hydration mismatch. */
+  useChrome?: boolean
 }
 
-export default function PublicLayoutClient({ children }: PublicLayoutClientProps) {
+export default function PublicLayoutClient({ children, useChrome = true }: PublicLayoutClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const pathname = usePathname()
 
-  // Hide sidebar on onboarding pages and super-admin routes
+  // Hide sidebar on onboarding pages and super-admin routes (only when useChrome is true)
   const hideSidebarRoutes = ["/onboarding"]
   const isSuperAdminRoute = pathname?.startsWith("/super-admin")
-  const shouldHideSidebar = hideSidebarRoutes.some(route => pathname === route) || isSuperAdminRoute
+  const shouldHideSidebar = !useChrome || hideSidebarRoutes.some(route => pathname === route) || isSuperAdminRoute
 
   // Close mobile menu on resize to desktop
   useEffect(() => {

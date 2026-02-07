@@ -403,7 +403,7 @@ export default function NewDppContent({
             padding: "0 1.5rem",
             paddingTop: subscriptionCanPublish ? "16px" : "1.5rem",
             flexShrink: 0,
-            marginTop: subscriptionCanPublish ? "16px" : "20px",
+            marginTop: subscriptionCanPublish ? "16px" : "24px",
           }}
         >
           <Link

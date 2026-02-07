@@ -8,12 +8,19 @@
 "use client"
 
 import React from 'react'
-import { Page } from './index'
+import { Page, Section } from './index'
 import { UnifiedContentBlock } from '@/lib/content-adapter'
 import type { StylingConfig } from '@/lib/cms/types'
 import EditorialSpine from './EditorialSpine'
 import DataSectionsContainer from './data/DataSectionsContainer'
-import Logo from './Logo'
+import ImageGallery from './data/ImageGallery'
+import { editorialSpacing } from './tokens/spacing'
+
+interface GalleryImageItem {
+  url: string
+  alt?: string
+  caption?: string
+}
 
 interface EditorialDppViewRedesignProps {
   blocks: UnifiedContentBlock[]
@@ -25,6 +32,8 @@ interface EditorialDppViewRedesignProps {
   organizationLogoUrl?: string
   organizationWebsite?: string
   heroImageUrl?: string
+  /** Galerie: weitere Bilder aus Basisdaten (2+) + Bilder aus Mehrwert-Blöcken */
+  galleryImages?: GalleryImageItem[]
   versionInfo?: {
     version: number
     createdAt: Date
@@ -50,6 +59,7 @@ export default function EditorialDppViewRedesign({
   organizationLogoUrl,
   organizationWebsite,
   heroImageUrl,
+  galleryImages = [],
   versionInfo,
   basicData,
   styling,
@@ -57,7 +67,7 @@ export default function EditorialDppViewRedesign({
 }: EditorialDppViewRedesignProps) {
   return (
     <Page styling={styling ?? undefined} fillViewport={!isPreview}>
-      {/* Editorial Spine mit Logo */}
+      {/* Editorial Spine mit Logo + optionalem Hinweis bei fehlendem Hero */}
       <EditorialSpine
         blocks={blocks}
         dppName={dppName}
@@ -69,6 +79,7 @@ export default function EditorialDppViewRedesign({
         organizationName={organizationName}
         organizationWebsite={organizationWebsite}
         basicData={basicData}
+        isPreview={isPreview}
       />
       
       {/* Data Sections */}
@@ -83,6 +94,23 @@ export default function EditorialDppViewRedesign({
           )
         }
       />
+      
+      {/* Galerie: weitere Basisdaten-Bilder (2+) + Mehrwert-Bilder */}
+      {galleryImages.length > 0 && (
+        <Section variant="contained" style={{ paddingTop: editorialSpacing.xl, paddingBottom: editorialSpacing.xl }}>
+          <h2 style={{
+            fontSize: '2rem',
+            fontWeight: 700,
+            lineHeight: 1.2,
+            marginBottom: '2rem',
+            textAlign: 'center',
+            letterSpacing: '-0.02em',
+          }}>
+            Galerie
+          </h2>
+          <ImageGallery images={galleryImages} alignment="center" />
+        </Section>
+      )}
       
       {/* Bottom Padding für Sticky Elements / Abschluss – in Vorschau reduziert */}
       <div style={{ height: isPreview ? '2rem' : '120px' }} />

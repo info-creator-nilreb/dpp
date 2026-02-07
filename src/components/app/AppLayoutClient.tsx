@@ -25,8 +25,9 @@ export default function AppLayoutClient({
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname?.startsWith("/api/auth")
   const isPublicDppPage = pathname?.startsWith("/public/dpp/")
   const shouldShowSidebar = !isAuthPage && !isPublicDppPage
-  // DPP-Editor-Seite (Pflichtdaten/Mehrwert/Vorschau): auf Mobile volle Breite ohne grauen Rand
-  const isDppEditorPage = pathname?.match(/^\/app\/dpps\/[^/]+$/) != null
+  // DPP-Editor-Seite (Pflichtdaten/Mehrwert/Vorschau) und Neuer Produktpass: auf Mobile volle Breite ohne grauen Rand
+  const isDppEditorPage =
+    pathname === "/app/create/new" || pathname?.match(/^\/app\/dpps\/[^/]+$/) != null
   
   // Auto logout after 60 minutes of inactivity (only when logged in)
   useAutoLogout({

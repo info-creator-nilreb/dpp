@@ -36,6 +36,8 @@ interface EditorialSpineProps {
     gtin?: string | null
     countryOfOrigin?: string | null
   }
+  /** true = Editor-Vorschau; bei fehlendem Hero wird ein Hinweis angezeigt */
+  isPreview?: boolean
 }
 
 export default function EditorialSpine({
@@ -48,7 +50,8 @@ export default function EditorialSpine({
   organizationLogoUrl,
   organizationName,
   organizationWebsite,
-  basicData
+  basicData,
+  isPreview = false
 }: EditorialSpineProps) {
   // Filter nur Spine-Blöcke
   const spineBlocks = blocks.filter(b => b.presentation.layer === "spine")
@@ -167,19 +170,22 @@ export default function EditorialSpine({
           ) : null}
         </Section>
       )}
-      {/* Headline-Bereich nur ohne Hero (z. B. wenn kein Produktbild) */}
+      {/* Headline-Bereich nur ohne Hero (z. B. wenn kein Produktbild). Basisdaten (GTIN etc.) nicht doppelt – werden bereits oben in StoryTextBlock bzw. erster Section gezeigt. */}
       {!heroUrl && showContentBelowHero && (
         <Section variant="contained" style={{ paddingTop: editorialSpacing.xl, paddingBottom: editorialSpacing.xl }}>
           <HeadlineBlock text={headlineDisplay} brandName={brandName} versionInfo={versionInfo} />
-          {hasBasicData && basicData && (
-            <>
-              <div style={{ width: '60px', height: '2px', backgroundColor: editorialColors.brand.accentVar, marginTop: editorialSpacing.xl, marginBottom: editorialSpacing.xl, marginLeft: 'auto', marginRight: 'auto' }} />
-              <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginTop: editorialSpacing.lg, fontSize: '0.875rem', color: editorialColors.text.secondaryVar, textAlign: 'center' }}>
-                {(basicData.sku != null && basicData.sku !== '') && <div><strong>SKU</strong><br />{basicData.sku}</div>}
-                {(basicData.gtin != null && basicData.gtin !== '') && <div><strong>GTIN</strong><br />{basicData.gtin}</div>}
-                {(basicData.countryOfOrigin != null && basicData.countryOfOrigin !== '') && <div><strong>Herkunftsland</strong><br />{basicData.countryOfOrigin}</div>}
-              </div>
-            </>
+          {isPreview && (
+            <p style={{
+              marginTop: editorialSpacing.lg,
+              fontSize: '0.875rem',
+              color: editorialColors.text.secondaryVar,
+              textAlign: 'center',
+              maxWidth: '480px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}>
+              Laden Sie in den Pflichtdaten unter „Basis- & Produktdaten“ mindestens ein Produktbild hoch – es wird hier als Hero angezeigt.
+            </p>
           )}
         </Section>
       )}

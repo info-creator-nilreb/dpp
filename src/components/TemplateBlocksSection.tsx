@@ -171,6 +171,12 @@ interface TemplateBlocksSectionProps {
   onPendingFileRemove?: (fileId: string) => void
   supplierFieldInfo?: Record<string, { partnerRole: string; confirmed?: boolean; mode?: "input" | "declaration" }> // fieldKey -> supplierInfo
   onSupplierInfoConfirm?: (fieldKey: string) => void // Callback für Bestätigung
+  /** Premium: CO₂-Berechnung für co2_emissions-Felder anzeigen (nur im Entwurf) */
+  co2CalculationEnabled?: boolean
+  /** Read-only/veröffentlicht: kein Berechnen-Button, kein Premium-Hinweis */
+  readOnly?: boolean
+  /** Öffnet CO₂-Berechnungs-Modal für dieses Feld (fieldKey) */
+  onOpenCo2Calculate?: (fieldKey: string) => void
 }
 
 /**
@@ -193,7 +199,10 @@ export default function TemplateBlocksSection({
   onPendingFileAdd,
   onPendingFileRemove,
   supplierFieldInfo = {},
-  onSupplierInfoConfirm
+  onSupplierInfoConfirm,
+  co2CalculationEnabled = false,
+  readOnly = false,
+  onOpenCo2Calculate,
 }: TemplateBlocksSectionProps) {
   // Debug: Log fieldValues beim ersten Render
   console.log("[TemplateBlocksSection] Component mounted with fieldValues:", Object.keys(fieldValues).length, "fields", Object.keys(fieldValues))
@@ -487,7 +496,12 @@ export default function TemplateBlocksSection({
             onToggle={() => toggleBlock(block.id)}
             alwaysOpen={isFirstBlock}
           >
-            {block.fields.map((field) => {
+            {(() => {
+              const isBasisdatenBlock = block.name && (block.name.includes("Basis") || block.name.includes("Produktdaten"))
+              const firstImageFieldKey = block.fields.find(
+                (f) => f.type === "file-image" || (f.type && String(f.type).startsWith("file-image"))
+              )?.key
+              return block.fields.map((field) => {
               // Wiederholbare Felder: Verwende RepeatableFieldGroup
               if (field.isRepeatable) {
                 return (
@@ -535,8 +549,6 @@ export default function TemplateBlocksSection({
                   onChange={(value) => {
                     console.log("[TemplateBlocksSection] Field value changed:", field.key, "(" + field.label + ")", "=", value)
                     if (onFieldValueChange) {
-                      // WICHTIG: onFieldValueChange bekommt field.key (Template-Key)
-                      // Der Callback muss dann beide Keys (englisch UND Template-Key) speichern
                       onFieldValueChange(field.key, value)
                     } else {
                       console.warn("[TemplateBlocksSection] onFieldValueChange is not defined!")
@@ -549,9 +561,15 @@ export default function TemplateBlocksSection({
                   onPendingFileRemove={onPendingFileRemove}
                   supplierInfo={supplierInfo}
                   onSupplierInfoConfirm={onSupplierInfoConfirm}
+                  readOnly={readOnly}
+                  showCo2CalculateButton={field.type === "co2_emissions" && co2CalculationEnabled && !readOnly && !!onOpenCo2Calculate}
+                  onOpenCo2Calculate={field.type === "co2_emissions" && onOpenCo2Calculate ? () => onOpenCo2Calculate(field.key) : undefined}
+                  showCo2PremiumHint={field.type === "co2_emissions" && !co2CalculationEnabled && !readOnly}
+                  showHeroHint={isBasisdatenBlock && firstImageFieldKey === field.key}
                 />
               )
-            })}
+            })
+            })()}
           </AccordionSection>
         )
       })}

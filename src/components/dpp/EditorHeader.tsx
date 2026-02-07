@@ -141,6 +141,10 @@ export default function EditorHeader({
               height: 156px !important;
               min-height: 156px !important;
             }
+            .editor-header-spacer.editor-header-spacer-with-trial {
+              height: 220px !important;
+              min-height: 220px !important;
+            }
           }
           @media (min-width: 768px) {
             .editor-header {
@@ -335,8 +339,11 @@ export default function EditorHeader({
           </div>
         )}
       </div>
-      {/* Spacer to prevent content from being hidden under header (mobile: 56px header + 100px editor bar) */}
-      <div className="editor-header-spacer" style={{ height: "100px", minHeight: "100px" }} />
+      {/* Spacer to prevent content from being hidden under header (mobile: 56px header + 100px editor bar; with trial banner: larger) */}
+      <div
+        className={"editor-header-spacer" + (!subscriptionCanPublish ? " editor-header-spacer-with-trial" : "")}
+        style={{ height: !subscriptionCanPublish ? "140px" : "100px", minHeight: !subscriptionCanPublish ? "140px" : "100px" }}
+      />
     </>
   )
 }

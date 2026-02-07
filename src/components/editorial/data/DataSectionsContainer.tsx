@@ -89,15 +89,20 @@ export default function DataSectionsContainer({
     dataBlocks.forEach(block => {
       // CMS-Blöcke haben bekannte BlockType-Keys (wie "timeline", "accordion", etc.)
       const isCmsBlock = block.blockKey && cmsBlockTypes.includes(block.blockKey.toLowerCase())
+      // Mehrwert-Bilder (blockKey "image") nur in der Galerie anzeigen, nicht hier – sonst doppelte Galerie
+      const isImageBlock = block.blockKey?.toLowerCase() === 'image'
       console.log('[DataSectionsContainer] Block classification:', {
         id: block.id,
         blockKey: block.blockKey,
         displayName: block.displayName,
         isCmsBlock,
+        isImageBlock,
         inList: block.blockKey ? cmsBlockTypes.includes(block.blockKey.toLowerCase()) : false
       })
-      if (isCmsBlock) {
+      if (isCmsBlock && !isImageBlock) {
         cms.push(block)
+      } else if (isImageBlock) {
+        // Image-Blöcke werden in der zentralen Galerie (EditorialDppViewRedesign) gerendert, nicht hier
       } else {
         // Alles andere sind Template-Blöcke (Pflichtdaten)
         // Filtere leere Blöcke aus (außer Basisdaten)

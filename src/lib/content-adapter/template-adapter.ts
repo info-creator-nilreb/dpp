@@ -40,15 +40,19 @@ interface DppMedia {
   fileType: string
   blockId?: string | null
   fieldId?: string | null
+  fieldKey?: string | null
 }
 
 /**
- * Extrahiert Field-Value aus DPP-Daten
+ * Extrahiert Field-Value aus DPP-Daten.
+ * Bei Media-Feldern: nur Medien mit passendem blockId (und fieldKey/fieldId) zuordnen,
+ * damit Bilder ausschließlich in dem Block erscheinen, in dem sie hochgeladen wurden.
  */
 function extractFieldValue(
   field: TemplateBlock['fields'][0],
   dppContent: DppContent | null,
-  media: DppMedia[] = []
+  media: DppMedia[] = [],
+  blockId?: string
 ): FieldValue {
   // Versuche Wert aus DPP-Daten zu holen (basierend auf field.key)
   let value: string | number | boolean | null = null
@@ -57,16 +61,21 @@ function extractFieldValue(
     value = dppContent[field.key]
   }
   
-  // Für Media-Fields: Suche zugehörige Medien (fieldKey/fieldId aus Upload; Match per field.id oder field.key)
+  // Für Media-Fields: Suche zugehörige Medien (blockId + fieldKey/fieldId aus Upload)
   if (field.type.startsWith('file-') || field.type === 'file') {
     const fieldMedia = media.filter(m => {
       const fid = (m as any).fieldId
-      const fkey = (m as any).fieldKey
-      return fid === field.id || fid === field.key || fkey === field.id || fkey === field.key
+      const fkey = (m as any).fieldKey ?? fid
+      const matchesField = fid === field.id || fid === field.key || fkey === field.id || fkey === field.key
+      if (!matchesField) return false
+      // Medien mit blockId: nur diesem Block zuordnen
+      if (blockId && (m.blockId != null && m.blockId !== '')) {
+        return m.blockId === blockId
+      }
+      // Legacy-Medien ohne blockId: weiterhin per Feld zuordnen (Rückwärtskompatibilität)
+      return true
     })
     if (fieldMedia.length > 0) {
-      // Für Media-Fields: Wert ist Array von Media-URLs (komma-separiert für jetzt)
-      // Später kann das zu einem Array erweitert werden
       value = fieldMedia.map(m => m.storageUrl).join(',') as any
     }
   }
@@ -122,10 +131,10 @@ export function adaptTemplateBlockToUnified(
   const layer: EditorialLayer = 
     templateBlock.order === 0 ? "spine" : "data"
   
-  // Extrahiere Content-Werte
+  // Extrahiere Content-Werte (blockId für korrekte Medien-Zuordnung pro Block)
   const fields: Record<string, FieldValue> = {}
   templateBlock.fields.forEach(field => {
-    fields[field.key] = extractFieldValue(field, dppContent, media)
+    fields[field.key] = extractFieldValue(field, dppContent, media, templateBlock.id)
   })
   
   // Generiere Zusammenfassung
