@@ -14,6 +14,10 @@ import { Block, StylingConfig } from "@/lib/cms/types"
 import { UnifiedContentBlock } from "@/lib/content-adapter"
 import type { MediaItem } from "@/lib/media/hero-logic"
 
+export interface DppFrontendPreviewHandle {
+  scrollToTop: () => void
+}
+
 interface DppFrontendPreviewProps {
   dpp: any
   blocks: Block[]
