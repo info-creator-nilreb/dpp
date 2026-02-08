@@ -1,6 +1,7 @@
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
@@ -227,8 +228,8 @@ export async function POST(
             dppId,
             versionId: version.id,
             isPublished: true,
-            blocks: draftContent.blocks,
-            styling: draftContent.styling,
+            blocks: draftContent.blocks as unknown as Prisma.InputJsonValue,
+            styling: draftContent.styling as unknown as Prisma.InputJsonValue,
             createdBy: session.user.id
           }
         })
