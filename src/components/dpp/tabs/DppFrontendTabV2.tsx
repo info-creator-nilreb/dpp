@@ -48,6 +48,7 @@ export default function DppFrontendTabV2({
   const stylingRef = useRef(styling)
   const hasChangesRef = useRef(false)
   const mobileScrollRef = useRef<HTMLDivElement>(null)
+  const previewRef = useRef<DppFrontendPreviewHandle>(null)
 
   // Update ref when styling changes
   useEffect(() => {
@@ -78,12 +79,29 @@ export default function DppFrontendTabV2({
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
-  // Vorschau immer oben starten (Hero-Bild): Mobile-Scroll-Container auf 0 + verzögerte Fallbacks
+  // Beim Wechsel auf Vorschau-Tab: Preview-Container immer oben (Hero) – verhindert Sprung zu Image/Mehrwert-Block
+  useEffect(() => {
+    const scrollPreviewToTop = () => previewRef.current?.scrollToTop()
+    scrollPreviewToTop()
+    const t0 = setTimeout(scrollPreviewToTop, 0)
+    const t1 = setTimeout(scrollPreviewToTop, 100)
+    const t2 = setTimeout(scrollPreviewToTop, 300)
+    const t3 = setTimeout(scrollPreviewToTop, 600)
+    return () => {
+      clearTimeout(t0)
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  }, [])
+
+  // Vorschau auf Mobile: zusätzlich Mobile-Scroll-Container und window auf 0
   useEffect(() => {
     if (!isMobile) return
     const scrollToTop = () => {
       mobileScrollRef.current?.scrollTo(0, 0)
       window.scrollTo(0, 0)
+      previewRef.current?.scrollToTop()
     }
     scrollToTop()
     const t0 = setTimeout(scrollToTop, 0)
@@ -253,6 +271,7 @@ export default function DppFrontendTabV2({
           </div>
           <div style={{ minHeight: "50vh" }}>
             <DppFrontendPreview
+              ref={previewRef}
               dpp={dpp}
               blocks={blocks}
               styling={styling}
@@ -338,6 +357,7 @@ export default function DppFrontendTabV2({
           </p>
         </div>
         <DppFrontendPreview
+          ref={previewRef}
           dpp={dpp}
           blocks={blocks}
           styling={styling}

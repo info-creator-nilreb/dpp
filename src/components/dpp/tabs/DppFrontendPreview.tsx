@@ -7,7 +7,7 @@
  * Uses the new EditorialDppViewRedesign for consistency with public view
  */
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react"
+import { useState, useEffect, useLayoutEffect, useRef, forwardRef, useImperativeHandle } from "react"
 import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRedesign"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { Block, StylingConfig } from "@/lib/cms/types"
@@ -86,11 +86,11 @@ function PreviewSkeleton() {
   )
 }
 
-export default function DppFrontendPreview({
+function DppFrontendPreviewInner({
   dpp,
   blocks,
   styling
-}: DppFrontendPreviewProps) {
+}: DppFrontendPreviewProps, ref: React.Ref<DppFrontendPreviewHandle>) {
   const [isLoading, setIsLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [unifiedBlocks, setUnifiedBlocks] = useState<UnifiedContentBlock[]>([])
@@ -148,29 +148,72 @@ export default function DppFrontendPreview({
     }
   }, [dpp?.id, mounted]) // Nur bei dpp.id laden – kein Refetch bei blocks-Änderung, damit Galerie und Mehrwert-Blöcke gemeinsam erscheinen
 
-  // Einmal am Hero starten wenn Vorschau fertig geladen; nicht bei jedem späteren Update (verhindert Scroll-Up nach Nutzer-Scroll)
+  // Immer am Hero starten: sofort beim Mount des Scroll-Containers + nach Laden mehrfach nachziehen
   const scrollPreviewToTop = () => {
-    previewScrollRef.current?.scrollTo(0, 0)
-    window.scrollTo(0, 0)
+    const el = previewScrollRef.current
+    if (el) {
+      el.scrollTop = 0
+      el.scrollTo(0, 0)
+    }
   }
+  useImperativeHandle(ref, () => ({ scrollToTop: scrollPreviewToTop }), [])
+
   useLayoutEffect(() => {
     if (dpp?.id !== scrollLastDppIdRef.current) {
       scrollLastDppIdRef.current = dpp?.id
       didScrollForLoadRef.current = false
     }
     if (isLoading || error) return
-    if (didScrollForLoadRef.current) return
     didScrollForLoadRef.current = true
     scrollPreviewToTop()
     const t0 = setTimeout(scrollPreviewToTop, 0)
     const t1 = requestAnimationFrame(scrollPreviewToTop)
-    const t2 = setTimeout(scrollPreviewToTop, 150)
+    const t2 = setTimeout(scrollPreviewToTop, 100)
+    const t3 = setTimeout(scrollPreviewToTop, 250)
+    const t4 = setTimeout(scrollPreviewToTop, 500)
+    const t5 = setTimeout(scrollPreviewToTop, 800)
     return () => {
       clearTimeout(t0)
       clearTimeout(t2)
+      clearTimeout(t3)
+      clearTimeout(t4)
+      clearTimeout(t5)
       cancelAnimationFrame(t1)
     }
   }, [dpp?.id, isLoading, error])
+
+  // Nach dem Rendern der Blöcke nochmals nachziehen (Kind-Komponenten können verzögert scrollen)
+  useLayoutEffect(() => {
+    if (!unifiedBlocks.length || isLoading || error) return
+    scrollPreviewToTop()
+    const t1 = setTimeout(scrollPreviewToTop, 50)
+    const t2 = setTimeout(scrollPreviewToTop, 200)
+    const t3 = setTimeout(scrollPreviewToTop, 450)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  }, [unifiedBlocks.length, isLoading, error])
+
+  // Kurz nach Laden bei Größenänderung (z. B. Bilder) Scroll oben halten – verhindert Sprung durch Layout-Shift
+  useEffect(() => {
+    if (isLoading || error) return
+    const el = previewScrollRef.current
+    if (!el) return
+    const deadline = Date.now() + 2000
+    const ro = new ResizeObserver(() => {
+      if (Date.now() > deadline) return
+      el.scrollTop = 0
+      el.scrollTo(0, 0)
+    })
+    ro.observe(el)
+    const t = setTimeout(() => ro.disconnect(), 2000)
+    return () => {
+      clearTimeout(t)
+      ro.disconnect()
+    }
+  }, [isLoading, error])
 
   if (!mounted || !dpp) {
     return (
@@ -326,9 +369,18 @@ export default function DppFrontendPreview({
   // Get logo from styling config
   const organizationLogoUrl = styling?.logo?.url || undefined
 
+  // Ref-Callback: Sobald der Scroll-Container im DOM ist, sofort auf 0 setzen (bevor Kind-Effekte scrollen)
+  const setScrollRef = (el: HTMLDivElement | null) => {
+    ;(previewScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = el
+    if (el) {
+      el.scrollTop = 0
+      el.scrollTo(0, 0)
+    }
+  }
+
   return (
     <div
-      ref={previewScrollRef}
+      ref={setScrollRef}
       style={{
         flex: 1,
         overflowY: "auto",
@@ -358,3 +410,6 @@ export default function DppFrontendPreview({
     </div>
   )
 }
+
+const DppFrontendPreview = forwardRef<DppFrontendPreviewHandle, DppFrontendPreviewProps>(DppFrontendPreviewInner)
+export default DppFrontendPreview

@@ -55,6 +55,7 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set())
   const [showAnswerConfirmation, setShowAnswerConfirmation] = useState<number | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const prevQuestionIndexRef = useRef<number | undefined>(undefined)
 
   // Prüfe ob bereits beantwortet (LocalStorage)
   useEffect(() => {
@@ -64,8 +65,12 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
     }
   }, [pollBlockId])
 
-  // Scroll zu aktueller Frage
+  // Scroll zu aktueller Frage nur wenn der Nutzer die Frage gewechselt hat (nicht beim Mount/Re-Run), sonst springt die Editor-Vorschau zur Befragung
   useEffect(() => {
+    const prev = prevQuestionIndexRef.current
+    prevQuestionIndexRef.current = currentQuestionIndex
+    if (prev === undefined) return // Erster Mount – nie scrollen
+    if (prev === currentQuestionIndex) return // Keine Änderung (z. B. Strict-Mode-Doppellauf)
     if (scrollContainerRef.current) {
       const questionElement = scrollContainerRef.current.children[currentQuestionIndex] as HTMLElement
       if (questionElement) {
