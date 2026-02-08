@@ -52,12 +52,11 @@ export default function DppContentTabV2({
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingBlocksRef = useRef<Block[] | null>(null) // Only for tracking pending saves
 
-  const sortedBlocks = [...(blocks || [])].sort((a, b) => (a.order || 0) - (b.order || 0))
-  
-  // Debug: Log blocks
-  useEffect(() => {
-    console.log("DppContentTabV2: Blocks prop changed:", blocks?.length || 0, blocks)
-  }, [blocks])
+  // Nur Mehrwert-Content-Blöcke anzeigen – Template-Blöcke (Pflichtdaten) bleiben unsichtbar
+  const isContentBlock = (b: Block) => b.type !== "template_block"
+  const templateBlocks = [...(blocks || [])].filter(b => !isContentBlock(b)).sort((a, b) => (a.order || 0) - (b.order || 0))
+  const contentBlocks = [...(blocks || [])].filter(isContentBlock)
+  const sortedContentBlocks = [...contentBlocks].sort((a, b) => (a.order || 0) - (b.order || 0))
 
   // Auto-Save: Save block changes
   // CRITICAL: Receives blocks as parameter - no refs for content data
@@ -276,18 +275,18 @@ export default function DppContentTabV2({
 
     if (!draggedBlockId) return
 
-    const draggedIndex = sortedBlocks.findIndex(b => b.id === draggedBlockId)
+    const draggedIndex = sortedContentBlocks.findIndex(b => b.id === draggedBlockId)
     if (draggedIndex === -1 || draggedIndex === dropIndex) {
       setDraggedBlockId(null)
       return
     }
 
-    const newBlocks = [...sortedBlocks]
-    const [removed] = newBlocks.splice(draggedIndex, 1)
-    newBlocks.splice(dropIndex, 0, removed)
-
-    const newOrder = newBlocks.map(b => b.id)
-    handleReorderBlocks(newOrder)
+    const newContentBlocks = [...sortedContentBlocks]
+    const [removed] = newContentBlocks.splice(draggedIndex, 1)
+    newContentBlocks.splice(dropIndex, 0, removed)
+    const newContentOrder = newContentBlocks.map(b => b.id)
+    const fullOrder = [...templateBlocks.map(b => b.id), ...newContentOrder]
+    handleReorderBlocks(fullOrder)
     setDraggedBlockId(null)
   }
 
@@ -354,7 +353,7 @@ export default function DppContentTabV2({
         {/* Content Blocks Section */}
         <div>
 
-          {sortedBlocks.length === 0 ? (
+          {sortedContentBlocks.length === 0 ? (
               <button
                 onClick={() => setShowBlockPicker(true)}
                 style={{
@@ -375,7 +374,7 @@ export default function DppContentTabV2({
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "#24c598"
-                  e.currentTarget.style.backgroundColor = "#FFF5F9"
+                  e.currentTarget.style.backgroundColor = "#ECFDF5"
                   e.currentTarget.style.color = "#24c598"
                 }}
                 onMouseLeave={(e) => {
@@ -392,7 +391,7 @@ export default function DppContentTabV2({
               </button>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {sortedBlocks.map((block, index) => (
+              {sortedContentBlocks.map((block, index) => (
                 <div 
                   key={block.id} 
                   style={{ 
@@ -412,7 +411,7 @@ export default function DppContentTabV2({
                       backgroundColor: "#24c598",
                       borderRadius: "2px",
                       zIndex: 10,
-                      boxShadow: "0 0 8px rgba(226, 0, 116, 0.4)"
+                      boxShadow: "0 0 8px rgba(36, 197, 152, 0.35)"
                     }} />
                   )}
                   <div style={{
@@ -461,7 +460,7 @@ export default function DppContentTabV2({
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "#24c598"
-                  e.currentTarget.style.backgroundColor = "#FFF5F9"
+                  e.currentTarget.style.backgroundColor = "#ECFDF5"
                   e.currentTarget.style.color = "#24c598"
                 }}
                 onMouseLeave={(e) => {

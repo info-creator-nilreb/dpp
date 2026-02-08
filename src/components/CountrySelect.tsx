@@ -253,11 +253,14 @@ export default function CountrySelect({ id, label, value, onChange, required = f
   useEffect(() => {
     async function detectCountry() {
       try {
-        const response = await fetch("https://ipapi.co/json/")
+        const response = await fetch("https://ipapi.co/json/", {
+          signal: AbortSignal.timeout(5000),
+          credentials: "omit",
+        })
+        if (!response.ok) return
         const data = await response.json()
-        if (data.country_code) {
+        if (data?.country_code) {
           setDetectedCountry(data.country_code)
-          // Sortiere Länder: Detected Country zuerst
           const sorted = [...COUNTRIES].sort((a, b) => {
             if (a.code === data.country_code) return -1
             if (b.code === data.country_code) return 1
@@ -265,9 +268,8 @@ export default function CountrySelect({ id, label, value, onChange, required = f
           })
           setSortedCountries(sorted)
         }
-      } catch (error) {
-        console.error("Error detecting country:", error)
-        // Fallback: Alphabetisch sortieren
+      } catch {
+        // Netzwerk/CORS/Timeout – still Fallback: alphabetisch
         setSortedCountries([...COUNTRIES].sort((a, b) => a.name.localeCompare(b.name)))
       }
     }

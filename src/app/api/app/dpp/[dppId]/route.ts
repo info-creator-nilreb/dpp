@@ -53,7 +53,7 @@ export async function GET(
         },
         content: {
           where: {
-            isPublished: false // Lade nur Draft-Content
+            isPublished: false // Immer nur Entwurf – auch bei veröffentlichten DPPs; Bearbeitungen = neuer Entwurf, Publish = neue Version
           },
           orderBy: {
             updatedAt: "desc"
@@ -194,8 +194,9 @@ export async function GET(
 
 /**
  * PUT /api/app/dpp/[dppId]
- * 
- * Aktualisiert einen DPP
+ *
+ * Aktualisiert den DPP (Entwurf). Bei veröffentlichten DPPs: Bearbeitungen ändern den Entwurf;
+ * die bestehende Version bleibt unverändert; erneutes Veröffentlichen erzeugt eine neue Version.
  */
 export async function PUT(
   request: Request,

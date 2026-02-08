@@ -577,7 +577,7 @@ export default function OrganizationDetailContent({
         }}>
           {/* Phase 1.5: Super Admin Warning Banner */}
       <div style={{
-        backgroundColor: "#FFF5F9",
+        backgroundColor: "#ECFDF5",
         border: "2px solid #24c598",
         borderRadius: "8px",
         padding: "1rem 1.5rem",
@@ -1229,7 +1229,7 @@ export default function OrganizationDetailContent({
       {/* Actions */}
       {canEdit && (
         <div style={{
-          backgroundColor: "#FFF5F9",
+          backgroundColor: "#ECFDF5",
           border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1.5rem"

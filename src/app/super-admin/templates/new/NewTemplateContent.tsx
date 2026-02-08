@@ -31,6 +31,7 @@ const fieldTypes = [
   { value: "text", label: "Text" },
   { value: "textarea", label: "Mehrzeiliger Text" },
   { value: "number", label: "Zahl" },
+  { value: "co2_emissions", label: "CO₂-Emissionen (kg CO₂e)" },
   { value: "select", label: "Auswahl" },
   { value: "multi-select", label: "Mehrfachauswahl" },
   { value: "boolean", label: "Ja/Nein" },
@@ -756,7 +757,7 @@ Hinweise:
             padding: "1.5rem",
             cursor: "pointer",
             transition: "all 0.2s",
-            backgroundColor: creationMode === "from-existing" ? "#FFF5F9" : "#FFFFFF"
+            backgroundColor: creationMode === "from-existing" ? "#ECFDF5" : "#FFFFFF"
           }}
           onClick={() => setCreationMode("from-existing")}
           onMouseEnter={(e) => {
@@ -827,7 +828,7 @@ Hinweise:
             padding: "1.5rem",
             cursor: "pointer",
             transition: "all 0.2s",
-            backgroundColor: creationMode === "empty" ? "#FFF5F9" : "#FFFFFF"
+            backgroundColor: creationMode === "empty" ? "#ECFDF5" : "#FFFFFF"
           }}
           onClick={() => setCreationMode("empty")}
           onMouseEnter={(e) => {
@@ -863,7 +864,7 @@ Hinweise:
             padding: "1.5rem",
             cursor: "pointer",
             transition: "all 0.2s",
-            backgroundColor: creationMode === "csv-import" ? "#FFF5F9" : "#FFFFFF"
+            backgroundColor: creationMode === "csv-import" ? "#ECFDF5" : "#FFFFFF"
           }}
           onClick={() => setCreationMode("csv-import")}
           onMouseEnter={(e) => {
@@ -1120,7 +1121,7 @@ Hinweise:
 
         {error && (
           <div style={{
-            backgroundColor: "#FFF5F9",
+            backgroundColor: "#ECFDF5",
             border: "1px solid #24c598",
             borderRadius: "8px",
             padding: "1rem",
@@ -1139,7 +1140,7 @@ Hinweise:
     <form onSubmit={handleSubmit}>
       {error && (
         <div style={{
-          backgroundColor: "#FFF5F9",
+          backgroundColor: "#ECFDF5",
           border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",

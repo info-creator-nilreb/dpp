@@ -14,6 +14,8 @@ import { latestPublishedTemplate } from '@/lib/template-helpers'
 interface TransformDppToUnifiedOptions {
   includeSupplierConfigs?: boolean
   includeVersionInfo?: boolean
+  /** Wenn gesetzt: Öffentliche Ansicht einer konkreten Version – Daten aus Version-Snapshot, nicht aus aktuellem Entwurf */
+  versionNumber?: number
 }
 
 /**
@@ -76,36 +78,69 @@ export async function transformDppToUnified(
     })
   }
   
+  // Bei öffentlicher Ansicht einer konkreten Version: Daten aus Version-Snapshot laden
+  let versionRow: { id: string; version: number; createdAt: Date; name: string; description: string | null; sku: string | null; gtin: string | null; brand: string | null; countryOfOrigin: string | null; materials: string | null; materialSource: string | null; careInstructions: string | null; isRepairable: string | null; sparePartsAvailable: string | null; lifespan: string | null; conformityDeclaration: string | null; disposalInfo: string | null; takebackOffered: string | null; takebackContact: string | null; secondLifeInfo: string | null } | null = null
+  if (options.versionNumber != null) {
+    versionRow = await prisma.dppVersion.findFirst({
+      where: { dppId, version: options.versionNumber },
+      select: {
+        id: true,
+        version: true,
+        createdAt: true,
+        name: true,
+        description: true,
+        sku: true,
+        gtin: true,
+        brand: true,
+        countryOfOrigin: true,
+        materials: true,
+        materialSource: true,
+        careInstructions: true,
+        isRepairable: true,
+        sparePartsAvailable: true,
+        lifespan: true,
+        conformityDeclaration: true,
+        disposalInfo: true,
+        takebackOffered: true,
+        takebackContact: true,
+        secondLifeInfo: true,
+      },
+    }) as typeof versionRow
+  }
+
   // Version-Info
-  const versionInfo = options.includeVersionInfo && dpp.versions[0]
+  const versionInfo = options.includeVersionInfo && (versionRow || dpp.versions[0])
     ? {
-        version: dpp.versions[0].version,
-        createdAt: dpp.versions[0].createdAt,
+        version: versionRow?.version ?? dpp.versions[0].version,
+        createdAt: versionRow?.createdAt ?? dpp.versions[0].createdAt,
       }
     : undefined
-  
+
   // Transformiere DPP-Daten zu Record (für Field-Lookup)
+  // Bei Version-Anzeige: Snapshot-Daten der Version, sonst aktueller Entwurf (dpp)
+  const dataSource = versionRow ?? dpp
   const dppContent: Record<string, any> = {
-    name: dpp.name,
-    description: dpp.description,
-    sku: dpp.sku,
-    gtin: dpp.gtin,
-    brand: dpp.brand,
-    countryOfOrigin: dpp.countryOfOrigin,
-    materials: dpp.materials,
-    materialSource: dpp.materialSource,
-    careInstructions: dpp.careInstructions,
-    isRepairable: dpp.isRepairable,
-    sparePartsAvailable: dpp.sparePartsAvailable,
-    lifespan: dpp.lifespan,
-    conformityDeclaration: dpp.conformityDeclaration,
-    disposalInfo: dpp.disposalInfo,
-    takebackOffered: dpp.takebackOffered,
-    takebackContact: dpp.takebackContact,
-    secondLifeInfo: dpp.secondLifeInfo,
+    name: dataSource.name,
+    description: dataSource.description ?? null,
+    sku: dataSource.sku ?? null,
+    gtin: dataSource.gtin ?? null,
+    brand: dataSource.brand ?? null,
+    countryOfOrigin: dataSource.countryOfOrigin ?? null,
+    materials: dataSource.materials ?? null,
+    materialSource: dataSource.materialSource ?? null,
+    careInstructions: dataSource.careInstructions ?? null,
+    isRepairable: dataSource.isRepairable ?? null,
+    sparePartsAvailable: dataSource.sparePartsAvailable ?? null,
+    lifespan: dataSource.lifespan ?? null,
+    conformityDeclaration: dataSource.conformityDeclaration ?? null,
+    disposalInfo: dataSource.disposalInfo ?? null,
+    takebackOffered: dataSource.takebackOffered ?? null,
+    takebackContact: dataSource.takebackContact ?? null,
+    secondLifeInfo: dataSource.secondLifeInfo ?? null,
   }
-  
+
   // Transformiere Media (fieldKey aus Schema; Template-Adapter matcht per field.id / field.key)
+  // Bei öffentlicher Version werden Medien von DppPublicView aus version.media übergeben – hier dpp.media für Vorschau
   const media = dpp.media.map(m => ({
     id: m.id,
     storageUrl: m.storageUrl,
@@ -114,30 +149,30 @@ export async function transformDppToUnified(
     fieldId: (m as any).fieldKey || null,
     fieldKey: (m as any).fieldKey || null,
   }))
-  
+
   // Lade DppContent für CMS-Blöcke
-  // Wenn includeVersionInfo = false (Vorschau), lade auch Draft-Content
-  const dppContentRecord = await prisma.dppContent.findFirst({
-    where: {
-      dppId,
-      // Für Vorschau (includeVersionInfo = false): lade auch Draft-Content
-      // Für veröffentlichte Versionen (includeVersionInfo = true): nur Published-Content
-      isPublished: options.includeVersionInfo ? true : undefined
-    },
-    orderBy: { updatedAt: 'desc' }
-  })
-  
+  // Bei versionNumber: Content-Snapshot dieser Version (versionId); sonst Draft oder isPublished
+  const dppContentRecord = versionRow
+    ? await prisma.dppContent.findFirst({
+        where: { dppId, versionId: versionRow.id, isPublished: true },
+        orderBy: { updatedAt: 'desc' },
+      })
+    : await prisma.dppContent.findFirst({
+        where: {
+          dppId,
+          isPublished: options.includeVersionInfo ? true : undefined,
+        },
+        orderBy: { updatedAt: 'desc' },
+      })
+
   // Filtere CMS-Blöcke: für Vorschau zeige auch Draft-Blöcke
-  const cmsBlocks = dppContentRecord 
+  const cmsBlocks = dppContentRecord
     ? ((dppContentRecord.blocks as any) || []).filter((b: any) => {
-        // Nur CMS-Blöcke (nicht Template-Blöcke)
         if (!b.content || b.data || b.type === "template_block") return false
-        // Für Vorschau: zeige alle Blöcke (draft + published)
-        // Für veröffentlichte Versionen: nur published
-        if (options.includeVersionInfo) {
+        if (options.includeVersionInfo || versionRow) {
           return b.status === "published"
         }
-        return true // Vorschau: zeige alle
+        return true
       })
     : []
   

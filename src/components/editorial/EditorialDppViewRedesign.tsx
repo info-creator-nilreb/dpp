@@ -85,6 +85,7 @@ export default function EditorialDppViewRedesign({
         organizationWebsite={organizationWebsite}
         basicData={basicData}
         isPreview={isPreview}
+        useOnlyPassedHeroImage
       />
       
       {/* Data Sections */}

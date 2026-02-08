@@ -59,6 +59,9 @@ export default function DppDataTabV2({
           onSave={onSave}
           onPublish={onPublish}
           onDppUpdate={onDppUpdate}
+          onStatusChange={onStatusChange}
+          onLastSavedChange={onLastSavedChange}
+          onErrorChange={onErrorChange}
         />
       </div>
     </div>

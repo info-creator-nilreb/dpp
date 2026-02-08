@@ -16,7 +16,8 @@ export type EditorStatus = "draft" | "published" | "published_with_hints" | "err
 
 interface EditorHeaderProps {
   status: EditorStatus
-  lastSaved: Date | null
+  /** Date oder ISO-String (z. B. nach Tab-Wechsel serialisiert) */
+  lastSaved: Date | string | null
   onPublish: () => void
   isNew: boolean
   canPublish: boolean // Pflichtdaten vorhanden
@@ -50,9 +51,14 @@ export default function EditorHeader({
       setTimeAgo("")
       return
     }
+    const lastSavedDate = lastSaved instanceof Date ? lastSaved : new Date(lastSaved)
+    if (Number.isNaN(lastSavedDate.getTime())) {
+      setTimeAgo("")
+      return
+    }
 
     const updateTimeAgo = () => {
-      const seconds = Math.floor((Date.now() - lastSaved!.getTime()) / 1000)
+      const seconds = Math.floor((Date.now() - lastSavedDate.getTime()) / 1000)
       if (seconds < 60) {
         setTimeAgo("gerade eben")
       } else if (seconds < 3600) {
@@ -262,7 +268,7 @@ export default function EditorHeader({
                   transition: "all 0.2s"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#FFF5F9"
+                  e.currentTarget.style.backgroundColor = "#ECFDF5"
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = "transparent"
@@ -284,7 +290,7 @@ export default function EditorHeader({
                 fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
                 fontWeight: "600",
                 cursor: publishDisabled || isProcessing ? "not-allowed" : "pointer",
-                boxShadow: publishDisabled || isProcessing ? "none" : "0 4px 12px rgba(226, 0, 116, 0.3)",
+                boxShadow: publishDisabled || isProcessing ? "none" : "0 4px 12px rgba(36, 197, 152, 0.25)",
                 transition: "all 0.2s"
               }}
             >

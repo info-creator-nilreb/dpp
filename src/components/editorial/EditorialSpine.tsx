@@ -41,6 +41,8 @@ interface EditorialSpineProps {
   }
   /** true = Editor-Vorschau; bei fehlendem Hero wird ein Hinweis angezeigt */
   isPreview?: boolean
+  /** Hero nur aus heroImageUrl verwenden (kein Fallback auf Block-Content); für Basis-daten-only-Hero */
+  useOnlyPassedHeroImage?: boolean
 }
 
 export default function EditorialSpine({
@@ -55,7 +57,8 @@ export default function EditorialSpine({
   organizationName,
   organizationWebsite,
   basicData,
-  isPreview = false
+  isPreview = false,
+  useOnlyPassedHeroImage = false
 }: EditorialSpineProps) {
   // Filter nur Spine-Blöcke
   const spineBlocks = blocks.filter(b => b.presentation.layer === "spine")
@@ -63,8 +66,8 @@ export default function EditorialSpine({
   // Sortiere nach order
   const sortedBlocks = [...spineBlocks].sort((a, b) => a.order - b.order)
   
-  // Finde Hero-Bild Block (erster Block mit Bild oder explizit hero_image)
-  const heroBlock = sortedBlocks.find(b => 
+  // Finde Hero-Bild Block (nur genutzt wenn useOnlyPassedHeroImage false)
+  const heroBlock = useOnlyPassedHeroImage ? null : sortedBlocks.find(b => 
     b.blockKey.includes('hero') || 
     Object.values(b.content.fields).some(f => f.type?.startsWith('file-image'))
   )
@@ -83,16 +86,17 @@ export default function EditorialSpine({
     Object.values(b.content.fields).some(f => f.type === 'textarea')
   )
   
-  // Extrahiere Hero-Bild URL
-  const heroUrl = heroImageUrl || 
-    (heroBlock ? (() => {
-      const imageField = Object.values(heroBlock.content.fields)
-        .find(f => f.type?.startsWith('file-image') || f.type === 'file-image')
-      if (!imageField?.value) return undefined
-      // Wert kann komma-separiert sein - nimm erste URL
-      const value = imageField.value as string
-      return value.includes(',') ? value.split(',')[0].trim() : value
-    })() : undefined)
+  // Hero-URL: nur aus Prop (Basis-daten-only) oder Fallback auf Block-Content
+  const heroUrl = useOnlyPassedHeroImage
+    ? (heroImageUrl ?? undefined)
+    : (heroImageUrl ||
+        (heroBlock ? (() => {
+          const imageField = Object.values(heroBlock.content.fields)
+            .find(f => f.type?.startsWith('file-image') || f.type === 'file-image')
+          if (!imageField?.value) return undefined
+          const value = imageField.value as string
+          return value.includes(',') ? value.split(',')[0].trim() : value
+        })() : undefined))
   
   // Extrahiere Headline
   const headline = headlineBlock 
@@ -134,15 +138,27 @@ export default function EditorialSpine({
         </div>
       )}
       
-      {/* Ohne Hero: Produktname/Headline ganz oben, darunter Platzhalter-Hinweis, darunter Basisdaten */}
+      {/* Ohne Hero: nur Produktname (nur aus Basisdaten); Akzent-Hintergrund für bessere UX */}
       {!heroUrl && showContentBelowHero && (
-        <Section variant="contained" style={{ paddingTop: editorialSpacing.xl, paddingBottom: editorialSpacing.xl }}>
-          <HeadlineBlock text={headlineDisplay} brandName={brandName} versionInfo={versionInfo} />
+        <Section
+          variant="contained"
+          style={{
+            paddingTop: editorialSpacing.xl,
+            paddingBottom: editorialSpacing.xl,
+            backgroundColor: editorialColors.brand.accentVar,
+          }}
+        >
+          <HeadlineBlock
+            text={headlineDisplay}
+            brandName={brandName}
+            versionInfo={versionInfo}
+            onAccentBackground
+          />
           {isPreview && (
             <p style={{
               marginTop: editorialSpacing.lg,
               fontSize: '0.875rem',
-              color: editorialColors.text.secondaryVar,
+              color: 'rgba(255, 255, 255, 0.9)',
               textAlign: 'center',
               maxWidth: '480px',
               marginLeft: 'auto',

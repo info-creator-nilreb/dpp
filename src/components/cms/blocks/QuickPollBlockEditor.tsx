@@ -113,7 +113,7 @@ export default function QuickPollBlockEditor({
               padding: "0.5rem 1rem",
               fontSize: "0.875rem",
               color: "#24c598",
-              backgroundColor: "#FFF5F9",
+              backgroundColor: "#ECFDF5",
               border: "1px solid #24c598",
               borderRadius: "8px",
               fontWeight: "500",
@@ -125,7 +125,7 @@ export default function QuickPollBlockEditor({
               e.currentTarget.style.color = "#FFFFFF"
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#FFF5F9"
+              e.currentTarget.style.backgroundColor = "#ECFDF5"
               e.currentTarget.style.color = "#24c598"
             }}
           >

@@ -153,7 +153,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
 
       {error && (
         <div style={{
-          backgroundColor: "#FFF5F9",
+          backgroundColor: "#ECFDF5",
           border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",
@@ -167,7 +167,7 @@ export default function NewDppContent({ availableCategories }: NewDppContentProp
 
       {availableCategories.length === 0 && (
         <div style={{
-          backgroundColor: "#FFF5F9",
+          backgroundColor: "#ECFDF5",
           border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",

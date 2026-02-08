@@ -73,7 +73,7 @@ export default function DppBrandingTab({
             width: "64px",
             height: "64px",
             borderRadius: "50%",
-            backgroundColor: "#FFF5F9",
+            backgroundColor: "#ECFDF5",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

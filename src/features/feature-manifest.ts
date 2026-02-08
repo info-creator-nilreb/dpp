@@ -338,6 +338,22 @@ export const FEATURE_MANIFEST: Record<string, FeatureDefinition> = {
     usableInTrial: true,
   },
 
+  /** CO₂-Berechnung via Climatiq im CO₂-Emissionen-Feld (Premium) */
+  co2_calculation: {
+    key: "co2_calculation",
+    kind: "optional",
+    category: "content",
+    defaultName: "CO₂-Berechnung",
+    defaultDescription: "Automatische CO₂e-Berechnung über Climatiq für das CO₂-Emissionen-Feld",
+    isCore: false,
+    isBillable: true,
+    systemFeature: false,
+    minimumPlan: "premium",
+    requiresActiveSubscription: true,
+    visibleInTrial: true,
+    usableInTrial: false,
+  },
+
   /** Mehrwert-Tab im DPP-Editor (CMS-Inhalte) */
   content_tab: {
     key: "content_tab",

@@ -198,7 +198,21 @@ export default function ContentBlockEditor({ block, onUpdate, dppId }: ContentBl
             color: "#7A7A7A",
             fontSize: "0.875rem"
           }}>
-            <p>Editor für Block-Typ "{block.type}" noch nicht implementiert</p>
+            {block.type === "template_block" ? (
+              <>
+                <p style={{ marginBottom: "0.5rem" }}>
+                  <strong>Template-Block (Pflichtdaten)</strong>
+                </p>
+                <p style={{ marginBottom: "1rem" }}>
+                  Dieser Block wird im Tab „Pflichtdaten“ bearbeitet. Er stammt aus dem Produktdaten-Template und ist hier nicht editierbar.
+                </p>
+                <p>
+                  Sie können ihn mit „Block entfernen“ oben rechts aus dem Mehrwert-Inhalt löschen, wenn er hier nicht angezeigt werden soll.
+                </p>
+              </>
+            ) : (
+              <p>Editor für Block-Typ „{block.type}“ noch nicht implementiert. Sie können den Block oben rechts entfernen.</p>
+            )}
           </div>
         )
     }

@@ -197,7 +197,7 @@ export default function ConfirmDialog({
                 if (!disabled) {
                   e.currentTarget.style.borderColor = "#24c598"
                   e.currentTarget.style.color = "#24c598"
-                  e.currentTarget.style.backgroundColor = "#FFF5F9"
+                  e.currentTarget.style.backgroundColor = "#ECFDF5"
                 }
               }}
               onMouseLeave={(e) => {

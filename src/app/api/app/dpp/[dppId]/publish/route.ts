@@ -16,12 +16,12 @@ import { createNotificationWithPayload } from "@/lib/phase1/notifications"
 
 /**
  * POST /api/app/dpp/[dppId]/publish
- * 
- * Veröffentlicht den aktuellen Draft als neue Version
- * - Kopiert alle Daten vom Draft
- * - Erstellt neue Version mit fortlaufender Nummer
- * - Setzt DPP-Status auf PUBLISHED (wenn noch nicht gesetzt)
- * - Speichert Bearbeiter für Audit-Trail
+ *
+ * Veröffentlicht den aktuellen Entwurf als neue Version (Draft bleibt weiter bearbeitbar).
+ * - Erstellt neue Version (Snapshot: DPP-Daten, Medien, Content) mit fortlaufender Nummer
+ * - Kopiert Draft-Medien in dpp_version_media, Draft-Content als isPublished: true mit versionId
+ * - Setzt DPP-Status auf PUBLISHED (falls noch nicht gesetzt)
+ * - Bearbeitungen an einem veröffentlichten DPP speichern weiter im Entwurf; erneutes Veröffentlichen = nächste Version
  */
 export async function POST(
   request: Request,
@@ -213,6 +213,26 @@ export async function POST(
           data: versionMedia
         })
         console.log(`Copied ${versionMedia.length} media files to version ${nextVersion}`)
+      }
+
+      // Snapshot des aktuellen Entwurfs als veröffentlichten Content für diese Version
+      // (Öffentliche Ansicht lädt dann diesen Snapshot, nicht den laufenden Entwurf)
+      const draftContent = await tx.dppContent.findFirst({
+        where: { dppId, isPublished: false },
+        orderBy: { updatedAt: "desc" }
+      })
+      if (draftContent) {
+        await tx.dppContent.create({
+          data: {
+            dppId,
+            versionId: version.id,
+            isPublished: true,
+            blocks: draftContent.blocks,
+            styling: draftContent.styling,
+            createdBy: session.user.id
+          }
+        })
+        console.log("Created published content snapshot for version", nextVersion)
       }
 
       // Setze Status auf PUBLISHED (falls noch nicht gesetzt)

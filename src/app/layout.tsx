@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import PublicLayoutClient from '@/components/PublicLayoutClient'
 import ConditionalLayout from '@/components/ConditionalLayout'
 import PasswordProtectionWrapper from '@/components/PasswordProtectionWrapper'
+import PasswordProtectionSessionCheck from '@/components/PasswordProtectionSessionCheck'
 import { getTemplateCategoryKeywordsForSeo } from '@/lib/template-helpers'
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.easyproductpass.com'
@@ -64,6 +65,7 @@ export default function RootLayout({
       </head>
       <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         <PasswordProtectionWrapper>
+          <PasswordProtectionSessionCheck />
           <ConditionalLayout>
             {children}
           </ConditionalLayout>

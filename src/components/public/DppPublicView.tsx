@@ -9,7 +9,7 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { transformDppToUnified } from "@/lib/content-adapter/dpp-transformer"
 import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRedesign"
-import { getHeroImage, type MediaItem } from "@/lib/media/hero-logic"
+import type { MediaItem } from "@/lib/media/hero-logic"
 
 interface DppPublicViewProps {
   dppId: string
@@ -27,30 +27,26 @@ export default async function DppPublicView({
       organization: {
         select: { name: true }
       },
-      media: {
-        orderBy: [
-          { sortOrder: "asc" },
-          { uploadedAt: "desc" }
-        ]
-      },
-      versions: versionNumber ? {
-        where: { version: versionNumber },
-        take: 1,
-        select: {
-          version: true,
-          createdAt: true
-        }
-      } : {
-        where: {
-          publicUrl: { not: null }
-        },
-        orderBy: { version: 'desc' },
-        take: 1,
-        select: {
-          version: true,
-          createdAt: true
-        }
-      }
+      versions: versionNumber
+        ? {
+            where: { version: versionNumber },
+            take: 1,
+            include: {
+              media: {
+                orderBy: [{ uploadedAt: "asc" }]
+              }
+            }
+          }
+        : {
+            where: { publicUrl: { not: null } },
+            orderBy: { version: "desc" },
+            take: 1,
+            include: {
+              media: {
+                orderBy: [{ uploadedAt: "asc" }]
+              }
+            }
+          }
     }
   })
 
@@ -58,11 +54,15 @@ export default async function DppPublicView({
     notFound()
   }
 
-  // Transform DPP to UnifiedContentBlocks (includes template blocks + CMS blocks)
+  // Versionsnummer für Anzeige (URL oder neueste Version)
+  const displayVersionNumber = versionNumber ?? (dpp.versions?.[0] as { version: number } | undefined)?.version
+
+  // Transform DPP to UnifiedContentBlocks – bei Version aus Snapshot (Entwurf bleibt unberührt)
   let unifiedBlocks
   try {
     unifiedBlocks = await transformDppToUnified(dppId, {
-      includeVersionInfo: true
+      includeVersionInfo: true,
+      versionNumber: displayVersionNumber,
     })
   } catch (error: any) {
     console.error("[DppPublicView] Error transforming DPP:", error)
@@ -78,15 +78,15 @@ export default async function DppPublicView({
     )
   }
 
-  // Get version info
-  const versionInfo = dpp.versions?.[0] ? {
-    version: dpp.versions[0].version,
-    createdAt: dpp.versions[0].createdAt
-  } : undefined
+  // Get version info and MEDIEN AUS DER VERSION (nicht aus dem Entwurf)
+  // So werden nur Bilder angezeigt, die zum Zeitpunkt der Veröffentlichung im Draft waren.
+  const version = dpp.versions?.[0] as { version: number; createdAt: Date; media?: Array<{ id: string; storageUrl: string; fileType: string; role?: string | null; blockId?: string | null; fieldKey?: string | null; fileName?: string }> } | undefined
+  const versionInfo = version ? { version: version.version, createdAt: version.createdAt } : undefined
+  const versionMediaList = (version?.media ?? []) as Array<{ id: string; storageUrl: string; fileType: string; role?: string | null; blockId?: string | null; fieldKey?: string | null; fileName?: string }>
 
   // Nur Medien mit gültigem Block (oder ohne blockId) – verwaiste/gelöschte nicht anzeigen
   const validBlockIds = new Set(unifiedBlocks.map((b: { id?: string }) => b.id).filter(Boolean))
-  const withoutLogo = ((dpp.media || []) as any[]).filter((m: any) => m.role !== "logo")
+  const withoutLogo = versionMediaList.filter((m: any) => m.role !== "logo")
   const validMedia = withoutLogo.filter(
     (m: any) => m.blockId == null || m.blockId === "" || validBlockIds.has(m.blockId)
   )
@@ -115,32 +115,20 @@ export default async function DppPublicView({
     )
   )
   const basisdatenBlockId = productDataBlock?.id ?? spineBlocks[0]?.id
-  const heroFromBasisdaten = getHeroImage(mediaList)
-  const fallbackHeroFromBlock =
-    basisdatenBlockId &&
-    validMedia.find((m: any) => {
-      if (!(m.fileType || "").startsWith("image/")) return false
-      return m.blockId === basisdatenBlockId || m.blockId == null || m.blockId === ""
-    })
-  const fallbackHeroLegacy =
-    !heroFromBasisdaten &&
-    !fallbackHeroFromBlock &&
-    validMedia.find(
-      (m: any) =>
-        (m.fileType || "").startsWith("image/") &&
-        (m.blockId == null || m.blockId === "")
-    )
-  const heroImage =
-    heroFromBasisdaten?.storageUrl ??
-    (fallbackHeroFromBlock?.storageUrl as string | undefined) ??
-    (fallbackHeroLegacy?.storageUrl as string | undefined) ??
-    undefined
+  // Hero nur aus Basisdaten: Block „Basis- & Produktdaten“ oder ohne blockId (Legacy). Keine Bilder aus Mehrwert-Blöcken.
+  const basisdatenHeroMediaOnly = withoutLogo.filter((m: any) => {
+    if (!(m.fileType || "").startsWith("image/")) return false
+    if (m.blockId && dataBlockIds.has(m.blockId)) return false
+    return m.blockId === basisdatenBlockId || m.blockId == null || m.blockId === ""
+  })
+  const heroImage = basisdatenHeroMediaOnly[0]?.storageUrl ?? undefined
 
-  // Thumbnails aus allen Bild-Medien (ohne validMedia-Filter), nur Mehrwert (Data-Layer) ausschließen
+  // Thumbnails nur aus dem Basisdaten-Block (blockId = basisdatenBlockId), keine verwaisten Einträge ohne blockId
   const basisdatenOnlyImages = withoutLogo.filter((m: any) => {
     if (!(m.fileType || "").startsWith("image/")) return false
     if (m.blockId && dataBlockIds.has(m.blockId)) return false
-    return true
+    if (!basisdatenBlockId) return false
+    return m.blockId === basisdatenBlockId
   })
   const basisdatenHeroImages = basisdatenOnlyImages.map((m: any) => ({
     url: m.storageUrl,
@@ -175,7 +163,7 @@ export default async function DppPublicView({
       organizationName={dpp.organization?.name || ""}
       organizationLogoUrl={organizationLogoUrl}
       heroImageUrl={heroImage}
-      basisdatenHeroImages={basisdatenHeroImages.length > 0 ? basisdatenHeroImages : undefined}
+      basisdatenHeroImages={basisdatenHeroImages.length > 1 ? basisdatenHeroImages : undefined}
       galleryImages={galleryImages}
       styling={styling ?? null}
       versionInfo={versionInfo}

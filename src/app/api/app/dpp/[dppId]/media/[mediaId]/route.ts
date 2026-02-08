@@ -12,11 +12,11 @@ import { getOrganizationRole } from "@/lib/permissions"
 
 /**
  * DELETE /api/app/dpp/[dppId]/media/[mediaId]
- * 
- * Löscht ein Medium
- * - Prüft Berechtigung (User muss Mitglied der Organization sein)
- * - Löscht Datei aus Storage
- * - Löscht Metadaten aus DB
+ *
+ * Löschkonzept:
+ * - Im Entwurf gelöschte Medien: werden aus DB (dpp_media) und aus dem Storage entfernt.
+ * - Wird die gleiche Datei (storageUrl) in einer veröffentlichten Version genutzt, wird nur
+ *   der Eintrag in dpp_media gelöscht; die Datei im Storage bleibt für die Version erhalten.
  */
 export async function DELETE(
   request: Request,
@@ -62,10 +62,20 @@ export async function DELETE(
       )
     }
 
-    // Lösche Datei aus Storage
-    await deleteFile(media.storageUrl)
+    // Prüfen, ob diese Datei (storageUrl) in einer veröffentlichten Version vorkommt
+    const usedInPublishedVersion = await prisma.dppVersionMedia.findFirst({
+      where: {
+        storageUrl: media.storageUrl,
+        version: { dppId }
+      }
+    })
 
-    // Lösche Metadaten aus DB
+    // Nur aus Storage löschen, wenn keine Version die Datei nutzt
+    if (!usedInPublishedVersion) {
+      await deleteFile(media.storageUrl)
+    }
+
+    // Eintrag in dpp_media immer löschen (Entwurf bereinigen)
     await prisma.dppMedia.delete({
       where: { id: mediaId }
     })

@@ -56,6 +56,7 @@ const fieldTypes = [
   { value: "text", label: "Text" },
   { value: "textarea", label: "Mehrzeiliger Text" },
   { value: "number", label: "Zahl" },
+  { value: "co2_emissions", label: "CO₂-Emissionen (kg CO₂e)" },
   { value: "select", label: "Auswahl" },
   { value: "multi-select", label: "Mehrfachauswahl" },
   { value: "boolean", label: "Ja/Nein" },
@@ -600,7 +601,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       <div>
         {error && (
           <div style={{
-            backgroundColor: "#FFF5F9",
+            backgroundColor: "#ECFDF5",
             border: "1px solid #24c598",
             borderRadius: "8px",
             padding: "1rem",
@@ -613,7 +614,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
         )}
 
         <div style={{
-          backgroundColor: "#FFF5F9",
+          backgroundColor: "#ECFDF5",
           border: "1px solid #24c598",
           borderRadius: "12px",
           padding: "1.5rem",
@@ -752,7 +753,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             <div style={{
               marginTop: "1rem",
               padding: "0.75rem",
-              backgroundColor: "#FFF5F9",
+              backgroundColor: "#ECFDF5",
               border: "1px solid #24c598",
               borderRadius: "8px",
               fontSize: "0.875rem",
@@ -989,7 +990,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
       <form onSubmit={handleSubmit}>
       {error && (
         <div style={{
-          backgroundColor: "#FFF5F9",
+          backgroundColor: "#ECFDF5",
           border: "1px solid #24c598",
           borderRadius: "8px",
           padding: "1rem",

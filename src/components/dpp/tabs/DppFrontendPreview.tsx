@@ -12,7 +12,7 @@ import EditorialDppViewRedesign from "@/components/editorial/EditorialDppViewRed
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { Block, StylingConfig } from "@/lib/cms/types"
 import { UnifiedContentBlock } from "@/lib/content-adapter"
-import { getHeroImage, type MediaItem } from "@/lib/media/hero-logic"
+import type { MediaItem } from "@/lib/media/hero-logic"
 
 interface DppFrontendPreviewProps {
   dpp: any
@@ -99,6 +99,8 @@ export default function DppFrontendPreview({
   const previewScrollRef = useRef<HTMLDivElement>(null)
   const stableHeroUrlRef = useRef<string | undefined>(undefined)
   const lastDppIdRef = useRef<string | undefined>(undefined)
+  const scrollLastDppIdRef = useRef<string | undefined>(undefined)
+  const didScrollForLoadRef = useRef(false)
 
   // Mount effect - only run once
   useEffect(() => {
@@ -146,28 +148,29 @@ export default function DppFrontendPreview({
     }
   }, [dpp?.id, mounted]) // Nur bei dpp.id laden – kein Refetch bei blocks-Änderung, damit Galerie und Mehrwert-Blöcke gemeinsam erscheinen
 
-  // Immer am Hero-Bild starten: Scroll auf 0 wenn Vorschau geladen (verhindert Sprung zu Basisdaten / Browser-Scroll-Restoration)
+  // Einmal am Hero starten wenn Vorschau fertig geladen; nicht bei jedem späteren Update (verhindert Scroll-Up nach Nutzer-Scroll)
   const scrollPreviewToTop = () => {
     previewScrollRef.current?.scrollTo(0, 0)
     window.scrollTo(0, 0)
   }
   useLayoutEffect(() => {
+    if (dpp?.id !== scrollLastDppIdRef.current) {
+      scrollLastDppIdRef.current = dpp?.id
+      didScrollForLoadRef.current = false
+    }
     if (isLoading || error) return
+    if (didScrollForLoadRef.current) return
+    didScrollForLoadRef.current = true
     scrollPreviewToTop()
     const t0 = setTimeout(scrollPreviewToTop, 0)
-    const t1 = requestAnimationFrame(() => {
-      scrollPreviewToTop()
-      requestAnimationFrame(scrollPreviewToTop)
-    })
-    const t2 = setTimeout(scrollPreviewToTop, 100)
-    const t3 = setTimeout(scrollPreviewToTop, 300)
+    const t1 = requestAnimationFrame(scrollPreviewToTop)
+    const t2 = setTimeout(scrollPreviewToTop, 150)
     return () => {
       clearTimeout(t0)
       clearTimeout(t2)
-      clearTimeout(t3)
       cancelAnimationFrame(t1)
     }
-  }, [isLoading, error, unifiedBlocks.length])
+  }, [dpp?.id, isLoading, error])
 
   if (!mounted || !dpp) {
     return (
@@ -251,44 +254,21 @@ export default function DppFrontendPreview({
   )
   const basisdatenBlockId = productDataBlock?.id ?? spineBlock?.id
   const withoutLogo = (dpp.media || []).filter((m: any) => m.role !== "logo")
-  // Hero: aus voller Medienliste, damit hochgeladenes Produktbild gefunden wird (role oder Spine/kein blockId)
-  const mediaListForHero: MediaItem[] = withoutLogo.map((m: any) => ({
-    id: m.id,
-    storageUrl: m.storageUrl,
-    fileType: m.fileType || "",
-    role: m.role ?? undefined,
-    blockId: m.blockId ?? undefined,
-    fieldKey: m.fieldKey ?? m.fieldId ?? undefined,
-    fileName: m.fileName ?? (m.originalFileName as string) ?? "",
-  }))
-  const spineImagesForHero = withoutLogo.filter((m: any) => {
+  // Hero nur aus Basisdaten: Block „Basis- & Produktdaten“ oder ohne blockId (Legacy). Keine Bilder aus Mehrwert-Blöcken.
+  const basisdatenHeroMediaOnly = withoutLogo.filter((m: any) => {
     if (!(m.fileType || "").startsWith("image/")) return false
-    if (basisdatenBlockId) return m.blockId === basisdatenBlockId || m.blockId == null || m.blockId === ""
-    return true
+    if (m.blockId && dataBlockIds.has(m.blockId)) return false // Mehrwert-Bilder nie als Hero
+    return m.blockId === basisdatenBlockId || m.blockId == null || m.blockId === ""
   })
-  const heroFromBasisdaten = getHeroImage(mediaListForHero)
-  const fallbackHeroFromBlock = spineImagesForHero[0]
-  const fallbackHeroLegacy =
-    !heroFromBasisdaten &&
-    !fallbackHeroFromBlock &&
-    withoutLogo.find(
-      (m: any) =>
-        (m.fileType || "").startsWith("image/") &&
-        (m.blockId == null || m.blockId === "")
-    )
-  const heroMedia =
-    heroFromBasisdaten ??
-    (fallbackHeroFromBlock ? { storageUrl: (fallbackHeroFromBlock as any).storageUrl } : null) ??
-    (fallbackHeroLegacy ? { storageUrl: (fallbackHeroLegacy as any).storageUrl } : null)
-  // Letzter Fallback: erstes Bild in der Liste (z. B. wenn blockId nicht zum Spine passt oder role fehlt)
-  const heroImage =
-    heroMedia?.storageUrl ??
-    (withoutLogo.find((m: any) => (m.fileType || "").startsWith("image/")) as any)?.storageUrl ??
-    undefined
+  const heroImage = basisdatenHeroMediaOnly[0]?.storageUrl ?? undefined
 
-  // Hero-URL stabil halten: nur bei DPP-Wechsel zurücksetzen; sonst letzte gültige URL beibehalten (verhindert Flackern)
+  // Hero-URL stabil halten: nur bei DPP-Wechsel oder wenn URL nicht mehr in Medien ist zurücksetzen (verhindert Flackern / verwaiste Thumbnails)
   if (dpp?.id !== lastDppIdRef.current) {
     lastDppIdRef.current = dpp?.id
+    stableHeroUrlRef.current = undefined
+  }
+  const mediaUrls = new Set((dpp?.media ?? []).map((m: { storageUrl?: string }) => m.storageUrl))
+  if (stableHeroUrlRef.current && !mediaUrls.has(stableHeroUrlRef.current)) {
     stableHeroUrlRef.current = undefined
   }
   if (heroImage) stableHeroUrlRef.current = heroImage
@@ -313,14 +293,14 @@ export default function DppFrontendPreview({
     fieldKey: m.fieldKey ?? m.fieldId ?? undefined,
     fileName: m.fileName ?? (m.originalFileName as string) ?? "",
   }))
-  // Thumbnails aus allen Bild-Medien (ohne validMedia-Filter), nur Mehrwert (Data-Layer) ausschließen
+  // Thumbnails nur aus dem Basisdaten-Block (blockId = basisdatenBlockId), keine verwaisten Einträge ohne blockId
   const basisdatenOnlyImages = withoutLogo.filter((m: any) => {
     if (!(m.fileType || "").startsWith("image/")) return false
     if (m.blockId && dataBlockIds.has(m.blockId)) return false // Mehrwert-Bilder ausblenden
-    return true
+    if (!basisdatenBlockId) return false
+    return m.blockId === basisdatenBlockId // strikt: nur explizit zugewiesene Bilder, keine null/empty blockId
   })
 
-  // Hero + Thumbnail-Strip: Basisdaten-Bilder in Reihenfolge (sortOrder vom Server)
   const basisdatenHeroImages = basisdatenOnlyImages.map((m: any) => ({
     url: m.storageUrl,
     alt: m.fileName ?? (m.originalFileName as string) ?? ""
@@ -365,7 +345,7 @@ export default function DppFrontendPreview({
         organizationName={organizationName}
         organizationLogoUrl={organizationLogoUrl}
         heroImageUrl={displayHeroUrl}
-        basisdatenHeroImages={basisdatenHeroImages.length > 0 ? basisdatenHeroImages : undefined}
+        basisdatenHeroImages={basisdatenHeroImages.length > 1 ? basisdatenHeroImages : undefined}
         galleryImages={galleryImages}
         styling={styling}
         isPreview

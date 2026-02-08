@@ -9,6 +9,7 @@ import { useNotification } from "@/components/NotificationProvider"
 import InputField from "@/components/InputField"
 import StickySaveBar from "@/components/StickySaveBar"
 import { useCapabilities } from "@/hooks/useCapabilities"
+import { useAutoSave } from "@/hooks/useAutoSave"
 import { DPP_SECTIONS } from "@/lib/dpp-sections"
 import TemplateBlocksSection from "@/components/TemplateBlocksSection"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
@@ -81,6 +82,10 @@ interface DppEditorPflichtdatenProps {
   onSave?: () => Promise<void>
   onPublish?: () => Promise<void>
   onDppUpdate?: (updatedDpp: Dpp) => void
+  /** Status an Header/Leiste durchreichen (saving | saved | error | idle) */
+  onStatusChange?: (status: "idle" | "saving" | "saved" | "publishing" | "error") => void
+  onLastSavedChange?: (date: Date | null) => void
+  onErrorChange?: (error: string | null) => void
 }
 
 /**
@@ -175,7 +180,7 @@ function AccordionSection({
  * 4. Rechtliches & Konformität (einklappbar)
  * 5. Rücknahme & Second Life (einklappbar)
  */
-export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, onUnsavedChangesChange, availableCategories: propCategories, availableFeatures = [], onSave: externalOnSave, onPublish: externalOnPublish, onDppUpdate }: DppEditorPflichtdatenProps) {
+export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, onUnsavedChangesChange, availableCategories: propCategories, availableFeatures = [], onSave: externalOnSave, onPublish: externalOnPublish, onDppUpdate, onStatusChange, onLastSavedChange, onErrorChange }: DppEditorPflichtdatenProps) {
   const router = useRouter()
   const { showNotification } = useNotification()
 
@@ -415,6 +420,24 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "publishing" | "error">("idle")
   const [lastSaved, setLastSaved] = useState<Date | null>(isNew ? null : initialDpp.updatedAt)
   const [saveError, setSaveError] = useState<string | null>(null)
+  
+  // Status an Header/Leiste durchreichen (z. B. wenn Tab im DppEditorTabs aktiv ist)
+  useEffect(() => {
+    onStatusChange?.(saveStatus)
+  }, [saveStatus, onStatusChange])
+  useEffect(() => {
+    onLastSavedChange?.(lastSaved)
+  }, [lastSaved, onLastSavedChange])
+  useEffect(() => {
+    onErrorChange?.(saveError)
+  }, [saveError, onErrorChange])
+  
+  // Nach "Gespeichert" nach 2 s wieder auf "idle" (wie useAutoSave / Content-Tab)
+  useEffect(() => {
+    if (saveStatus !== "saved") return
+    const t = setTimeout(() => setSaveStatus("idle"), 2000)
+    return () => clearTimeout(t)
+  }, [saveStatus])
   
   // Subscription Context für Publishing-Capability
   const [subscriptionCanPublish, setSubscriptionCanPublish] = useState<boolean>(true)
@@ -1103,10 +1126,109 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
     }
   }
 
+  // Refs: immer aktuelle Werte für Auto-Save (verhindert abgeschnittene Zeichen beim Tippen)
+  const latestPayloadRef = useRef<{ fieldValues: Record<string, unknown>; fieldInstances: Record<string, unknown> } | null>(null)
+  const lastSavedSnapshotRef = useRef<string | null>(null)
+
+  const autoSaveEnabled = Boolean(externalOnSave && !isNew && dpp?.id && dpp.id !== "new")
+
+  // Aktualisiere Ref bei jeder Änderung, damit der Debounce-Save die neuesten Werte schreibt
+  useEffect(() => {
+    if (!autoSaveEnabled) return
+    latestPayloadRef.current = {
+      fieldValues: {
+        ...fieldValues,
+        name,
+        description,
+        sku,
+        gtin,
+        brand,
+        countryOfOrigin,
+        materials,
+        materialSource,
+        careInstructions,
+        isRepairable,
+        sparePartsAvailable,
+        lifespan,
+        conformityDeclaration,
+        disposalInfo,
+        takebackOffered,
+        takebackContact,
+        secondLifeInfo,
+      },
+      fieldInstances: fieldInstances || {},
+    }
+  }, [autoSaveEnabled, fieldValues, fieldInstances, name, description, sku, gtin, brand, countryOfOrigin, materials, materialSource, careInstructions, isRepairable, sparePartsAvailable, lifespan, conformityDeclaration, disposalInfo, takebackOffered, takebackContact, secondLifeInfo])
+
+  // Auto-Save nur bei echten Änderungen, mit Debounce (2 s Inaktivität) – Best Practice für SaaS
+  const performSaveContent = useCallback(async () => {
+    const dppId = dpp?.id
+    if (!dppId || dppId === "new") return
+    const payload = latestPayloadRef.current
+    if (!payload) return
+    setSaveStatus("saving")
+    setSaveError(null)
+    try {
+      const res = await fetch(`/api/app/dpp/${dppId}/content`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fieldValues: payload.fieldValues, fieldInstances: payload.fieldInstances }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Fehler beim Speichern")
+      }
+      const snapshot = JSON.stringify({ fieldValues: payload.fieldValues, fieldInstances: payload.fieldInstances })
+      lastSavedSnapshotRef.current = snapshot
+      setLastSaved(new Date())
+      setSaveStatus("saved")
+      try {
+        const r = await fetch(`/api/app/dpp/${dppId}`, { cache: "no-store" })
+        if (r.ok) {
+          const data = await r.json()
+          const updated = { ...data.dpp, _fieldValues: data.fieldValues ?? {}, _fieldInstances: data.fieldInstances ?? {} }
+          setDpp(updated)
+          onDppUpdate?.(updated)
+        }
+      } catch (_) { /* optional refresh */ }
+    } catch (e: any) {
+      const msg = e?.message || "Fehler beim Speichern"
+      setSaveError(msg)
+      setSaveStatus("error")
+    }
+  }, [dpp?.id, onDppUpdate])
+
+  const { scheduleSave } = useAutoSave({
+    onSave: performSaveContent,
+    enabled: autoSaveEnabled,
+    debounceMs: 2000,
+    onStatusChange: (status) => {
+      if (status === "saving") setSaveStatus("saving")
+      else if (status === "saved") setSaveStatus("saved")
+      else if (status === "error") setSaveStatus("error")
+    },
+  })
+
+  // Nur bei Änderung gegenüber letztem gespeicherten Stand speichern (kein Speichern nach Parent-Update)
+  const dataTabFirstRunRef = useRef(true)
+  useEffect(() => {
+    if (!autoSaveEnabled) return
+    const current = latestPayloadRef.current
+    if (!current) return
+    const snapshot = JSON.stringify({ fieldValues: current.fieldValues, fieldInstances: current.fieldInstances })
+    if (dataTabFirstRunRef.current) {
+      dataTabFirstRunRef.current = false
+      lastSavedSnapshotRef.current = snapshot
+      return
+    }
+    if (snapshot === lastSavedSnapshotRef.current) return
+    scheduleSave()
+  }, [autoSaveEnabled, scheduleSave, name, description, sku, gtin, brand, countryOfOrigin, materials, materialSource, careInstructions, isRepairable, sparePartsAvailable, lifespan, conformityDeclaration, disposalInfo, takebackOffered, takebackContact, secondLifeInfo, fieldValues, fieldInstances])
+
   // Speichere DPP-Daten (Draft Save)
   const handleSave = async () => {
     if (externalOnSave) {
-      await externalOnSave()
+      await performSaveContent()
       return
     }
     setSaveStatus("saving")
@@ -2062,7 +2184,10 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
             template={template}
             dppId={dpp.id && dpp.id !== "new" ? dpp.id : null}
             media={pflichtdatenMedia}
-            onMediaChange={refreshMedia}
+            onMediaChange={async () => {
+              await refreshMedia()
+              scheduleSave()
+            }}
             onMediaReorder={handleMediaReorder}
             blockSupplierConfigs={blockSupplierConfigs}
             supplierInvitationEnabled={hasSupplierInvitation}
@@ -2375,7 +2500,7 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
                 fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
                 fontWeight: "600",
                 cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(226, 0, 116, 0.3)"
+                boxShadow: "0 4px 12px rgba(36, 197, 152, 0.25)"
               }}
             >
               Trotzdem verlassen

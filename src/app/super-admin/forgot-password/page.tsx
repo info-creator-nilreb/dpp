@@ -90,7 +90,7 @@ export default function SuperAdminForgotPasswordPage() {
 
         {error && (
           <div style={{
-            backgroundColor: "#FFF5F9",
+            backgroundColor: "#ECFDF5",
             border: "1px solid #24c598",
             borderRadius: "8px",
             padding: "1rem",

@@ -106,7 +106,7 @@ export default function SubscriptionChangeModal({
             width: "48px",
             height: "48px",
             borderRadius: "50%",
-            backgroundColor: "#FFF5F9",
+            backgroundColor: "#ECFDF5",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -300,7 +300,7 @@ export default function SubscriptionChangeModal({
         {/* Warning Banner */}
         <div style={{
           padding: "1rem",
-          backgroundColor: "#FFF5F9",
+          backgroundColor: "#ECFDF5",
           border: "1px solid #24c598",
           borderRadius: "6px",
           marginBottom: "1.5rem",

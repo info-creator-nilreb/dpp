@@ -103,7 +103,7 @@ export default function ConfirmationModal({
               width: "48px",
               height: "48px",
               borderRadius: "50%",
-              backgroundColor: "#FFF5F9",
+              backgroundColor: "#ECFDF5",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -238,7 +238,7 @@ export default function ConfirmationModal({
         {/* Warning Banner */}
         <div style={{
           padding: "1rem",
-          backgroundColor: isHighSeverity ? "#FFF5F9" : "#F5F5F5",
+          backgroundColor: isHighSeverity ? "#ECFDF5" : "#F5F5F5",
           border: `1px solid ${isHighSeverity ? "#24c598" : "#CDCDCD"}`,
           borderRadius: "6px",
           marginBottom: "1.5rem",

@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic"
  * GET /api/app/dpp/[dppId]/content
  *
  * Liefert CMS-Inhalt (Blocks, Styling) für den Mehrwert-Tab.
+ * Immer nur Entwurf (isPublished: false) – auch bei veröffentlichten DPPs.
  */
 export async function GET(
   request: Request,
@@ -119,7 +120,8 @@ export async function POST(
 /**
  * PUT /api/app/dpp/[dppId]/content
  *
- * Speichert template-basierte Feldwerte in dppContent
+ * Speichert template-basierte Feldwerte in dppContent (immer Entwurf, isPublished: false).
+ * Bei veröffentlichten DPPs: Bearbeitungen landen im Entwurf; erneutes Veröffentlichen erzeugt eine neue Version.
  */
 export async function PUT(
   request: Request,
@@ -277,6 +279,49 @@ export async function PUT(
       console.log("[DPP Content API] Created new dppContent with", finalBlocks.length, "template blocks")
     }
 
+    // DPP-Spalten (gtin, sku, name, …) aus fieldValues synchronisieren – gelöschte Werte werden in der DB entfernt (datensparsam)
+    const columnToFieldKeys: Record<string, string[]> = {
+      name: ["name", "produktname", "productname"],
+      description: ["description", "beschreibung"],
+      sku: ["sku"],
+      gtin: ["gtin", "ean"],
+      brand: ["brand", "marke", "hersteller"],
+      countryOfOrigin: ["countryOfOrigin", "herstellungsland", "country"],
+      materials: ["materials", "material", "materialien"],
+      materialSource: ["materialSource", "materialquelle"],
+      careInstructions: ["careInstructions", "pflegehinweise", "pflege"],
+      isRepairable: ["isRepairable", "reparierbarkeit", "reparierbar"],
+      sparePartsAvailable: ["sparePartsAvailable", "ersatzteile"],
+      lifespan: ["lifespan", "lebensdauer"],
+      conformityDeclaration: ["conformityDeclaration", "konformiataetserklaerung"],
+      disposalInfo: ["disposalInfo", "entsorgung"],
+      takebackOffered: ["takebackOffered", "ruecknahme_angeboten", "rücknahme"],
+      takebackContact: ["takebackContact", "ruecknahme_kontakt"],
+      secondLifeInfo: ["secondLifeInfo", "secondlife"],
+    }
+    // Optionale DPP-Spalten: leerer String → null (Datensparsamkeit). name ist Pflichtfeld und bleibt String.
+    const optionalColumns = new Set(["description", "sku", "gtin", "brand", "countryOfOrigin", "materials", "materialSource", "careInstructions", "isRepairable", "sparePartsAvailable", "lifespan", "conformityDeclaration", "disposalInfo", "takebackOffered", "takebackContact", "secondLifeInfo"])
+    const dppUpdateFromFieldValues: Record<string, string | null> = {}
+    for (const [col, keys] of Object.entries(columnToFieldKeys)) {
+      let raw: unknown = undefined
+      for (const k of keys) {
+        if (fieldValues && typeof fieldValues === "object" && k in fieldValues) {
+          raw = fieldValues[k]
+          break
+        }
+      }
+      if (raw === undefined) continue // Feld nicht gesendet → Spalte nicht überschreiben
+      const value = raw === null ? "" : String(raw).trim()
+      dppUpdateFromFieldValues[col] = optionalColumns.has(col) && value === "" ? null : value
+    }
+    if (Object.keys(dppUpdateFromFieldValues).length > 0) {
+      await prisma.dpp.update({
+        where: { id: dppId },
+        data: dppUpdateFromFieldValues as any,
+      })
+      console.log("[DPP Content API] Synced DPP columns from fieldValues:", Object.keys(dppUpdateFromFieldValues))
+    }
+
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: any) {
     console.error("[DPP Content API] Error saving content:", error)
@@ -286,3 +331,4 @@ export async function PUT(
     )
   }
 }
+

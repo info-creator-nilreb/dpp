@@ -175,6 +175,28 @@ export default function ContentBlockCard({
             </div>
           </div>
           <button
+            onClick={() => onDelete()}
+            style={{
+              padding: "0.5rem 0.75rem",
+              color: "#DC2626",
+              backgroundColor: "transparent",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "0.875rem",
+              transition: "all 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#FEF2F2"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent"
+            }}
+            title="Block entfernen"
+          >
+            Block entfernen
+          </button>
+          <button
             onClick={() => setIsEditing(false)}
             style={{
               padding: "0.5rem",
@@ -236,7 +258,7 @@ export default function ContentBlockCard({
         cursor: isEditing ? "default" : "pointer",
         transition: "all 0.2s",
         opacity: isDragging ? 0.5 : 1,
-        boxShadow: isSelected ? "0 4px 12px rgba(226, 0, 116, 0.1)" : "none"
+        boxShadow: isSelected ? "0 4px 12px rgba(36, 197, 152, 0.15)" : "none"
       }}
       onClick={isEditing ? undefined : onSelect}
     >
