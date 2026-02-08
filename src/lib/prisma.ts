@@ -57,13 +57,15 @@ function getPrisma(): PrismaClient {
     )
   }
 
-  // Connection Pool für Serverless (Vercel): limit=1 führte zu P2024 Timeouts bei Autosave (mehrere Queries pro Request).
-  // Über Umgebungsvariablen konfigurierbar; Default in Production: 3 Verbindungen, timeout 20s.
+  // Connection Pool für Serverless (Vercel):
+  // - connection_limit=1 nötig bei Session-Mode-DBs (Neon/Supabase etc.): sonst "MaxClientsInSessionMode: max clients reached".
+  // - pool_timeout etwas höher, damit bei Last nicht sofort P2024 (Timeout) entsteht.
+  // Optional: PRISMA_CONNECTION_LIMIT, PRISMA_POOL_TIMEOUT in Vercel setzen (nur limit > 1 wenn DB pool_size das erlaubt).
   let databaseUrl = process.env.DATABASE_URL || ""
   const isServerless = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
 
   if (isServerless && databaseUrl && !databaseUrl.includes("connection_limit")) {
-    const limit = process.env.PRISMA_CONNECTION_LIMIT ? String(process.env.PRISMA_CONNECTION_LIMIT) : "3"
+    const limit = process.env.PRISMA_CONNECTION_LIMIT ? String(process.env.PRISMA_CONNECTION_LIMIT) : "1"
     const timeout = process.env.PRISMA_POOL_TIMEOUT ? String(process.env.PRISMA_POOL_TIMEOUT) : "20"
     const separator = databaseUrl.includes("?") ? "&" : "?"
     databaseUrl = `${databaseUrl}${separator}connection_limit=${limit}&pool_timeout=${timeout}`
