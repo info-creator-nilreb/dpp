@@ -8,15 +8,17 @@ FATAL: MaxClientsInSessionMode: max clients reached - in Session mode max client
 ```
 
 Dieser Fehler tritt auf, wenn:
-- Viele parallele Serverless Function Requests gleichzeitig laufen
-- Die DATABASE_URL eine direkte Verbindung verwendet (nicht über Connection Pooler)
-- Supabase Connection Pool Limit wird überschritten
+- Viele parallele Serverless Function Requests gleichzeitig laufen (jede Instanz öffnet mindestens 1 DB-Verbindung)
+- Die **DATABASE_URL eine direkte Verbindung** verwendet (nicht den **Connection Pooler** des Anbieters)
+- Das Gesamtlimit der DB (pool_size / MaxClients) überschritten wird
 
-## Lösung
+**Wichtig:** Auch mit `connection_limit=1` pro Instanz reichen bereits wenige parallele Requests, um das Limit zu erreichen. Die einzige zuverlässige Lösung ist die **gepoolte Connection-URL** (Pooler).
 
-### 1. DATABASE_URL in Vercel prüfen und anpassen
+## Lösung: Pooled DATABASE_URL in Vercel verwenden
 
-Die `DATABASE_URL` in Vercel Environment Variables **MUSS** den Supabase Connection Pooler verwenden:
+Die `DATABASE_URL` in Vercel **muss** die **Pooler-URL** Ihres Datenbank-Anbieters verwenden (nicht die direkte DB-URL).
+
+### Supabase
 
 #### ✅ RICHTIG (mit Connection Pooler):
 ```
@@ -27,6 +29,15 @@ postgresql://postgres.[project-ref]:[password]@aws-1-eu-north-1.pooler.supabase.
 ```
 postgresql://postgres.[project-ref]:[password]@aws-1-eu-north-1.supabase.co:5432/postgres?sslmode=require
 ```
+
+### Neon
+
+Im Neon Dashboard unter **Connection details** die **„Pooled connection“** (nicht „Direct connection“) kopieren und in Vercel als `DATABASE_URL` eintragen.
+
+- **Direct connection** (❌ für Vercel): Host z.B. `ep-xxx-xxx.region.aws.neon.tech` → begrenzte Verbindungen, führt zu MaxClientsInSessionMode.
+- **Pooled connection** (✅): Nutzt den Neon-Pooler (z.B. Host mit `-pooler` oder separater Pooler-Endpoint), viele App-Verbindungen teilen sich wenige echte DB-Verbindungen.
+
+Dokumentation: https://neon.tech/docs/connect/connection-pooling
 
 ### 2. Vercel Environment Variables konfigurieren
 

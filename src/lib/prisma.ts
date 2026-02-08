@@ -57,19 +57,21 @@ function getPrisma(): PrismaClient {
     )
   }
 
-  // Connection Pool für Serverless (Vercel):
-  // - connection_limit=1 nötig bei Session-Mode-DBs (Neon/Supabase etc.): sonst "MaxClientsInSessionMode: max clients reached".
-  // - pool_timeout etwas höher, damit bei Last nicht sofort P2024 (Timeout) entsteht.
-  // Optional: PRISMA_CONNECTION_LIMIT, PRISMA_POOL_TIMEOUT in Vercel setzen (nur limit > 1 wenn DB pool_size das erlaubt).
+  // Serverless (Vercel): Bei Pooler-URL nichts anhängen – Pooler-URL so lassen wie konfiguriert (funktionierte vorher).
+  // Nur bei direkter DB-URL (ohne Pooler) connection_limit/pool_timeout anfügen, um Limits zu setzen.
   let databaseUrl = process.env.DATABASE_URL || ""
   const isServerless = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
+  const isPoolerUrl =
+    databaseUrl.includes("pooler.supabase") ||
+    databaseUrl.includes("-pooler.") ||
+    /pooler[.-]/.test(databaseUrl)
 
-  if (isServerless && databaseUrl && !databaseUrl.includes("connection_limit")) {
+  if (isServerless && databaseUrl && !databaseUrl.includes("connection_limit") && !isPoolerUrl) {
     const limit = process.env.PRISMA_CONNECTION_LIMIT ? String(process.env.PRISMA_CONNECTION_LIMIT) : "1"
     const timeout = process.env.PRISMA_POOL_TIMEOUT ? String(process.env.PRISMA_POOL_TIMEOUT) : "20"
     const separator = databaseUrl.includes("?") ? "&" : "?"
     databaseUrl = `${databaseUrl}${separator}connection_limit=${limit}&pool_timeout=${timeout}`
-    console.log("[PRISMA] Added connection_limit=" + limit + ", pool_timeout=" + timeout + " for serverless")
+    console.log("[PRISMA] Added connection_limit=" + limit + ", pool_timeout=" + timeout + " for serverless (direct DB URL)")
   }
 
   const prisma = new PrismaClient({
