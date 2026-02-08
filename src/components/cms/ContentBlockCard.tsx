@@ -174,53 +174,76 @@ export default function ContentBlockCard({
               </h4>
             </div>
           </div>
-          <button
-            onClick={() => onDelete()}
-            style={{
-              padding: "0.5rem 0.75rem",
-              color: "#DC2626",
-              backgroundColor: "transparent",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#FEF2F2"
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent"
-            }}
-            title="Block entfernen"
-          >
-            Block entfernen
-          </button>
-          <button
-            onClick={() => setIsEditing(false)}
-            style={{
-              padding: "0.5rem",
-              color: "#7A7A7A",
-              backgroundColor: "transparent",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#0A0A0A"
-              e.currentTarget.style.backgroundColor = "#F5F5F5"
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#7A7A7A"
-              e.currentTarget.style.backgroundColor = "transparent"
-            }}
-            title="Editor schließen"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="18 15 12 9 6 15"/>
-            </svg>
-          </button>
+          {/* Icon-Bar im Header (immer sichtbar): Löschen + Editor schließen */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem"
+          }} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              style={{
+                padding: "0.5rem",
+                color: "#7A7A7A",
+                backgroundColor: "transparent",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#DC2626"
+                e.currentTarget.style.backgroundColor = "#FEF2F2"
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "#7A7A7A"
+                e.currentTarget.style.backgroundColor = "transparent"
+              }}
+              title="Block entfernen"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsEditing(false)
+              }}
+              style={{
+                padding: "0.5rem",
+                color: "#7A7A7A",
+                backgroundColor: "transparent",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#0A0A0A"
+                e.currentTarget.style.backgroundColor = "#F5F5F5"
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "#7A7A7A"
+                e.currentTarget.style.backgroundColor = "transparent"
+              }}
+              title="Editor schließen"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="18 15 12 9 6 15"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Editor Content */}
@@ -343,13 +366,12 @@ export default function ContentBlockCard({
           </div>
         </div>
 
-        {/* Actions */}
-        {(isHovered || isSelected) && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem"
-          }} onClick={(e) => e.stopPropagation()}>
+        {/* Icon-Bar: immer sichtbar (Bearbeiten, Status, Löschen) */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem"
+        }} onClick={(e) => e.stopPropagation()}>
             {/* Status Toggle Button - immer verfügbar wenn Block im entsprechenden Status */}
             {block.status === "draft" && (
               <button
@@ -482,7 +504,6 @@ export default function ContentBlockCard({
               </svg>
             </button>
           </div>
-        )}
       </div>
 
       {/* Content Preview */}

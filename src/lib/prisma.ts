@@ -57,22 +57,17 @@ function getPrisma(): PrismaClient {
     )
   }
 
-  // Connection Pool Konfiguration für Serverless-Umgebungen (Vercel)
-  // In Serverless: Jede Lambda-Funktion sollte nur 1 Verbindung verwenden
-  // Dies verhindert "MaxClientsInSessionMode" Fehler
-  // WICHTIG: connection_limit sollte idealerweise in DATABASE_URL in Vercel gesetzt werden
-  // Als Fallback fügen wir es hier hinzu, falls es nicht vorhanden ist
+  // Connection Pool für Serverless (Vercel): limit=1 führte zu P2024 Timeouts bei Autosave (mehrere Queries pro Request).
+  // Über Umgebungsvariablen konfigurierbar; Default in Production: 3 Verbindungen, timeout 20s.
   let databaseUrl = process.env.DATABASE_URL || ""
-  
-  // Nur in Production/Serverless-Umgebungen und nur wenn connection_limit noch nicht gesetzt ist
-  if ((process.env.VERCEL || process.env.NODE_ENV === "production") && 
-      databaseUrl && 
-      !databaseUrl.includes("connection_limit")) {
-    // Füge connection_limit=1 für Serverless-Umgebungen hinzu
-    // pool_timeout=10 verhindert, dass Verbindungen zu lange warten
+  const isServerless = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
+
+  if (isServerless && databaseUrl && !databaseUrl.includes("connection_limit")) {
+    const limit = process.env.PRISMA_CONNECTION_LIMIT ? String(process.env.PRISMA_CONNECTION_LIMIT) : "3"
+    const timeout = process.env.PRISMA_POOL_TIMEOUT ? String(process.env.PRISMA_POOL_TIMEOUT) : "20"
     const separator = databaseUrl.includes("?") ? "&" : "?"
-    databaseUrl = `${databaseUrl}${separator}connection_limit=1&pool_timeout=10`
-    console.log("[PRISMA] Added connection_limit=1 to DATABASE_URL for serverless environment")
+    databaseUrl = `${databaseUrl}${separator}connection_limit=${limit}&pool_timeout=${timeout}`
+    console.log("[PRISMA] Added connection_limit=" + limit + ", pool_timeout=" + timeout + " for serverless")
   }
 
   const prisma = new PrismaClient({
