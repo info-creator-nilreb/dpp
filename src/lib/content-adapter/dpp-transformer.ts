@@ -79,7 +79,29 @@ export async function transformDppToUnified(
   }
   
   // Bei öffentlicher Ansicht einer konkreten Version: Daten aus Version-Snapshot laden
-  let versionRow: { id: string; version: number; createdAt: Date; name: string; description: string | null; sku: string | null; gtin: string | null; brand: string | null; countryOfOrigin: string | null; materials: string | null; materialSource: string | null; careInstructions: string | null; isRepairable: string | null; sparePartsAvailable: string | null; lifespan: string | null; conformityDeclaration: string | null; disposalInfo: string | null; takebackOffered: string | null; takebackContact: string | null; secondLifeInfo: string | null } | null = null
+  type VersionRow = {
+    id: string
+    version: number
+    createdAt: Date
+    name: string
+    description: string | null
+    sku: string | null
+    gtin: string | null
+    brand: string | null
+    countryOfOrigin: string | null
+    materials: string | null
+    materialSource: string | null
+    careInstructions: string | null
+    isRepairable: string | null
+    sparePartsAvailable: string | null
+    lifespan: string | null
+    conformityDeclaration: string | null
+    disposalInfo: string | null
+    takebackOffered: string | null
+    takebackContact: string | null
+    secondLifeInfo: string | null
+  }
+  let versionRow: VersionRow | null = null
   if (options.versionNumber != null) {
     versionRow = await prisma.dppVersion.findFirst({
       where: { dppId, version: options.versionNumber },
@@ -105,7 +127,7 @@ export async function transformDppToUnified(
         takebackContact: true,
         secondLifeInfo: true,
       },
-    }) as typeof versionRow
+    }) as VersionRow | null
   }
 
   // Version-Info (version/createdAt getrennt ermitteln, da Prisma versions[0] sonst als never inferiert)
