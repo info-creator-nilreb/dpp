@@ -108,11 +108,12 @@ export async function transformDppToUnified(
     }) as typeof versionRow
   }
 
-  // Version-Info
-  const versionInfo = options.includeVersionInfo && (versionRow || dpp.versions[0])
+  // Version-Info (firstVersion typisieren, da Prisma-Include sonst dpp.versions[0] als never inferieren kann)
+  const firstVersion = dpp.versions[0] as { version: number; createdAt: Date } | undefined
+  const versionInfo = options.includeVersionInfo && (versionRow || firstVersion)
     ? {
-        version: versionRow?.version ?? dpp.versions[0].version,
-        createdAt: versionRow?.createdAt ?? dpp.versions[0].createdAt,
+        version: versionRow?.version ?? firstVersion?.version,
+        createdAt: versionRow?.createdAt ?? firstVersion?.createdAt,
       }
     : undefined
 
