@@ -108,16 +108,19 @@ export async function transformDppToUnified(
     }) as typeof versionRow
   }
 
-  // Version-Info (unknown-Cast um Prisma-Inferenz „never“ für versions[0] zu umgehen)
+  // Version-Info (expliziter Typ + unknown-Cast, da Prisma versions[0] als never inferiert)
   type VersionInfoItem = { version: number; createdAt: Date }
   const hasVersion = Array.isArray(dpp.versions) && dpp.versions.length > 0
-  const firstV = hasVersion ? (dpp.versions[0] as unknown as VersionInfoItem) : undefined
-  const versionInfo = options.includeVersionInfo && (versionRow || firstV)
-    ? {
-        version: versionRow?.version ?? firstV?.version,
-        createdAt: versionRow?.createdAt ?? firstV?.createdAt,
-      }
+  const firstV: VersionInfoItem | undefined = hasVersion
+    ? (dpp.versions[0] as unknown as VersionInfoItem)
     : undefined
+  const versionInfo =
+    options.includeVersionInfo && (versionRow || firstV)
+      ? {
+          version: versionRow?.version ?? firstV?.version,
+          createdAt: versionRow?.createdAt ?? firstV?.createdAt,
+        }
+      : undefined
 
   // Transformiere DPP-Daten zu Record (für Field-Lookup)
   // Bei Version-Anzeige: Snapshot-Daten der Version, sonst aktueller Entwurf (dpp)
