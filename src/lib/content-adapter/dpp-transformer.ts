@@ -108,18 +108,22 @@ export async function transformDppToUnified(
     }) as typeof versionRow
   }
 
-  // Version-Info (expliziter Typ + unknown-Cast, da Prisma versions[0] als never inferiert)
+  // Version-Info (version/createdAt getrennt ermitteln, da Prisma versions[0] sonst als never inferiert)
   type VersionInfoItem = { version: number; createdAt: Date }
   const hasVersion = Array.isArray(dpp.versions) && dpp.versions.length > 0
-  const firstV: VersionInfoItem | undefined = hasVersion
-    ? (dpp.versions[0] as unknown as VersionInfoItem)
-    : undefined
+  let versionNum: number | undefined
+  let versionDate: Date | undefined
+  if (versionRow) {
+    versionNum = versionRow.version
+    versionDate = versionRow.createdAt
+  } else if (hasVersion) {
+    const v = dpp.versions[0] as unknown as VersionInfoItem
+    versionNum = v.version
+    versionDate = v.createdAt
+  }
   const versionInfo =
-    options.includeVersionInfo && (versionRow || firstV)
-      ? {
-          version: versionRow?.version ?? firstV?.version,
-          createdAt: versionRow?.createdAt ?? firstV?.createdAt,
-        }
+    options.includeVersionInfo && versionNum != null && versionDate != null
+      ? { version: versionNum, createdAt: versionDate }
       : undefined
 
   // Transformiere DPP-Daten zu Record (für Field-Lookup)
