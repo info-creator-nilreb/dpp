@@ -11,7 +11,7 @@
 import type { UpdateStylingRequest } from "@/lib/cms/types"
 import { StylingConfig, Block } from "@/lib/cms/types"
 import StylingEditor from "@/components/cms/StylingEditor"
-import DppFrontendPreview from "./DppFrontendPreview"
+import DppFrontendPreview, { type DppFrontendPreviewHandle } from "./DppFrontendPreview"
 import { useNotification } from "@/components/NotificationProvider"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { useState, useEffect, useRef } from "react"
