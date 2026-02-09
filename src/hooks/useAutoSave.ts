@@ -15,10 +15,13 @@ interface UseAutoSaveOptions {
  * Automatically saves changes after a debounce period
  * Returns current save status
  */
+// In Production längeres Debounce, um DB-Pool (Connection Limit) zu schonen – weniger parallele Saves
+const defaultDebounceMs = typeof process !== "undefined" && process.env.NODE_ENV === "production" ? 2500 : 1000
+
 export function useAutoSave({
   onSave,
   enabled = true,
-  debounceMs = 1000,
+  debounceMs = defaultDebounceMs,
   onStatusChange
 }: UseAutoSaveOptions) {
   const [status, setStatus] = useState<AutoSaveStatus>("idle")

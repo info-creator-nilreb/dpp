@@ -54,6 +54,7 @@ export default function HeroImageBlock({
       style={{
         position: 'relative',
         width: '100%',
+        backgroundColor: '#f5f5f5', // Neutraler Lade-Hintergrund, bis Bild geladen ist (kein farbiger Fallback)
       }}
     >
       {/* Bild + Overlay in einem Container, damit der Thumbnail-Strip darunter sichtbar bleibt */}

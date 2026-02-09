@@ -320,7 +320,9 @@ function DppFrontendPreviewInner({
   }
   if (heroImage) stableHeroUrlRef.current = heroImage
   else if ((dpp?.media?.length ?? 0) === 0) stableHeroUrlRef.current = undefined
-  const displayHeroUrl = stableHeroUrlRef.current ?? heroImage
+  // Wenn ein Hero aus Basisdaten existiert, nutzen. Sonst: sobald irgendein Produktbild existiert, das als Hero genutzt werden kann, anzeigen (kein Fallback mit farbigem Hintergrund flackern).
+  const provisionalHeroUrl = (withoutLogo.find((m: any) => (m.fileType || "").startsWith("image/")) as any)?.storageUrl
+  const displayHeroUrl = stableHeroUrlRef.current ?? heroImage ?? provisionalHeroUrl
 
   // Galerie: nur gültige Medien (blockId in aktuellen Blöcken oder leer), damit keine Verwaisten
   const validBlockIds = new Set(unifiedBlocks.map((b: { id?: string }) => b.id).filter(Boolean))
