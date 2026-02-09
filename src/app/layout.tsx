@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { unstable_cache } from 'next/cache'
 import PublicLayoutClient from '@/components/PublicLayoutClient'
 import ConditionalLayout from '@/components/ConditionalLayout'
 import PasswordProtectionWrapper from '@/components/PasswordProtectionWrapper'
@@ -10,7 +11,17 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.easyproductpass.
 const baseKeywords = ['Digitaler Produktpass', 'DPP', 'ESPR', 'Nachhaltigkeit', 'Produktpass', 'EU-Verordnung']
 
 export async function generateMetadata(): Promise<Metadata> {
-  const categoryKeywords = await getTemplateCategoryKeywordsForSeo()
+  let categoryKeywords: string[] = []
+  try {
+    // 60s Cache: reduziert DB-Last bei jedem Request (MaxClientsInSessionMode)
+    categoryKeywords = await unstable_cache(
+      () => getTemplateCategoryKeywordsForSeo(),
+      ['template-category-keywords-seo'],
+      { revalidate: 60 }
+    )()
+  } catch {
+    categoryKeywords = []
+  }
   const keywords = [...baseKeywords, ...categoryKeywords]
 
   return {

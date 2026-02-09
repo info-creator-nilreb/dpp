@@ -57,13 +57,16 @@ function getPrisma(): PrismaClient {
     )
   }
 
-  // Serverless (Vercel): Bei Pooler-URL nichts anhängen – Pooler-URL so lassen wie konfiguriert (funktionierte vorher).
-  // Nur bei direkter DB-URL (ohne Pooler) connection_limit/pool_timeout anfügen, um Limits zu setzen.
+  // Serverless (Vercel): Bei Pooler-URL nichts anhängen – Pooler-URL so lassen wie konfiguriert.
+  // DATABASE_USE_POOLER=true in Vercel setzen, um URL unverändert zu lassen (bei MaxClientsInSessionMode).
   let databaseUrl = process.env.DATABASE_URL || ""
   const isServerless = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
+  const forcePooler = process.env.DATABASE_USE_POOLER === "true" || process.env.DATABASE_USE_POOLER === "1"
   const isPoolerUrl =
+    forcePooler ||
     databaseUrl.includes("pooler.supabase") ||
     databaseUrl.includes("-pooler.") ||
+    databaseUrl.includes("pooler.") ||
     /pooler[.-]/.test(databaseUrl)
 
   if (isServerless && databaseUrl && !databaseUrl.includes("connection_limit") && !isPoolerUrl) {

@@ -13,6 +13,10 @@ import { cookies } from "next/headers"
 const ACCESS_COOKIE_NAME = "password_protection_access"
 const SESSION_TIMEOUT_MINUTES = 60
 
+// Kurz-Cache für Production: weniger DB-Aufrufe pro Request (MaxClientsInSessionMode)
+const CACHE_TTL_MS = 60_000 // 60 Sekunden
+let configCache: { config: PasswordProtectionConfig | null; until: number } | null = null
+
 export interface PasswordProtectionConfig {
   passwordProtectionEnabled: boolean
   passwordProtectionStartDate: Date | null
@@ -22,28 +26,34 @@ export interface PasswordProtectionConfig {
 }
 
 /**
- * Get password protection configuration from database
+ * Get password protection configuration from database.
+ * In Production: 60s In-Memory-Cache pro Instanz, reduziert DB-Last (Pool).
  */
 export async function getPasswordProtectionConfig(): Promise<PasswordProtectionConfig | null> {
+  const now = Date.now()
+  if (configCache && configCache.until > now) {
+    return configCache.config
+  }
   try {
     // @ts-ignore - passwordProtectionConfig exists in Prisma schema
     const config = await prisma.passwordProtectionConfig.findFirst({
       orderBy: { updatedAt: "desc" },
     })
 
-    if (!config) {
-      return null
-    }
-
-    return {
-      passwordProtectionEnabled: config.passwordProtectionEnabled,
-      passwordProtectionStartDate: config.passwordProtectionStartDate,
-      passwordProtectionEndDate: config.passwordProtectionEndDate,
-      passwordProtectionPasswordHash: config.passwordProtectionPasswordHash,
-      passwordProtectionSessionTimeoutMinutes: config.passwordProtectionSessionTimeoutMinutes,
-    }
+    const result = !config
+      ? null
+      : {
+          passwordProtectionEnabled: config.passwordProtectionEnabled,
+          passwordProtectionStartDate: config.passwordProtectionStartDate,
+          passwordProtectionEndDate: config.passwordProtectionEndDate,
+          passwordProtectionPasswordHash: config.passwordProtectionPasswordHash,
+          passwordProtectionSessionTimeoutMinutes: config.passwordProtectionSessionTimeoutMinutes,
+        }
+    configCache = { config: result, until: now + CACHE_TTL_MS }
+    return result
   } catch (error) {
-    // Wenn Datenbank nicht erreichbar ist, gebe null zurück (kein Password Protection)
+    // Bei DB-Fehler: Cache invalidieren, beim nächsten Request erneut versuchen
+    configCache = null
     return null
   }
 }
