@@ -1,7 +1,9 @@
 /**
  * Story Text Block Component
- * 
- * Narrativer Textblock (max. 300 Wörter)
+ *
+ * Produktbeschreibung (narrativer Text) + Basisdaten-Kacheln (außer Beschreibung):
+ * Mobile: eine Zeile mit Akzent-Hintergrund, horizontal durchwischbar.
+ * Desktop: max. 4 Kacheln pro Zeile, Akzent-Hintergrund pro Kachel.
  */
 
 "use client"
@@ -21,13 +23,17 @@ interface StoryTextBlockProps {
   }
 }
 
+const TILES = [
+  { key: 'sku' as const, label: 'SKU', value: (d: StoryTextBlockProps['basicData']) => d?.sku },
+  { key: 'gtin' as const, label: 'GTIN/EAN', value: (d: StoryTextBlockProps['basicData']) => d?.gtin },
+  { key: 'countryOfOrigin' as const, label: 'Herkunftsland', value: (d: StoryTextBlockProps['basicData']) => d?.countryOfOrigin },
+]
+
 export default function StoryTextBlock({ text, maxWords = 300, basicData }: StoryTextBlockProps) {
-  // Kürze Text auf max. Wörter (falls nötig)
   const words = text.split(' ')
-  const truncated = words.length > maxWords 
-    ? words.slice(0, maxWords).join(' ') + '...'
-    : text
-  
+  const truncated = words.length > maxWords ? words.slice(0, maxWords).join(' ') + '...' : text
+  const hasBasicData = basicData && TILES.some((t) => t.value(basicData) != null && t.value(basicData) !== '')
+
   return (
     <div
       style={{
@@ -41,112 +47,81 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
       }}
     >
       {words.length > 150 ? (
-        <div
-          className="story-text-two-columns"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: editorialSpacing.lg,
-            textAlign: 'center',
-          }}
-        >
+        <div className="story-text-two-columns" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: editorialSpacing.lg, textAlign: 'center' }}>
           <div>{truncated}</div>
         </div>
       ) : (
         <div>{truncated}</div>
       )}
-      
-      {/* Mintfarbene Linie als Trenner - zentriert */}
+
       <div
         style={{
           width: '60px',
           height: '2px',
           backgroundColor: editorialColors.brand.accentVar,
           marginTop: editorialSpacing.xl,
-          marginBottom: editorialSpacing.xl, // Einheitlicher Abstand zu DataSectionsContainer
+          marginBottom: editorialSpacing.xl,
           marginLeft: 'auto',
           marginRight: 'auto',
         }}
       />
-      
-      {/* Basisdaten (SKU, GTIN, Herkunftsland) - wie in aktueller public DPP route */}
-      {basicData && (basicData.sku || basicData.gtin || basicData.countryOfOrigin) && (
-        <div style={{
-          maxWidth: '900px',
-          margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '2rem',
-          marginTop: editorialSpacing.xl,
-          textAlign: 'center',
-        }}>
-          {basicData.sku && (
-            <div>
-              <p style={{
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                color: editorialColors.text.secondaryVar,
-                marginBottom: '0.5rem',
-              }}>
-                SKU
-              </p>
-              <p style={{
-                fontSize: '1rem',
-                fontWeight: 500,
-                color: editorialColors.text.primary,
-              }}>
-                {basicData.sku}
-              </p>
-            </div>
-          )}
-          
-          {basicData.gtin && (
-            <div>
-              <p style={{
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                color: editorialColors.text.secondaryVar,
-                marginBottom: '0.5rem',
-              }}>
-                GTIN/EAN
-              </p>
-              <p style={{
-                fontSize: '1rem',
-                fontWeight: 500,
-                color: editorialColors.text.primary,
-              }}>
-                {basicData.gtin}
-              </p>
-            </div>
-          )}
-          
-          {basicData.countryOfOrigin && (
-            <div>
-              <p style={{
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                color: editorialColors.text.secondaryVar,
-                marginBottom: '0.5rem',
-              }}>
-                Herkunftsland
-              </p>
-              <p style={{
-                fontSize: '1rem',
-                fontWeight: 500,
-                color: editorialColors.text.primary,
-              }}>
-                {basicData.countryOfOrigin}
-              </p>
-            </div>
-          )}
+
+      {/* Basisdaten: Mobile = durchwischbare Kacheln mit Akzent, Desktop = max 4 pro Zeile */}
+      {hasBasicData && (
+        <div
+          className="editorial-basisdaten-tiles"
+          style={{
+            marginTop: editorialSpacing.xl,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '1rem',
+            maxWidth: '100%',
+          }}
+        >
+          {TILES.map((tile) => {
+            const val = tile.value(basicData!)
+            if (val == null || val === '') return null
+            return (
+              <div
+                key={tile.key}
+                style={{
+                  backgroundColor: editorialColors.brand.accentVar,
+                  color: 'rgba(255,255,255,0.95)',
+                  padding: '1rem 1.25rem',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                  minWidth: '140px',
+                }}
+              >
+                <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem 0', opacity: 0.9 }}>
+                  {tile.label}
+                </p>
+                <p style={{ fontSize: '1rem', fontWeight: 500, margin: 0, wordBreak: 'break-word' }}>{val}</p>
+              </div>
+            )
+          })}
         </div>
       )}
+      <style>{`
+        @media (max-width: 768px) {
+          .editorial-basisdaten-tiles {
+            display: flex !important;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 0.75rem;
+            padding-bottom: 0.5rem;
+            -webkit-overflow-scrolling: touch;
+          }
+          .editorial-basisdaten-tiles > div {
+            flex: 0 0 auto;
+          }
+        }
+        @media (min-width: 769px) {
+          .editorial-basisdaten-tiles {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+      `}</style>
     </div>
   )
 }

@@ -17,6 +17,74 @@ import { ChevronDownIcon, ChevronUpIcon } from './SectionIcons'
 import MultiQuestionPollRenderer from './MultiQuestionPollRenderer'
 import ImageGallery from './ImageGallery'
 
+/** Blog-Style Text-Block: Überschrift + Teaser (100 Zeichen), aufklappbar mit Akzent-Outline */
+function TextBlockExpandable({
+  heading,
+  previewText,
+  fullText,
+  isLong,
+  textAlign,
+}: {
+  heading: string
+  previewText: string
+  fullText: string
+  isLong: boolean
+  textAlign: 'left' | 'center' | 'right'
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const showBody = fullText.length > 0
+  if (!showBody && !heading) return null
+  return (
+    <div
+      style={{
+        maxWidth: '900px',
+        margin: '0 auto',
+        paddingLeft: 'clamp(1rem, 4vw, 2rem)',
+        paddingRight: 'clamp(1rem, 4vw, 2rem)',
+        textAlign,
+        border: expanded ? `2px solid ${editorialColors.brand.accentVar}` : undefined,
+        borderRadius: '12px',
+        padding: expanded ? '1.25rem' : 0,
+        transition: 'border-color 0.2s, padding 0.2s',
+      }}
+    >
+      {heading && (
+        <h3 style={{
+          fontSize: '1.25rem',
+          fontWeight: 600,
+          color: editorialColors.text.primary,
+          margin: '0 0 0.5rem 0',
+          lineHeight: 1.3,
+        }}>
+          {heading}
+        </h3>
+      )}
+      <div style={{ fontSize: '1rem', lineHeight: 1.6, color: editorialColors.text.primary }}>
+        {expanded ? fullText : previewText}
+      </div>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          style={{
+            marginTop: '0.75rem',
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            color: editorialColors.brand.accentVar,
+            background: 'transparent',
+            border: `1px solid ${editorialColors.brand.accentVar}`,
+            borderRadius: '8px',
+            cursor: 'pointer',
+          }}
+        >
+          {expanded ? 'Weniger anzeigen' : 'Mehr lesen'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 interface CmsBlockRendererProps {
   block: UnifiedContentBlock
   visualStyle?: 'default' | 'accent' | 'background' | 'bordered'
@@ -27,23 +95,24 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
   const blockType = block.blockKey // z.B. "text_block", "image_gallery", "timeline"
   const content = block.content?.fields || {}
   
-  // Text Block
+  // Text Block: Blog-Style (Überschrift + erste 100 Zeichen, aufklappbar), Ausrichtung aus Config
   if (blockType === 'text_block' || blockType === 'text') {
+    const heading = content.heading?.value != null ? String(content.heading.value).trim() : ''
     const text = content.text?.value || content.content?.value || ''
     const alignment = content.alignment?.value || 'left'
     const textAlign = alignment === 'center' ? 'center' : alignment === 'right' ? 'right' : 'left'
+    const PREVIEW_CHARS = 100
+    const fullText = String(text)
+    const isLong = fullText.length > PREVIEW_CHARS
+    const previewText = isLong ? fullText.slice(0, PREVIEW_CHARS).trim() + '…' : fullText
     return (
-      <div style={{
-        maxWidth: '900px',
-        margin: '0 auto',
-        paddingLeft: 'clamp(1rem, 4vw, 2rem)',
-        paddingRight: 'clamp(1rem, 4vw, 2rem)',
-        textAlign: textAlign as any,
-      }}>
-        <TextBlock size="base">
-          {String(text)}
-        </TextBlock>
-      </div>
+      <TextBlockExpandable
+        heading={heading}
+        previewText={previewText}
+        fullText={fullText}
+        isLong={isLong}
+        textAlign={textAlign as 'left' | 'center' | 'right'}
+      />
     )
   }
   

@@ -180,33 +180,8 @@ export default function EditorialSpine({
             paddingBottom: editorialSpacing.xl 
           }}
         >
-          {storyText ? (
-            <StoryTextBlock text={storyText} basicData={basicData} />
-          ) : hasBasicData && basicData ? (
-            <>
-              <div style={{
-                width: '60px',
-                height: '2px',
-                backgroundColor: editorialColors.brand.accentVar,
-                marginBottom: editorialSpacing.xl,
-                marginLeft: 'auto',
-                marginRight: 'auto',
-              }} />
-              <div style={{
-                maxWidth: '900px',
-                margin: '0 auto',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '2rem',
-                fontSize: '0.875rem',
-                color: editorialColors.text.secondaryVar,
-                textAlign: 'center',
-              }}>
-                {(basicData.sku != null && basicData.sku !== '') && <div><strong>SKU</strong><br />{basicData.sku}</div>}
-                {(basicData.gtin != null && basicData.gtin !== '') && <div><strong>GTIN</strong><br />{basicData.gtin}</div>}
-                {(basicData.countryOfOrigin != null && basicData.countryOfOrigin !== '') && <div><strong>Herkunftsland</strong><br />{basicData.countryOfOrigin}</div>}
-              </div>
-            </>
+          {storyText || (hasBasicData && basicData) ? (
+            <StoryTextBlock text={storyText || ''} basicData={basicData} />
           ) : null}
         </Section>
       )}

@@ -45,6 +45,22 @@ export async function adaptCmsBlockToUnified(
       label: 'Text',
       key: 'text'
     }
+    if (content.heading !== undefined) {
+      fields.heading = {
+        value: content.heading,
+        type: 'text',
+        label: 'Überschrift',
+        key: 'heading'
+      }
+    }
+    if (content.alignment !== undefined) {
+      fields.alignment = {
+        value: content.alignment,
+        type: 'text',
+        label: 'Ausrichtung',
+        key: 'alignment'
+      }
+    }
   } else if (cmsBlock.type === 'quote_block' || cmsBlock.type === 'quote') {
     fields.quote = {
       value: content.quote || content.text || '',

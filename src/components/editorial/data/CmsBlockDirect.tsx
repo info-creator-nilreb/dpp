@@ -27,14 +27,12 @@ export default function CmsBlockDirect({ block, dppId }: CmsBlockDirectProps) {
   
   // Generische BlockType-Namen, die nicht angezeigt werden sollen
   const genericBlockNames = ['image', 'Image', 'Bild', 'text', 'Text', 'video', 'Video', 'gallery', 'Gallery']
-  
-  // Zeige Titel nur wenn es ein benutzerdefinierter Titel ist (nicht generisch)
-  // Generische Bezeichnungen (BlockType-Namen) werden nicht angezeigt
+  // Text-Block: Kein fixer Titel – Überschrift + Inhalt kommen im Renderer (Blog-Style)
+  const isTextBlock = block.blockKey === 'text_block' || block.blockKey === 'text'
   const isGenericName = !customTitle || 
     (typeof block.displayName === 'string' && genericBlockNames.includes(block.displayName)) ||
     (typeof customTitle === 'string' && genericBlockNames.includes(customTitle))
-  
-  const showTitle = customTitle && typeof customTitle === 'string' && customTitle.trim().length > 0 && !isGenericName
+  const showTitle = !isTextBlock && !!customTitle && typeof customTitle === 'string' && customTitle.trim().length > 0 && !isGenericName
   
   return (
     <div style={{
