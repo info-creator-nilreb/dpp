@@ -17,6 +17,13 @@ import { ChevronDownIcon, ChevronUpIcon } from './SectionIcons'
 import MultiQuestionPollRenderer from './MultiQuestionPollRenderer'
 import ImageGallery from './ImageGallery'
 
+/** Schriftgrößen für Fließtext (small/medium/large) – 16–20px für gute Lesbarkeit */
+const PLAKATIV_TEXT_FONT_SIZES = {
+  small: 'clamp(1rem, 2vw, 1.0625rem)',
+  medium: 'clamp(1.0625rem, 2.5vw, 1.125rem)',
+  large: 'clamp(1.125rem, 2.8vw, 1.25rem)',
+} as const
+
 /** Plakative Darstellung: volle Breite, Akzent-Hintergrund, große Überschrift (für Text-Block, Storytelling ohne Bild) */
 function StorytellingBlockPlakativ({
   heading,
@@ -24,17 +31,19 @@ function StorytellingBlockPlakativ({
   linkUrl,
   linkLabel,
   alignment = 'center',
+  fontSize = 'medium',
 }: {
   heading: string
   text: string
   linkUrl?: string
   linkLabel?: string
-  /** Text- und Überschriften-Ausrichtung: left | center | right */
   alignment?: 'left' | 'center' | 'right'
+  fontSize?: 'small' | 'medium' | 'large'
 }) {
   const hasContent = heading.trim().length > 0 || text.trim().length > 0
   if (!hasContent) return null
   const textAlign = alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center'
+  const textSize = PLAKATIV_TEXT_FONT_SIZES[fontSize] ?? PLAKATIV_TEXT_FONT_SIZES.medium
   return (
     <div
       style={{
