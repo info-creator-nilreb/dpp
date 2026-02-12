@@ -39,9 +39,11 @@ export default function StorytellingBlockEditor({
 
   // URLs aus images für FileField (wie Image-Block)
   const imageUrls = data.images?.length
-    ? data.images.map((img: { url?: string }) => img?.url).filter(Boolean)
+    ? data.images
+        .map((img: { url?: string }) => img?.url)
+        .filter((u): u is string => Boolean(u))
     : null
-  const fileFieldValue = imageUrls && imageUrls.length > 0
+  const fileFieldValue: string | string[] | null = imageUrls && imageUrls.length > 0
     ? (imageUrls.length === 1 ? imageUrls[0] : imageUrls)
     : null
 
