@@ -156,6 +156,12 @@ export async function adaptCmsBlockToUnified(
         key: 'poster'
       }
     }
+    if (content.autoplay !== undefined) {
+      fields.autoplay = { value: !!content.autoplay, type: 'boolean', label: 'Autoplay', key: 'autoplay' }
+    }
+    if (content.loop !== undefined) {
+      fields.loop = { value: !!content.loop, type: 'boolean', label: 'Loop', key: 'loop' }
+    }
   } else if (cmsBlock.type === 'multi_question_poll') {
     // Multi-Question Poll: Speichere Fragen und Completion Message
     // Immer setzen, auch wenn leer (für korrekte Transformation)

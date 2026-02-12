@@ -65,7 +65,7 @@ function StorytellingBlockPlakativ({
       {text && (
         <p
           style={{
-            fontSize: 'clamp(0.9375rem, 2vw, 1.0625rem)',
+            fontSize: textSize,
             lineHeight: 1.7,
             color: 'rgba(255, 255, 255, 0.9)',
             margin: heading ? '0 0 1.25rem 0' : '0 0 1.25rem 0',
@@ -756,24 +756,126 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
     }
   }
   
-  // Video Block
+  // Video Block – YouTube/Vimeo als Embed, direkte URLs als <video>
   if (blockType === 'video_block' || blockType === 'video') {
-    const videoUrl = content.videoUrl?.value || content.url?.value
+    const rawUrl = content.videoUrl?.value || content.url?.value
     const poster = content.poster?.value || content.thumbnail?.value
-    
-    if (!videoUrl) return null
-    
-    return (
-      <div style={{ marginTop: editorialSpacing.md }}>
-        <video
-          src={String(videoUrl)}
-          poster={poster ? String(poster) : undefined}
-          controls
+    const autoplay = content.autoplay?.value === true || content.autoplay?.value === 'true'
+    const loop = content.loop?.value === true || content.loop?.value === 'true'
+
+    if (!rawUrl) return null
+
+    const url = String(rawUrl).trim()
+
+    // YouTube: watch oder youtu.be → Embed-URL
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+    if (ytMatch) {
+      const videoId = ytMatch[1]
+      const params = new URLSearchParams()
+      if (autoplay) {
+        params.set('autoplay', '1')
+        params.set('mute', '1')
+      }
+      if (loop) {
+        params.set('loop', '1')
+        params.set('playlist', videoId)
+      }
+      const embedUrl = `https://www.youtube.com/embed/${videoId}?${params.toString()}`
+      return (
+        <div
           style={{
             width: '100%',
             maxWidth: '100%',
-            height: 'auto',
+            marginTop: editorialSpacing.md,
+            position: 'relative',
+            aspectRatio: '16/9',
+            minHeight: 360,
+            overflow: 'hidden',
             borderRadius: '8px',
+          }}
+        >
+          <iframe
+            src={embedUrl}
+            title="Video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              border: 'none',
+            }}
+          />
+        </div>
+      )
+    }
+
+    // Vimeo: vimeo.com/VIDEO_ID
+    const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/)
+    if (vimeoMatch) {
+      const videoId = vimeoMatch[1]
+      const params = new URLSearchParams()
+      if (autoplay) params.set('autoplay', '1')
+      if (loop) params.set('loop', '1')
+      const embedUrl = `https://player.vimeo.com/video/${videoId}?${params.toString()}`
+      return (
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '100%',
+            marginTop: editorialSpacing.md,
+            position: 'relative',
+            aspectRatio: '16/9',
+            minHeight: 360,
+            overflow: 'hidden',
+            borderRadius: '8px',
+          }}
+        >
+          <iframe
+            src={embedUrl}
+            title="Video"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              border: 'none',
+            }}
+          />
+        </div>
+      )
+    }
+
+    // Direkte Video-URL (mp4, webm etc.)
+    return (
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '100%',
+          marginTop: editorialSpacing.md,
+          minHeight: 360,
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}
+      >
+        <video
+          src={url}
+          poster={poster ? String(poster) : undefined}
+          controls
+          autoPlay={autoplay}
+          loop={loop}
+          playsInline
+          muted={autoplay}
+          style={{
+            width: '100%',
+            height: '100%',
+            minHeight: 360,
+            objectFit: 'cover',
           }}
         />
       </div>

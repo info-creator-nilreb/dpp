@@ -29,13 +29,15 @@ export default function CmsBlockDirect({ block, dppId }: CmsBlockDirectProps) {
   const genericBlockNames = ['image', 'Image', 'Bild', 'text', 'Text', 'video', 'Video', 'gallery', 'Gallery']
   // Text-/Storytelling-Block: Kein fixer Titel – Überschrift + Inhalt kommen plakativ im Renderer
   const isTextBlock = block.blockKey === 'text_block' || block.blockKey === 'text' || block.blockKey === 'storytelling'
+  // Video-Block: gleiche Breite wie Text-Block (volle Container-Breite)
+  const isVideoBlock = block.blockKey === 'video_block' || block.blockKey === 'video'
   const isGenericName = !customTitle || 
     (typeof block.displayName === 'string' && genericBlockNames.includes(block.displayName)) ||
     (typeof customTitle === 'string' && genericBlockNames.includes(customTitle))
   const showTitle = !isTextBlock && !!customTitle && typeof customTitle === 'string' && customTitle.trim().length > 0 && !isGenericName
   
-  // Text-/Storytelling-Blöcke: volle Breite, kein Padding-Container (Breakout)
-  const isFullBleedBlock = isTextBlock
+  // Text-/Storytelling-Blöcke: volle Breite, kein Padding-Container. Video: gleiche Breite wie Text-Block.
+  const isFullBleedBlock = isTextBlock || isVideoBlock
 
   return (
     <div style={{
