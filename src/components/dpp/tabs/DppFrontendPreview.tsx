@@ -106,15 +106,10 @@ function DppFrontendPreviewInner({
   const scrollLastDppIdRef = useRef<string | undefined>(undefined)
   const didScrollForLoadRef = useRef(false)
 
-  // Mount effect - only run once
+  // Mount effect - only run once (loading ends when unified-blocks fetch completes)
   useEffect(() => {
     setMounted(true)
-    // Simulate loading for better UX perception (only on initial mount)
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, []) // Only run on mount
+  }, [])
 
   // Load UnifiedContentBlocks from API when dpp or blocks change
   useEffect(() => {
