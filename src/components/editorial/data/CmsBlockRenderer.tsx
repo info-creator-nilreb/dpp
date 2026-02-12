@@ -17,28 +17,33 @@ import { ChevronDownIcon, ChevronUpIcon } from './SectionIcons'
 import MultiQuestionPollRenderer from './MultiQuestionPollRenderer'
 import ImageGallery from './ImageGallery'
 
-/** Plakative Darstellung: volle Breite, Akzent-Hintergrund, große Überschrift, zentrierter Text (für Text-Block) */
+/** Plakative Darstellung: volle Breite, Akzent-Hintergrund, große Überschrift (für Text-Block, Storytelling ohne Bild) */
 function StorytellingBlockPlakativ({
   heading,
   text,
   linkUrl,
   linkLabel,
+  alignment = 'center',
 }: {
   heading: string
   text: string
   linkUrl?: string
   linkLabel?: string
+  /** Text- und Überschriften-Ausrichtung: left | center | right */
+  alignment?: 'left' | 'center' | 'right'
 }) {
   const hasContent = heading.trim().length > 0 || text.trim().length > 0
   if (!hasContent) return null
+  const textAlign = alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center'
   return (
     <div
       style={{
-        width: '100vw',
-        marginLeft: 'calc(-50vw + 50%)',
-        padding: 'clamp(2rem, 5vw, 3rem) clamp(1.5rem, 4vw, 2rem)',
+        width: '100%',
+        maxWidth: '100%',
+        padding: 'clamp(2rem, 5vw, 3rem) clamp(1.5rem, 4vw, 2.5rem)',
         backgroundColor: editorialColors.brand.accentVar,
-        textAlign: 'center',
+        textAlign,
+        boxSizing: 'border-box',
       }}
     >
       {heading && (
@@ -50,6 +55,8 @@ function StorytellingBlockPlakativ({
             margin: '0 0 1rem 0',
             lineHeight: 1.3,
             letterSpacing: '-0.02em',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
           }}
         >
           {heading}
@@ -63,6 +70,9 @@ function StorytellingBlockPlakativ({
             color: 'rgba(255, 255, 255, 0.9)',
             margin: heading ? '0 0 1.25rem 0' : '0 0 1.25rem 0',
             whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
+            minWidth: 0,
           }}
         >
           {text}
@@ -265,14 +275,24 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
     )
   }
 
-  // Text Block: 1:1 wie Storytelling ohne Bild (volle Breite, Akzent-Hintergrund, Überschrift, zentrierter Text)
+  // Text Block: 1:1 wie Storytelling ohne Bild (volle Breite, Akzent-Hintergrund, Überschrift, Ausrichtung + Schriftgröße)
   if (blockType === 'text_block' || blockType === 'text') {
     const heading = content.heading?.value != null ? String(content.heading.value).trim() : ''
     const text = content.text?.value || content.content?.value || ''
+    const alignmentRaw = content.alignment?.value
+    const alignment = (alignmentRaw === 'left' || alignmentRaw === 'right' || alignmentRaw === 'center')
+      ? alignmentRaw
+      : 'center'
+    const fontSizeRaw = content.fontSize?.value
+    const fontSize = (fontSizeRaw === 'small' || fontSizeRaw === 'medium' || fontSizeRaw === 'large')
+      ? fontSizeRaw
+      : 'medium'
     return (
       <StorytellingBlockPlakativ
         heading={heading}
         text={String(text)}
+        alignment={alignment}
+        fontSize={fontSize}
       />
     )
   }

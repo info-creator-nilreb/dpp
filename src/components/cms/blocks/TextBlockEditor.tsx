@@ -302,7 +302,7 @@ export default function TextBlockEditor({
             padding: "0.75rem",
             border: "1px solid #E5E5E5",
             borderRadius: "8px",
-            fontSize: data.fontSize === "small" ? "0.75rem" : data.fontSize === "large" ? "1.125rem" : "0.875rem",
+            fontSize: data.fontSize === "small" ? "1rem" : data.fontSize === "large" ? "1.125rem" : "1.0625rem",
             minHeight: "150px",
             resize: "vertical",
             fontFamily: "inherit",
@@ -320,7 +320,7 @@ export default function TextBlockEditor({
             e.target.style.borderColor = "#E5E5E5"
             e.target.style.boxShadow = "none"
           }}
-          maxLength={5000}
+          maxLength={300}
         />
         <div style={{
           fontSize: "0.75rem",
@@ -328,7 +328,7 @@ export default function TextBlockEditor({
           marginTop: "0.5rem",
           textAlign: "right"
         }}>
-          {data.text.length} / 5000 Zeichen
+          {data.text.length} / 300 Zeichen
         </div>
       </div>
     </div>

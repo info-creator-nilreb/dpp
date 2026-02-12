@@ -61,6 +61,14 @@ export async function adaptCmsBlockToUnified(
         key: 'alignment'
       }
     }
+    if (content.fontSize !== undefined) {
+      fields.fontSize = {
+        value: content.fontSize,
+        type: 'text',
+        label: 'Schriftgröße',
+        key: 'fontSize'
+      }
+    }
   } else if (cmsBlock.type === 'quote_block' || cmsBlock.type === 'quote') {
     fields.quote = {
       value: content.quote || content.text || '',
