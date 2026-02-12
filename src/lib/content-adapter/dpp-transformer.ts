@@ -198,7 +198,7 @@ export async function transformDppToUnified(
       })
 
   // Filtere CMS-Blöcke: für Vorschau zeige auch Draft-Blöcke
-  const cmsBlocks = dppContentRecord
+  const cmsBlocksRaw = dppContentRecord
     ? ((dppContentRecord.blocks as any) || []).filter((b: any) => {
         if (!b.content || b.data || b.type === "template_block") return false
         if (options.includeVersionInfo || versionRow) {
@@ -207,7 +207,9 @@ export async function transformDppToUnified(
         return true
       })
     : []
-  
+  // Explizit nach Reihenfolge aus dem Mehrwert-Tab sortieren (order = Index im Tab)
+  const cmsBlocks = [...cmsBlocksRaw].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+
   // Transformiere CMS-Blöcke zu Unified Content Blocks
   const cmsUnifiedBlocks = await Promise.all(
     cmsBlocks.map(async (block: any) => {

@@ -156,14 +156,20 @@ export default function DppContentTabV2({
   }
 
   async function handleUpdateBlock(blockId: string, updates: Partial<Block>) {
-    try {
-      // Check if block still exists
-      const blockExists = blocks.some(b => b.id === blockId)
-      if (!blockExists) {
-        console.warn(`Block ${blockId} not found, skipping update`)
-        return
-      }
+    const blockExists = blocks.some(b => b.id === blockId)
+    if (!blockExists) {
+      console.warn(`Block ${blockId} not found, skipping update`)
+      return
+    }
 
+    // OPTIMISTISCHER UPDATE: Sofort lokalen State aktualisieren (wie Pflichtdaten)
+    // Verhindert „Text verschwindet und taucht verzögert wieder auf“
+    const updatedBlocks = blocks.map(b => b.id === blockId ? { ...b, ...updates } : b)
+    onBlocksChange(updatedBlocks)
+    scheduleSaveWithBlocks(updatedBlocks)
+
+    // API-Call im Hintergrund – nicht vor UI-Update warten
+    try {
       const response = await fetch(`/api/app/dpp/${dppId}/content/blocks/${blockId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -172,25 +178,16 @@ export default function DppContentTabV2({
 
       if (!response.ok) {
         if (response.status === 404) {
-          // Block was deleted, remove from local state
-          const updatedBlocks = blocks.filter(b => b.id !== blockId)
-          onBlocksChange(updatedBlocks)
-          console.warn(`Block ${blockId} was deleted, removed from local state`)
+          const nextBlocks = blocks.filter(b => b.id !== blockId)
+          onBlocksChange(nextBlocks)
           return
         }
         const error = await response.json().catch(() => ({ error: "Fehler beim Aktualisieren" }))
-        throw new Error(error.error || "Fehler beim Aktualisieren")
+        showNotification(error.error || "Fehler beim Speichern", "error")
       }
-
-      // CRITICAL: Server response is ignored - we use the updates we sent
-      // Client draft (blocks) is the single source of truth
-      const updatedBlocks = blocks.map(b => b.id === blockId ? { ...b, ...updates } : b)
-      onBlocksChange(updatedBlocks) // SYNCHRONE State-Update
-      scheduleSaveWithBlocks(updatedBlocks) // Auto-Save mit aktuellen Daten
-      // No notification for auto-save (silent)
     } catch (error: any) {
       console.error("Error updating block:", error)
-      showNotification(error.message || "Fehler beim Aktualisieren", "error")
+      showNotification(error.message || "Fehler beim Speichern", "error")
     }
   }
 

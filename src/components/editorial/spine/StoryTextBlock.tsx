@@ -3,7 +3,7 @@
  *
  * Produktbeschreibung (narrativer Text) + Basisdaten-Kacheln (außer Beschreibung):
  * Mobile: eine Zeile mit Akzent-Hintergrund, horizontal durchwischbar.
- * Desktop: max. 4 Kacheln pro Zeile, Akzent-Hintergrund pro Kachel.
+ * Desktop: Kacheln mittig zentriert, max. 4 pro Zeile.
  */
 
 "use client"
@@ -23,10 +23,22 @@ interface StoryTextBlockProps {
   }
 }
 
+/** ISO-3166-1 Alpha-2 zu ausgeschriebenem Ländernamen (deutsch) */
+function formatCountryDisplay(value: string | null | undefined): string {
+  if (value == null || value === '') return ''
+  const trimmed = String(value).trim()
+  if (trimmed.length !== 2) return trimmed // Bereits ausgeschrieben
+  try {
+    return new Intl.DisplayNames(['de'], { type: 'region' }).of(trimmed.toUpperCase()) ?? trimmed
+  } catch {
+    return trimmed
+  }
+}
+
 const TILES = [
-  { key: 'sku' as const, label: 'SKU', value: (d: StoryTextBlockProps['basicData']) => d?.sku },
-  { key: 'gtin' as const, label: 'GTIN/EAN', value: (d: StoryTextBlockProps['basicData']) => d?.gtin },
-  { key: 'countryOfOrigin' as const, label: 'Herkunftsland', value: (d: StoryTextBlockProps['basicData']) => d?.countryOfOrigin },
+  { key: 'sku' as const, label: 'SKU', value: (d: StoryTextBlockProps['basicData']) => d?.sku, format: (v: string) => v },
+  { key: 'gtin' as const, label: 'GTIN/EAN', value: (d: StoryTextBlockProps['basicData']) => d?.gtin, format: (v: string) => v },
+  { key: 'countryOfOrigin' as const, label: 'Herkunftsland', value: (d: StoryTextBlockProps['basicData']) => d?.countryOfOrigin, format: formatCountryDisplay },
 ]
 
 export default function StoryTextBlock({ text, maxWords = 300, basicData }: StoryTextBlockProps) {
@@ -66,21 +78,24 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
         }}
       />
 
-      {/* Basisdaten: Mobile = durchwischbare Kacheln mit Akzent, Desktop = max 4 pro Zeile */}
+      {/* Basisdaten: mittig zentriert, Mobile = horizontal durchwischbar */}
       {hasBasicData && (
         <div
           className="editorial-basisdaten-tiles"
           style={{
             marginTop: editorialSpacing.xl,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
             gap: '1rem',
             maxWidth: '100%',
+            width: '100%',
           }}
         >
           {TILES.map((tile) => {
             const val = tile.value(basicData!)
             if (val == null || val === '') return null
+            const displayVal = tile.format ? tile.format(val) : val
             return (
               <div
                 key={tile.key}
@@ -96,7 +111,7 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
                 <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem 0', opacity: 0.9 }}>
                   {tile.label}
                 </p>
-                <p style={{ fontSize: '1rem', fontWeight: 500, margin: 0, wordBreak: 'break-word' }}>{val}</p>
+                <p style={{ fontSize: '1rem', fontWeight: 500, margin: 0, wordBreak: 'break-word' }}>{displayVal}</p>
               </div>
             )
           })}
@@ -108,17 +123,13 @@ export default function StoryTextBlock({ text, maxWords = 300, basicData }: Stor
             display: flex !important;
             flex-wrap: nowrap;
             overflow-x: auto;
+            justify-content: center;
             gap: 0.75rem;
             padding-bottom: 0.5rem;
             -webkit-overflow-scrolling: touch;
           }
           .editorial-basisdaten-tiles > div {
             flex: 0 0 auto;
-          }
-        }
-        @media (min-width: 769px) {
-          .editorial-basisdaten-tiles {
-            grid-template-columns: repeat(4, 1fr);
           }
         }
       `}</style>

@@ -34,6 +34,8 @@ interface FileFieldProps {
   maxCount?: number // Optional: Maximale Anzahl an Dateien (für Multi-File-Felder)
   description?: string
   helperText?: string
+  /** Wenn true: Bei maxCount=1 und vorhandenem Bild kein Upload-Bereich (kein Plus), nur Thumbnail + Entfernen */
+  hideAddWhenMaxReached?: boolean
 }
 
 /**
@@ -86,7 +88,8 @@ export default function FileField({
   maxSize = 10 * 1024 * 1024, // 10 MB default
   maxCount,
   description,
-  helperText
+  helperText,
+  hideAddWhenMaxReached = false,
 }: FileFieldProps) {
   const { showNotification } = useNotification()
   const [uploading, setUploading] = useState(false)
@@ -247,9 +250,37 @@ export default function FileField({
     }
   }
 
-  function handleRemove(index?: number) {
+  async function handleRemove(index?: number) {
+    const urls = maxCount && maxCount > 1 && Array.isArray(value)
+      ? value
+      : value
+        ? (Array.isArray(value) ? value : [value])
+        : []
+    const urlToRemove =
+      index != null && urls[index] != null
+        ? urls[index]
+        : urls.length > 0
+          ? urls[0]
+          : null
+
+    if (dppId && urlToRemove && typeof urlToRemove === "string") {
+      try {
+        const res = await fetch(
+          `/api/app/dpp/${dppId}/media?storageUrl=${encodeURIComponent(urlToRemove)}`,
+          { method: "DELETE" }
+        )
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          showNotification(data.error || "Fehler beim Entfernen", "error")
+          return
+        }
+      } catch {
+        showNotification("Fehler beim Entfernen der Datei", "error")
+        return
+      }
+    }
+
     if (maxCount && maxCount > 1 && Array.isArray(value)) {
-      // Entferne spezifisches Bild aus Array
       const newValue = value.filter((_, i) => i !== index)
       onChange(newValue.length > 0 ? newValue : null)
     } else {
@@ -361,8 +392,8 @@ export default function FileField({
         </div>
       )}
 
-      {/* File Upload - nur anzeigen wenn keine Dateien oder wenn Single-File */}
-      {(!value || (Array.isArray(value) && value.length === 0) || (!isMultiFile && value)) && !uploading && (
+      {/* File Upload – bei hideAddWhenMaxReached und vorhandenem Bild nicht anzeigen (Storytelling: nur Thumbnail, kein Plus) */}
+      {!(hideAddWhenMaxReached && value && (Array.isArray(value) ? value.length > 0 : true)) && (!value || (Array.isArray(value) && value.length === 0) || (!isMultiFile && value)) && !uploading && (
         <FileUploadArea
           accept={effectiveAccept}
           maxSize={maxSize}
@@ -377,12 +408,11 @@ export default function FileField({
         />
       )}
 
-      {/* File Preview mit Thumbnail */}
+      {/* File Preview mit Thumbnail – weißer Hintergrund bei Single-File Bild (wie Bild-Komponente), ohne Rahmen-Border */}
       {value && !uploading && (
         <div style={{
           padding: "1rem",
-          backgroundColor: "#F9F9F9",
-          border: "1px solid #E5E5E5",
+          backgroundColor: !isMultiFile && isImage && imageUrl ? "#FFFFFF" : "#F9F9F9",
           borderRadius: "8px"
         }}>
           {isMultiFile && Array.isArray(imageUrls) && imageUrls.length > 0 ? (
@@ -443,30 +473,64 @@ export default function FileField({
               ))}
             </div>
           ) : isImage && imageUrl ? (
-            // Single-File: Einzelnes Bild
-            <div style={{ marginBottom: "0.75rem" }}>
+            // Single-File: Thumbnail wie Bild-Komponente (quadratisch, weißer Hintergrund, Trash oben rechts)
+            <div
+              style={{
+                position: "relative",
+                width: "120px",
+                aspectRatio: "1",
+                borderRadius: "8px",
+                overflow: "hidden",
+                backgroundColor: "#FFFFFF",
+                flexShrink: 0,
+              }}
+            >
               <img
                 src={imageUrl}
                 alt={label}
                 style={{
                   width: "100%",
-                  maxWidth: "300px",
-                  height: "auto",
-                  maxHeight: "200px",
-                  objectFit: "contain",
-                  borderRadius: "6px",
-                  border: "1px solid #E5E5E5",
-                  backgroundColor: "#FFFFFF",
-                  display: "block"
+                  height: "100%",
+                  objectFit: "cover",
                 }}
                 onError={(e) => {
                   console.error("Error loading image:", imageUrl)
                 }}
               />
+              <button
+                type="button"
+                onClick={() => handleRemove()}
+                disabled={uploading}
+                style={{
+                  position: "absolute",
+                  top: "4px",
+                  right: "4px",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(220, 38, 38, 0.9)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  cursor: uploading ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 0,
+                  lineHeight: 1,
+                  zIndex: 1,
+                }}
+                title="Entfernen"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
             </div>
           ) : imageUrl ? (
-            // Dokument
+            // Dokument mit Trash-Icon
             <div style={{
+              position: "relative",
               padding: "1rem",
               backgroundColor: "#FFFFFF",
               border: "1px solid #E5E5E5",
@@ -486,27 +550,36 @@ export default function FileField({
               <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>
                 {imageUrl.split("/").pop() || "Datei"}
               </span>
+              <button
+                type="button"
+                onClick={() => handleRemove()}
+                disabled={uploading}
+                style={{
+                  position: "absolute",
+                  top: "4px",
+                  right: "4px",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(220, 38, 38, 0.9)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  cursor: uploading ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 0,
+                  lineHeight: 1
+                }}
+                title="Entfernen"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
             </div>
           ) : null}
-          {!isMultiFile && (
-            <button
-              type="button"
-              onClick={() => handleRemove()}
-              disabled={uploading}
-              style={{
-                fontSize: "0.75rem",
-                color: "#DC2626",
-                backgroundColor: "transparent",
-                border: "none",
-                cursor: uploading ? "not-allowed" : "pointer",
-                padding: "0.5rem 0",
-                opacity: uploading ? 0.5 : 1,
-                fontWeight: "500"
-              }}
-            >
-              Datei entfernen
-            </button>
-          )}
           {isMultiFile && Array.isArray(imageUrls) && imageUrls.length > 0 && (
             <p style={{
               fontSize: "0.75rem",

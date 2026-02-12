@@ -17,70 +17,204 @@ import { ChevronDownIcon, ChevronUpIcon } from './SectionIcons'
 import MultiQuestionPollRenderer from './MultiQuestionPollRenderer'
 import ImageGallery from './ImageGallery'
 
-/** Blog-Style Text-Block: Überschrift + Teaser (100 Zeichen), aufklappbar mit Akzent-Outline */
-function TextBlockExpandable({
+/** Plakative Darstellung: volle Breite, Akzent-Hintergrund, große Überschrift, zentrierter Text (für Text-Block) */
+function StorytellingBlockPlakativ({
   heading,
-  previewText,
-  fullText,
-  isLong,
-  textAlign,
+  text,
+  linkUrl,
+  linkLabel,
 }: {
   heading: string
-  previewText: string
-  fullText: string
-  isLong: boolean
-  textAlign: 'left' | 'center' | 'right'
+  text: string
+  linkUrl?: string
+  linkLabel?: string
 }) {
-  const [expanded, setExpanded] = useState(false)
-  const showBody = fullText.length > 0
-  if (!showBody && !heading) return null
+  const hasContent = heading.trim().length > 0 || text.trim().length > 0
+  if (!hasContent) return null
   return (
     <div
       style={{
-        maxWidth: '900px',
-        margin: '0 auto',
-        paddingLeft: 'clamp(1rem, 4vw, 2rem)',
-        paddingRight: 'clamp(1rem, 4vw, 2rem)',
-        textAlign,
-        border: expanded ? `2px solid ${editorialColors.brand.accentVar}` : undefined,
-        borderRadius: '12px',
-        padding: expanded ? '1.25rem' : 0,
-        transition: 'border-color 0.2s, padding 0.2s',
+        width: '100vw',
+        marginLeft: 'calc(-50vw + 50%)',
+        padding: 'clamp(2rem, 5vw, 3rem) clamp(1.5rem, 4vw, 2rem)',
+        backgroundColor: editorialColors.brand.accentVar,
+        textAlign: 'center',
       }}
     >
       {heading && (
-        <h3 style={{
-          fontSize: '1.25rem',
-          fontWeight: 600,
-          color: editorialColors.text.primary,
-          margin: '0 0 0.5rem 0',
-          lineHeight: 1.3,
-        }}>
-          {heading}
-        </h3>
-      )}
-      <div style={{ fontSize: '1rem', lineHeight: 1.6, color: editorialColors.text.primary }}>
-        {expanded ? fullText : previewText}
-      </div>
-      {isLong && (
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
+        <h2
           style={{
-            marginTop: '0.75rem',
-            padding: '0.5rem 0.75rem',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            color: editorialColors.brand.accentVar,
-            background: 'transparent',
-            border: `1px solid ${editorialColors.brand.accentVar}`,
-            borderRadius: '8px',
-            cursor: 'pointer',
+            fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
+            fontWeight: 700,
+            color: 'rgba(255, 255, 255, 0.95)',
+            margin: '0 0 1rem 0',
+            lineHeight: 1.3,
+            letterSpacing: '-0.02em',
           }}
         >
-          {expanded ? 'Weniger anzeigen' : 'Mehr lesen'}
-        </button>
+          {heading}
+        </h2>
       )}
+      {text && (
+        <p
+          style={{
+            fontSize: 'clamp(0.9375rem, 2vw, 1.0625rem)',
+            lineHeight: 1.7,
+            color: 'rgba(255, 255, 255, 0.9)',
+            margin: heading ? '0 0 1.25rem 0' : '0 0 1.25rem 0',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {text}
+        </p>
+      )}
+      {linkUrl && linkLabel && (
+        <p style={{ margin: 0, fontSize: '0.9375rem', color: 'rgba(255, 255, 255, 0.95)' }}>
+          <a
+            href={linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'inherit',
+              textDecoration: 'underline',
+              fontWeight: 500,
+            }}
+          >
+            {linkLabel}
+          </a>
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Storytelling mit Bild: Editorial / Apple-Stil – Gradient-Overlay, starke Botschaft, keine schwere Box */
+function StorytellingBlockWithImage({
+  heading,
+  text,
+  imageUrl,
+  linkUrl,
+  linkLabel,
+}: {
+  heading: string
+  text: string
+  imageUrl: string
+  linkUrl?: string
+  linkLabel?: string
+}) {
+  const hasContent = heading.trim().length > 0 || text.trim().length > 0 || imageUrl
+  if (!hasContent) return null
+  return (
+    <div
+      style={{
+        width: '100%',
+        position: 'relative',
+        minHeight: 'clamp(400px, 55vh, 600px)',
+        overflow: 'visible',
+      }}
+    >
+      {/* Hintergrundbild */}
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt=""
+          role="presentation"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+          }}
+        />
+      )}
+      {/* Editorial-Gradient: Dunkel links (für Lesbarkeit) → transparent rechts (Bild bleibt sichtbar) */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 55%, transparent 85%)',
+          pointerEvents: 'none',
+        }}
+      />
+      {/* Text: Linksbündig, Botschaft im Fokus – wie Editorial Cover / Apple Product Pages */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          right: '28%',
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: 'clamp(2rem, 5vw, 3.5rem)',
+          textAlign: 'left',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '100%',
+            minWidth: 0,
+            maxHeight: 'min(90vh, 480px)',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+          }}
+        >
+          {heading && (
+            <h2
+              style={{
+                fontSize: 'clamp(1.25rem, 3vw, 1.75rem)',
+                fontWeight: 700,
+                color: '#FFFFFF',
+                margin: '0 0 0.75rem 0',
+                lineHeight: 1.2,
+                letterSpacing: '-0.03em',
+                wordBreak: 'break-word',
+                textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }}
+            >
+              {heading}
+            </h2>
+          )}
+          {text && (
+            <p
+              style={{
+                fontSize: 'clamp(0.875rem, 1.5vw, 1rem)',
+                lineHeight: 1.55,
+                color: 'rgba(255,255,255,0.95)',
+                margin: heading ? '0 0 0.75rem 0' : '0 0 0.75rem 0',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                textShadow: '0 1px 2px rgba(0,0,0,0.25)',
+              }}
+            >
+              {text}
+            </p>
+          )}
+          {linkUrl && linkLabel && (
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'rgba(255,255,255,0.9)' }}>
+              <a
+                href={linkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: 'inherit',
+                  textDecoration: 'underline',
+                  textDecorationThickness: '1px',
+                  textUnderlineOffset: '2px',
+                  fontWeight: 500,
+                }}
+              >
+                {linkLabel}
+              </a>
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -95,23 +229,50 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
   const blockType = block.blockKey // z.B. "text_block", "image_gallery", "timeline"
   const content = block.content?.fields || {}
   
-  // Text Block: Blog-Style (Überschrift + erste 100 Zeichen, aufklappbar), Ausrichtung aus Config
+  // Storytelling Block: Mit Bild = Hintergrundbild + linke Hälfte 80 % Akzent-Overlay; ohne Bild = wie Text-Block
+  if (blockType === 'storytelling') {
+    const heading = content.title?.value != null ? String(content.title.value).trim() : ''
+    const text = content.description?.value != null ? String(content.description.value).trim() : ''
+    const linkUrl = content.linkUrl?.value ? String(content.linkUrl.value).trim() : undefined
+    const linkLabel = content.linkLabel?.value ? String(content.linkLabel.value).trim() : undefined
+    const images = content.images?.value
+    const imageArray = Array.isArray(images) ? images : []
+    const firstImage = imageArray[0]
+    const imageUrl = typeof firstImage === 'object' && firstImage?.url
+      ? String(firstImage.url)
+      : typeof firstImage === 'string'
+        ? firstImage
+        : ''
+
+    if (imageUrl) {
+      return (
+        <StorytellingBlockWithImage
+          heading={heading}
+          text={text}
+          imageUrl={imageUrl}
+          linkUrl={linkUrl || undefined}
+          linkLabel={linkLabel || undefined}
+        />
+      )
+    }
+    return (
+      <StorytellingBlockPlakativ
+        heading={heading}
+        text={text}
+        linkUrl={linkUrl || undefined}
+        linkLabel={linkLabel || undefined}
+      />
+    )
+  }
+
+  // Text Block: 1:1 wie Storytelling ohne Bild (volle Breite, Akzent-Hintergrund, Überschrift, zentrierter Text)
   if (blockType === 'text_block' || blockType === 'text') {
     const heading = content.heading?.value != null ? String(content.heading.value).trim() : ''
     const text = content.text?.value || content.content?.value || ''
-    const alignment = content.alignment?.value || 'left'
-    const textAlign = alignment === 'center' ? 'center' : alignment === 'right' ? 'right' : 'left'
-    const PREVIEW_CHARS = 100
-    const fullText = String(text)
-    const isLong = fullText.length > PREVIEW_CHARS
-    const previewText = isLong ? fullText.slice(0, PREVIEW_CHARS).trim() + '…' : fullText
     return (
-      <TextBlockExpandable
+      <StorytellingBlockPlakativ
         heading={heading}
-        previewText={previewText}
-        fullText={fullText}
-        isLong={isLong}
-        textAlign={textAlign as 'left' | 'center' | 'right'}
+        text={String(text)}
       />
     )
   }

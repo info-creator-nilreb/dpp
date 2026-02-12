@@ -13,10 +13,10 @@ import { getOrganizationRole } from "@/lib/permissions"
 /**
  * DELETE /api/app/dpp/[dppId]/media/[mediaId]
  *
- * Löschkonzept:
- * - Im Entwurf gelöschte Medien: werden aus DB (dpp_media) und aus dem Storage entfernt.
- * - Wird die gleiche Datei (storageUrl) in einer veröffentlichten Version genutzt, wird nur
- *   der Eintrag in dpp_media gelöscht; die Datei im Storage bleibt für die Version erhalten.
+ * Löschkonzept (gilt für Bilder, Dokumente, Videos):
+ * - Nie veröffentlicht: Hard-Delete (DB + Storage) – Datensparsamkeit.
+ * - In veröffentlichter Version genutzt: Soft-Delete – nur dpp_media-Eintrag löschen,
+ *   Datei im Storage bleibt für Versionen-Historie.
  */
 export async function DELETE(
   request: Request,

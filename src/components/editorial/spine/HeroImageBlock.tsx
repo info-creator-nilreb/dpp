@@ -49,16 +49,15 @@ export default function HeroImageBlock({
   }
   
   return (
-    <div
-      className="hero-image-wrapper"
-      style={{
-        position: 'relative',
-        width: '100%',
-        backgroundColor: '#f5f5f5', // Neutraler Lade-Hintergrund, bis Bild geladen ist (kein farbiger Fallback)
-      }}
-    >
-      {/* Bild + Overlay in einem Container, damit der Thumbnail-Strip darunter sichtbar bleibt */}
-      <div style={{ position: 'relative', width: '100%' }}>
+    <div style={{ width: '100%' }}>
+      {/* Bild + Overlay: Lade-Hintergrund nur im Bildbereich */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          backgroundColor: '#f5f5f5',
+        }}
+      >
         <Image
           src={displayUrl}
           alt={displayAlt}
@@ -164,7 +163,7 @@ export default function HeroImageBlock({
       </div>
       </div>
 
-      {/* Thumbnail-Strip unter dem Hero (ohne Hintergrund, quadratisch, Akzent-Rahmen bei aktiv) */}
+      {/* Thumbnail-Strip unter dem Hero (weißer Hintergrund, quadratisch, Akzent-Rahmen bei aktiv) */}
       {images && images.length > 1 && (
         <div
           style={{
@@ -173,6 +172,7 @@ export default function HeroImageBlock({
             justifyContent: 'center',
             gap: '0.5rem',
             padding: 'clamp(0.75rem, 2vw, 1rem)',
+            backgroundColor: '#FFFFFF',
           }}
         >
           {images.map((img, i) => (

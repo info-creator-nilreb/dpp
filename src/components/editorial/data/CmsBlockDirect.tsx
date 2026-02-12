@@ -27,22 +27,26 @@ export default function CmsBlockDirect({ block, dppId }: CmsBlockDirectProps) {
   
   // Generische BlockType-Namen, die nicht angezeigt werden sollen
   const genericBlockNames = ['image', 'Image', 'Bild', 'text', 'Text', 'video', 'Video', 'gallery', 'Gallery']
-  // Text-Block: Kein fixer Titel – Überschrift + Inhalt kommen im Renderer (Blog-Style)
-  const isTextBlock = block.blockKey === 'text_block' || block.blockKey === 'text'
+  // Text-/Storytelling-Block: Kein fixer Titel – Überschrift + Inhalt kommen plakativ im Renderer
+  const isTextBlock = block.blockKey === 'text_block' || block.blockKey === 'text' || block.blockKey === 'storytelling'
   const isGenericName = !customTitle || 
     (typeof block.displayName === 'string' && genericBlockNames.includes(block.displayName)) ||
     (typeof customTitle === 'string' && genericBlockNames.includes(customTitle))
   const showTitle = !isTextBlock && !!customTitle && typeof customTitle === 'string' && customTitle.trim().length > 0 && !isGenericName
   
+  // Text-/Storytelling-Blöcke: volle Breite, kein Padding-Container (Breakout)
+  const isFullBleedBlock = isTextBlock
+
   return (
     <div style={{
       marginBottom: editorialSpacing.xl,
-      maxWidth: '900px',
-      marginLeft: 'auto',
-      marginRight: 'auto',
-      paddingLeft: 'clamp(1rem, 4vw, 2rem)',
-      paddingRight: 'clamp(1rem, 4vw, 2rem)',
-      // Keine border-bottom mehr
+      ...(isFullBleedBlock ? {} : {
+        maxWidth: '900px',
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        paddingLeft: 'clamp(1rem, 4vw, 2rem)',
+        paddingRight: 'clamp(1rem, 4vw, 2rem)',
+      }),
     }}>
       {/* Block Title - nur wenn benutzerdefiniert */}
       {showTitle && (
@@ -59,7 +63,7 @@ export default function CmsBlockDirect({ block, dppId }: CmsBlockDirectProps) {
       )}
       
       {/* Block Content */}
-      <div>
+      <div style={isFullBleedBlock ? { width: '100%' } : undefined}>
         <CmsBlockRenderer block={block} dppId={dppId} />
       </div>
     </div>

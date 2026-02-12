@@ -26,7 +26,7 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
   // Prüfe ob es ein CMS-Block ist (hat blockKey als BlockType.key)
   // CMS-Blocks haben bekannte BlockType-Keys wie "timeline", "accordion", etc.
   // Template-Blocks haben keys wie "data-1", "data-2" oder lange IDs
-  const cmsBlockTypes = ['text_block', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll']
+  const cmsBlockTypes = ['text_block', 'text', 'storytelling', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll']
   const isCmsBlock = block.blockKey && cmsBlockTypes.includes(block.blockKey.toLowerCase())
   
   console.log('[SectionContent] isCmsBlock:', isCmsBlock, 'blockKey:', block.blockKey, 'check:', block.blockKey ? cmsBlockTypes.includes(block.blockKey.toLowerCase()) : 'no blockKey')
@@ -127,7 +127,8 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
     // Filtere technische/UI-Felder, die nicht angezeigt werden sollen
     const isTechnicalField = key === 'alignment' || key === 'ausrichtung' || 
                             key === 'order' || key === 'status' ||
-                            key === 'blockid' || key === 'fieldkey'
+                            key === 'blockid' || key === 'fieldkey' ||
+                            key === 'description' || key === 'title'
     const isDataField = !type.includes('image') && 
            type !== 'file-image' &&
            !type.includes('video') &&
@@ -184,17 +185,19 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
                   flexDirection: 'column',
                   gap: '0.5rem',
                 }}>
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      color: editorialColors.text.secondaryVar,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    {field.label}
-                  </span>
+                  {!(field.key === 'description' || field.key === 'title') && (
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        color: editorialColors.text.secondaryVar,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}
+                    >
+                      {field.label}
+                    </span>
+                  )}
                   <div
                     style={{
                       fontSize: isTextarea ? '0.9375rem' : '0.875rem',

@@ -283,7 +283,7 @@ export default function ContentBlockCard({
         opacity: isDragging ? 0.5 : 1,
         boxShadow: isSelected ? "0 4px 12px rgba(36, 197, 152, 0.15)" : "none"
       }}
-      onClick={isEditing ? undefined : onSelect}
+      onClick={isEditing ? undefined : () => { onSelect(); setIsEditing(true); }}
     >
       {/* Header - ähnlich wie Pflichtangaben */}
       <div style={{

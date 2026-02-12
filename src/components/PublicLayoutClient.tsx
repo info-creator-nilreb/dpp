@@ -70,8 +70,9 @@ export default function PublicLayoutClient({ children, useChrome = true }: Publi
         />
       )}
 
-      {/* Main Content */}
-      <main
+      {/* Main Content – div statt main: AppLayoutClient/PlatformLayout haben bereits main; vermeidet main-in-main und Hydration-Mismatch */}
+      <div
+        role="main"
         style={{
           marginLeft: "0",
           padding: "0",
@@ -79,7 +80,7 @@ export default function PublicLayoutClient({ children, useChrome = true }: Publi
         }}
       >
         {children}
-      </main>
+      </div>
     </div>
   )
 }

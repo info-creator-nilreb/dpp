@@ -4,10 +4,13 @@ export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { saveFile, isAllowedFileType, getMaxFileSize } from "@/lib/storage"
+import { saveFile, isAllowedFileType, getMaxFileSize, deleteFile } from "@/lib/storage"
 import { requireEditDPP, requireViewDPP } from "@/lib/api-permissions"
 import { DPP_SECTIONS } from "@/lib/permissions"
 import { scanFile } from "@/lib/virus-scanner"
+import { logDppMediaAction, ACTION_TYPES, SOURCES } from "@/lib/audit/audit-helpers"
+import { getClientIp } from "@/lib/audit/get-client-ip"
+import { getOrganizationRole } from "@/lib/permissions"
 
 /**
  * POST /api/app/dpp/[dppId]/media
@@ -237,6 +240,194 @@ export async function PATCH(
     )
   } catch (error: any) {
     console.error("Media reorder error:", error)
+    return NextResponse.json(
+      { error: error?.message ?? "Ein Fehler ist aufgetreten" },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * DELETE /api/app/dpp/[dppId]/media?storageUrl=...
+ *
+ * Löscht ein Medium anhand der storageUrl (z.B. für FileField in Mehrwert-Blöcken, die nur URLs speichern).
+ * Gleiche Löschlogik wie DELETE by mediaId: Hard-Delete (DB + Storage) nur wenn nie veröffentlicht.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ dppId: string }> }
+) {
+  try {
+    const { dppId } = await params
+    const { searchParams } = new URL(request.url)
+    const storageUrl = searchParams.get("storageUrl")
+
+    if (!storageUrl || storageUrl.trim() === "") {
+      return NextResponse.json(
+        { error: "storageUrl Query-Parameter erforderlich" },
+        { status: 400 }
+      )
+    }
+
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Nicht autorisiert" },
+        { status: 401 }
+      )
+    }
+
+    const permissionError = await requireEditDPP(dppId, session.user.id)
+    if (permissionError) return permissionError
+
+    const media = await prisma.dppMedia.findFirst({
+      where: { dppId, storageUrl: storageUrl.trim() }
+    })
+
+    if (!media) {
+      return NextResponse.json(
+        { error: "Medium nicht gefunden" },
+        { status: 404 }
+      )
+    }
+
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      select: { organizationId: true }
+    })
+    if (!dpp) {
+      return NextResponse.json(
+        { error: "DPP nicht gefunden" },
+        { status: 404 }
+      )
+    }
+
+    const usedInPublishedVersion = await prisma.dppVersionMedia.findFirst({
+      where: {
+        storageUrl: media.storageUrl,
+        version: { dppId }
+      }
+    })
+
+    if (!usedInPublishedVersion) {
+      await deleteFile(media.storageUrl)
+    }
+
+    await prisma.dppMedia.delete({
+      where: { id: media.id }
+    })
+
+    const ipAddress = getClientIp(request)
+    const role = await getOrganizationRole(session.user.id, dpp.organizationId)
+    await logDppMediaAction(ACTION_TYPES.DELETE, media.id, dppId, {
+      actorId: session.user.id,
+      actorRole: role || undefined,
+      organizationId: dpp.organizationId,
+      source: SOURCES.UI,
+      complianceRelevant: false,
+      ipAddress,
+    })
+
+    return NextResponse.json(
+      { message: "Medium erfolgreich gelöscht" },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error("Media delete by URL error:", error)
+    return NextResponse.json(
+      { error: error?.message ?? "Ein Fehler ist aufgetreten" },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * DELETE /api/app/dpp/[dppId]/media?storageUrl=...
+ *
+ * Löscht ein Medium anhand der storageUrl (z.B. für FileField in Mehrwert-Blöcken, die nur URLs speichern).
+ * Gleiche Löschlogik wie DELETE by mediaId: Hard-Delete (DB + Storage) nur wenn nie veröffentlicht.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ dppId: string }> }
+) {
+  try {
+    const { dppId } = await params
+    const { searchParams } = new URL(request.url)
+    const storageUrl = searchParams.get("storageUrl")
+
+    if (!storageUrl || storageUrl.trim() === "") {
+      return NextResponse.json(
+        { error: "storageUrl Query-Parameter erforderlich" },
+        { status: 400 }
+      )
+    }
+
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Nicht autorisiert" },
+        { status: 401 }
+      )
+    }
+
+    const permissionError = await requireEditDPP(dppId, session.user.id)
+    if (permissionError) return permissionError
+
+    const media = await prisma.dppMedia.findFirst({
+      where: { dppId, storageUrl: storageUrl.trim() }
+    })
+
+    if (!media) {
+      return NextResponse.json(
+        { error: "Medium nicht gefunden" },
+        { status: 404 }
+      )
+    }
+
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      select: { organizationId: true }
+    })
+    if (!dpp) {
+      return NextResponse.json(
+        { error: "DPP nicht gefunden" },
+        { status: 404 }
+      )
+    }
+
+    const usedInPublishedVersion = await prisma.dppVersionMedia.findFirst({
+      where: {
+        storageUrl: media.storageUrl,
+        version: { dppId }
+      }
+    })
+
+    if (!usedInPublishedVersion) {
+      await deleteFile(media.storageUrl)
+    }
+
+    await prisma.dppMedia.delete({
+      where: { id: media.id }
+    })
+
+    const ipAddress = getClientIp(request)
+    const role = await getOrganizationRole(session.user.id, dpp.organizationId)
+    await logDppMediaAction(ACTION_TYPES.DELETE, media.id, dppId, {
+      actorId: session.user.id,
+      actorRole: role || undefined,
+      organizationId: dpp.organizationId,
+      source: SOURCES.UI,
+      complianceRelevant: false,
+      ipAddress,
+    })
+
+    return NextResponse.json(
+      { message: "Medium erfolgreich gelöscht" },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error("Media delete by URL error:", error)
     return NextResponse.json(
       { error: error?.message ?? "Ein Fehler ist aufgetreten" },
       { status: 500 }

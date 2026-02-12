@@ -390,6 +390,7 @@ function DppFrontendPreviewInner({
       style={{
         flex: 1,
         overflowY: "auto",
+        overflowX: "hidden",
         backgroundColor: "#FFFFFF"
       }}
     >

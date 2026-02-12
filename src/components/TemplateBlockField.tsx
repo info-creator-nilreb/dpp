@@ -178,20 +178,25 @@ export default function TemplateBlockField({
   // Feld-Key aus Media (API liefert fieldKey, Frontend nutzt teils fieldId)
   const mediaFieldKey = (m: typeof media[0]) => (m as any).fieldKey ?? m.fieldId
 
-  // Filtere Medien für dieses Feld
-  // 1. Exakte Übereinstimmung: blockId und fieldKey/fieldId passen
-  // 2. Fallback: fieldKey/fieldId passt (auch wenn blockId unterschiedlich)
-  // 3. Fallback: alternativer Schreibweise (z.B. 'produktbild' vs 'productbild')
-  // 4. Fallback: Legacy-Medien ohne blockId/fieldKey für file-image Felder
+  // Filtere Medien für dieses Feld – Medien gehören ausschließlich zu genau diesem Block
+  // Regel: Hat das Medium eine blockId, MUSS sie mit diesem Block übereinstimmen (sonst ausschließen)
+  // Fallbacks 2–4 gelten NUR für Legacy-Medien ohne blockId
   const fieldMedia = media.filter(m => {
     const mKey = mediaFieldKey(m)
+    const hasBlockId = m.blockId && m.blockId !== ""
+
+    // Medien aus anderen Blöcken (z.B. Mehrwert-Storytelling) niemals hier anzeigen
+    if (hasBlockId && m.blockId !== blockId) return false
+
+    // 1. Exakte Übereinstimmung: blockId und fieldKey/fieldId passen
     if (m.blockId === blockId && mKey === field.key) return true
+    // 2–4. Fallbacks NUR für Legacy-Medien ohne blockId (Pflichtangaben-Bilder vor blockId-Einführung)
+    if (hasBlockId) return false
     if (mKey === field.key && field.type === "file-image" && m.fileType?.startsWith("image/")) return true
     const normalize = (id: string | null | undefined) => id ? id.toLowerCase().replace(/produktbild/g, "productbild") : null
     if (normalize(mKey) === normalize(field.key) && field.type === "file-image" && m.fileType?.startsWith("image/")) return true
-    const hasNoBlockId = !m.blockId || m.blockId === ""
     const hasNoKey = !mKey || mKey === ""
-    if (hasNoBlockId && hasNoKey && field.type === "file-image" && m.fileType?.startsWith("image/")) return true
+    if (hasNoKey && field.type === "file-image" && m.fileType?.startsWith("image/")) return true
     return false
   })
   

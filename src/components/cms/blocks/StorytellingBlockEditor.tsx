@@ -4,25 +4,25 @@
  * Storytelling Block Editor
  */
 
-import { useState } from "react"
 import { StorytellingBlockContent } from "@/lib/cms/types"
-import FileUploadArea from "@/components/FileUploadArea"
-import { useNotification } from "@/components/NotificationProvider"
+import FileField from "@/components/cms/fields/FileField"
 
 interface StorytellingBlockEditorProps {
   content: Record<string, any>
   onChange: (content: StorytellingBlockContent) => void
   dppId?: string
+  blockId?: string
 }
+
+const TITLE_MAX = 80
+const DESC_MAX = 300
 
 export default function StorytellingBlockEditor({
   content,
   onChange,
-  dppId
+  dppId,
+  blockId
 }: StorytellingBlockEditorProps) {
-  const { showNotification } = useNotification()
-  const [uploading, setUploading] = useState(false)
-  
   const data: StorytellingBlockContent = {
     title: content.title || "",
     description: content.description || "",
@@ -37,73 +37,23 @@ export default function StorytellingBlockEditor({
     })
   }
 
-  async function handleImageUpload(file: File, index?: number) {
-    if (!dppId) {
-      showNotification("DPP-ID fehlt", "error")
-      return
-    }
+  // URLs aus images für FileField (wie Image-Block)
+  const imageUrls = data.images?.length
+    ? data.images.map((img: { url?: string }) => img?.url).filter(Boolean)
+    : null
+  const fileFieldValue = imageUrls && imageUrls.length > 0
+    ? (imageUrls.length === 1 ? imageUrls[0] : imageUrls)
+    : null
 
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch(`/api/app/dpp/${dppId}/media`, {
-        method: "POST",
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || "Fehler beim Hochladen")
-      }
-
-      if (index !== undefined) {
-        // Update existing image
-        const images = [...(data.images || [])]
-        images[index] = { ...images[index], url: result.media.storageUrl }
-        updateField("images", images)
-      } else {
-        // Add new image
-        updateField("images", [
-          ...data.images || [],
-          { url: result.media.storageUrl, alt: "", caption: "" }
-        ])
-      }
-
-      showNotification("Bild erfolgreich hochgeladen", "success")
-    } catch (error: any) {
-      showNotification(error.message || "Fehler beim Hochladen", "error")
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  function addImage() {
-    updateField("images", [
-      ...data.images || [],
-      { url: "", alt: "", caption: "" }
-    ])
-  }
-
-  function updateImage(index: number, field: string, value: string) {
-    const images = [...(data.images || [])]
-    images[index] = { ...images[index], [field]: value }
-    updateField("images", images)
-  }
-
-  function removeImage(index: number) {
-    const images = [...(data.images || [])]
-    images.splice(index, 1)
-    updateField("images", images)
-  }
-
-  function addSection() {
-    updateField("sections", [
-      ...data.sections || [],
-      { heading: "", text: "", image: "" }
-    ])
+  function handleImagesChange(urls: string | string[] | null) {
+    const urlArray = urls
+      ? (Array.isArray(urls) ? urls : [urls]).filter(Boolean)
+      : []
+    const newImages = urlArray.map((url) => {
+      const existing = data.images?.find((img: { url?: string }) => img?.url === url)
+      return existing || { url, alt: "", caption: "" }
+    })
+    updateField("images", newImages)
   }
 
   function updateSection(index: number, field: string, value: string) {
@@ -129,12 +79,12 @@ export default function StorytellingBlockEditor({
           color: "#0A0A0A",
           marginBottom: "0.5rem"
         }}>
-          Titel <span style={{ color: "#DC2626" }}>*</span>
+          Titel <span style={{ color: "#DC2626" }}>*</span> <span style={{ fontWeight: 400, color: "#7A7A7A" }}>(max. {TITLE_MAX} Zeichen)</span>
         </label>
         <input
           type="text"
           value={data.title}
-          onChange={(e) => updateField("title", e.target.value)}
+          onChange={(e) => updateField("title", e.target.value.slice(0, TITLE_MAX))}
           placeholder="Titel eingeben"
           style={{
             width: "100%",
@@ -152,8 +102,11 @@ export default function StorytellingBlockEditor({
             e.target.style.borderColor = "#E5E5E5"
             e.target.style.boxShadow = "none"
           }}
-          maxLength={200}
+          maxLength={TITLE_MAX}
         />
+        <div style={{ fontSize: "0.75rem", color: "#7A7A7A", marginTop: "0.25rem", textAlign: "right" }}>
+          {data.title.length} / {TITLE_MAX}
+        </div>
       </div>
 
       {/* Description */}
@@ -191,195 +144,40 @@ export default function StorytellingBlockEditor({
             e.target.style.boxShadow = "none"
           }}
           rows={4}
-          maxLength={5000}
+          maxLength={DESC_MAX}
         />
         <div style={{
           fontSize: "0.75rem",
           color: "#7A7A7A",
-          marginTop: "0.5rem",
+          marginTop: "0.25rem",
           textAlign: "right"
         }}>
-          {data.description.length} / 5000 Zeichen
+          {data.description.length} / {DESC_MAX}
         </div>
       </div>
 
-      {/* Images */}
+      {/* Bilder – wie Image-Block: FileField mit blockId für korrekten Media-Upload */}
+      {dppId && blockId && (
+        <FileField
+          label="Bild"
+          value={fileFieldValue}
+          onChange={handleImagesChange}
+          dppId={dppId}
+          blockId={blockId}
+          fieldKey="images"
+          blockName="Storytelling"
+          fileType="media"
+          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+          maxSize={5 * 1024 * 1024}
+          maxCount={1}
+          hideAddWhenMaxReached
+          description="JPEG, PNG, GIF oder WebP (max. 5 MB)"
+          helperText="Hintergrundbild für den Storytelling-Block (wird mit Text-Overlay angezeigt)"
+        />
+      )}
+
+      {/* Sections – kein weiterer Abschnitt hinzufügbar */}
       <div>
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "1rem"
-        }}>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "#0A0A0A"
-          }}>
-            Bilder
-          </label>
-        </div>
-
-        {/* Upload Area */}
-        {dppId && (
-          <div style={{ marginBottom: "1rem" }}>
-            <FileUploadArea
-              accept="image/*"
-              maxSize={5 * 1024 * 1024}
-              onFileSelect={(file) => handleImageUpload(file)}
-              disabled={uploading}
-              label="Bild hochladen"
-              description="JPEG, PNG, GIF oder WebP (max. 5 MB)"
-            />
-          </div>
-        )}
-
-        {/* Image List */}
-        {data.images && data.images.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {data.images.map((image, index) => (
-              <div key={index} style={{
-                padding: "1rem",
-                border: "1px solid #E5E5E5",
-                borderRadius: "8px",
-                backgroundColor: "#F9F9F9"
-              }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "start",
-                  justifyContent: "space-between",
-                  marginBottom: "0.75rem"
-                }}>
-                  <span style={{
-                    fontSize: "0.75rem",
-                    fontWeight: "500",
-                    color: "#7A7A7A"
-                  }}>
-                    Bild {index + 1}
-                  </span>
-                  <button
-                    onClick={() => removeImage(index)}
-                    style={{
-                      padding: "0.5rem",
-                      color: "#DC2626",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#FEF2F2"
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent"
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Image Preview */}
-                {image.url && (
-                  <div style={{
-                    marginBottom: "0.75rem",
-                    padding: "0.75rem",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E5E5E5",
-                    borderRadius: "8px"
-                  }}>
-                    <img
-                      src={image.url}
-                      alt={image.alt || "Bild"}
-                      style={{
-                        maxWidth: "100%",
-                        maxHeight: "200px",
-                        borderRadius: "6px"
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Upload for existing image */}
-                {dppId && (
-                  <div style={{ marginBottom: "0.75rem" }}>
-                    <FileUploadArea
-                      accept="image/*"
-                      maxSize={5 * 1024 * 1024}
-                      onFileSelect={(file) => handleImageUpload(file, index)}
-                      disabled={uploading}
-                      label={image.url ? "Bild ersetzen" : "Bild hochladen"}
-                      description=""
-                    />
-                  </div>
-                )}
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {!dppId && (
-                    <input
-                      type="url"
-                      value={image.url || ""}
-                      onChange={(e) => updateImage(index, "url", e.target.value)}
-                      placeholder="Bild-URL"
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem",
-                        border: "1px solid #E5E5E5",
-                        borderRadius: "8px",
-                        fontSize: "0.875rem"
-                      }}
-                    />
-                  )}
-                  <input
-                    type="text"
-                    value={image.alt || ""}
-                    onChange={(e) => updateImage(index, "alt", e.target.value)}
-                    placeholder="Alt-Text *"
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #E5E5E5",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem"
-                    }}
-                  />
-                  <input
-                    type="text"
-                    value={image.caption || ""}
-                    onChange={(e) => updateImage(index, "caption", e.target.value)}
-                    placeholder="Bildunterschrift (optional)"
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #E5E5E5",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem"
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Sections */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Abschnitte
-          </label>
-          <button
-            onClick={addSection}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            + Abschnitt hinzufügen
-          </button>
-        </div>
         {data.sections && data.sections.length > 0 && (
           <div className="space-y-4">
             {data.sections.map((section, index) => (

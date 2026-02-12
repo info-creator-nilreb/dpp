@@ -79,11 +79,11 @@ export default function DataSectionsContainer({
   }
   
   // Eine gemeinsame, nach order sortierte Liste: Template- und CMS-Blöcke gemischt, damit Position = Mehrwert-Tab
-  const cmsBlockTypes = ['text_block', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll']
+  const cmsBlockTypes = ['text_block', 'text', 'storytelling', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll']
   
   const { templateBlocks, orderedBlocks } = useMemo(() => {
     const template: UnifiedContentBlock[] = []
-    const ordered: Array<{ type: 'template' | 'cms'; block: UnifiedContentBlock }> = []
+    const cmsBlocks: UnifiedContentBlock[] = []
     
     dataBlocks.forEach(block => {
       const isCmsBlock = block.blockKey && cmsBlockTypes.includes(block.blockKey.toLowerCase())
@@ -92,14 +92,20 @@ export default function DataSectionsContainer({
         (block.order === 1 && /basis|produktdaten/i.test(block.displayName || ''))
       
       if (isCmsBlock) {
-        ordered.push({ type: 'cms', block })
+        cmsBlocks.push(block)
       } else if (!isRedundantBasisdaten) {
         if (!isBlockEmpty(block)) {
           template.push(block)
-          ordered.push({ type: 'template', block })
         }
       }
     })
+    
+    // Pflichtangaben (Template-Blöcke) zuerst, dann Mehrwert-Blöcke (CMS-Blöcke) – CMS exakt wie im Mehrwert-Tab
+    const cmsSorted = [...cmsBlocks].sort((a, b) => a.order - b.order)
+    const ordered: Array<{ type: 'template' | 'cms'; block: UnifiedContentBlock }> = [
+      ...template.map(block => ({ type: 'template' as const, block })),
+      ...cmsSorted.map(block => ({ type: 'cms' as const, block })),
+    ]
     
     return { templateBlocks: template, orderedBlocks: ordered }
   }, [dataBlocks])

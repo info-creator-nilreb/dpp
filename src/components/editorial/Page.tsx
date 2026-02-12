@@ -42,6 +42,7 @@ export default function Page({ children, className = '', style = {}, styling, fi
         lineHeight: editorialTypography.lineHeight.normal,
         color: textPrimary,
         backgroundColor: editorialColors.background.primary,
+        overflowX: 'hidden',
         ...(fillViewport ? { minHeight: '100vh' } : {}),
         // CSS Variables for global theme access
         '--editorial-primary': primaryColor,

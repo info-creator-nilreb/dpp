@@ -403,8 +403,25 @@ export default function ImageBlockEditor({
                 {/* Entfernen-Button */}
                 <button
                   type="button"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation()
+                    const urlToRemove = urlArray[index]
+                    if (dppId && urlToRemove && typeof urlToRemove === "string") {
+                      try {
+                        const res = await fetch(
+                          `/api/app/dpp/${dppId}/media?storageUrl=${encodeURIComponent(urlToRemove)}`,
+                          { method: "DELETE" }
+                        )
+                        if (!res.ok) {
+                          const data = await res.json().catch(() => ({}))
+                          showNotification(data.error || "Fehler beim Entfernen", "error")
+                          return
+                        }
+                      } catch {
+                        showNotification("Fehler beim Entfernen des Bildes", "error")
+                        return
+                      }
+                    }
                     const newUrls = urlArray.filter((_, i) => i !== index)
                     updateField("url", newUrls)
                     // Entferne Metadaten für gelöschtes Bild
