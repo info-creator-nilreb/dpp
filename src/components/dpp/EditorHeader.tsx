@@ -212,7 +212,7 @@ export default function EditorHeader({
                 {getStatusText()}
               </span>
             </div>
-            {((status === "draft" || status === "published_with_hints") && lastSaved && timeAgo) && (
+            {((status === "draft" || status === "published" || status === "published_with_hints") && lastSaved && timeAgo) && (
               <span style={{
                 fontSize: "clamp(0.75rem, 1.8vw, 0.85rem)",
                 color: "#7A7A7A"
