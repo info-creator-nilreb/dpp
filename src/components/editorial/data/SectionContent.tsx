@@ -188,13 +188,21 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
 
             if (isDocument) {
               const raw = field.value
-              const items: Array<{ url: string; displayName?: string }> = Array.isArray(raw)
-                ? raw
-                : raw && typeof raw === 'object' && 'url' in (raw as object)
-                  ? [raw as { url: string; displayName?: string }]
-                  : typeof raw === 'string'
-                    ? (raw.includes(',') ? raw.split(',').map(u => ({ url: u.trim() })) : [{ url: raw }])
-                    : []
+              let items: Array<{ url: string; displayName?: string }> = []
+              if (Array.isArray(raw)) {
+                items = raw.map((r: unknown) =>
+                  r && typeof r === 'object' && 'url' in (r as object)
+                    ? { url: (r as { url: string }).url, displayName: (r as { displayName?: string }).displayName }
+                    : typeof r === 'string' ? { url: r } : { url: String(r) }
+                ).filter((x): x is { url: string; displayName?: string } => !!x.url)
+              } else if (raw && typeof raw === 'object' && 'url' in (raw as object)) {
+                const obj = raw as { url: string; displayName?: string }
+                items = [{ url: obj.url, displayName: obj.displayName }]
+              } else if (typeof raw === 'string') {
+                items = raw.includes(',')
+                  ? raw.split(',').map(u => ({ url: u.trim() })).filter(x => x.url)
+                  : [{ url: raw }]
+              }
               return (
                 <div key={field.key} style={{ marginBottom: variant === 'spacious' ? '1.5rem' : '1rem' }}>
                   <span
