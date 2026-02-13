@@ -40,7 +40,8 @@ export default function DppContentTabV2({
   loading,
   onReload,
   onStatusChange,
-  onLastSavedChange
+  onLastSavedChange,
+  onDraftSaved
 }: DppContentTabV2Props) {
   const { showNotification } = useNotification()
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
