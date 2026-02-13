@@ -64,7 +64,7 @@ function extractFieldValue(
   blockId?: string
 ): FieldValue {
   // Versuche Wert aus DPP-Daten zu holen (basierend auf field.key)
-  let value: string | number | boolean | null = null
+  let value: FieldValue['value'] = null
   
   if (dppContent && field.key in dppContent) {
     value = dppContent[field.key]
