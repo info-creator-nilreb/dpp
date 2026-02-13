@@ -137,10 +137,13 @@ interface TemplateBlocksSectionProps {
     fileName: string
     fileType: string
     storageUrl: string
+    displayName?: string | null
     blockId?: string | null
     fieldId?: string | null
   }>
   onMediaChange: () => void
+  /** Anzeigename eines Mediums aktualisieren (z.B. für Zertifikate) */
+  onMediaDisplayNameChange?: (mediaId: string, displayName: string | null) => Promise<void>
   /** Reihenfolge der Produktbilder speichern (z. B. erstes = Hero). Wird an TemplateBlockField durchgereicht. */
   onMediaReorder?: (orderedMediaIds: string[]) => void | Promise<void>
   // ENTFERNT: onInviteSupplier - wird jetzt über globales Modal gehandhabt
@@ -190,6 +193,7 @@ export default function TemplateBlocksSection({
   dppId,
   media,
   onMediaChange,
+  onMediaDisplayNameChange,
   onMediaReorder,
   blockSupplierConfigs = {},
   supplierInvitationEnabled = true,
@@ -522,6 +526,7 @@ export default function TemplateBlocksSection({
                     }}
                     media={media}
                     onMediaChange={onMediaChange}
+                    onMediaDisplayNameChange={onMediaDisplayNameChange}
                   />
                 )
               }
@@ -560,6 +565,7 @@ export default function TemplateBlocksSection({
                   }}
                   media={media}
                   onMediaChange={onMediaChange}
+                  onMediaDisplayNameChange={onMediaDisplayNameChange}
                   pendingFiles={pendingFiles}
                   onPendingFileAdd={onPendingFileAdd}
                   onPendingFileRemove={onPendingFileRemove}

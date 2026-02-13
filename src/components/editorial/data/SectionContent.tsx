@@ -9,6 +9,7 @@
 
 import React from 'react'
 import { UnifiedContentBlock } from '@/lib/content-adapter'
+import { normalizeCo2EmissionsValue } from '@/lib/co2-emissions-types'
 import { editorialColors } from '../tokens/colors'
 import { editorialSpacing } from '../tokens/spacing'
 import MediaGallery from './MediaGallery'
@@ -85,9 +86,11 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
       return hasValue
     })
   
-  // Sortiere Felder nach Key
+  // Sortiere Felder nach Template-Reihenfolge (order), Fallback: Key
   const sortedFields = [...fields].sort((a, b) => {
-    // Sortiere nach Field-Key (kann später durch Field.order erweitert werden)
+    const orderA = (a as { order?: number }).order ?? 999
+    const orderB = (b as { order?: number }).order ?? 999
+    if (orderA !== orderB) return orderA - orderB
     return a.key.localeCompare(b.key)
   })
   
@@ -124,7 +127,6 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
   const dataFields = fieldsToRender.filter(f => {
     const type = (f.type || '').toLowerCase()
     const key = (f.key || '').toLowerCase()
-    // Filtere technische/UI-Felder, die nicht angezeigt werden sollen
     const isTechnicalField = key === 'alignment' || key === 'ausrichtung' || 
                             key === 'order' || key === 'status' ||
                             key === 'blockid' || key === 'fieldkey' ||
@@ -146,16 +148,20 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
            !isTechnicalField
     return isDataField
   })
+
+  // Data + Dokument-Felder kombiniert in Template-Reihenfolge (behebt großen Abstand, konsistente Spacing)
+  const dataAndDocumentFields = fieldsToRender.filter(f => 
+    dataFields.includes(f) || documentFields.includes(f)
+  )
   
   console.log('[SectionContent] Data Fields:', dataFields.length, 'Media Fields:', mediaFields.length, 'Video Fields:', videoFields.length, 'Document Fields:', documentFields.length)
   
-  // Bestimme Layout basierend auf Variant
-  const useGrid = variant !== 'minimal' && dataFields.length > 5
+  const useGrid = variant !== 'minimal' && dataAndDocumentFields.length > 5
   
   return (
     <div>
-      {/* Data Fields */}
-      {dataFields.length > 0 && (
+      {/* Data Fields + Dokumente inline (Template-Reihenfolge, einheitliches Spacing) */}
+      {dataAndDocumentFields.length > 0 && (
         <div
           style={{
             display: useGrid ? 'grid' : 'flex',
@@ -165,14 +171,91 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
             marginBottom: mediaFields.length > 0 ? editorialSpacing.lg : 0,
           }}
         >
-          {dataFields.map((field, fieldIndex) => {
+          {dataAndDocumentFields.map((field, fieldIndex) => {
+            const isDocument = documentFields.includes(field)
             const isTextarea = field.type === 'textarea' || (typeof field.value === 'string' && field.value.length > 100)
             const isBoolean = field.type === 'boolean'
             const isNumber = field.type === 'number'
             const isSelect = field.type === 'select' || field.type === 'multi-select'
             const isUrl = field.type === 'url'
             const isDate = field.type === 'date'
-            
+            const isCo2 = field.type === 'co2_emissions'
+            const co2Display = isCo2 ? (() => {
+              const co2 = normalizeCo2EmissionsValue(field.value)
+              if (co2.value == null || (typeof co2.value === 'number' && Number.isNaN(co2.value))) return null
+              return `${Number(co2.value).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg CO₂e`
+            })() : undefined
+
+            if (isDocument) {
+              const raw = field.value
+              const items: Array<{ url: string; displayName?: string }> = Array.isArray(raw)
+                ? raw
+                : raw && typeof raw === 'object' && 'url' in (raw as object)
+                  ? [raw as { url: string; displayName?: string }]
+                  : typeof raw === 'string'
+                    ? (raw.includes(',') ? raw.split(',').map(u => ({ url: u.trim() })) : [{ url: raw }])
+                    : []
+              return (
+                <div key={field.key} style={{ marginBottom: variant === 'spacious' ? '1.5rem' : '1rem' }}>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      color: editorialColors.text.secondaryVar,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      marginBottom: '0.5rem',
+                    }}
+                  >
+                    {field.label}
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {items.map((item, idx) => {
+                      const displayName = item.displayName || field.label
+                      const linkText = displayName ? `${displayName} ansehen` : 'Ansehen'
+                      return (
+                        <a
+                          key={idx}
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem 1rem',
+                            backgroundColor: 'rgba(36, 197, 152, 0.08)',
+                            border: `1px solid ${editorialColors.brand.accentVar}`,
+                            borderRadius: '8px',
+                            color: editorialColors.brand.accentVar,
+                            textDecoration: 'none',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            transition: 'background-color 0.2s, border-color 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(36, 197, 152, 0.12)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(36, 197, 152, 0.08)'
+                          }}
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                          </svg>
+                          <span>{linkText}</span>
+                        </a>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            }
+
             return (
               <div 
                 key={field.key} 
@@ -206,13 +289,15 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
                       fontWeight: 400,
                     }}
                   >
-                    {field.value === null || field.value === '' 
-                      ? <span style={{ color: editorialColors.text.tertiary, fontStyle: 'italic' }}>Nicht angegeben</span>
-                      : isBoolean 
-                        ? (field.value === true || field.value === 'true' ? 'Ja' : 'Nein')
-                        : isSelect && Array.isArray(field.value)
-                          ? field.value.join(', ')
-                          : String(field.value)
+                    {isCo2
+                      ? (co2Display ?? <span style={{ color: editorialColors.text.tertiary, fontStyle: 'italic' }}>Nicht angegeben</span>)
+                      : field.value === null || field.value === '' 
+                        ? <span style={{ color: editorialColors.text.tertiary, fontStyle: 'italic' }}>Nicht angegeben</span>
+                        : isBoolean 
+                          ? (field.value === true || field.value === 'true' ? 'Ja' : 'Nein')
+                          : isSelect && Array.isArray(field.value)
+                            ? field.value.join(', ')
+                            : String(field.value)
                     }
                   </div>
                 </div>
@@ -270,62 +355,8 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
         />
       )}
       
-      {/* Dokumente (PDFs) - Einheitlich mit Icon und Akzentfarbe - nach Media Gallery */}
-      {documentFields.length > 0 && (
-        <div style={{ 
-          marginTop: editorialSpacing.lg,
-          marginBottom: editorialSpacing.md,
-        }}>
-          {documentFields.map((f, idx) => (
-            <a
-              key={idx}
-              href={f.value as string}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: editorialSpacing.sm,
-                padding: `${editorialSpacing.sm} 0`,
-                color: editorialColors.brand.accentVar,
-                textDecoration: 'none',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                marginBottom: idx < documentFields.length - 1 ? editorialSpacing.sm : 0,
-                transition: 'opacity 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.7'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1'
-              }}
-            >
-              {/* Dokument-Icon (grün/teal wie im Screenshot) */}
-              <svg 
-                width="16" 
-                height="16" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2"
-                style={{
-                  flexShrink: 0,
-                }}
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
-              <span>{f.label}</span>
-            </a>
-          ))}
-        </div>
-      )}
-      
       {/* Empty State */}
-      {dataFields.length === 0 && mediaFields.length === 0 && videoFields.length === 0 && (
+      {dataAndDocumentFields.length === 0 && mediaFields.length === 0 && videoFields.length === 0 && (
         <p
           style={{
             color: editorialColors.text.tertiary,

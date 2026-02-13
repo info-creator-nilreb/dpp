@@ -200,21 +200,23 @@ model DppSupplierInvite {
 }
 
 model DppMedia {
-  id         String   @id @default(cuid())
-  dppId      String
-  fileName   String
-  fileType   String
-  fileSize   Int
-  storageUrl String
-  uploadedAt DateTime @default(now())
-  sortOrder  Int      @default(0) // Reihenfolge für Anzeige (erstes Bild = Hero)
+  id          String   @id @default(cuid())
+  dppId       String
+  fileName    String
+  fileType    String
+  fileSize    Int
+  storageUrl  String
+  uploadedAt  DateTime @default(now())
+  sortOrder   Int      @default(0) // Reihenfolge für Anzeige (erstes Bild = Hero)
+  // Nutzerdefinierter Anzeigename (z.B. "CE-Konformitätserklärung"); Fallback: fileName ohne Extension
+  displayName String?
   // Semantische Rolle: primary_product_image (Hero), gallery_image, certificate, logo, etc.
-  role       String?
+  role        String?
   // Zuordnung zu Template-Block und -Feld (optional für Legacy-Medien)
-  blockId    String?  // TemplateBlock ID
-  fieldId    String?  // TemplateField ID (key)
-  fieldKey   String?  // Key des File-Felds im Block
-  dpp        Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+  blockId     String?  // TemplateBlock ID
+  fieldId     String?  // TemplateField ID (key)
+  fieldKey    String?  // Key des File-Felds im Block
+  dpp         Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
 
   @@index([dppId, blockId, fieldId])
   @@index([dppId, role])

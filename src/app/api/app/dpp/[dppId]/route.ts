@@ -71,6 +71,17 @@ export async function GET(
       )
     }
 
+    // Media per Raw-SQL laden (displayName wird von Prisma Include ggf. nicht geliefert)
+    const mediaWithDisplayName = await prisma.$queryRaw<
+      Array<{ id: string; dppId: string; fileName: string; fileType: string; fileSize: number; storageUrl: string; uploadedAt: Date; sortOrder: number; role: string | null; blockId: string | null; fieldId: string | null; fieldKey: string | null; displayName: string | null }>
+    >`
+      SELECT id, "dppId", "fileName", "fileType", "fileSize", "storageUrl", "uploadedAt", "sortOrder", role, "blockId", "fieldId", "fieldKey", "displayName"
+      FROM dpp_media
+      WHERE "dppId" = ${dppId}
+      ORDER BY "sortOrder" ASC, "uploadedAt" DESC
+    `
+    ;(dppWithMedia as any).media = mediaWithDisplayName
+
     console.log("[DPP API] DPP loaded successfully:", dppWithMedia.id)
     console.log("[DPP API] DPP has content entries:", dppWithMedia.content?.length || 0)
 

@@ -171,15 +171,25 @@ export async function transformDppToUnified(
     secondLifeInfo: dataSource.secondLifeInfo ?? null,
   }
 
-  // Transformiere Media (fieldKey aus Schema; Template-Adapter matcht per field.id / field.key)
-  // Bei öffentlicher Version werden Medien von DppPublicView aus version.media übergeben – hier dpp.media für Vorschau
-  const media = dpp.media.map(m => ({
+  // Media per Raw-SQL laden (displayName wird von Prisma Include ggf. nicht geliefert)
+  const mediaRows = await prisma.$queryRaw<
+    Array<{ id: string; storageUrl: string; fileType: string; fileName: string; displayName: string | null; blockId: string | null; fieldId: string | null; fieldKey: string | null }>
+  >`
+    SELECT id, "storageUrl", "fileType", "fileName", "displayName", "blockId", "fieldId", "fieldKey"
+    FROM dpp_media
+    WHERE "dppId" = ${dppId}
+    ORDER BY "sortOrder" ASC, "uploadedAt" DESC
+    LIMIT 100
+  `
+  const media = mediaRows.map(m => ({
     id: m.id,
     storageUrl: m.storageUrl,
     fileType: m.fileType,
+    fileName: m.fileName,
+    displayName: m.displayName ?? null,
     blockId: m.blockId || null,
-    fieldId: (m as any).fieldKey || null,
-    fieldKey: (m as any).fieldKey || null,
+    fieldId: m.fieldKey || null,
+    fieldKey: m.fieldKey || null,
   }))
 
   // Lade DppContent für CMS-Blöcke
@@ -210,11 +220,12 @@ export async function transformDppToUnified(
   // Explizit nach Reihenfolge aus dem Mehrwert-Tab sortieren (order = Index im Tab)
   const cmsBlocks = [...cmsBlocksRaw].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
 
-  // Transformiere CMS-Blöcke zu Unified Content Blocks
+  // Transformiere CMS-Blöcke zu Unified Content Blocks (order ab 1000, damit nach Template-Blöcken)
+  const ORDER_OFFSET_CMS = 1000
   const cmsUnifiedBlocks = await Promise.all(
-    cmsBlocks.map(async (block: any) => {
+    cmsBlocks.map(async (block: any, index: number) => {
       const unified = await adaptCmsBlockToUnified(block, dppId)
-      // Füge dppId als zusätzliche Property hinzu (für Multi-Question Poll Renderer)
+      unified.order = ORDER_OFFSET_CMS + (block.order ?? index)
       if (block.type === 'multi_question_poll') {
         (unified as any).dppId = dppId
       }
@@ -222,10 +233,21 @@ export async function transformDppToUnified(
     })
   )
   
+  // Template-Block-Daten aus DppContent (co2, etc. – Felder, die nicht in DPP-Spalten sind)
+  const templateBlocksFromContent = (dppContentRecord?.blocks as any[]) || []
+  const templateBlockDataById = new Map<string, Record<string, any>>()
+  templateBlocksFromContent
+    .filter((b: any) => b.type === 'template_block' && b.data && typeof b.data === 'object')
+    .forEach((b: any) => {
+      if (b.id) templateBlockDataById.set(b.id, b.data)
+    })
+
   // Transformiere Template-Blocks zu Unified Content Blocks
   const templateUnifiedBlocks: UnifiedContentBlock[] = template.blocks.map(block => {
     const supplierConfig = supplierConfigs[block.id] || null
-    
+    const blockData = templateBlockDataById.get(block.id) || {}
+    const mergedDppContent = { ...dppContent, ...blockData }
+
     return adaptTemplateBlockToUnified(
       {
         id: block.id,
@@ -248,14 +270,14 @@ export async function transformDppToUnified(
           isRepeatable: f.isRepeatable || false,
         })),
       },
-      dppContent,
+      mergedDppContent,
       supplierConfig,
       media,
       versionInfo
     )
   })
   
-  // Kombiniere CMS- und Template-Blöcke, sortiert nach order
-  const allBlocks = [...cmsUnifiedBlocks, ...templateUnifiedBlocks]
-  return allBlocks.sort((a, b) => a.order - b.order)
+  // Reihenfolge wie im DPP-Editor: Pflichtangaben (Template) zuerst, dann Mehrwert (CMS)
+  // CMS-Blöcke haben order >= 1000, damit sort() sie korrekt nach Template-Blöcken einordnet
+  return [...templateUnifiedBlocks, ...cmsUnifiedBlocks].sort((a, b) => a.order - b.order)
 }

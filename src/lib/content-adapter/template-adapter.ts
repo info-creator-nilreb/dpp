@@ -38,9 +38,18 @@ interface DppMedia {
   id: string
   storageUrl: string
   fileType: string
+  fileName?: string
   blockId?: string | null
   fieldId?: string | null
   fieldKey?: string | null
+}
+
+/** Dateiname ohne Extension als Anzeigename (z.B. "CE-Konformität.pdf" → "CE-Konformität") */
+function displayNameFromFileName(fileName?: string): string | undefined {
+  if (!fileName || typeof fileName !== 'string') return undefined
+  const lastDot = fileName.lastIndexOf('.')
+  const base = lastDot > 0 ? fileName.slice(0, lastDot) : fileName
+  return base.trim() || undefined
 }
 
 /**
@@ -76,7 +85,11 @@ function extractFieldValue(
       return true
     })
     if (fieldMedia.length > 0) {
-      value = fieldMedia.map(m => m.storageUrl).join(',') as any
+      const items = fieldMedia.map((m: any) => ({
+        url: m.storageUrl,
+        displayName: (m.displayName && String(m.displayName).trim()) || displayNameFromFileName(m.fileName),
+      }))
+      value = items.length === 1 ? items[0] : items
     }
   }
   
@@ -84,7 +97,8 @@ function extractFieldValue(
     value: value ?? null,
     type: field.type,
     label: field.label,
-    key: field.key
+    key: field.key,
+    order: field.order
   }
 }
 

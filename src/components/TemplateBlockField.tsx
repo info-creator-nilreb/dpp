@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import FileUploadArea from "@/components/FileUploadArea"
 import InputField from "@/components/InputField"
 import CountrySelect from "@/components/CountrySelect"
@@ -37,11 +37,14 @@ interface TemplateBlockFieldProps {
     fileName: string
     fileType: string
     storageUrl: string
+    displayName?: string | null
     blockId?: string | null
     fieldId?: string | null
     fieldKey?: string | null
   }>
   onMediaChange?: () => void
+  /** Callback zum Aktualisieren des Anzeigenamens (z.B. für Zertifikate) */
+  onMediaDisplayNameChange?: (mediaId: string, displayName: string | null) => Promise<void>
   pendingFiles?: PendingFile[]
   onPendingFileAdd?: (file: PendingFile) => void
   onPendingFileRemove?: (fileId: string) => void
@@ -77,6 +80,7 @@ export default function TemplateBlockField({
   onChange,
   media = [],
   onMediaChange,
+  onMediaDisplayNameChange,
   pendingFiles = [],
   onPendingFileAdd,
   onPendingFileRemove,
@@ -94,6 +98,13 @@ export default function TemplateBlockField({
   const [uploading, setUploading] = useState(false)
   const [deleteConfirmMediaId, setDeleteConfirmMediaId] = useState<string | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [displayNameEdits, setDisplayNameEdits] = useState<Record<string, string>>({})
+
+  const fileNameWithoutExt = useCallback((fileName: string) => {
+    if (!fileName) return ""
+    const lastDot = fileName.lastIndexOf(".")
+    return lastDot > 0 ? fileName.slice(0, lastDot) : fileName
+  }, [])
 
   // Debug: Log value prop
   console.log(`[TemplateBlockField] Field ${field.key} (${field.label}): value=`, value, "type:", typeof value, "supplierInfo:", supplierInfo)
@@ -596,6 +607,7 @@ export default function TemplateBlockField({
                   border: "1px solid #CDCDCD",
                   borderRadius: "8px",
                   overflow: "hidden",
+                  minWidth: 0,
                   ...(canReorder && { cursor: "grab" }),
                   ...(dragOverIndex === mediaIndex && { boxShadow: "0 0 0 2px var(--color-accent, #2563eb)" })
                 }}
@@ -671,6 +683,54 @@ export default function TemplateBlockField({
                     </span>
                   </div>
                 )}
+                {field.type === "file-document" && !readOnly && onMediaDisplayNameChange && dppId && dppId !== "new" ? (
+                  <div style={{ padding: "0.5rem", display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: 0, overflow: "hidden" }}>
+                    <input
+                      type="text"
+                      placeholder="Anzeigename"
+                      title="Anzeigename eingeben, z.B. CE-Konformität oder ISO 14001 Zertifikat"
+                      value={displayNameEdits[mediaItem.id] ?? (mediaItem.displayName ?? "")}
+                      onChange={(e) => setDisplayNameEdits(prev => ({ ...prev, [mediaItem.id]: e.target.value }))}
+                      onBlur={async () => {
+                        const val = displayNameEdits[mediaItem.id] ?? (mediaItem.displayName ?? "")
+                        const trimmed = val.trim()
+                        const current = (mediaItem.displayName ?? "").trim()
+                        if (trimmed === current) {
+                          setDisplayNameEdits(prev => { const next = { ...prev }; delete next[mediaItem.id]; return next })
+                          return
+                        }
+                        try {
+                          await onMediaDisplayNameChange(mediaItem.id, trimmed || null)
+                          // displayNameEdits bewusst nicht löschen – Media-Refresh ist asynchron,
+                          // der eingegebene Wert bleibt sofort sichtbar bis mediaItem.displayName aktualisiert ist
+                        } catch {
+                          showNotification("Anzeigename konnte nicht gespeichert werden", "error")
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        minWidth: 0,
+                        maxWidth: "100%",
+                        boxSizing: "border-box",
+                        padding: "0.375rem 0.5rem",
+                        fontSize: "0.8125rem",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "6px",
+                        backgroundColor: "#FFF"
+                      }}
+                    />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "0.7rem", color: "#7A7A7A", overflow: "hidden", textOverflow: "ellipsis" }}>{mediaItem.fileName}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmMediaId(mediaItem.id) }}
+                        style={{ background: "none", border: "none", color: "#DC2626", cursor: "pointer", padding: "0.25rem" }}
+                        title="Datei löschen"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                 <div style={{
                   padding: "0.5rem",
                   fontSize: "0.75rem",
@@ -683,7 +743,7 @@ export default function TemplateBlockField({
                   alignItems: "center"
                 }}>
                   <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {mediaItem.fileName}
+                    {mediaItem.displayName ?? mediaItem.fileName}
                   </span>
                   {/* Delete-Button nur anzeigen wenn nicht read-only */}
                   {!readOnly && dppId && dppId !== "new" && (
@@ -712,6 +772,7 @@ export default function TemplateBlockField({
                     </button>
                   )}
                 </div>
+                )}
               </div>
             )
             })}

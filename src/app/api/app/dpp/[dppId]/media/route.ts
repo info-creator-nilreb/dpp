@@ -172,9 +172,10 @@ export async function GET(
         blockId: string | null
         fieldId: string | null
         fieldKey: string | null
+        displayName: string | null
       }>
     >`
-      SELECT id, "dppId", "fileName", "fileType", "fileSize", "storageUrl", "uploadedAt", "sortOrder", role, "blockId", "fieldId", "fieldKey"
+      SELECT id, "dppId", "fileName", "fileType", "fileSize", "storageUrl", "uploadedAt", "sortOrder", role, "blockId", "fieldId", "fieldKey", "displayName"
       FROM dpp_media
       WHERE "dppId" = ${dppId}
       ORDER BY "sortOrder" ASC, "uploadedAt" DESC

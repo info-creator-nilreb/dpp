@@ -12,6 +12,8 @@ export interface FieldValue {
   type: string
   label: string
   key: string
+  /** Reihenfolge im Template/Editor (für konsistente Anzeige) */
+  order?: number
 }
 
 export interface UnifiedContentBlock {

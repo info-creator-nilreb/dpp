@@ -2188,6 +2188,21 @@ export default function DppEditorPflichtdaten({ dpp: initialDpp, isNew = false, 
               await refreshMedia()
               scheduleSave()
             }}
+            onMediaDisplayNameChange={async (mediaId, displayName) => {
+              if (!dpp.id || dpp.id === "new") return
+              const res = await fetch(`/api/app/dpp/${dpp.id}/media/${mediaId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ displayName }),
+                credentials: "include"
+              })
+              if (!res.ok) {
+                const data = await res.json().catch(() => ({}))
+                throw new Error(data.error || "Fehler beim Speichern")
+              }
+              await refreshMedia()
+              scheduleSave()
+            }}
             onMediaReorder={handleMediaReorder}
             blockSupplierConfigs={blockSupplierConfigs}
             supplierInvitationEnabled={hasSupplierInvitation}

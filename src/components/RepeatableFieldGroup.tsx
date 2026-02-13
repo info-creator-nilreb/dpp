@@ -35,6 +35,7 @@ interface RepeatableFieldGroupProps {
     fieldId?: string | null
   }>
   onMediaChange?: () => void
+  onMediaDisplayNameChange?: (mediaId: string, displayName: string | null) => Promise<void>
 }
 
 /**
@@ -203,6 +204,7 @@ export default function RepeatableFieldGroup({
                   m.fieldId === getFieldIdForInstance(instance.instanceId)
                 )}
                 onMediaChange={onMediaChange}
+                onMediaDisplayNameChange={onMediaDisplayNameChange}
                 hideLabel={true}
               />
             </div>
