@@ -51,7 +51,8 @@ export default function RepeatableFieldGroup({
   instances,
   onInstancesChange,
   media = [],
-  onMediaChange
+  onMediaChange,
+  onMediaDisplayNameChange,
 }: RepeatableFieldGroupProps) {
   const addInstance = () => {
     const newInstanceId = `${field.id}-${Date.now()}`
