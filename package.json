@@ -5,7 +5,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "next dev -p 3000",
-    "build": "prisma generate && next build --webpack",
+    "build": "prisma generate && prisma migrate deploy && next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "migrate:production:missing-tables": "node scripts/apply-missing-tables-to-production.js",
