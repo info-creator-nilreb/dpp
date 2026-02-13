@@ -28,6 +28,7 @@ interface DppEditorTabsProps {
   onLastSavedChange?: (date: Date | null) => void
   onErrorChange?: (error: string | null) => void
   onDppUpdate?: (updatedDpp: any) => void
+  onDraftSaved?: () => void
 }
 
 type TabId = "data" | "content" | "frontend"
