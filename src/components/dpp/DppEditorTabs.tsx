@@ -43,7 +43,8 @@ export default function DppEditorTabs({
   onStatusChange,
   onLastSavedChange,
   onErrorChange,
-  onDppUpdate
+  onDppUpdate,
+  onDraftSaved
 }: DppEditorTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>("data")
   const [cmsBlocks, setCmsBlocks] = useState<Block[]>([])
@@ -236,6 +237,7 @@ export default function DppEditorTabs({
             onReload={loadCmsContent}
             onStatusChange={setContentTabStatus}
             onLastSavedChange={onLastSavedChange}
+            onDraftSaved={onDraftSaved}
           />
         )}
         
@@ -253,6 +255,7 @@ export default function DppEditorTabs({
             onReload={loadCmsContent}
             onStatusChange={onStatusChange}
             onLastSavedChange={onLastSavedChange}
+            onDraftSaved={onDraftSaved}
           />
         )}
       </div>

@@ -188,10 +188,27 @@ export async function GET(
       console.log("[DPP API] Final fieldValues after fallback:", Object.keys(fieldValues).length, "fields:", Object.keys(fieldValues))
     }
 
+    // hasDraftChanges: bei veröffentlichten DPPs prüfen, ob Entwurf nach letzter Veröffentlichung geändert wurde
+    let hasDraftChanges = false
+    if ((dppWithMedia as any).status === "PUBLISHED") {
+      const lastVersion = await prisma.dppVersion.findFirst({
+        where: { dppId },
+        orderBy: { version: "desc" },
+        select: { createdAt: true }
+      })
+      if (lastVersion) {
+        const lastPublishedAt = lastVersion.createdAt.getTime()
+        const draftContentUpdatedAt = (dppWithMedia.content?.[0] as any)?.updatedAt?.getTime?.() ?? 0
+        const dppUpdatedAt = (dppWithMedia as any).updatedAt?.getTime?.() ?? 0
+        hasDraftChanges = draftContentUpdatedAt > lastPublishedAt || dppUpdatedAt > lastPublishedAt
+      }
+    }
+
     return NextResponse.json({ 
       dpp: dppWithMedia,
       fieldValues,
-      fieldInstances
+      fieldInstances,
+      hasDraftChanges
     }, { status: 200 })
   } catch (error: any) {
     console.error("Error fetching DPP:", error)

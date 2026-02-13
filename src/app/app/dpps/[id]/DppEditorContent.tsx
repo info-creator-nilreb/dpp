@@ -99,7 +99,13 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
             ? contentUpdated
             : dppUpdated
         setLastSaved(lastSavedDate)
-        setEditorStatus(normalizedDpp.status === "PUBLISHED" ? "published" : "draft")
+        // Bei veröffentlichtem DPP: Status "Entwurf" wenn unveröffentlichte Änderungen vorliegen
+        const hasDraftChanges = data.hasDraftChanges === true
+        setEditorStatus(
+          normalizedDpp.status === "PUBLISHED"
+            ? (hasDraftChanges ? "draft" : "published")
+            : "draft"
+        )
         
         // Load user ID and capabilities in parallel
         const [accountResponse, capabilitiesResponse] = await Promise.all([
@@ -386,6 +392,16 @@ export default function DppEditorContent({ id }: DppEditorContentProps) {
               // This ensures tab switches don't reset the draft state
               // SINGLE SOURCE OF TRUTH: This is the only place where dpp state is updated
               setDpp(updatedDpp)
+              // Bei veröffentlichtem DPP: Nach Entwurf-Save Status auf "Entwurf" setzen
+              if (updatedDpp?.status === "PUBLISHED") {
+                setEditorStatus("draft")
+              }
+            }}
+            onDraftSaved={() => {
+              // Content-Tab speichert: Status auf Entwurf, wenn DPP veröffentlicht war
+              if (dpp?.status === "PUBLISHED") {
+                setEditorStatus("draft")
+              }
             }}
           />
         )}

@@ -29,6 +29,7 @@ interface DppContentTabV2Props {
   onReload: () => void
   onStatusChange?: (status: "idle" | "saving" | "saved" | "error") => void
   onLastSavedChange?: (date: Date | null) => void
+  onDraftSaved?: () => void
 }
 
 export default function DppContentTabV2({
@@ -94,6 +95,7 @@ export default function DppContentTabV2({
       const result = await response.json().catch(() => ({})) as { updatedAt?: string }
       const savedDate = result.updatedAt ? new Date(result.updatedAt) : new Date()
       onLastSavedChange?.(savedDate) // ALWAYS propagate (same pattern as DppEditor)
+      onDraftSaved?.() // Für Status-Update: Entwurf wurde gespeichert (z.B. veröffentlicht → Entwurf)
       // No notification for auto-save (silent)
       // No reload - blocks prop remains unchanged
     } catch (error: any) {

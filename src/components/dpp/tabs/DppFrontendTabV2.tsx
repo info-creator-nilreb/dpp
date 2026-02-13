@@ -30,6 +30,7 @@ interface DppFrontendTabV2Props {
   onReload: () => void
   onStatusChange?: (status: "idle" | "saving" | "saved" | "error") => void
   onLastSavedChange?: (date: Date | null) => void
+  onDraftSaved?: () => void
 }
 
 export default function DppFrontendTabV2({
@@ -41,7 +42,8 @@ export default function DppFrontendTabV2({
   availableFeatures,
   loading,
   onStatusChange,
-  onLastSavedChange
+  onLastSavedChange,
+  onDraftSaved
 }: DppFrontendTabV2Props) {
   const { showNotification } = useNotification()
   const [isMobile, setIsMobile] = useState(false)
@@ -166,6 +168,7 @@ export default function DppFrontendTabV2({
       hasChangesRef.current = false
       const savedDate = new Date()
       onLastSavedChange?.(savedDate)
+      onDraftSaved?.()
       // No notification for auto-save (silent)
     } catch (error: any) {
       showNotification("Auto-Save fehlgeschlagen. Bitte versuchen Sie es erneut.", "error")
