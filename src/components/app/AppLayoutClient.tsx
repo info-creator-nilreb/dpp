@@ -64,11 +64,11 @@ export default function AppLayoutClient({
         />
       )}
 
-      {/* Main Content */}
+      {/* Main Content - style always rendered in same order as main to avoid hydration mismatch */}
       <>
-        {shouldShowSidebar && (
-          <style dangerouslySetInnerHTML={{
-            __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: shouldShowSidebar
+            ? `
               :root {
                 --sidebar-width: ${isSidebarCollapsed ? "64px" : "280px"};
               }
@@ -86,8 +86,8 @@ export default function AppLayoutClient({
                 }
               }
             `
-          }} />
-        )}
+            : "/* no sidebar */",
+        }} />
         <main
           className={shouldShowSidebar ? "app-main-content" + (isDppEditorPage ? " dpp-editor-page" : "") : ""}
           style={{
