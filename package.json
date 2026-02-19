@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "DIRECT_URL=${DIRECT_URL:-$DATABASE_URL} prisma generate",
     "dev": "next dev -p 3000",
-    "build": "prisma generate && prisma migrate deploy && next build --webpack",
+    "build": "DIRECT_URL=${DIRECT_URL:-$DATABASE_URL} prisma generate && DIRECT_URL=${DIRECT_URL:-$DATABASE_URL} prisma migrate deploy && next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "migrate:production:missing-tables": "node scripts/apply-missing-tables-to-production.js",
