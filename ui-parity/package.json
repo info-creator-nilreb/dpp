@@ -1,0 +1,13 @@
+{
+  "name": "ui-parity",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "ui:parity": "playwright test",
+    "ui:parity:record": "UI_PARITY_RECORD=1 playwright test",
+    "ui:parity:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

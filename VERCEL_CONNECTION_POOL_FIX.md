@@ -9,25 +9,37 @@ FATAL: MaxClientsInSessionMode: max clients reached - in Session mode max client
 
 Dieser Fehler tritt auf, wenn:
 - Viele parallele Serverless Function Requests gleichzeitig laufen (jede Instanz öffnet mindestens 1 DB-Verbindung)
-- Die **DATABASE_URL eine direkte Verbindung** verwendet (nicht den **Connection Pooler** des Anbieters)
-- Das Gesamtlimit der DB (pool_size / MaxClients) überschritten wird
+- Die **DATABASE_URL Session-Modus** (Port 5432) verwendet – Session-Modus ist stark limitiert
+- Oder eine direkte Verbindung statt des Poolers verwendet wird
 
-**Wichtig:** Auch mit `connection_limit=1` pro Instanz reichen bereits wenige parallele Requests, um das Limit zu erreichen. Die einzige zuverlässige Lösung ist die **gepoolte Connection-URL** (Pooler).
+**Ursache:** Supabase hat zwei Pooler-Modi:
+- **Session-Modus (Port 5432)**: Jede Client-Verbindung = 1 Server-Verbindung → schnell Limit erreicht
+- **Transaction-Modus (Port 6543)**: Viele Client-Verbindungen teilen sich wenige Server-Verbindungen → ideal für Serverless
 
-## Lösung: Pooled DATABASE_URL in Vercel verwenden
+## Lösung: DATABASE_URL muss Transaction-Modus (Port 6543) verwenden
 
-Die `DATABASE_URL` in Vercel **muss** die **Pooler-URL** Ihres Datenbank-Anbieters verwenden (nicht die direkte DB-URL).
+Die `DATABASE_URL` in Vercel **muss** den **Transaction-Modus-Pooler** (Port **6543**) verwenden.
 
-### Supabase
+### Supabase – Vercel Environment Variables
 
-#### ✅ RICHTIG (mit Connection Pooler):
+#### ✅ RICHTIG (Transaction-Modus, Port 6543):
 ```
-postgresql://postgres.[project-ref]:[password]@aws-1-eu-north-1.pooler.supabase.com:5432/postgres?sslmode=require
+postgresql://postgres.[project-ref]:[password]@db.[project-ref].supabase.co:6543/postgres?pgbouncer=true&connection_limit=1
+```
+Oder bei Shared Pooler (ähnlicher Host):
+```
+postgresql://postgres.[project-ref]:[password]@aws-1-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
 ```
 
-#### ❌ FALSCH (direkte Verbindung):
+#### ❌ FALSCH (Session-Modus, Port 5432 – löst MaxClientsInSessionMode aus):
 ```
-postgresql://postgres.[project-ref]:[password]@aws-1-eu-north-1.supabase.co:5432/postgres?sslmode=require
+postgresql://...@pooler.supabase.com:5432/...
+postgresql://...@db.xxx.supabase.co:5432/...
+```
+
+#### ❌ FALSCH (direkte Verbindung ohne Pooler):
+```
+postgresql://...@db.xxx.supabase.co:5432/postgres
 ```
 
 ### Neon
@@ -41,27 +53,27 @@ Dokumentation: https://neon.tech/docs/connect/connection-pooling
 
 ### 2. Vercel Environment Variables konfigurieren
 
-1. Gehe zu Vercel Dashboard → Projekt → Settings → Environment Variables
+1. Gehe zu **Vercel Dashboard** → Projekt → **Settings** → **Environment Variables**
 2. Prüfe `DATABASE_URL`:
-   - Enthält die URL `.pooler.supabase.com`? ✅ Gut
-   - Enthält die URL `.supabase.co`? ❌ Muss geändert werden
-3. Falls falsch:
+   - Enthält die URL **`:6543`** (Transaction-Modus)? ✅ Gut
+   - Enthält die URL **`:5432`**? ❌ Führt zu MaxClientsInSessionMode – Port muss 6543 sein
+3. Falls Port 5432:
    - Kopiere die aktuelle `DATABASE_URL`
-   - Ersetze `.supabase.co` durch `.pooler.supabase.com`
-   - Ersetze den Port durch `5432` (wenn nötig)
-   - Füge `?sslmode=require` hinzu (falls nicht vorhanden)
+   - **Ändere den Port von 5432 auf 6543**
+   - Füge `?pgbouncer=true&connection_limit=1` hinzu (oder ergänze bei bestehendem `?` mit `&`)
    - Speichere die neue `DATABASE_URL`
-4. **WICHTIG**: Nach Änderung neues Deployment triggern (oder warte auf automatisches Deployment)
+4. `DIRECT_URL` (für Prisma Migrations) soll Port 5432 behalten – das ist korrekt.
+5. **WICHTIG**: Nach Änderung **neues Deployment** triggern (Redeploy).
 
-### 3. Connection Limit Parameter (Optional)
+### 3. Supabase Connection String kopieren
 
-Falls das Problem weiterhin besteht, können Sie ein Connection Limit hinzufügen:
+Im Supabase Dashboard: **Settings** → **Database** → **Connection string** → **URI**  
+Wähle **"Transaction"** (nicht "Session"!) und kopiere die URL. Port muss **6543** sein.
 
 ```
-postgresql://...@aws-1-eu-north-1.pooler.supabase.com:5432/postgres?sslmode=require&connection_limit=1
+# Transaction-Modus (korrekt für Vercel)
+postgresql://postgres.[ref]:[password]@db.[ref].supabase.co:6543/postgres?pgbouncer=true&connection_limit=1
 ```
-
-**Hinweis**: `connection_limit=1` ist für Serverless Functions empfohlen, da jede Function-Instanz nur eine Verbindung benötigt.
 
 ## Prüfung
 

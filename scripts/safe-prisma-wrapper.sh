@@ -6,6 +6,18 @@
 
 set -e
 
+# .env laden (falls vorhanden), damit DATABASE_URL und ggf. DIRECT_URL gesetzt sind
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
+
+# Prisma verlangt DIRECT_URL im Schema; für lokale Dev reicht Fallback auf DATABASE_URL
+if [ -z "$DIRECT_URL" ] && [ -n "$DATABASE_URL" ]; then
+  export DIRECT_URL="$DATABASE_URL"
+fi
+
 # Prüfe zuerst die Datenbank-Umgebung
 if ! ./scripts/check-database-environment.sh; then
   echo ""

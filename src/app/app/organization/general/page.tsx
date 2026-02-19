@@ -1,13 +1,9 @@
-export const dynamic = "force-dynamic"
+import { redirect } from "next/navigation"
 
-import AuthGate from "../../_auth/AuthGate"
-import OrganizationGeneralClient from "./OrganizationGeneralClient"
-
-export default async function OrganizationGeneralPage() {
-  return (
-    <AuthGate>
-      <OrganizationGeneralClient />
-    </AuthGate>
-  )
+/**
+ * Ehemalige "Allgemeine Einstellungen" – Inhalt wurde in Firmendaten integriert.
+ * Redirect für bestehende Lesezeichen/Links.
+ */
+export default function OrganizationGeneralPage() {
+  redirect("/app/organization/company-details")
 }
-

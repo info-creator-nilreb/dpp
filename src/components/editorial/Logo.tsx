@@ -33,9 +33,9 @@ export default function Logo({
     <div
       style={{
         position: 'absolute',
-        top: 'clamp(16px, 2vw, 24px)',
-        left: 'clamp(16px, 2vw, 24px)',
-        zIndex: 10,
+        top: '32px',
+        left: '32px',
+        zIndex: 3,
         width: 'clamp(100px, 12vw, 160px)',
         height: 'auto',
         pointerEvents: 'auto',

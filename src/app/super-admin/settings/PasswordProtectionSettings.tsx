@@ -222,6 +222,7 @@ export default function PasswordProtectionSettings({
               border: "1px solid #CDCDCD",
               borderRadius: "6px",
               fontSize: "0.95rem",
+              fontFamily: "inherit",
               boxSizing: "border-box"
             }}
           />
@@ -256,6 +257,7 @@ export default function PasswordProtectionSettings({
               border: "1px solid #CDCDCD",
               borderRadius: "6px",
               fontSize: "0.95rem",
+              fontFamily: "inherit",
               boxSizing: "border-box"
             }}
           />

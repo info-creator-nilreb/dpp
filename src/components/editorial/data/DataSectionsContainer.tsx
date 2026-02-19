@@ -15,6 +15,7 @@ import CmsBlockDirect from './CmsBlockDirect'
 import ImageGallery from './ImageGallery'
 import { editorialSpacing } from '../tokens/spacing'
 import { editorialColors } from '../tokens/colors'
+import { BREAKPOINTS_MQ } from '@/lib/breakpoints'
 import './data-sections-container.css'
 
 interface DataSectionsContainerProps {
@@ -26,10 +27,28 @@ interface DataSectionsContainerProps {
 
 export default function DataSectionsContainer({
   blocks,
-  maxExpandedSections = 3,
+  maxExpandedSections: maxExpandedProp = 3,
   hasStoryText = false,
   dppId
 }: DataSectionsContainerProps) {
+  // Mobile: only ONE section expanded at a time
+  const [isMobile, setIsMobile] = useState(false)
+  const [isDesktopNav, setIsDesktopNav] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia(BREAKPOINTS_MQ.appMobile)
+    setIsMobile(mq.matches)
+    const h = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', h)
+    return () => mq.removeEventListener('change', h)
+  }, [])
+  useEffect(() => {
+    const mq = window.matchMedia(BREAKPOINTS_MQ.desktopNav)
+    setIsDesktopNav(mq.matches)
+    const h = () => setIsDesktopNav(mq.matches)
+    mq.addEventListener('change', h)
+    return () => mq.removeEventListener('change', h)
+  }, [])
+  const maxExpandedSections = isMobile ? 1 : maxExpandedProp
   // Filter nur Data-Blöcke
   const dataBlocks = blocks
     .filter(b => b.presentation.layer === "data")
@@ -110,41 +129,27 @@ export default function DataSectionsContainer({
     return { templateBlocks: template, orderedBlocks: ordered }
   }, [dataBlocks])
   
-  // State für expanded Sections (nur Template-Blöcke)
-  // Initialisiere direkt mit den ersten 2 Blöcken
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
-    const initial = new Set<string>()
-    // Initialisiere mit leeren Set, wird in useEffect gesetzt
-    return initial
-  })
-  const [lastExpanded, setLastExpanded] = useState<string[]>([])
-  
-  // Keine automatische Initialisierung - alle Blöcke starten collapsed
-  // useEffect entfernt - Benutzer klappt manuell auf // Nur wenn templateBlocks.length sich ändert
-  
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set())
+  const lastExpandedRef = React.useRef<string[]>([])
+
   const handleToggle = useCallback((blockId: string) => {
     setExpandedSections(prev => {
       const next = new Set(prev)
-      
+      const lastOrder = lastExpandedRef.current
+
       if (next.has(blockId)) {
-        // Collapse
         next.delete(blockId)
-        setLastExpanded(prevOrder => prevOrder.filter(id => id !== blockId))
+        lastExpandedRef.current = lastOrder.filter(id => id !== blockId)
       } else {
-        // Expand
-        // Auto-Collapse älteste Section wenn max erreicht
-        setLastExpanded(prevOrder => {
-          if (next.size >= maxExpandedSections && prevOrder.length > 0) {
-            const oldestId = prevOrder[0]
-            next.delete(oldestId)
-            return [...prevOrder.slice(1).filter(id => id !== blockId), blockId]
-          }
-          return [...prevOrder.filter(id => id !== blockId), blockId]
-        })
-        
+        if (next.size >= maxExpandedSections && lastOrder.length > 0) {
+          const oldestId = lastOrder[0]
+          next.delete(oldestId)
+          lastExpandedRef.current = [...lastOrder.slice(1).filter(id => id !== blockId), blockId]
+        } else {
+          lastExpandedRef.current = [...lastOrder.filter(id => id !== blockId), blockId]
+        }
         next.add(blockId)
       }
-      
       return next
     })
   }, [maxExpandedSections])
@@ -161,31 +166,49 @@ export default function DataSectionsContainer({
   // Alle Sections haben einheitliche Header-Styles
   const getVariantForBlock = (): 'minimal' => 'minimal'
   
+  const showStickyNavPlaceholder = isDesktopNav && templateBlocks.length > 5
+
+  const isFullbleedBlock = (block: UnifiedContentBlock) =>
+    block.blockKey === 'storytelling' || block.blockKey === 'text_block' || block.blockKey === 'text'
+
+  const containedStyle = {
+    maxWidth: '900px' as const,
+    marginLeft: 'auto' as const,
+    marginRight: 'auto' as const,
+    padding: '0 clamp(1rem, 4vw, 2rem)' as const,
+  }
+
   return (
-    <div style={{ 
-      maxWidth: '900px',
-      marginLeft: 'auto',
-      marginRight: 'auto',
-      padding: '0 clamp(1rem, 4vw, 2rem)', // Mobile: weniger Padding, Desktop: mehr
-      textAlign: 'left', // Desktop: linksbündig
-      paddingTop: hasStoryText ? 0 : editorialSpacing.xl, // Wenn StoryText vorhanden, kein zusätzlicher Abstand oben
-      paddingBottom: editorialSpacing.xl,
-    }}
-    className="data-sections-container"
+    <div
+      className={`data-sections-container ${showStickyNavPlaceholder ? 'data-sections-with-nav' : ''}`}
+      style={{
+        maxWidth: showStickyNavPlaceholder ? undefined : 'none',
+        marginLeft: showStickyNavPlaceholder ? undefined : 0,
+        marginRight: showStickyNavPlaceholder ? undefined : 0,
+        padding: 0,
+        textAlign: 'left',
+        paddingTop: hasStoryText ? 0 : editorialSpacing.introToData,
+        paddingBottom: editorialSpacing.xl,
+      }}
     >
+      {showStickyNavPlaceholder && (
+        <div className="data-sections-nav-placeholder" aria-hidden />
+      )}
+      <div className={showStickyNavPlaceholder ? 'data-sections-content' : undefined} style={showStickyNavPlaceholder ? { maxWidth: '900px' } : undefined}>
       {/* Mintfarbene Linie als Trenner – nur wenn Blöcke vorhanden und kein StoryText */}
       {orderedBlocks.length > 0 && !hasStoryText && (
-        <div style={{
-          marginTop: editorialSpacing.xl,
-          marginBottom: editorialSpacing.xl,
-          display: 'flex',
-          justifyContent: 'center',
-        }}>
+        <div
+          style={
+            showStickyNavPlaceholder
+              ? { marginTop: editorialSpacing.introToData, marginBottom: editorialSpacing.introToData, display: 'flex', justifyContent: 'center' }
+              : { ...containedStyle, marginTop: editorialSpacing.introToData, marginBottom: editorialSpacing.introToData, display: 'flex', justifyContent: 'center' }
+          }
+        >
           <div style={{ width: '60px', height: '2px', backgroundColor: editorialColors.brand.accentVar }} />
         </div>
       )}
-      
-      {/* Alle Blöcke in einer Reihenfolge (wie im Mehrwert-Tab): Template = Akkordion, CMS = direkt, Image = Galerie an Position */}
+
+      {/* Alle Blöcke in Reihenfolge: Fullbleed (Storytelling, Text) = volle Breite wie Hero, Rest = max-width 900px */}
       {orderedBlocks.length > 0 && (() => {
         const blockToImages = (block: UnifiedContentBlock): Array<{ url: string; alt?: string; caption?: string }> => {
           const urlVal = block.content?.fields?.url?.value
@@ -201,13 +224,14 @@ export default function DataSectionsContainer({
             }))
         }
         let templateIndex = 0
+        let seenFirstCms = false
         return orderedBlocks.map((item) => {
           if (item.type === 'template') {
             const block = item.block
             const index = templateIndex++
             const visualStyle = getVisualStyle(index, block)
             const isExpanded = expandedSections.has(block.id)
-            return (
+            const content = (
               <DataSection
                 key={block.id}
                 block={block}
@@ -218,20 +242,47 @@ export default function DataSectionsContainer({
                 visualStyle={visualStyle}
               />
             )
+            return showStickyNavPlaceholder ? content : <div key={block.id} style={containedStyle}>{content}</div>
           }
           const block = item.block
+          const isFirstCms = !seenFirstCms
+          if (isFirstCms) seenFirstCms = true
           if (block.blockKey?.toLowerCase() === 'image') {
             const images = blockToImages(block)
             if (images.length === 0) return null
-            return (
-              <div key={block.id} style={{ marginBottom: editorialSpacing.xl }}>
+            const content = (
+              <div
+                key={block.id}
+                className="mehrwert-module"
+                style={{
+                  marginBottom: editorialSpacing.betweenSections,
+                  marginTop: isFirstCms ? editorialSpacing.beforeMehrwert : undefined,
+                }}
+              >
                 <ImageGallery images={images} alignment="center" />
               </div>
             )
+            return showStickyNavPlaceholder ? content : <div key={block.id} style={containedStyle}>{content}</div>
           }
-          return <CmsBlockDirect key={block.id} block={block} dppId={dppId} />
+          const content = (
+            <div
+              key={block.id}
+              className="mehrwert-module"
+              style={{
+                marginTop: isFirstCms ? editorialSpacing.beforeMehrwert : undefined,
+                marginBottom: editorialSpacing.betweenSections,
+              }}
+            >
+              <CmsBlockDirect block={block} dppId={dppId} />
+            </div>
+          )
+          if (isFullbleedBlock(block)) {
+            return <div key={block.id} className="mehrwert-module--fullbleed">{content}</div>
+          }
+          return showStickyNavPlaceholder ? content : <div key={block.id} style={containedStyle}>{content}</div>
         })
       })()}
+      </div>
     </div>
   )
 }

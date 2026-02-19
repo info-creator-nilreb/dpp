@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic"
 
 /**
  * GET /api/auth/check-2fa
- * 
- * Prüft ob ein User 2FA benötigt oder zeigt 2FA-Status
- * - Ohne Parameter: Prüft aktuell eingeloggten User (für Security-Seite)
- * - Mit email Parameter: Prüft spezifischen User (für Login-Flow)
+ *
+ * Prüft 2FA-Status für jeden User (nicht nur Super Admins).
+ * - Ohne Parameter: aktuell eingeloggter User (Security-Seite)
+ * - Mit email: Login-Flow
  */
 export async function GET(request: Request) {
   try {
@@ -19,13 +19,10 @@ export async function GET(request: Request) {
     const email = searchParams.get("email")
 
     let userId: string | undefined
-    let userEmail: string | undefined
 
-    // Wenn email Parameter vorhanden (Login-Flow)
     if (email) {
-      userEmail = email
+      // Login-Flow: nur email
     } else {
-      // Sonst: Session-basiert (Security-Seite)
       const session = await auth()
       if (!session?.user?.id) {
         return NextResponse.json(
@@ -34,31 +31,38 @@ export async function GET(request: Request) {
         )
       }
       userId = session.user.id
-      userEmail = session.user.email || undefined
     }
 
     const user = await prisma.user.findUnique({
-      where: email ? { email } : { id: userId! },
+      where: email ? { email: email.toLowerCase().trim() } : { id: userId! },
       select: {
         systemRole: true,
         isPlatformAdmin: true,
         totpEnabled: true,
         totpSecret: true,
+        twoFactorMethod: true,
       },
     })
 
     if (!user) {
-      return NextResponse.json({ requires2FA: false, isSuperAdmin: false, totpEnabled: false }, { status: 200 })
+      return NextResponse.json({
+        requires2FA: false,
+        isSuperAdmin: false,
+        totpEnabled: false,
+        twoFactorMethod: null,
+      }, { status: 200 })
     }
 
-    // Prüfe ob Super Admin (mit userId falls vorhanden, sonst mit user-Daten)
     const adminCheck = userId ? await isSuperAdmin(userId) : (user.systemRole === "SUPER_ADMIN" || user.isPlatformAdmin === true)
-    const requires2FA = adminCheck && user.totpEnabled && !!user.totpSecret
+    const totpEnabled = user.totpEnabled || false
+    const method = user.twoFactorMethod || (user.totpSecret ? "totp" : null)
+    const requires2FA = totpEnabled && (method === "totp" ? !!user.totpSecret : method === "email")
 
-    return NextResponse.json({ 
-      requires2FA, 
-      isSuperAdmin: adminCheck, 
-      totpEnabled: user.totpEnabled || false 
+    return NextResponse.json({
+      requires2FA,
+      isSuperAdmin: adminCheck,
+      totpEnabled,
+      twoFactorMethod: method,
     }, { status: 200 })
   } catch (error: any) {
     console.error("Error checking 2FA:", error)

@@ -6,6 +6,7 @@
  */
 
 import React from 'react'
+import './editorial-desktop.css'
 import { editorialTypography } from './tokens/typography'
 import { editorialColors } from './tokens/colors'
 import { StylingConfig } from "@/lib/cms/types"

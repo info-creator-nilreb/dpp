@@ -1,0 +1,16 @@
+{
+  "dpps": [
+    {
+      "id": "FIXTURE_DPP_001",
+      "name": "Test DPP Fixture",
+      "description": "Fixture für visuelle Tests",
+      "organizationName": "Fixture Org",
+      "mediaCount": 2,
+      "status": "PUBLISHED",
+      "updatedAt": "2025-01-15T10:00:00.000Z",
+      "latestVersion": { "version": 1, "createdAt": "2025-01-15T10:00:00.000Z", "createdBy": "Fixture User", "hasQrCode": true }
+    }
+  ],
+  "total": 1,
+  "hasMore": false
+}

@@ -118,9 +118,12 @@ export default function EditorialSpine({
   
   return (
     <>
-      {/* Mit Hero: Hero-Bereich (Bild + Produktname) ganz oben */}
+      {/* Mit Hero: randlos bis Viewport-Kante (margin-Breakout, kein 1px-Weißraum) */}
       {heroUrl && (
-        <div style={{ position: 'relative', width: '100%' }}>
+        <div className="editorial-hero-wrapper hero-fullbleed" style={{
+          width: '100%',
+          position: 'relative',
+        }}>
           {organizationLogoUrl && (
             <Logo
               logoUrl={organizationLogoUrl}
@@ -157,8 +160,8 @@ export default function EditorialSpine({
           {isPreview && (
             <p style={{
               marginTop: editorialSpacing.lg,
-              fontSize: '0.875rem',
-              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: '12px',
+              color: 'rgba(255, 255, 255, 0.6)',
               textAlign: 'center',
               maxWidth: '480px',
               marginLeft: 'auto',
@@ -174,15 +177,18 @@ export default function EditorialSpine({
       {showContentBelowHero && (storyText || hasBasicData) && (
         <Section 
           variant="contained"
-          backgroundColor="#FFFFFF"
+          backgroundColor="#FAFAFA"
+          className="editorial-intro-section-wrapper"
           style={{ 
-            paddingTop: editorialSpacing.xl,
+            paddingTop: heroUrl ? '40px' : editorialSpacing.xl,
             paddingBottom: editorialSpacing.xl 
           }}
         >
-          {storyText || (hasBasicData && basicData) ? (
-            <StoryTextBlock text={storyText || ''} basicData={basicData} />
-          ) : null}
+          <div className={`editorial-intro-section ${!hasBasicData ? 'editorial-intro-section-single' : ''}`}>
+            {(storyText || (hasBasicData && basicData)) ? (
+              <StoryTextBlock text={storyText || ''} basicData={basicData} />
+            ) : null}
+          </div>
         </Section>
       )}
     </>

@@ -24,9 +24,9 @@ export const editorialColors = {
 
   // Backgrounds
   background: {
-    primary: '#FFFFFF',      // Main background
-    secondary: '#FAFAFA',    // Subtle background
-    tertiary: '#F5F5F5',     // Section backgrounds
+    primary: '#FAFAFA',      // Page background
+    secondary: '#F0F0F0',    // Section cards (increased contrast)
+    tertiary: '#F5F5F5',     // Tertiary backgrounds
     dark: '#0A0A0A',         // Dark sections
   },
 

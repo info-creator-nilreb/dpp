@@ -6,6 +6,17 @@ import PublicSidebar from "./PublicSidebar"
 import PublicHeader from "./PublicMobileHeader"
 import { MenuIcon } from "./PublicIcons"
 
+/** Stable styles so server and client serialize the same (avoids hydration mismatch). */
+const OUTER_WRAPPER_STYLE: React.CSSProperties = {
+  minHeight: "100vh",
+  backgroundColor: "#FFFFFF",
+}
+const MAIN_CONTENT_STYLE: React.CSSProperties = {
+  marginLeft: "0",
+  padding: "0",
+  minHeight: "100vh",
+}
+
 interface PublicLayoutClientProps {
   children: React.ReactNode
   /** When false, only render main content (no sidebar/header). Keeps DOM structure identical to avoid hydration mismatch. */
@@ -47,7 +58,7 @@ export default function PublicLayoutClient({ children, useChrome = true }: Publi
   }, [isMobileMenuOpen])
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#FFFFFF" }}>
+    <div style={OUTER_WRAPPER_STYLE}>
       {/* Floating Burger Menu Button - always visible when at top */}
       {!shouldHideSidebar && (
         <>
@@ -73,11 +84,8 @@ export default function PublicLayoutClient({ children, useChrome = true }: Publi
       {/* Main Content – div statt main: AppLayoutClient/PlatformLayout haben bereits main; vermeidet main-in-main und Hydration-Mismatch */}
       <div
         role="main"
-        style={{
-          marginLeft: "0",
-          padding: "0",
-          minHeight: "100vh",
-        }}
+        style={MAIN_CONTENT_STYLE}
+        suppressHydrationWarning
       >
         {children}
       </div>

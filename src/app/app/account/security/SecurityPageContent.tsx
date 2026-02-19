@@ -3,24 +3,35 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 /**
  * Sicherheitseinstellungen
- * 
- * Zeigt 2FA-Status und ermöglicht Super Admins die Einrichtung von 2FA
+ *
+ * 2FA für alle Benutzer: Authenticator (TOTP) oder E-Mail-Code.
  */
 export function SecurityPageContent() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [totpEnabled, setTotpEnabled] = useState(false)
+  const [twoFactorMethod, setTwoFactorMethod] = useState<string | null>(null)
   const [setup2FA, setSetup2FA] = useState(false)
+  const [methodChoice, setMethodChoice] = useState<"totp" | "email" | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [secret, setSecret] = useState<string | null>(null)
   const [verificationCode, setVerificationCode] = useState("")
+  const [emailCodeSent, setEmailCodeSent] = useState(false)
+  const [emailCode, setEmailCode] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [activating, setActivating] = useState(false)
+  const [activatingEmail, setActivatingEmail] = useState(false)
+  const [sendingEmailCode, setSendingEmailCode] = useState(false)
+  const [showDisable2FA, setShowDisable2FA] = useState(false)
+  const [disablePassword, setDisablePassword] = useState("")
+  const [disableCode, setDisableCode] = useState("")
+  const [disabling, setDisabling] = useState(false)
   
   // Passwort-Änderung States
   const [changingPassword, setChangingPassword] = useState(false)
@@ -43,6 +54,7 @@ export function SecurityPageContent() {
           const data = await response.json()
           setIsSuperAdmin(data.isSuperAdmin || false)
           setTotpEnabled(data.totpEnabled || false)
+          setTwoFactorMethod(data.twoFactorMethod || null)
         }
       } catch (err) {
         console.error("Error loading 2FA status:", err)
@@ -54,29 +66,111 @@ export function SecurityPageContent() {
     load2FAStatus()
   }, [])
 
-  // Starte 2FA-Setup
-  async function handleStart2FASetup() {
+  function open2FASetup() {
     setError("")
     setSuccess("")
     setSetup2FA(true)
+    setMethodChoice(null)
+    setQrCode(null)
+    setSecret(null)
+    setVerificationCode("")
+    setEmailCodeSent(false)
+    setEmailCode("")
+  }
 
-    try {
-      const response = await fetch("/api/auth/setup-2fa", {
-        method: "GET",
-        cache: "no-store"
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Fehler beim Generieren des QR-Codes")
+  async function handleStart2FASetup(method: "totp" | "email") {
+    setMethodChoice(method)
+    setError("")
+    setSuccess("")
+    if (method === "totp") {
+      setSetup2FA(true)
+      try {
+        const response = await fetch("/api/auth/setup-2fa", { method: "GET", cache: "no-store" })
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Fehler beim Generieren des QR-Codes")
+        }
+        const data = await response.json()
+        setQrCode(data.qrCode)
+        setSecret(data.secret)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten")
+        setMethodChoice(null)
       }
+    } else {
+      setSendingEmailCode(true)
+      setError("")
+      try {
+        const res = await fetch("/api/auth/send-2fa-email", { method: "POST" })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Code konnte nicht gesendet werden")
+        setEmailCodeSent(true)
+        setEmailCode("")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten")
+      } finally {
+        setSendingEmailCode(false)
+      }
+    }
+  }
 
-      const data = await response.json()
-      setQrCode(data.qrCode)
-      setSecret(data.secret)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten")
+  async function handleActivate2FAEmail() {
+    const code = emailCode.trim().replace(/\D/g, "")
+    if (code.length !== 6) {
+      setError("Bitte geben Sie den 6-stelligen Code aus der E-Mail ein.")
+      return
+    }
+    setActivatingEmail(true)
+    setError("")
+    try {
+      const res = await fetch("/api/auth/activate-2fa-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Aktivierung fehlgeschlagen")
+      setSuccess("Zwei-Faktor-Authentifizierung per E-Mail wurde aktiviert.")
+      setTotpEnabled(true)
+      setTwoFactorMethod("email")
       setSetup2FA(false)
+      setMethodChoice(null)
+      setEmailCodeSent(false)
+      setEmailCode("")
+      setTimeout(() => setSuccess(""), 4000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Aktivierung fehlgeschlagen")
+    } finally {
+      setActivatingEmail(false)
+    }
+  }
+
+  async function handleDisable2FA() {
+    if (!disablePassword.trim() || !disableCode.trim()) {
+      setError("Bitte Passwort und 2FA-Code eingeben.")
+      return
+    }
+    setDisabling(true)
+    setError("")
+    try {
+      const res = await fetch("/api/auth/disable-2fa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: disablePassword, code: disableCode.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Deaktivierung fehlgeschlagen")
+      setSuccess("2FA wurde deaktiviert.")
+      setTotpEnabled(false)
+      setTwoFactorMethod(null)
+      setShowDisable2FA(false)
+      setDisablePassword("")
+      setDisableCode("")
+      setTimeout(() => setSuccess(""), 4000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Deaktivierung fehlgeschlagen")
+    } finally {
+      setDisabling(false)
     }
   }
 
@@ -136,9 +230,11 @@ export function SecurityPageContent() {
       
       console.log("2FA erfolgreich aktiviert!")
 
-      setSuccess("2FA wurde erfolgreich aktiviert!")
-      setTotpEnabled(true) // Status direkt aktualisieren
+      setSuccess("Zwei-Faktor-Authentifizierung wurde aktiviert.")
+      setTotpEnabled(true)
+      setTwoFactorMethod("totp")
       setSetup2FA(false)
+      setMethodChoice(null)
       setQrCode(null)
       setSecret(null)
       setVerificationCode("")
@@ -152,6 +248,7 @@ export function SecurityPageContent() {
           const statusData = await statusResponse.json()
           setIsSuperAdmin(statusData.isSuperAdmin || false)
           setTotpEnabled(statusData.totpEnabled || false)
+          setTwoFactorMethod(statusData.twoFactorMethod || null)
         }
       } catch (statusErr) {
         console.error("Error reloading 2FA status:", statusErr)
@@ -226,7 +323,7 @@ export function SecurityPageContent() {
         alignItems: "center",
         minHeight: "400px"
       }}>
-        <p style={{ color: "#7A7A7A" }}>Lade Sicherheitseinstellungen...</p>
+        <LoadingSpinner message="Lade Sicherheitseinstellungen..." />
       </div>
     )
   }
@@ -345,10 +442,11 @@ export function SecurityPageContent() {
 
           <div style={{
             display: "grid",
-            gap: "1.5rem"
+            gap: "1.5rem",
+            minWidth: 0
           }}>
             {/* Aktuelles Passwort */}
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={{
                 display: "block",
                 fontSize: "clamp(0.9rem, 2vw, 1rem)",
@@ -365,6 +463,8 @@ export function SecurityPageContent() {
                 placeholder="Aktuelles Passwort"
                 style={{
                   width: "100%",
+                  maxWidth: "100%",
+                  boxSizing: "border-box",
                   padding: "clamp(0.75rem, 2vw, 1rem)",
                   fontSize: "clamp(0.9rem, 2vw, 1rem)",
                   border: "1px solid #CDCDCD",
@@ -376,7 +476,7 @@ export function SecurityPageContent() {
             </div>
 
             {/* Neues Passwort */}
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={{
                 display: "block",
                 fontSize: "clamp(0.9rem, 2vw, 1rem)",
@@ -393,6 +493,8 @@ export function SecurityPageContent() {
                 placeholder="Neues Passwort (mind. 8 Zeichen)"
                 style={{
                   width: "100%",
+                  maxWidth: "100%",
+                  boxSizing: "border-box",
                   padding: "clamp(0.75rem, 2vw, 1rem)",
                   fontSize: "clamp(0.9rem, 2vw, 1rem)",
                   border: "1px solid #CDCDCD",
@@ -412,7 +514,7 @@ export function SecurityPageContent() {
             </div>
 
             {/* Passwort bestätigen */}
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={{
                 display: "block",
                 fontSize: "clamp(0.9rem, 2vw, 1rem)",
@@ -429,6 +531,8 @@ export function SecurityPageContent() {
                 placeholder="Neues Passwort wiederholen"
                 style={{
                   width: "100%",
+                  maxWidth: "100%",
+                  boxSizing: "border-box",
                   padding: "clamp(0.75rem, 2vw, 1rem)",
                   fontSize: "clamp(0.9rem, 2vw, 1rem)",
                   border: "1px solid #CDCDCD",
@@ -448,9 +552,9 @@ export function SecurityPageContent() {
               backgroundColor: changingPassword || !currentPassword || !newPassword || !confirmPassword ? "#7A7A7A" : "#24c598",
               color: "#FFFFFF",
               border: "none",
-              padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
+              padding: "0.75rem 1.5rem",
               borderRadius: "8px",
-              fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
+              fontSize: "0.95rem",
               fontWeight: "600",
               cursor: changingPassword || !currentPassword || !newPassword || !confirmPassword ? "not-allowed" : "pointer",
               boxShadow: changingPassword || !currentPassword || !newPassword || !confirmPassword ? "none" : "0 4px 12px rgba(36, 197, 152, 0.3)",
@@ -468,57 +572,6 @@ export function SecurityPageContent() {
           border: "1px solid #CDCDCD",
           padding: "clamp(1.5rem, 4vw, 2rem)"
         }}>
-          {/* Super Admin Status */}
-          <div style={{
-            marginBottom: "2rem",
-            paddingBottom: "2rem",
-            borderBottom: "1px solid #E5E5E5"
-          }}>
-            <h2 style={{
-              fontSize: "clamp(1.2rem, 3vw, 1.5rem)",
-              fontWeight: "600",
-              color: "#0A0A0A",
-              marginBottom: "0.5rem"
-            }}>
-              Rollenstatus
-            </h2>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem"
-            }}>
-              {isSuperAdmin ? (
-                <>
-                  <span style={{
-                    backgroundColor: "#24c598",
-                    color: "#FFFFFF",
-                    padding: "0.25rem 0.75rem",
-                    borderRadius: "6px",
-                    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
-                    fontWeight: "600"
-                  }}>
-                    Super Admin
-                  </span>
-                  <p style={{
-                    fontSize: "clamp(0.9rem, 2vw, 1rem)",
-                    color: "#7A7A7A",
-                    margin: 0
-                  }}>
-                    Sie haben Vollzugriff auf alle Funktionen und Daten.
-                  </p>
-                </>
-              ) : (
-                <p style={{
-                  fontSize: "clamp(0.9rem, 2vw, 1rem)",
-                  color: "#7A7A7A",
-                  margin: 0
-                }}>
-                  Standardbenutzer
-                </p>
-              )}
-            </div>
-          </div>
-
           <h2 style={{
             fontSize: "clamp(1.2rem, 3vw, 1.5rem)",
             fontWeight: "600",
@@ -527,67 +580,227 @@ export function SecurityPageContent() {
           }}>
             Zwei-Faktor-Authentifizierung (2FA)
           </h2>
-          <p style={{
-            fontSize: "clamp(0.9rem, 2vw, 1rem)",
-            color: "#7A7A7A",
+
+          {/* Status-Anzeige */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
             marginBottom: "1.5rem"
           }}>
-            {isSuperAdmin 
-              ? "Als Super Admin können Sie 2FA mit einem Authenticator-App (z.B. Google Authenticator) einrichten, um zusätzliche Sicherheit zu gewährleisten."
-              : "2FA ist nur für Super Admins verfügbar."
-            }
-          </p>
+            <div style={{
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              backgroundColor: totpEnabled ? "#10B981" : setup2FA ? "#F59E0B" : "#94A3B8"
+            }} />
+            <span style={{
+              fontSize: "clamp(0.9rem, 2vw, 1rem)",
+              color: "#0A0A0A"
+            }}>
+              {totpEnabled
+                ? `Zwei-Faktor-Authentifizierung ist aktiv (Methode: ${twoFactorMethod === "email" ? "E-Mail" : "Authenticator"})`
+                : setup2FA
+                  ? (methodChoice ? `2FA einrichten – gewählte Methode: ${methodChoice === "email" ? "E-Mail" : "Authenticator-App"}` : "2FA einrichten – Methode auswählen")
+                  : "Zwei-Faktor-Authentifizierung ist deaktiviert"}
+            </span>
+          </div>
 
-          {isSuperAdmin && (
+          {!totpEnabled && (
             <>
-              {/* 2FA Status */}
-              <div style={{
-                marginBottom: "1.5rem"
-              }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  marginBottom: "1rem"
-                }}>
-                  <div style={{
-                    width: "12px",
-                    height: "12px",
-                    borderRadius: "50%",
-                    backgroundColor: totpEnabled ? "#10B981" : "#EF4444"
-                  }} />
-                  <span style={{
-                    fontSize: "clamp(0.9rem, 2vw, 1rem)",
-                    fontWeight: "600",
-                    color: "#0A0A0A"
-                  }}>
-                    {totpEnabled ? "2FA ist aktiviert" : "2FA ist nicht aktiviert"}
-                  </span>
+              {!setup2FA ? (
+                <>
+                  <button
+                    onClick={open2FASetup}
+                    style={{
+                      backgroundColor: "#24c598",
+                      color: "#FFFFFF",
+                      border: "none",
+                      padding: "0.75rem 1.5rem",
+                      borderRadius: "8px",
+                      fontSize: "0.95rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 12px rgba(36, 197, 152, 0.3)"
+                    }}
+                  >
+                    2FA aktivieren
+                  </button>
+                </>
+              ) : !methodChoice ? (
+                <div style={{ marginTop: "1rem" }}>
+                  <p style={{ fontSize: "0.95rem", color: "#475569", marginBottom: "1rem" }}>
+                    Authenticator-Apps bieten höheren Schutz als E-Mail-Codes.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxWidth: "320px" }}>
+                    <button
+                      onClick={() => handleStart2FASetup("totp")}
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        textAlign: "left",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "8px",
+                        backgroundColor: "#FFFFFF",
+                        cursor: "pointer",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        color: "#0A0A0A"
+                      }}
+                    >
+                      Authenticator-App (empfohlen)
+                    </button>
+                    <button
+                      onClick={() => handleStart2FASetup("email")}
+                      disabled={sendingEmailCode}
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        textAlign: "left",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "8px",
+                        backgroundColor: "#FFFFFF",
+                        cursor: sendingEmailCode ? "not-allowed" : "pointer",
+                        fontSize: "0.95rem",
+                        color: "#0A0A0A"
+                      }}
+                    >
+                      {sendingEmailCode ? "Code wird gesendet..." : "E-Mail-Code"}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => { setSetup2FA(false); setMethodChoice(null); setError(""); }}
+                    style={{
+                      marginTop: "1rem",
+                      background: "none",
+                      border: "none",
+                      color: "#64748B",
+                      cursor: "pointer",
+                      fontSize: "0.9rem"
+                    }}
+                  >
+                    Abbrechen
+                  </button>
                 </div>
-              </div>
+              ) : methodChoice === "email" ? (
+                <div style={{ marginTop: "1rem" }}>
+                  {sendingEmailCode ? (
+                    <p style={{ fontSize: "0.95rem", color: "#475569", margin: 0 }}>
+                      Code wird an Ihre E-Mail-Adresse gesendet…
+                    </p>
+                  ) : emailCodeSent ? (
+                    <>
+                      <p style={{ fontSize: "0.95rem", color: "#475569", marginBottom: "0.75rem" }}>
+                        Ein Code wurde an Ihre E-Mail gesendet. Geben Sie den 6-stelligen Code ein:
+                      </p>
+                      <input
+                        type="text"
+                        value={emailCode}
+                        onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="000000"
+                        maxLength={6}
+                        style={{
+                          width: "100%",
+                          maxWidth: "160px",
+                          padding: "0.75rem",
+                          fontSize: "1.25rem",
+                          textAlign: "center",
+                          letterSpacing: "0.25em",
+                          border: "1px solid #CDCDCD",
+                          borderRadius: "8px",
+                          marginBottom: "0.75rem"
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                          onClick={handleActivate2FAEmail}
+                          disabled={activatingEmail || emailCode.replace(/\D/g, "").length !== 6}
+                          style={{
+                            padding: "0.75rem 1.5rem",
+                            backgroundColor: (activatingEmail || emailCode.replace(/\D/g, "").length !== 6) ? "#94A3B8" : "#24c598",
+                            color: "#FFF",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.95rem",
+                            fontWeight: "600",
+                            cursor: (activatingEmail || emailCode.replace(/\D/g, "").length !== 6) ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          {activatingEmail ? "Aktivieren..." : "Aktivieren"}
+                        </button>
+                        <button
+                          onClick={() => { setEmailCodeSent(false); setEmailCode(""); setError(""); setMethodChoice(null); }}
+                          style={{
+                            padding: "0.75rem 1.5rem",
+                            background: "none",
+                            border: "1px solid #CDCDCD",
+                            borderRadius: "8px",
+                            fontSize: "0.95rem",
+                            cursor: "pointer"
+                          }}
+                        >
+                          Abbrechen
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: "0.95rem", color: "#475569", marginBottom: "0.75rem" }}>
+                        Es wird ein Einmal-Code an Ihre E-Mail-Adresse gesendet.
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center", marginBottom: "0.75rem" }}>
+                        <button
+                          onClick={() => handleStart2FASetup("email")}
+                          disabled={sendingEmailCode}
+                          style={{
+                            padding: "0.75rem 1.5rem",
+                            backgroundColor: "#24c598",
+                            color: "#FFF",
+border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.95rem",
+                            fontWeight: "600",
+                            cursor: sendingEmailCode ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          Code an E-Mail senden
+                        </button>
+                        <button
+                          onClick={() => { setMethodChoice(null); setError(""); }}
+                          style={{
+                            padding: "0.75rem 1.5rem",
+                          background: "none",
+                          border: "1px solid #CDCDCD",
+                          borderRadius: "8px",
+                          fontSize: "0.95rem",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                      <button
+                        type="button"
+                        onClick={() => { setMethodChoice(null); setError(""); }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          color: "#7A7A7A",
+                          cursor: "pointer",
+                          fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                          textDecoration: "none"
+                        }}
+                      >
+                        ← Andere Methode wählen (Authenticator-App)
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null}
+            </>
+          )}
 
-              {/* 2FA Setup */}
-              {!totpEnabled && !setup2FA && (
-                <button
-                  onClick={handleStart2FASetup}
-                  style={{
-                    backgroundColor: "#24c598",
-                    color: "#FFFFFF",
-                    border: "none",
-                    padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
-                    borderRadius: "8px",
-                    fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(36, 197, 152, 0.3)"
-                  }}
-                >
-                  2FA einrichten
-                </button>
-              )}
-
-              {/* QR Code Setup */}
-              {setup2FA && qrCode && secret && (
+          {/* TOTP QR-Code Setup (wenn methodChoice === "totp") */}
+          {!totpEnabled && setup2FA && methodChoice === "totp" && qrCode && secret && (
                 <div style={{
                   backgroundColor: "#F5F5F5",
                   borderRadius: "8px",
@@ -632,6 +845,23 @@ export function SecurityPageContent() {
                       />
                     </div>
                   </div>
+
+                  <p style={{ fontSize: "0.85rem", color: "#64748B", marginBottom: "0.5rem" }}>
+                    Oder Secret-Key manuell in der App eingeben:
+                  </p>
+                  <code style={{
+                    display: "block",
+                    padding: "0.75rem",
+                    backgroundColor: "#FFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "6px",
+                    fontFamily: "monospace",
+                    fontSize: "0.9rem",
+                    wordBreak: "break-all",
+                    marginBottom: "1.5rem"
+                  }}>
+                    {secret}
+                  </code>
 
                   <h3 style={{
                     fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
@@ -701,9 +931,9 @@ export function SecurityPageContent() {
                           backgroundColor: activating || verificationCode.length !== 6 ? "#7A7A7A" : "#24c598",
                           color: "#FFFFFF",
                           border: "none",
-                          padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
+                          padding: "0.75rem 1.5rem",
                           borderRadius: "8px",
-                          fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
+                          fontSize: "0.95rem",
                           fontWeight: "600",
                           cursor: activating || verificationCode.length !== 6 ? "not-allowed" : "pointer",
                           boxShadow: activating || verificationCode.length !== 6 ? "none" : "0 4px 12px rgba(36, 197, 152, 0.3)"
@@ -714,6 +944,7 @@ export function SecurityPageContent() {
                       <button
                         onClick={() => {
                           setSetup2FA(false)
+                          setMethodChoice(null)
                           setQrCode(null)
                           setSecret(null)
                           setVerificationCode("")
@@ -723,9 +954,9 @@ export function SecurityPageContent() {
                           backgroundColor: "transparent",
                           color: "#7A7A7A",
                           border: "1px solid #CDCDCD",
-                          padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
+                          padding: "0.75rem 1.5rem",
                           borderRadius: "8px",
-                          fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
+                          fontSize: "0.95rem",
                           fontWeight: "600",
                           cursor: "pointer"
                         }}
@@ -733,10 +964,132 @@ export function SecurityPageContent() {
                         Abbrechen
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSetup2FA(false)
+                        setMethodChoice(null)
+                        setQrCode(null)
+                        setSecret(null)
+                        setVerificationCode("")
+                        setError("")
+                      }}
+                      style={{
+                        marginTop: "0.75rem",
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        color: "#7A7A7A",
+                        cursor: "pointer",
+                        fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                        textDecoration: "none"
+                      }}
+                    >
+                      ← Andere Methode wählen (E-Mail)
+                    </button>
                   </div>
                 </div>
               )}
-            </>
+
+          {/* 2FA deaktivieren */}
+          {totpEnabled && (
+            <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid #E5E5E5" }}>
+              {!showDisable2FA ? (
+                <button
+                  onClick={async () => {
+                    setShowDisable2FA(true)
+                    if (twoFactorMethod === "email") {
+                      setSendingEmailCode(true)
+                      setError("")
+                      try {
+                        await fetch("/api/auth/send-2fa-email", { method: "POST" })
+                      } catch {
+                        setError("Code konnte nicht gesendet werden.")
+                      }
+                      setSendingEmailCode(false)
+                    }
+                  }}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    backgroundColor: "transparent",
+                    color: "#DC2626",
+                    border: "1px solid #DC2626",
+                    borderRadius: "8px",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  2FA deaktivieren
+                </button>
+              ) : (
+                <div style={{ maxWidth: "400px" }}>
+                  <p style={{ fontSize: "0.9rem", color: "#475569", marginBottom: "1rem" }}>
+                    Zur Deaktivierung benötigen wir Ihr Passwort und den aktuellen 2FA-Code.
+                    {twoFactorMethod === "email" && " Ein Code wurde an Ihre E-Mail gesendet."}
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1rem" }}>
+                    <input
+                      type="password"
+                      value={disablePassword}
+                      onChange={(e) => setDisablePassword(e.target.value)}
+                      placeholder="Aktuelles Passwort"
+                      style={{
+                        padding: "0.75rem",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "8px",
+                        fontSize: "1rem"
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={disableCode}
+                      onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="6-stelliger 2FA-Code"
+                      maxLength={6}
+                      style={{
+                        padding: "0.75rem",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "8px",
+                        fontSize: "1rem"
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button
+                      onClick={handleDisable2FA}
+                      disabled={disabling || !disablePassword.trim() || disableCode.trim().length !== 6}
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        backgroundColor: (disabling || !disablePassword.trim() || disableCode.trim().length !== 6) ? "#94A3B8" : "#DC2626",
+                        color: "#FFF",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: (disabling || !disablePassword.trim() || disableCode.trim().length !== 6) ? "not-allowed" : "pointer"
+                      }}
+                    >
+                      {disabling ? "Wird deaktiviert..." : "2FA deaktivieren"}
+                    </button>
+                    <button
+                      onClick={() => { setShowDisable2FA(false); setDisablePassword(""); setDisableCode(""); setError(""); }}
+                      disabled={disabling}
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        background: "none",
+                        border: "1px solid #CDCDCD",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        cursor: disabling ? "not-allowed" : "pointer"
+                      }}
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

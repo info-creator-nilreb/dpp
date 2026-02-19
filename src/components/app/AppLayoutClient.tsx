@@ -1,12 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import AppSidebar from "./AppSidebar"
 import MobileHeader from "./MobileHeader"
 import { useSession } from "next-auth/react"
 import { useAutoLogout } from "@/hooks/useAutoLogout"
 import { useAppData } from "@/contexts/AppDataContext"
+
+/** Stable style so server and client serialize the same (avoids hydration mismatch). */
+const WRAPPER_STYLE: React.CSSProperties = {
+  minHeight: "100vh",
+  backgroundColor: "#F5F5F5",
+}
 
 interface AppLayoutClientProps {
   children: React.ReactNode
@@ -17,18 +23,23 @@ export default function AppLayoutClient({
 }: AppLayoutClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const { data: session } = useSession()
   const { availableFeatures, isLoading: featuresLoading } = useAppData()
-  
+
+  useEffect(() => setMounted(true), [])
+
   // Hide sidebar on login/signup pages and public DPP views
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname?.startsWith("/api/auth")
   const isPublicDppPage = pathname?.startsWith("/public/dpp/")
   const shouldShowSidebar = !isAuthPage && !isPublicDppPage
+  // Erst nach Mount Sidebar/Header rendern, damit Server und Client dieselbe DOM-Struktur haben (vermeidet Hydration-Mismatch)
+  const showChrome = mounted && shouldShowSidebar
   // DPP-Editor-Seite (Pflichtdaten/Mehrwert/Vorschau) und Neuer Produktpass: auf Mobile volle Breite ohne grauen Rand
   const isDppEditorPage =
     pathname === "/app/create/new" || pathname?.match(/^\/app\/dpps\/[^/]+$/) != null
-  
+
   // Auto logout after 60 minutes of inactivity (only when logged in)
   useAutoLogout({
     timeout: 60 * 60 * 1000, // 60 minutes
@@ -42,31 +53,10 @@ export default function AppLayoutClient({
   const userRole = session?.user?.role ?? undefined
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#F5F5F5" }}>
-      {/* Mobile Header - only show when not on auth pages or public DPP views */}
-      {shouldShowSidebar && (
-        <MobileHeader onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
-      )}
-
-      {/* Sidebar - Desktop (fixed) & Mobile (overlay) - only show when not on auth pages or public DPP views */}
-      {/* Only render sidebar when features are loaded to prevent layout shifts */}
-      {shouldShowSidebar && !featuresLoading && (
-        <AppSidebar
-          userEmail={userEmail}
-          userRole={userRole}
-          userFirstName={userFirstName}
-          userLastName={userLastName}
-          availableFeatures={availableFeatures}
-          isMobileOpen={isMobileMenuOpen}
-          onMobileClose={() => setIsMobileMenuOpen(false)}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        />
-      )}
-
-      {/* Main Content - style always rendered in same order as main to avoid hydration mismatch */}
-      <>
-        <style dangerouslySetInnerHTML={{
+    <div style={WRAPPER_STYLE}>
+      {/* Immer zuerst style + main, damit Server und Client dieselbe Kind-Reihenfolge haben (vermeidet Hydration-Mismatch) */}
+      <style
+        dangerouslySetInnerHTML={{
           __html: shouldShowSidebar
             ? `
               :root {
@@ -87,25 +77,42 @@ export default function AppLayoutClient({
               }
             `
             : "/* no sidebar */",
-        }} />
-        <main
-          className={shouldShowSidebar ? "app-main-content" + (isDppEditorPage ? " dpp-editor-page" : "") : ""}
-          style={{
-            marginLeft: shouldShowSidebar ? "0" : "0",
-            paddingLeft: "0",
-            minHeight: "100vh",
-            transition: "margin-left 0.3s ease, width 0.3s ease, max-width 0.3s ease",
-            boxSizing: "border-box",
-            width: shouldShowSidebar ? "100%" : "100%",
-            maxWidth: shouldShowSidebar ? "100vw" : "100vw",
-            overflowX: "hidden",
-            position: "relative",
-            padding: shouldShowSidebar ? "clamp(1rem, 2vw, 2rem)" : "0",
-          }}
-        >
-          {children}
-        </main>
-      </>
+        }}
+      />
+      <main
+        className={shouldShowSidebar ? "app-main-content" + (isDppEditorPage ? " dpp-editor-page" : "") : ""}
+        style={{
+          marginLeft: "0",
+          paddingLeft: "0",
+          minHeight: "100vh",
+          transition: "margin-left 0.3s ease, width 0.3s ease, max-width 0.3s ease",
+          boxSizing: "border-box",
+          width: "100%",
+          maxWidth: "100vw",
+          overflowX: "hidden",
+          position: "relative",
+          padding: shouldShowSidebar ? "clamp(1rem, 2vw, 2rem)" : "0",
+        }}
+      >
+        {children}
+      </main>
+      {/* Mobile Header und Sidebar nach main, erst nach Mount (showChrome) */}
+      {showChrome && (
+        <MobileHeader onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+      )}
+      {showChrome && !featuresLoading && (
+        <AppSidebar
+          userEmail={userEmail}
+          userRole={userRole}
+          userFirstName={userFirstName}
+          userLastName={userLastName}
+          availableFeatures={availableFeatures}
+          isMobileOpen={isMobileMenuOpen}
+          onMobileClose={() => setIsMobileMenuOpen(false)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+      )}
     </div>
   )
 }

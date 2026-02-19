@@ -195,6 +195,7 @@ export default function AuditLogMobileFilters({
                 borderRadius: "8px",
                 border: "1px solid #E5E5E5",
                 fontSize: "0.875rem",
+                fontFamily: "inherit",
                 boxSizing: "border-box"
               }}
             />

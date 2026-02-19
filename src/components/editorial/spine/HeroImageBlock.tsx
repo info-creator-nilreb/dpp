@@ -56,6 +56,7 @@ export default function HeroImageBlock({
           position: 'relative',
           width: '100%',
           backgroundColor: '#f5f5f5',
+          overflow: 'hidden',
         }}
       >
         <Image
@@ -70,6 +71,7 @@ export default function HeroImageBlock({
             width: '100%',
             display: 'block',
             verticalAlign: 'bottom',
+            marginBottom: 0,
           }}
           className="hero-image-responsive"
         />
@@ -85,26 +87,25 @@ export default function HeroImageBlock({
           }}
         />
 
-        {/* Overlay mit Headline, Brand, Version */}
-      {/* WICHTIG: Overlay ist innerhalb des Bildes positioniert, damit Text immer im Bild bleibt */}
+        {/* Overlay mit Headline, Brand, Version – zentriert, max-width 820px */}
       <div
+        className="hero-overlay-container"
         style={{
           position: 'absolute',
           bottom: 0,
-          left: 0,
-          right: 0,
-          padding: 'clamp(2rem, 5vw, 3rem) clamp(1.5rem, 4vw, 2rem)',
-          maxHeight: '100%', // Verhindert, dass Text über das Bild hinausragt
-          overflow: 'hidden', // Verhindert Overflow
+          left: '50%',
+          transform: 'translateX(-50%)',
+          maxWidth: '820px',
+          width: '100%',
+          padding: 'clamp(2rem, 5vw, 3rem) 32px',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'flex-end', // Text am unteren Rand
+          justifyContent: 'flex-end',
         }}
       >
         <div
+          className="hero-overlay-inner"
           style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
             width: '100%',
             textAlign: 'center',
           }}
@@ -114,23 +115,24 @@ export default function HeroImageBlock({
             style={{
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
               fontWeight: 700,
-              lineHeight: 1.2,
-              marginBottom: brandName ? '0.5rem' : versionInfo ? '0.5rem' : 0,
+              lineHeight: 1.15,
+              marginBottom: brandName ? '0.75rem' : versionInfo ? '0.75rem' : 0,
               letterSpacing: '-0.02em',
               color: editorialColors.text.inverse,
-              wordWrap: 'break-word', // Verhindert Text-Overflow
+              wordWrap: 'break-word',
               overflowWrap: 'break-word',
             }}
           >
             {headline}
           </h1>
           
-          {/* Brand Name */}
+          {/* Brand Name (Subtitle) */}
           {brandName && (
             <p
               style={{
-                fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
-                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '14px',
+                opacity: 0.85,
+                color: editorialColors.text.inverse,
                 fontWeight: 500,
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
@@ -143,11 +145,12 @@ export default function HeroImageBlock({
             </p>
           )}
           
-          {/* Version: immer anzeigen (veröffentlicht oder Entwurf) */}
+          {/* Version (Draft hint bei Entwurf) */}
           <p
             style={{
-              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: '12px',
+              opacity: 0.6,
+              color: editorialColors.text.inverse,
               fontWeight: 400,
               letterSpacing: '0.02em',
               marginTop: '0.5rem',
@@ -172,7 +175,7 @@ export default function HeroImageBlock({
             justifyContent: 'center',
             gap: '0.5rem',
             padding: 'clamp(0.75rem, 2vw, 1rem)',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'rgb(250, 250, 250)',
           }}
         >
           {images.map((img, i) => (

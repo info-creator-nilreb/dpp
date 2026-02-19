@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 
+const secondaryTextStyle = {
+  fontSize: "clamp(0.8rem, 1.5vw, 0.875rem)",
+  color: "#6B7280",
+  marginTop: "0.5rem",
+  marginBottom: 0,
+  lineHeight: 1.4,
+} as const
+
 /**
  * Persönliche Daten (My Profile)
  * 
@@ -14,6 +22,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner"
 export function PersonalDataPageContent() {
   const router = useRouter()
   const [userName, setUserName] = useState("")
+  const [initialName, setInitialName] = useState("")
   const [userEmail, setUserEmail] = useState("")
   const [userRole, setUserRole] = useState<string | null>(null)
   const [organizationName, setOrganizationName] = useState("")
@@ -36,7 +45,9 @@ export function PersonalDataPageContent() {
 
         if (userResponse.ok) {
           const userData = await userResponse.json()
-          setUserName(userData.name || "")
+          const name = userData.name || ""
+          setUserName(name)
+          setInitialName(name)
           setUserEmail(userData.email || "")
         }
 
@@ -88,12 +99,11 @@ export function PersonalDataPageContent() {
         throw new Error(errorData.error || "Fehler beim Aktualisieren des Benutzers")
       }
 
-      // Success: Exit edit mode and refresh
+      setInitialName(userName.trim())
       setIsEditing(false)
-      setSuccess("Ihre Daten wurden erfolgreich gespeichert")
+      setSuccess("Profil aktualisiert")
       router.refresh()
-      
-      // Remove success message after 3 seconds
+
       setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten.")
@@ -175,17 +185,26 @@ export function PersonalDataPageContent() {
       )}
 
       <div style={{
-        backgroundColor: "#FFFFFF",
-        borderRadius: "12px",
-        border: "1px solid #CDCDCD",
-        padding: "clamp(1.5rem, 4vw, 2rem)"
+        maxWidth: "100%",
+        overflowX: "hidden",
+        boxSizing: "border-box",
       }}>
         <div style={{
-          display: "grid",
-          gap: "1.5rem"
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          border: "1px solid #CDCDCD",
+          padding: "clamp(1.5rem, 4vw, 2rem)",
+          boxSizing: "border-box",
+          maxWidth: "100%",
+          overflow: "hidden",
         }}>
-          {/* User Name */}
-          <div>
+        <div style={{
+          display: "grid",
+          gap: "1.5rem",
+          minWidth: 0,
+        }}>
+          {/* User Name (einziges editierbares Feld) */}
+          <div style={{ minWidth: 0 }}>
             <label style={{
               display: "block",
               fontSize: "clamp(0.9rem, 2vw, 1rem)",
@@ -193,7 +212,7 @@ export function PersonalDataPageContent() {
               color: "#0A0A0A",
               marginBottom: "0.5rem"
             }}>
-              Name <span style={{ color: "#24c598" }}>*</span>
+              Name {isEditing && <span style={{ color: "#24c598" }}>*</span>}
             </label>
             {isEditing ? (
               <input
@@ -201,8 +220,11 @@ export function PersonalDataPageContent() {
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
                 placeholder="Ihr Name"
+                aria-required="true"
                 style={{
                   width: "100%",
+                  maxWidth: "100%",
+                  boxSizing: "border-box",
                   padding: "clamp(0.75rem, 2vw, 1rem)",
                   fontSize: "clamp(0.9rem, 2vw, 1rem)",
                   border: "1px solid #CDCDCD",
@@ -212,20 +234,25 @@ export function PersonalDataPageContent() {
                 }}
               />
             ) : (
-              <p style={{
-                fontSize: "clamp(0.9rem, 2vw, 1rem)",
-                color: "#0A0A0A",
-                padding: "clamp(0.75rem, 2vw, 1rem)",
-                backgroundColor: "#F5F5F5",
-                borderRadius: "8px",
-                margin: 0
-              }}>
+              <p
+                role="text"
+                tabIndex={-1}
+                style={{
+                  fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                  color: "#0A0A0A",
+                  padding: "clamp(0.75rem, 2vw, 1rem)",
+                  backgroundColor: "#F8FAFC",
+                  borderRadius: "8px",
+                  margin: 0,
+                  border: "1px solid #E2E8F0",
+                }}
+              >
                 {userName || "Nicht gesetzt"}
               </p>
             )}
           </div>
 
-          {/* User Email (read-only) */}
+          {/* E-Mail (read-only) */}
           <div>
             <label style={{
               display: "block",
@@ -236,27 +263,27 @@ export function PersonalDataPageContent() {
             }}>
               E-Mail
             </label>
-            <p style={{
-              fontSize: "clamp(0.9rem, 2vw, 1rem)",
-              color: "#7A7A7A",
-              padding: "clamp(0.75rem, 2vw, 1rem)",
-              backgroundColor: "#F5F5F5",
-              borderRadius: "8px",
-              margin: 0
-            }}>
+            <p
+              role="text"
+              tabIndex={-1}
+              style={{
+                fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                color: "#0A0A0A",
+                padding: "clamp(0.75rem, 2vw, 1rem)",
+                backgroundColor: "#F8FAFC",
+                borderRadius: "8px",
+                margin: 0,
+                border: "1px solid #E2E8F0",
+              }}
+            >
               {userEmail}
             </p>
-            <p style={{
-              fontSize: "clamp(0.8rem, 1.5vw, 0.85rem)",
-              color: "#7A7A7A",
-              marginTop: "0.5rem",
-              margin: "0.5rem 0 0 0"
-            }}>
-              Die E-Mail-Adresse kann nicht geändert werden.
+            <p style={secondaryTextStyle}>
+              Änderungen an Passwort und Zwei-Faktor-Authentifizierung finden Sie unter &quot;Sicherheitseinstellungen&quot;.
             </p>
           </div>
 
-          {/* Role (read-only) */}
+          {/* Rolle (read-only) */}
           {userRole && (
             <div>
               <label style={{
@@ -268,23 +295,31 @@ export function PersonalDataPageContent() {
               }}>
                 Rolle
               </label>
-              <p style={{
-                fontSize: "clamp(0.9rem, 2vw, 1rem)",
-                color: "#0A0A0A",
-                padding: "clamp(0.75rem, 2vw, 1rem)",
-                backgroundColor: "#F5F5F5",
-                borderRadius: "8px",
-                margin: 0,
-                fontWeight: "500"
-              }}>
+              <p
+                role="text"
+                tabIndex={-1}
+                style={{
+                  fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                  color: "#0A0A0A",
+                  padding: "clamp(0.75rem, 2vw, 1rem)",
+                  backgroundColor: "#F8FAFC",
+                  borderRadius: "8px",
+                  margin: 0,
+                  fontWeight: "500",
+                  border: "1px solid #E2E8F0",
+                }}
+              >
                 {userRole === "ORG_ADMIN" ? "Organisations-Administrator" : 
                  userRole === "EDITOR" ? "Editor" : 
                  userRole === "VIEWER" ? "Betrachter" : userRole}
               </p>
+              <p style={secondaryTextStyle}>
+                Rollen können nur durch Organisations-Administratoren geändert werden.
+              </p>
             </div>
           )}
 
-          {/* Organization (read-only, only show name) */}
+          {/* Organisation (read-only) */}
           {organizationId && (
             <div>
               <label style={{
@@ -296,15 +331,23 @@ export function PersonalDataPageContent() {
               }}>
                 Organisation
               </label>
-              <p style={{
-                fontSize: "clamp(0.9rem, 2vw, 1rem)",
-                color: "#0A0A0A",
-                padding: "clamp(0.75rem, 2vw, 1rem)",
-                backgroundColor: "#F5F5F5",
-                borderRadius: "8px",
-                margin: 0
-              }}>
+              <p
+                role="text"
+                tabIndex={-1}
+                style={{
+                  fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                  color: "#0A0A0A",
+                  padding: "clamp(0.75rem, 2vw, 1rem)",
+                  backgroundColor: "#F8FAFC",
+                  borderRadius: "8px",
+                  margin: 0,
+                  border: "1px solid #E2E8F0",
+                }}
+              >
                 {organizationName || "Nicht gesetzt"}
+              </p>
+              <p style={secondaryTextStyle}>
+                Die Organisationszuordnung wird bei Einladung festgelegt und kann nicht selbstständig geändert werden.
               </p>
             </div>
           )}
@@ -321,28 +364,27 @@ export function PersonalDataPageContent() {
             <>
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || !(userName.trim() !== initialName.trim() && userName.trim().length > 0)}
                 style={{
-                  backgroundColor: saving ? "#7A7A7A" : "#24c598",
+                  backgroundColor: (saving || !(userName.trim() !== initialName.trim() && userName.trim().length > 0)) ? "#CDCDCD" : "#24c598",
                   color: "#FFFFFF",
                   border: "none",
                   padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.5rem, 4vw, 2rem)",
                   borderRadius: "8px",
                   fontSize: "clamp(0.9rem, 2.5vw, 1.1rem)",
                   fontWeight: "600",
-                  cursor: saving ? "not-allowed" : "pointer",
-                  boxShadow: saving ? "none" : "0 4px 12px rgba(36, 197, 152, 0.3)"
+                  cursor: (saving || !(userName.trim() !== initialName.trim() && userName.trim().length > 0)) ? "not-allowed" : "pointer",
+                  boxShadow: (saving || !(userName.trim() !== initialName.trim() && userName.trim().length > 0)) ? "none" : "0 4px 12px rgba(36, 197, 152, 0.3)"
                 }}
               >
                 {saving ? "Speichern..." : "Speichern"}
               </button>
               <button
                 onClick={() => {
+                  setUserName(initialName)
                   setIsEditing(false)
                   setError("")
                   setSuccess("")
-                  // Reload data to reset changes
-                  window.location.reload()
                 }}
                 disabled={saving}
                 style={{
@@ -377,6 +419,7 @@ export function PersonalDataPageContent() {
               Bearbeiten
             </button>
           )}
+        </div>
         </div>
       </div>
     </div>

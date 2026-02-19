@@ -14,4 +14,5 @@ export { default as EditorialDppView } from './EditorialDppView'
 export * from './tokens/colors'
 export * from './tokens/typography'
 export * from './tokens/spacing'
+export * from './tokens/theme'
 

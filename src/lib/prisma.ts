@@ -69,12 +69,19 @@ function getPrisma(): PrismaClient {
     databaseUrl.includes("pooler.") ||
     /pooler[.-]/.test(databaseUrl)
 
-  if (isServerless && databaseUrl && !databaseUrl.includes("connection_limit") && !isPoolerUrl) {
-    const limit = process.env.PRISMA_CONNECTION_LIMIT ? String(process.env.PRISMA_CONNECTION_LIMIT) : "1"
-    const timeout = process.env.PRISMA_POOL_TIMEOUT ? String(process.env.PRISMA_POOL_TIMEOUT) : "20"
+  if (databaseUrl && !databaseUrl.includes("connection_limit") && !isPoolerUrl) {
     const separator = databaseUrl.includes("?") ? "&" : "?"
-    databaseUrl = `${databaseUrl}${separator}connection_limit=${limit}&pool_timeout=${timeout}`
-    console.log("[PRISMA] Added connection_limit=" + limit + ", pool_timeout=" + timeout + " for serverless (direct DB URL)")
+    if (isServerless) {
+      const limit = process.env.PRISMA_CONNECTION_LIMIT ?? "1"
+      const timeout = process.env.PRISMA_POOL_TIMEOUT ?? "20"
+      databaseUrl = `${databaseUrl}${separator}connection_limit=${limit}&pool_timeout=${timeout}`
+      console.log("[PRISMA] Added connection_limit=" + limit + ", pool_timeout=" + timeout + " for serverless (direct DB URL)")
+    } else {
+      // Development: größerer Pool und längerer Timeout, um "Timed out fetching a new connection" zu vermeiden
+      const limit = process.env.PRISMA_CONNECTION_LIMIT ?? "10"
+      const timeout = process.env.PRISMA_POOL_TIMEOUT ?? "30"
+      databaseUrl = `${databaseUrl}${separator}connection_limit=${limit}&pool_timeout=${timeout}`
+    }
   }
 
   const prisma = new PrismaClient({

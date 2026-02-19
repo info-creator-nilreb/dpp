@@ -48,7 +48,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             isPlatformAdmin: true,
             emailVerified: true,
             totpEnabled: true,
-            totpSecret: true
+            totpSecret: true,
+            twoFactorMethod: true,
+            email2FACodeHash: true,
+            email2FACodeExpiresAt: true,
           }
         })
 
@@ -78,15 +81,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         console.log("[AUTH] Passwort gültig - weiter mit 2FA-Prüfung (falls erforderlich)")
 
-        // STEP 5: Nur wenn Passwort korrekt ist, prüfe 2FA (nur für Super Admins)
+        // STEP 5: 2FA für alle User mit aktivierter 2FA (TOTP oder E-Mail)
+        const twoFactorMethod = (user as any).twoFactorMethod || (user.totpSecret ? "totp" : null)
         console.error("[AUTH] 2FA-Check:", {
-          isSuperAdmin,
           totpEnabled: user.totpEnabled,
-          hasSecret: !!user.totpSecret,
+          twoFactorMethod,
+          hasTotpSecret: !!user.totpSecret,
           totpCode: (credentials as any)?.totpCode
         })
-        
-        if (isSuperAdmin && user.totpEnabled && user.totpSecret) {
+
+        if (user.totpEnabled && twoFactorMethod === "totp" && user.totpSecret) {
           const totpCode = (credentials as any).totpCode
           
           console.error("[AUTH] 2FA ist aktiviert, Code vorhanden:", !!totpCode, "Code:", totpCode)
@@ -139,6 +143,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
           
           console.log("[AUTH] 2FA-Code gültig - Login erlaubt")
+        } else if (user.totpEnabled && twoFactorMethod === "email") {
+          const emailCode = (credentials as any)?.email2FACode
+          const hash = (user as any).email2FACodeHash
+          const expiresAt = (user as any).email2FACodeExpiresAt
+          if (!emailCode || !hash || !expiresAt) {
+            console.error("[AUTH] E-Mail-2FA: Code oder gespeicherter Hash fehlt")
+            return null
+          }
+          if (new Date() > expiresAt) {
+            console.error("[AUTH] E-Mail-2FA: Code abgelaufen")
+            return null
+          }
+          const codeMatch = await bcrypt.compare(String(emailCode).trim(), hash)
+          if (!codeMatch) {
+            console.error("[AUTH] E-Mail-2FA: Code ungültig")
+            return null
+          }
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { email2FACodeHash: null, email2FACodeExpiresAt: null },
+          })
+          console.log("[AUTH] E-Mail-2FA-Code gültig - Login erlaubt")
         }
 
         // STEP 6: Alle Prüfungen erfolgreich → Session erstellen

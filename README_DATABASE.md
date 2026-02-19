@@ -17,6 +17,15 @@ npm run db:push
 npm run db:migrate:dev
 ```
 
+## 📐 Regel: Nur ergänzende Migrationen
+
+**Migrationen dürfen keine bestehenden Daten überschreiben.** Es sind nur ergänzende Änderungen erlaubt:
+
+- ✅ **Erlaubt:** Neue Tabellen anlegen, neue Spalten hinzufügen (`ADD COLUMN`), neue Indizes
+- ❌ **Nicht erlaubt:** Bestehende Daten per `UPDATE`/`DELETE` ändern, Spalten/Tabellen löschen (`DROP`), Daten überschreiben
+
+So bleiben bestehende Daten unverändert; nur Schema wird erweitert.
+
 ## ⚠️ Production-Migrationen
 
 **NUR über spezielle Scripts:**
@@ -42,6 +51,19 @@ DATABASE_URL="${DEV_DATABASE_URL}"
 ## 🚨 Was passiert bei versehentlichem Production-Zugriff?
 
 Die Befehle werden **sofort blockiert** mit einer Fehlermeldung.
+
+## 🔗 Supabase + Vercel (Connection-Pool-Limit)
+
+Bei Fehlern wie `MaxClientsInSessionMode: max clients reached` in Vercel Production:
+
+1. **Vercel Environment Variables** – zwei URLs setzen:
+   - `DATABASE_URL`: Pooler (Port 6543) für Runtime  
+     `postgresql://postgres:PASSWORD@db.XXX.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1`
+   - `DIRECT_URL`: Direct (Port 5432) für Migrations  
+     `postgresql://postgres:PASSWORD@db.XXX.supabase.co:5432/postgres`
+
+2. **Lokale Entwicklung** – in `.env.local`:
+   - `DIRECT_URL` = gleiche URL wie `DATABASE_URL` (oder jeweils Port 5432)
 
 ## 📚 Vollständige Dokumentation
 

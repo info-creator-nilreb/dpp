@@ -17,8 +17,10 @@ function LoginForm() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [requires2FA, setRequires2FA] = useState(false)
+  const [twoFactorMethod, setTwoFactorMethod] = useState<string | null>(null)
   const [totpCode, setTotpCode] = useState("")
   const [showVerificationSuccess, setShowVerificationSuccess] = useState(false)
+  const [emailCodeSent, setEmailCodeSent] = useState(false)
   
   // Lese callbackUrl aus Query-Parametern (falls vorhanden)
   const callbackUrl = searchParams.get("callbackUrl") || "/app/dashboard"
@@ -63,11 +65,23 @@ function LoginForm() {
             return
           }
 
-          // Passwort ist korrekt - prüfe ob 2FA erforderlich ist
           if (verifyData.requires2FA) {
             setRequires2FA(true)
+            setTwoFactorMethod(verifyData.twoFactorMethod || "totp")
+            if (verifyData.twoFactorMethod === "email") {
+              try {
+                await fetch("/api/auth/send-login-2fa-code", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email }),
+                })
+                setEmailCodeSent(true)
+              } catch {
+                setError("Code konnte nicht an Ihre E-Mail gesendet werden.")
+              }
+            }
             setLoading(false)
-            return // Zeige 2FA-Feld an
+            return
           }
 
           // Passwort korrekt, kein 2FA erforderlich - direkt einloggen
@@ -88,9 +102,12 @@ function LoginForm() {
         callbackUrl: callbackUrl
       }
       
-      // Nur totpCode hinzufügen, wenn 2FA erforderlich ist und ein Code vorhanden ist
       if (requires2FA && totpCode) {
-        signInOptions.totpCode = totpCode.trim()
+        if (twoFactorMethod === "email") {
+          signInOptions.email2FACode = totpCode.trim()
+        } else {
+          signInOptions.totpCode = totpCode.trim()
+        }
       }
       
       const result: any = await signIn("credentials", signInOptions)
@@ -342,7 +359,7 @@ function LoginForm() {
                 fontWeight: "500",
                 fontSize: "0.9rem"
               }}>
-                2FA-Code (Authenticator)
+                {twoFactorMethod === "email" ? "E-Mail-Code" : "2FA-Code (Authenticator)"}
               </label>
               <input
                 type="text"
@@ -368,7 +385,9 @@ function LoginForm() {
                 autoFocus
               />
               <p style={{ fontSize: "0.8rem", color: "#7A7A7A", marginTop: "0.25rem", textAlign: "center" }}>
-                Geben Sie den 6-stelligen Code aus Ihrem Authenticator-App ein
+                {twoFactorMethod === "email"
+                  ? (emailCodeSent ? "Ein Code wurde an Ihre E-Mail gesendet. Bitte geben Sie ihn hier ein." : "Code wird gesendet...")
+                  : "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein"}
               </p>
             </div>
           )}

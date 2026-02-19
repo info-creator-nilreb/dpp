@@ -1,0 +1,7 @@
+{
+  "name": "GET /api/app/organizations",
+  "method": "GET",
+  "path": "/api/app/organizations",
+  "headers": {},
+  "body": null
+}

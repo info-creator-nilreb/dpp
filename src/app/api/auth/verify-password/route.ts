@@ -40,7 +40,8 @@ export async function POST(request: Request) {
           systemRole: true,
           isPlatformAdmin: true,
           totpEnabled: true,
-          totpSecret: true
+          totpSecret: true,
+          twoFactorMethod: true,
         }
       })
     } catch (dbError: any) {
@@ -97,15 +98,17 @@ export async function POST(request: Request) {
       )
     }
 
-    // Passwort ist korrekt - prüfe ob 2FA erforderlich ist
-    const requires2FA = isSuperAdmin && user.totpEnabled && !!user.totpSecret
+    const totpEnabled = user.totpEnabled || false
+    const method = user.twoFactorMethod || (user.totpSecret ? "totp" : null)
+    const requires2FA = totpEnabled && (method === "totp" ? !!user.totpSecret : method === "email")
 
-    console.log(`[VERIFY_PASSWORD] Password verified successfully for user: ${user.id}, requires2FA: ${requires2FA}`)
+    console.log(`[VERIFY_PASSWORD] Password verified for user: ${user.id}, requires2FA: ${requires2FA}, method: ${method}`)
 
     return NextResponse.json({
       success: true,
       requires2FA,
-      isSuperAdmin
+      twoFactorMethod: method,
+      isSuperAdmin,
     }, { status: 200 })
 
   } catch (error: any) {

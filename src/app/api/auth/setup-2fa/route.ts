@@ -2,15 +2,14 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { generateTotpSecret, generateTotpUrl, generateTotpQrCode } from "@/lib/totp"
-import { isSuperAdmin } from "@/lib/permissions"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
  * GET /api/auth/setup-2fa
- * 
- * Generiert ein neues TOTP-Secret und QR-Code für 2FA-Setup
+ *
+ * Generiert TOTP-Secret und QR-Code. Für alle eingeloggten User.
  */
 export async function GET() {
   try {
@@ -20,15 +19,6 @@ export async function GET() {
       return NextResponse.json(
         { error: "Nicht autorisiert" },
         { status: 401 }
-      )
-    }
-
-    // Prüfe ob User Super Admin ist
-    const isAdmin = await isSuperAdmin(session.user.id)
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: "Nur Super Admins können 2FA einrichten" },
-        { status: 403 }
       )
     }
 
@@ -64,15 +54,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Nicht autorisiert" },
         { status: 401 }
-      )
-    }
-
-    // Prüfe ob User Super Admin ist
-    const isAdmin = await isSuperAdmin(session.user.id)
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: "Nur Super Admins können 2FA einrichten" },
-        { status: 403 }
       )
     }
 
@@ -128,12 +109,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Aktiviere 2FA in DB
     await prisma.user.update({
       where: { id: session.user.id },
       data: {
         totpSecret: secret,
         totpEnabled: true,
+        twoFactorMethod: "totp",
+        email2FACodeHash: null,
+        email2FACodeExpiresAt: null,
       },
     })
 

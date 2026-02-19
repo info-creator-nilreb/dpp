@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dpp-saas.example.com/schemas/error.json",
+  "title": "PlatformError",
+  "description": "Platform-standard error response (exakt nach Platform Constants)",
+  "type": "object",
+  "required": ["error"],
+  "properties": {
+    "error": {
+      "type": "string",
+      "description": "Human-readable error message"
+    }
+  },
+  "additionalProperties": true
+}

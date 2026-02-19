@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation"
-import { headers } from "next/headers"
+import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
 
 /**
  * AuthGate - Server Component
- * 
+ *
  * Handles authentication and onboarding checks for protected pages.
  * MUST be used in pages, NOT in layouts.
- * 
+ *
  * WICHTIG: AuthGate wird ausschließlich in /app/** Seiten verwendet.
  * Die Middleware leitet bereits nicht-authentifizierte Requests zu /login um.
  */
@@ -17,39 +18,27 @@ export default async function AuthGate({
 }) {
   // Login wird bereits durch middleware.ts garantiert
   // AuthGate prüft NUR Business-Logik (Onboarding)
-
-  // Prüfe ob Onboarding benötigt wird via API route (Prisma not in render path)
-  // Use absolute URL - Server Components require absolute URLs for fetch
+  // Direkte Prisma-Abfrage statt Self-Fetch (vermeidet "fetch failed" in SSR/Turbopack)
   let needsOnboarding = false
-  
-  try {
-    // Get base URL from request headers (works in all environments)
-    const headersList = await headers()
-    const host = headersList.get("host") || "localhost:3000"
-    const protocol = headersList.get("x-forwarded-proto") || (process.env.NODE_ENV === "production" ? "https" : "http")
-    const baseUrl = `${protocol}://${host}`
-    
-    const response = await fetch(`${baseUrl}/api/app/onboarding/check`, {
-      cache: "no-store",
-    })
 
-    if (response.ok) {
-      const data = await response.json()
-      needsOnboarding = data.needsOnboarding === true
+  try {
+    const session = await auth()
+    if (session?.user?.id) {
+      const count = await prisma.membership.count({
+        where: { userId: session.user.id },
+      })
+      needsOnboarding = count === 0
     }
   } catch (error) {
-    // Bei Network-Fehler: Onboarding-Check überspringen (nur loggen, nicht abbrechen)
-    console.error("Error checking onboarding (network error):", error)
-    // Bei Fehler: Onboarding-Check überspringen, Seite normal rendern
+    // Bei Pool-Timeout oder anderen DB-Fehlern: nicht zu Onboarding umleiten, App weiter nutzbar
+    console.error("Error checking onboarding (continuing without redirect):", error)
+    needsOnboarding = false
   }
 
-  // redirect() muss AUSSERHALB von try/catch sein
-  // redirect() wirft NEXT_REDIRECT - darf NICHT gefangen werden
   if (needsOnboarding) {
     redirect("/onboarding")
   }
 
-  // User ist authentifiziert und hat Onboarding abgeschlossen
   return <>{children}</>
 }
 

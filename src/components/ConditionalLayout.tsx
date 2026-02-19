@@ -12,12 +12,13 @@ interface ConditionalLayoutProps {
  *
  * Wraps with PublicLayoutClient. useChrome=false hides sidebar/header for app,
  * super-admin, public/dpp, contribute, password routes.
- * Pathname comes directly from usePathname() so server and client render the same DOM (avoids hydration mismatch).
+ * When pathname is unknown (empty on server), default to useChrome=false so server and client render the same DOM (avoids hydration mismatch).
  */
 export default function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname() ?? ""
 
   const useChrome =
+    pathname.length > 0 &&
     !pathname.startsWith("/super-admin") &&
     !pathname.startsWith("/app") &&
     !pathname.startsWith("/public/dpp") &&

@@ -1,0 +1,81 @@
+{
+  "$schema": "../parity.config.schema.json",
+  "ignorePaths": [
+    "createdAt",
+    "updatedAt",
+    "timestamp",
+    "id",
+    "uploadedAt",
+    "readAt",
+    "emailSentAt",
+    "submittedAt",
+    "reviewedAt",
+    "expiresAt",
+    "verifiedAt",
+    "lastLoginAt",
+    "trialExpiresAt",
+    "currentPeriodStart",
+    "currentPeriodEnd",
+    "validFrom",
+    "validTo",
+    "effectiveFrom",
+    "requestId"
+  ],
+  "ignorePathPatterns": [
+    "*.createdAt",
+    "*.updatedAt",
+    "*.timestamp",
+    "*.id",
+    "*.uploadedAt",
+    "*.readAt",
+    "*.emailSentAt",
+    "*.submittedAt",
+    "*.reviewedAt",
+    "*.expiresAt",
+    "*.token",
+    "*.verificationToken",
+    "*.passwordResetToken",
+    "media[].id",
+    "versions[].id",
+    "invitations[].id",
+    "invitations[].token",
+    "invitations[].expiresAt",
+    "dpps[].id",
+    "notifications[].id"
+  ],
+  "redactPaths": [
+    "totpSecret",
+    "password",
+    "passwordHash",
+    "verificationToken",
+    "passwordResetToken",
+    "token"
+  ],
+  "redactPathPatterns": [
+    "*.totpSecret",
+    "*.password",
+    "*.passwordHash",
+    "*.verificationToken",
+    "*.passwordResetToken",
+    "invitations[].token",
+    "contributorTokens[].token"
+  ],
+  "sortRules": [
+    { "path": "media", "by": ["sortOrder", "uploadedAt"], "order": ["asc", "desc"] },
+    { "path": "versions", "by": "version", "order": "desc" },
+    { "path": "dpps", "by": "updatedAt", "order": "desc" },
+    { "path": "invitations", "by": "createdAt", "order": "desc" },
+    { "path": "joinRequests", "by": "createdAt", "order": "desc" },
+    { "path": "notifications", "by": "createdAt", "order": "desc" }
+  ],
+  "urlSanitizeRules": [
+    { "pattern": "\\?.*", "replacement": "" },
+    { "pattern": "https?://[^/]+/.*", "replaceWith": "[REDACTED_URL]" }
+  ],
+  "urlSanitizePaths": [
+    "storageUrl",
+    "publicUrl",
+    "qrCodeImageUrl"
+  ],
+  "_comment": "urlSanitizePaths: Strip ?query from URLs at these keys before compare/record"
+}

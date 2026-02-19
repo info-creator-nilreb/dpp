@@ -1,0 +1,37 @@
+{
+  "$schema": "./parity.config.schema.json",
+  "altBaseUrl": "http://localhost:3000",
+  "newBaseUrl": "http://localhost:3001",
+  "timeoutMs": 10000,
+  "normalizeConfigPath": "config/normalize.json",
+  "toleratedFields": [
+    "createdAt",
+    "updatedAt",
+    "timestamp",
+    "id",
+    "uploadedAt",
+    "readAt",
+    "emailSentAt",
+    "submittedAt",
+    "reviewedAt",
+    "expiresAt",
+    "verifiedAt",
+    "lastLoginAt",
+    "trialExpiresAt",
+    "currentPeriodStart",
+    "currentPeriodEnd",
+    "validFrom",
+    "validTo",
+    "effectiveFrom"
+  ],
+  "toleratedPathPatterns": [
+    "*.id",
+    "*.createdAt",
+    "*.updatedAt",
+    "media[].id",
+    "versions[].id",
+    "invitations[].id",
+    "invitations[].token",
+    "invitations[].expiresAt"
+  ]
+}

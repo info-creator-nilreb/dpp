@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dpp-saas.example.com/schemas/OBJ-038-join-request.json",
+  "title": "JoinRequest",
+  "description": "OBJ-038: Join Request – User beantragt Beitritt zu Organisation",
+  "type": "object",
+  "required": ["id", "userId", "organizationId", "status"],
+  "properties": {
+    "id": { "type": "string", "description": "CUID" },
+    "userId": { "type": "string" },
+    "organizationId": { "type": "string" },
+    "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+    "message": { "type": ["string", "null"] },
+    "reviewedById": { "type": ["string", "null"] },
+    "reviewedAt": { "type": ["string", "null"], "format": "date-time" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

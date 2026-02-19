@@ -3,8 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Für Supabase + Vercel: Migrations nutzen Direct (5432), Runtime nutzt Pooler (6543)
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -23,6 +25,9 @@ model User {
   passwordResetTokenExpires DateTime?
   totpSecret                String?
   totpEnabled               Boolean   @default(false)
+  twoFactorMethod           String?   // "totp" | "email" – nur gesetzt wenn totpEnabled
+  email2FACodeHash          String?   // Einmal-Code (gehasht) für E-Mail-2FA (Login/Aktivierung)
+  email2FACodeExpiresAt     DateTime?
 
   // Phase 1: Extended profile fields
   status            String    @default("active") // active | invited | suspended
@@ -66,13 +71,15 @@ model Organization {
   // Phase 1: Company Details (legal & operational)
   legalName            String?
   companyType          String? // e.g., "GmbH", "AG", "UG", "Ltd", etc.
-  vatId                String? // VAT/UID number
+  vatId                String? // VAT/UID number (EU-weit)
+  eori                 String? // EORI-Nummer (EU-Zoll / grenzüberschreitende Lieferkette, DPP)
   commercialRegisterId String? // Handelsregisternummer
+  registrationCountry  String? // ISO: Land des rechtlichen Sitzes (falls abweichend von Adresse)
   addressStreet        String?
   addressZip           String?
   addressCity          String?
   addressCountry       String?
-  country              String? // ISO country code
+  country              String? // ISO country code (Adresse)
 
   // Phase 1: Billing Information (separate from company details)
   billingEmail          String?

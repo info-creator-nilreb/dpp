@@ -1,0 +1,445 @@
+openapi: 3.1.0
+info:
+  title: DPP SaaS – SLICE-2 (Organisation & Collaboration)
+  description: API-IDs 022–040. Capabilities CAP-006, CAP-007, CAP-008, CAP-009.
+  version: 1.0.0
+  x-parity-spec: PARITY_SPEC.md
+
+servers:
+  - url: /api
+    description: API Base
+
+security:
+  - sessionCookie: []
+
+paths:
+  /app/organizations:
+    get:
+      operationId: API-022-get-organizations
+      summary: Organisationen des Users abrufen
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizations: { type: array }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+    put:
+      operationId: API-023-put-organizations
+      summary: Organisation aktualisieren
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/access:
+    get:
+      operationId: API-024-get-access
+      summary: Zugriffsrechte abrufen
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/users:
+    get:
+      operationId: API-025-get-users
+      summary: Benutzer der Organisation abrufen
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user: { $ref: '#/components/schemas/OrgUser' }
+                        role: { type: string }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/users/{userId}:
+    delete:
+      operationId: API-026-delete-user
+      summary: Benutzer aus Organisation entfernen
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User erfolgreich entfernt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/invitations:
+    get:
+      operationId: API-027-get-invitations
+      summary: Einladungen auflisten
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invitations]
+                properties:
+                  invitations:
+                    type: array
+                    items: { $ref: '#/components/schemas/Invitation' }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+    post:
+      operationId: API-028-post-invitations
+      summary: Einladung erstellen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email: { type: string, format: email }
+                role: { type: string, enum: [ORG_ADMIN, EDITOR, VIEWER] }
+      responses:
+        '201':
+          description: Einladung erstellt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invitationId: { type: string }
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/invitations/{invitationId}:
+    delete:
+      operationId: API-029-delete-invitation
+      summary: Einladung löschen
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Einladung gelöscht
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/billing:
+    get:
+      operationId: API-030-get-billing
+      summary: Abrechnung abrufen
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+    put:
+      operationId: API-031-put-billing
+      summary: Abrechnung aktualisieren
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/company-details:
+    get:
+      operationId: API-032-get-company-details
+      summary: Firmendaten abrufen
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+    put:
+      operationId: API-033-put-company-details
+      summary: Firmendaten aktualisieren
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/general:
+    get:
+      operationId: API-034-get-general
+      summary: Allgemeine Org-Einstellungen abrufen
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+    put:
+      operationId: API-035-put-general
+      summary: Allgemeine Org-Einstellungen aktualisieren
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/update-name:
+    post:
+      operationId: API-036-post-update-name
+      summary: Organisationsname aktualisieren
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/join-requests:
+    get:
+      operationId: API-037-get-join-requests
+      summary: Join-Requests auflisten
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [joinRequests]
+                properties:
+                  joinRequests:
+                    type: array
+                    items: { $ref: '#/components/schemas/JoinRequest' }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+    post:
+      operationId: API-038-post-join-requests
+      summary: Join-Request erstellen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId]
+              properties:
+                organizationId: { type: string }
+                message: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Beitrittsanfrage erstellt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  joinRequestId: { type: string }
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/organization/join-requests/{requestId}:
+    put:
+      operationId: API-039-put-join-request
+      summary: Join-Request genehmigen oder ablehnen
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [approve, reject] }
+      responses:
+        '200':
+          description: Erfolgreich bearbeitet
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  userId: { type: string, description: "Nur bei approve" }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /app/invitations/accept:
+    post:
+      operationId: API-040-post-invitations-accept
+      summary: Einladung annehmen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200':
+          description: Einladung erfolgreich angenommen
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  organizationId: { type: string }
+                  role: { type: string }
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: authjs.session-token
+
+  schemas:
+    PlatformError:
+      type: object
+      required: [error]
+      description: Platform-standard error (exakt nach platform constants)
+      properties:
+        error: { type: string }
+      additionalProperties: true
+
+    OrgUser:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        firstName: { type: string, nullable: true }
+        lastName: { type: string, nullable: true }
+        status: { type: string }
+        lastLoginAt: { type: string, nullable: true, format: date-time }
+        jobTitle: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+
+    Invitation:
+      type: object
+      required: [id, email, organizationId, role, status, token, expiresAt]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        organizationId: { type: string }
+        role: { type: string, enum: [ORG_ADMIN, EDITOR, VIEWER] }
+        status: { type: string, enum: [pending, accepted, expired] }
+        token: { type: string }
+        expiresAt: { type: string, format: date-time }
+        invitedById: { type: string, nullable: true }
+        invitedBy: { type: object, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    JoinRequest:
+      type: object
+      required: [id, userId, organizationId, status]
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        organizationId: { type: string }
+        status: { type: string, enum: [pending, approved, rejected] }
+        message: { type: string, nullable: true }
+        reviewedById: { type: string, nullable: true }
+        reviewedAt: { type: string, nullable: true, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+  responses:
+    Error400:
+      description: Bad Request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }
+    Error401:
+      description: Nicht autorisiert
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }
+    Error403:
+      description: Keine Berechtigung
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }
+    Error404:
+      description: Nicht gefunden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }
+    Error500:
+      description: Interner Fehler
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }

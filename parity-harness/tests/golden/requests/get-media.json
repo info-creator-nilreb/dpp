@@ -1,0 +1,10 @@
+{
+  "name": "GET /api/app/dpp/{dppId}/media",
+  "method": "GET",
+  "path": "/api/app/dpp/{{DPP_ID}}/media",
+  "headers": {},
+  "body": null,
+  "pathParams": {
+    "DPP_ID": "REPLACE_WITH_REAL_DPP_ID"
+  }
+}

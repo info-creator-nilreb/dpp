@@ -1,0 +1,475 @@
+openapi: 3.1.0
+info:
+  title: DPP SaaS – SLICE-1 (Media & Publish)
+  description: API-IDs 061–066, 077–084. Capabilities CAP-012, CAP-013.
+  version: 1.0.0
+  x-parity-spec: PARITY_SPEC.md
+
+servers:
+  - url: /api
+    description: API Base
+
+security:
+  - sessionCookie: []
+
+paths:
+  /app/dpp/{dppId}/media:
+    get:
+      operationId: API-061-get-media
+      summary: Medien auflisten
+      description: Holt alle Medien eines DPPs
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [media]
+                properties:
+                  media:
+                    type: array
+                    items: { $ref: '#/components/schemas/DppMedia' }
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+    post:
+      operationId: API-062-post-media
+      summary: Medium hochladen
+      description: Upload eines Mediums (Bild, PDF, Video) für einen DPP
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                blockId: { type: string, nullable: true }
+                fieldId: { type: string, nullable: true }
+                fieldKey: { type: string, nullable: true }
+                role: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Medium erfolgreich hochgeladen
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, media]
+                properties:
+                  message: { type: string }
+                  media: { $ref: '#/components/schemas/DppMedia' }
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+    patch:
+      operationId: API-063-patch-media
+      summary: Reihenfolge der Medien aktualisieren
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mediaIds]
+              properties:
+                mediaIds: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Reihenfolge aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+    delete:
+      operationId: API-064-delete-media
+      summary: Medium löschen (by storageUrl)
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+        - name: storageUrl
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Medium erfolgreich gelöscht
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /app/dpp/{dppId}/media/{mediaId}:
+    patch:
+      operationId: API-065-patch-media-id
+      summary: Einzelnes Medium aktualisieren
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+        - $ref: '#/components/parameters/mediaId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Medium aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  media:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      displayName: { type: string, nullable: true }
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+    delete:
+      operationId: API-066-delete-media-id
+      summary: Einzelnes Medium löschen
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+        - $ref: '#/components/parameters/mediaId'
+      responses:
+        '200':
+          description: Medium erfolgreich gelöscht
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /app/dpp/{dppId}/template:
+    get:
+      operationId: API-077-get-template
+      summary: Template des DPP abrufen
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /app/dpp/{dppId}/publish:
+    post:
+      operationId: API-080-post-publish
+      summary: DPP veröffentlichen
+      description: Erstellt neue Version, setzt DPP-Status auf PUBLISHED
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+      responses:
+        '200':
+          description: Erfolgreich veröffentlicht
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { $ref: '#/components/schemas/DppVersion' }
+                  publicUrl: { type: string }
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /app/dpp/{dppId}/versions:
+    get:
+      operationId: API-081-get-versions
+      summary: Versionen auflisten
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dpp:
+                    type: object
+                    nullable: true
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      status: { type: string }
+                  versions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        version: { type: integer }
+                        name: { type: string }
+                        createdAt: { type: string, format: date-time }
+                        createdBy:
+                          type: object
+                          properties:
+                            name: { type: string }
+                            email: { type: string }
+                        hasQrCode: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /app/dpp/{dppId}/versions/{versionNumber}:
+    get:
+      operationId: API-082-get-version
+      summary: Einzelne Version abrufen
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+        - $ref: '#/components/parameters/versionNumber'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version]
+                properties:
+                  version: { $ref: '#/components/schemas/DppVersionDetail' }
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /app/dpp/{dppId}/versions/{versionNumber}/qr-code:
+    get:
+      operationId: API-083-get-qr-code
+      summary: QR-Code für Download (SVG)
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+        - $ref: '#/components/parameters/versionNumber'
+      responses:
+        '200':
+          description: SVG Content
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+
+  /app/dpp/{dppId}/versions/{versionNumber}/qr-code-preview:
+    get:
+      operationId: API-084-get-qr-code-preview
+      summary: QR-Code für Anzeige (Preview)
+      parameters:
+        - $ref: '#/components/parameters/dppId'
+        - $ref: '#/components/parameters/versionNumber'
+      responses:
+        '200':
+          description: SVG Content
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: authjs.session-token
+
+  parameters:
+    dppId:
+      name: dppId
+      in: path
+      required: true
+      schema: { type: string }
+    mediaId:
+      name: mediaId
+      in: path
+      required: true
+      schema: { type: string }
+    versionNumber:
+      name: versionNumber
+      in: path
+      required: true
+      schema: { type: string }
+
+  schemas:
+    PlatformError:
+      type: object
+      required: [error]
+      description: Platform-standard error (exakt nach platform constants)
+      properties:
+        error: { type: string }
+      additionalProperties: true
+
+    DppMedia:
+      type: object
+      required: [id, dppId, fileName, fileType, fileSize, storageUrl]
+      properties:
+        id: { type: string }
+        dppId: { type: string }
+        fileName: { type: string }
+        fileType: { type: string }
+        fileSize: { type: integer }
+        storageUrl: { type: string }
+        uploadedAt: { type: string, format: date-time }
+        sortOrder: { type: integer }
+        displayName: { type: string, nullable: true }
+        role: { type: string, nullable: true }
+        blockId: { type: string, nullable: true }
+        fieldId: { type: string, nullable: true }
+        fieldKey: { type: string, nullable: true }
+
+    DppVersion:
+      type: object
+      required: [id, dppId, version, name, category]
+      properties:
+        id: { type: string }
+        dppId: { type: string }
+        version: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        category: { type: string }
+        createdAt: { type: string, format: date-time }
+        publicUrl: { type: string, nullable: true }
+        qrCodeImageUrl: { type: string, nullable: true }
+
+    DppVersionDetail:
+      type: object
+      properties:
+        id: { type: string }
+        version: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        category: { type: string }
+        sku: { type: string, nullable: true }
+        gtin: { type: string, nullable: true }
+        brand: { type: string, nullable: true }
+        countryOfOrigin: { type: string, nullable: true }
+        materials: { type: string, nullable: true }
+        materialSource: { type: string, nullable: true }
+        careInstructions: { type: string, nullable: true }
+        isRepairable: { type: string, nullable: true }
+        sparePartsAvailable: { type: string, nullable: true }
+        lifespan: { type: string, nullable: true }
+        conformityDeclaration: { type: string, nullable: true }
+        disposalInfo: { type: string, nullable: true }
+        takebackOffered: { type: string, nullable: true }
+        takebackContact: { type: string, nullable: true }
+        secondLifeInfo: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        createdBy:
+          type: object
+          properties:
+            name: { type: string }
+            email: { type: string }
+        publicUrl: { type: string }
+        qrCodeImageUrl: { type: string, nullable: true }
+        dppName: { type: string }
+
+  responses:
+    Error400:
+      description: Bad Request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }
+    Error401:
+      description: Nicht autorisiert
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }
+    Error403:
+      description: Keine Berechtigung
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }
+    Error404:
+      description: Nicht gefunden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }
+    Error500:
+      description: Interner Fehler
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformError' }

@@ -90,28 +90,6 @@ export default function OrganizationClient() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
         <DashboardCard
-          href="/app/organization/general"
-          icon={
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="none"
-              stroke="#24c598"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              viewBox="0 0 24 24"
-            >
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-          }
-          title="Allgemeine Einstellungen"
-          description="Organisationsname, Status und grundlegende Informationen verwalten"
-        />
-
-        <DashboardCard
           href="/app/organization/company-details"
           icon={
             <svg
@@ -125,13 +103,12 @@ export default function OrganizationClient() {
               strokeLinejoin="round"
               viewBox="0 0 24 24"
             >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
           }
           title="Firmendaten"
-          description="Rechtliche Informationen und Adressdaten Ihrer Organisation verwalten"
+          description="Organisationsname, rechtliche Informationen und Adressdaten verwalten"
         />
 
         <DashboardCard
@@ -148,8 +125,8 @@ export default function OrganizationClient() {
               strokeLinejoin="round"
               viewBox="0 0 24 24"
             >
-              <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="6" />
             </svg>
           }
           title="Rechnungsinformationen"

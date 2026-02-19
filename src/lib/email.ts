@@ -433,6 +433,63 @@ Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorie
 }
 
 /**
+ * Sendet einen 2FA-E-Mail-Code (Einmal-Code für Zwei-Faktor-Authentifizierung)
+ */
+export async function send2FACodeEmail(
+  email: string,
+  name: string | null,
+  code: string
+): Promise<void> {
+  const appName = process.env.APP_NAME || "Easy Pass"
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
+
+  const htmlContent = generateEmailTemplate({
+    headline: "Ihr 2FA-Code",
+    subline: "Verwenden Sie diesen Code zur Anmeldung oder zur Aktivierung der Zwei-Faktor-Authentifizierung.",
+    content: [
+      `Hallo ${name || email},`,
+      `Ihr Einmal-Code lautet:`,
+      `<strong style="font-size: 1.5rem; letter-spacing: 0.2em;">${code}</strong>`,
+      `Der Code ist 10 Minuten gültig.`,
+    ],
+    ctaText: "Zum Login",
+    ctaUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    infoBox: "Wenn Sie diesen Code nicht angefordert haben, ignorieren Sie diese E-Mail und prüfen Sie Ihr Konto.",
+    appName,
+    baseUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  })
+
+  const textContent = `Ihr 2FA-Code
+
+Hallo ${name || email},
+
+Ihr Einmal-Code: ${code}
+
+Der Code ist 10 Minuten gültig.
+
+Wenn Sie diesen Code nicht angefordert haben, ignorieren Sie diese E-Mail.`
+
+  try {
+    const transport = createEmailTransport()
+    await transport.sendMail({
+      from: fromEmail,
+      to: email,
+      subject: `Ihr 2FA-Code – ${appName}`,
+      text: textContent,
+      html: htmlContent,
+    })
+    if (process.env.SMTP_HOST) {
+      console.log(`2FA-Code-E-Mail gesendet an: ${email}`)
+    } else {
+      console.log(`[Dev] 2FA-Code an ${email}: ${code}`)
+    }
+  } catch (error) {
+    console.error("Fehler beim Senden der 2FA-Code-E-Mail:", error)
+    throw error
+  }
+}
+
+/**
  * Sendet eine Einladungs-E-Mail
  * 
  * Phase 1: Organisation lädt User per E-Mail ein

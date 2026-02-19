@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import '../../ui-parity/tokens.css'
 import { unstable_cache } from 'next/cache'
 import PublicLayoutClient from '@/components/PublicLayoutClient'
 import ConditionalLayout from '@/components/ConditionalLayout'
@@ -70,11 +71,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="de">
+    <html lang="de" style={{ margin: 0, padding: 0, overflowX: 'hidden' }}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
       </head>
-      <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <body style={{ margin: 0, padding: 0, fontFamily: 'var(--ui-font-body, system-ui, -apple-system, sans-serif)' }}>
         <PasswordProtectionWrapper>
           <PasswordProtectionSessionCheck />
           <ConditionalLayout>

@@ -15,6 +15,7 @@ import { editorialSpacing } from '../tokens/spacing'
 interface MultiQuestionPollRendererProps {
   block: UnifiedContentBlock
   dppId: string
+  fillCard?: boolean
 }
 
 interface Question {
@@ -22,7 +23,7 @@ interface Question {
   options: string[]
 }
 
-export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestionPollRendererProps) {
+export default function MultiQuestionPollRenderer({ block, dppId, fillCard = false }: MultiQuestionPollRendererProps) {
   const pollBlockId = block.id
   
   console.log('[MultiQuestionPollRenderer] Initialized', { 
@@ -248,13 +249,15 @@ export default function MultiQuestionPollRenderer({ block, dppId }: MultiQuestio
   const isLastQuestion = currentQuestionIndex === questions.length - 1
 
   return (
-    <div style={{ marginTop: editorialSpacing.md }}>
-      {/* Poll Container mit dunklem Hintergrund */}
+    <div style={fillCard ? { width: '100%' } : { marginTop: editorialSpacing.md }}>
+      {/* Poll Container – bei fillCard randlos, sonst mit Abstand und Radius */}
       <div style={{
         padding: editorialSpacing.xl,
         backgroundColor: editorialColors.background.dark,
-        borderRadius: '12px',
+        borderRadius: fillCard ? 0 : '12px',
         overflow: 'hidden',
+        minHeight: fillCard ? '100%' : undefined,
+        boxSizing: 'border-box',
       }}>
         {/* Fortschrittsanzeige - Kompakt */}
         <div style={{

@@ -11,6 +11,7 @@ import React, { useState } from 'react'
 import { UnifiedContentBlock } from '@/lib/content-adapter'
 import { editorialColors } from '../tokens/colors'
 import { editorialSpacing } from '../tokens/spacing'
+import { editorialTheme } from '../tokens/theme'
 import Image from '../Media'
 import { TextBlock, QuoteBlock, ListBlock } from '../Block'
 import { ChevronDownIcon, ChevronUpIcon } from './SectionIcons'
@@ -46,19 +47,27 @@ function StorytellingBlockPlakativ({
   const textSize = PLAKATIV_TEXT_FONT_SIZES[fontSize] ?? PLAKATIV_TEXT_FONT_SIZES.medium
   return (
     <div
+      className="fullbleed-mint-banner"
       style={{
         width: '100%',
-        maxWidth: '100%',
-        padding: 'clamp(2rem, 5vw, 3rem) clamp(1.5rem, 4vw, 2.5rem)',
-        backgroundColor: editorialColors.brand.accentVar,
-        textAlign,
+        padding: 'clamp(2.25rem, 5.5vw, 3.25rem) 0',
+        backgroundColor: 'hsl(165, 57%, 46%)',
         boxSizing: 'border-box',
       }}
     >
+      <div
+        className="editorial-mint-banner-inner"
+        style={{
+          maxWidth: '900px',
+          margin: '0 auto',
+          padding: '0 32px',
+          textAlign,
+        }}
+      >
       {heading && (
         <h2
           style={{
-            fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
+            fontSize: 'clamp(1.4375rem, 3.8vw, 2.125rem)',
             fontWeight: 700,
             color: 'rgba(255, 255, 255, 0.95)',
             margin: '0 0 1rem 0',
@@ -103,6 +112,7 @@ function StorytellingBlockPlakativ({
           </a>
         </p>
       )}
+      </div>
     </div>
   )
 }
@@ -125,12 +135,8 @@ function StorytellingBlockWithImage({
   if (!hasContent) return null
   return (
     <div
-      style={{
-        width: '100%',
-        position: 'relative',
-        minHeight: 'clamp(400px, 55vh, 600px)',
-        overflow: 'visible',
-      }}
+      className="storytelling-with-image"
+      style={{ width: '100%', position: 'relative', minHeight: 'clamp(400px, 55vh, 600px)' }}
     >
       {/* Hintergrundbild */}
       {imageUrl && (
@@ -138,51 +144,23 @@ function StorytellingBlockWithImage({
           src={imageUrl}
           alt=""
           role="presentation"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center',
-          }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
         />
       )}
-      {/* Editorial-Gradient: Dunkel links (für Lesbarkeit) → transparent rechts (Bild bleibt sichtbar) */}
+      {/* Mobile: Inline-Gradient (Desktop nutzt ::after) */}
       <div
+        className="storytelling-gradient-mobile"
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 55%, transparent 85%)',
+          background: 'linear-gradient(to right, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0) 65%)',
           pointerEvents: 'none',
         }}
       />
-      {/* Text: Linksbündig, Botschaft im Fokus – wie Editorial Cover / Apple Product Pages */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          right: '28%',
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          padding: 'clamp(2rem, 5vw, 3.5rem)',
-          textAlign: 'left',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '100%',
-            minWidth: 0,
-            maxHeight: 'min(90vh, 480px)',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-          }}
-        >
+      {/* Text: storytelling-content / storytelling-content-inner für 900px Grid auf Desktop */}
+      <div className="storytelling-content" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
+        <div className="storytelling-content-inner" style={{ padding: 'clamp(2rem, 5vw, 3.5rem)', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+        <div style={{ maxWidth: '100%', minWidth: 0, maxHeight: 'min(90vh, 480px)', overflowY: 'auto', overflowX: 'hidden' }}>
           {heading && (
             <h2
               style={{
@@ -233,6 +211,7 @@ function StorytellingBlockWithImage({
             </p>
           )}
         </div>
+        </div>
       </div>
     </div>
   )
@@ -242,9 +221,11 @@ interface CmsBlockRendererProps {
   block: UnifiedContentBlock
   visualStyle?: 'default' | 'accent' | 'background' | 'bordered'
   dppId?: string
+  /** Umfrage/Video: füllt Card komplett ohne grauen Rand */
+  fillCard?: boolean
 }
 
-export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId }: CmsBlockRendererProps) {
+export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId, fillCard = false }: CmsBlockRendererProps) {
   const blockType = block.blockKey // z.B. "text_block", "image_gallery", "timeline"
   const content = block.content?.fields || {}
   
@@ -364,37 +345,46 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
     )
   }
   
-  // Timeline Block
+  // Timeline Block – reduzierte visuelle Dominanz
   if (blockType === 'timeline') {
     const events = content.events?.value || []
     if (!Array.isArray(events) || events.length === 0) return null
-    
+    const lineLeft = 'calc(-0.5px + 2.1rem)'
     return (
-      <div style={{
+      <div className="editorial-timeline-desktop" style={{
         position: 'relative',
         paddingLeft: '2rem',
         marginTop: editorialSpacing.md,
       }}>
+        {/* Vertikale Linie – 1px, text-secondary bei 30% opacity */}
+        <div style={{
+          position: 'absolute',
+          left: lineLeft,
+          top: 0,
+          bottom: 0,
+          width: '1px',
+          backgroundColor: 'rgba(111, 111, 111, 0.3)',
+        }} />
         {events.map((event: any, index: number) => (
           <div key={index} style={{
             position: 'relative',
             paddingBottom: editorialSpacing.lg,
-            borderLeft: `2px solid ${editorialColors.border.light}`,
             paddingLeft: editorialSpacing.md,
-            marginLeft: '-2rem',
           }}>
+            {/* Dot: 10% kleiner (9px statt 10px) */}
             <div style={{
               position: 'absolute',
-              left: '-0.5rem',
+              left: 0,
               top: 0,
-              width: '1rem',
-              height: '1rem',
+              width: '9px',
+              height: '9px',
+              marginLeft: '-4.5px',
               borderRadius: '50%',
               backgroundColor: editorialColors.brand.accentVar,
               border: `2px solid ${editorialColors.background.primary}`,
             }} />
             <div style={{
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
               color: editorialColors.text.secondaryVar,
               marginBottom: '0.25rem',
             }}>
@@ -423,26 +413,33 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
     )
   }
   
-  // Accordion Block
+  // Accordion Block – SectionCard style, no divider-based separation
   if (blockType === 'accordion') {
     const items = content.items?.value || []
     if (!Array.isArray(items) || items.length === 0) return null
-    
+
+    const { spacing, radius, color, typography } = editorialTheme
     const [expandedIndex, setExpandedIndex] = useState<number | null>(0)
-    
+
     return (
-      <div style={{ marginTop: editorialSpacing.md }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
         {items.map((item: any, index: number) => (
-          <div key={index} style={{
-            borderBottom: `1px solid ${editorialColors.border.light}`,
-            marginBottom: editorialSpacing.sm,
-          }}>
+          <div
+            key={index}
+            style={{
+              backgroundColor: color.backgroundSubtle,
+              borderRadius: radius.md,
+              padding: spacing.md,
+              border: 'none',
+              boxShadow: 'none',
+            }}
+          >
             <button
               type="button"
               onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
               style={{
                 width: '100%',
-                padding: editorialSpacing.md,
+                padding: 0,
                 backgroundColor: 'transparent',
                 border: 'none',
                 textAlign: 'left',
@@ -450,37 +447,42 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                gap: spacing.sm,
               }}
             >
-              <span style={{
-                fontSize: '0.9375rem',
-                fontWeight: 500,
-                color: editorialColors.text.primary,
-              }}>
+              <span
+                style={{
+                  fontSize: typography.fontSizeSectionTitle,
+                  fontWeight: 500,
+                  color: color.textPrimary,
+                }}
+              >
                 {item.question || item.title}
               </span>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: editorialColors.text.secondaryVar,
-                transition: 'transform 0.2s ease',
-                transform: expandedIndex === index ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: editorialColors.text.secondaryVar,
+                  flexShrink: 0,
+                }}
+              >
                 {expandedIndex === index ? (
-                  <ChevronUpIcon size={16} color={editorialColors.text.secondaryVar} />
+                  <ChevronUpIcon size={14} color={editorialColors.text.secondaryVar} />
                 ) : (
-                  <ChevronDownIcon size={16} color={editorialColors.text.secondaryVar} />
+                  <ChevronDownIcon size={14} color={editorialColors.text.secondaryVar} />
                 )}
               </div>
             </button>
             {expandedIndex === index && (
-              <div style={{
-                padding: `0 ${editorialSpacing.md} ${editorialSpacing.md}`,
-                fontSize: '0.875rem',
-                color: editorialColors.text.secondaryVar,
-                lineHeight: 1.6,
-              }}>
+              <div
+                style={{
+                  paddingTop: spacing.md,
+                  fontSize: typography.fontSizeBody,
+                  color: color.textSecondary,
+                  lineHeight: typography.lineHeightBody,
+                }}
+              >
                 {item.answer || item.content}
               </div>
             )}
@@ -509,7 +511,7 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
       )
     }
     console.log('[CmsBlockRenderer] Rendering Multi-Question Poll mit dppId:', pollDppId)
-    return <MultiQuestionPollRenderer block={block} dppId={pollDppId} />
+    return <MultiQuestionPollRenderer block={block} dppId={pollDppId} fillCard={fillCard} />
   }
   
   // Legacy Quick Poll Block - Mit dunklem Hintergrund (wie in bisheriger public DPP view für Firmennamen)
@@ -795,12 +797,11 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
           style={{
             width: '100%',
             maxWidth: '100%',
-            marginTop: editorialSpacing.md,
+            marginTop: fillCard ? 0 : editorialSpacing.md,
             position: 'relative',
             aspectRatio: '16/9',
-            minHeight: 360,
             overflow: 'hidden',
-            borderRadius: '8px',
+            borderRadius: fillCard ? 0 : '8px',
           }}
         >
           <iframe
@@ -834,12 +835,11 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
           style={{
             width: '100%',
             maxWidth: '100%',
-            marginTop: editorialSpacing.md,
+            marginTop: fillCard ? 0 : editorialSpacing.md,
             position: 'relative',
             aspectRatio: '16/9',
-            minHeight: 360,
             overflow: 'hidden',
-            borderRadius: '8px',
+            borderRadius: fillCard ? 0 : '8px',
           }}
         >
           <iframe
@@ -860,15 +860,14 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
       )
     }
 
-    // Direkte Video-URL (mp4, webm etc.)
+    // Direkte Video-URL (mp4, webm etc.) – Höhe aus Video-Content, kein schwarzer Rahmen
     return (
       <div
         style={{
           width: '100%',
           maxWidth: '100%',
-          marginTop: editorialSpacing.md,
-          minHeight: 360,
-          borderRadius: '8px',
+          marginTop: fillCard ? 0 : editorialSpacing.md,
+          borderRadius: fillCard ? 0 : '8px',
           overflow: 'hidden',
         }}
       >
@@ -882,9 +881,9 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
           muted={autoplay}
           style={{
             width: '100%',
-            height: '100%',
-            minHeight: 360,
-            objectFit: 'cover',
+            height: 'auto',
+            display: 'block',
+            verticalAlign: 'bottom',
           }}
         />
       </div>

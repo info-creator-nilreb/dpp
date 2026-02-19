@@ -1,0 +1,60 @@
+/**
+ * UI-Parity Design Tokens - CSS Custom Properties
+ * Quelle: Extrahiert aus editorial/tokens und Login/Signup/App-Komponenten
+ */
+
+:root {
+  --ui-brand-primary: #0A0A0A;
+  --ui-brand-secondary: #7A7A7A;
+  --ui-brand-accent: #24c598;
+  --ui-text-primary: #0A0A0A;
+  --ui-text-secondary: #7A7A7A;
+  --ui-text-tertiary: #9A9A9A;
+  --ui-text-inverse: #FFFFFF;
+  --ui-bg-primary: #FFFFFF;
+  --ui-bg-secondary: #FAFAFA;
+  --ui-bg-tertiary: #F5F5F5;
+  --ui-bg-dark: #0A0A0A;
+  --ui-border-light: #E5E5E5;
+  --ui-border-medium: #CDCDCD;
+  --ui-border-dark: #7A7A7A;
+  --ui-success: #2E7D32;
+  --ui-success-bg: #E8F5E9;
+  --ui-success-border: #C8E6C9;
+  --ui-error: #C33;
+  --ui-error-bg: #FEE;
+  --ui-error-border: #FCC;
+  --ui-info: #2563EB;
+  --ui-font-heading: system-ui, -apple-system, sans-serif;
+  --ui-font-body: system-ui, -apple-system, sans-serif;
+  --ui-font-mono: ui-monospace, monospace;
+  --ui-font-size-xs: 0.75rem;
+  --ui-font-size-sm: 0.875rem;
+  --ui-font-size-base: 1rem;
+  --ui-font-size-lg: 1.125rem;
+  --ui-font-size-xl: 1.25rem;
+  --ui-font-size-2xl: 1.5rem;
+  --ui-font-size-3xl: 1.875rem;
+  --ui-font-size-4xl: 2.25rem;
+  --ui-font-size-5xl: 3rem;
+  --ui-font-weight-normal: 400;
+  --ui-font-weight-medium: 500;
+  --ui-font-weight-semibold: 600;
+  --ui-font-weight-bold: 700;
+  --ui-line-height-tight: 1.2;
+  --ui-line-height-snug: 1.4;
+  --ui-line-height-normal: 1.6;
+  --ui-line-height-relaxed: 1.8;
+  --ui-space-xs: 0.5rem;
+  --ui-space-sm: 1rem;
+  --ui-space-md: 1.5rem;
+  --ui-space-lg: 2rem;
+  --ui-space-xl: 3rem;
+  --ui-space-2xl: 4rem;
+  --ui-radius-sm: 6px;
+  --ui-radius-md: 8px;
+  --ui-radius-lg: 12px;
+  --ui-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --ui-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --ui-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}

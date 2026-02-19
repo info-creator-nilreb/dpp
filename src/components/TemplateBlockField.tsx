@@ -1059,6 +1059,7 @@ export default function TemplateBlockField({
             width: "100%",
             padding: "clamp(0.75rem, 2vw, 1rem)",
             fontSize: "clamp(0.9rem, 2vw, 1rem)",
+            fontFamily: "inherit",
             border: "1px solid #CDCDCD",
             borderRadius: "8px",
             boxSizing: "border-box"

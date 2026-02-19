@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dpp-saas.example.com/schemas/OBJ-007-dpp-media.json",
+  "title": "DppMedia",
+  "description": "OBJ-007: DPP Media – Medien pro DPP",
+  "type": "object",
+  "required": ["id", "dppId", "fileName", "fileType", "fileSize", "storageUrl"],
+  "properties": {
+    "id": { "type": "string", "description": "CUID" },
+    "dppId": { "type": "string", "description": "DPP ID" },
+    "fileName": { "type": "string" },
+    "fileType": { "type": "string", "description": "MIME type" },
+    "fileSize": { "type": "integer", "minimum": 0 },
+    "storageUrl": { "type": "string", "format": "uri-reference" },
+    "uploadedAt": { "type": "string", "format": "date-time" },
+    "sortOrder": { "type": "integer", "default": 0 },
+    "displayName": { "type": ["string", "null"] },
+    "role": { "type": ["string", "null"], "description": "primary_product_image, gallery_image, certificate, logo, etc." },
+    "blockId": { "type": ["string", "null"] },
+    "fieldId": { "type": ["string", "null"] },
+    "fieldKey": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

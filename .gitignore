@@ -46,3 +46,8 @@ next-env.d.ts
 # migration documentation (temporary)
 MIGRATION_TEMPLATE_VERSION_BINDING.md
 migrate-template-version-binding.sql
+
+# UI-Parität (Reports/Diffs; Snapshots-Baseline wird committed)
+/ui-parity/reports/html
+/ui-parity/reports/test-results
+/ui-parity/reports/results.json

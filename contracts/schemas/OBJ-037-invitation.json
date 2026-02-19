@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dpp-saas.example.com/schemas/OBJ-037-invitation.json",
+  "title": "Invitation",
+  "description": "OBJ-037: Invitation – Organisation lädt User per E-Mail ein",
+  "type": "object",
+  "required": ["id", "email", "organizationId", "role", "status", "token", "expiresAt"],
+  "properties": {
+    "id": { "type": "string", "description": "CUID" },
+    "email": { "type": "string", "format": "email" },
+    "organizationId": { "type": "string" },
+    "role": { "type": "string", "enum": ["ORG_ADMIN", "EDITOR", "VIEWER"] },
+    "status": { "type": "string", "enum": ["pending", "accepted", "expired"] },
+    "token": { "type": "string", "description": "Unique invitation token" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "invitedById": { "type": ["string", "null"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

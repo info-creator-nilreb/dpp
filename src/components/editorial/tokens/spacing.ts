@@ -21,6 +21,16 @@ export const editorialSpacing = {
     normal: '6rem',     // 96px - standard sections
     loose: '8rem',      // 128px - hero sections
   },
+
+  // Vertical rhythm refinement (mobile DPP public)
+  introToData: '40px',      // Spine/story → first data block
+  beforeMehrwert: '48px',   // Mehrwert sections breathe more
+  betweenSections: '24px',  // Between individual sections
+
+  // Desktop (>= 1024px)
+  betweenSectionsDesktop: '48px',
+  betweenMajorGroups: '64px',
+  gridColumnGap: '48px',
 } as const
 
 export type EditorialSpacing = typeof editorialSpacing

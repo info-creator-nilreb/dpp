@@ -161,7 +161,9 @@ export async function updateCompanyDetails(
     legalName?: string
     companyType?: string
     vatId?: string
+    eori?: string
     commercialRegisterId?: string
+    registrationCountry?: string
     addressStreet?: string
     addressZip?: string
     addressCity?: string
@@ -175,7 +177,9 @@ export async function updateCompanyDetails(
       legalName: data.legalName,
       companyType: data.companyType,
       vatId: data.vatId,
+      eori: data.eori,
       commercialRegisterId: data.commercialRegisterId,
+      registrationCountry: data.registrationCountry,
       addressStreet: data.addressStreet,
       addressZip: data.addressZip,
       addressCity: data.addressCity,

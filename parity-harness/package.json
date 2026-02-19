@@ -1,0 +1,20 @@
+{
+  "name": "parity-harness",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "parity": "tsx src/index.ts",
+    "parity:ci": "tsx src/index.ts --ci",
+    "build": "tsc",
+    "test": "tsx src/index.ts --dry-run"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.5.0"
+  }
+}

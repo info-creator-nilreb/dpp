@@ -12,7 +12,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { updateCompanyDetails, getOrganizationWithDetails } from "@/lib/phase1/organization"
 import { canEditOrganization, getUserRole } from "@/lib/phase1/permissions"
-import { logCompanyDetailsUpdated } from "@/lib/phase1/audit"
+import { logCompanyDetailsUpdated, logOrganizationUpdated } from "@/lib/phase1/audit"
 
 /**
  * GET /api/app/organization/company-details
@@ -51,13 +51,23 @@ export async function GET(request: Request) {
       )
     }
 
+    const canEdit = await canEditOrganization(session.user.id, user.organizationId)
+
     return NextResponse.json(
       {
+        organization: {
+          name: organization.name,
+          status: organization.status,
+          createdAt: organization.createdAt.toISOString(),
+          canEdit,
+        },
         companyDetails: {
           legalName: organization.legalName,
           companyType: organization.companyType,
           vatId: organization.vatId,
+          eori: organization.eori,
           commercialRegisterId: organization.commercialRegisterId,
+          registrationCountry: organization.registrationCountry,
           addressStreet: organization.addressStreet,
           addressZip: organization.addressZip,
           addressCity: organization.addressCity,
@@ -115,10 +125,13 @@ export async function PUT(request: Request) {
 
     const body = await request.json()
     const {
+      name: nameInput,
       legalName,
       companyType,
       vatId,
+      eori,
       commercialRegisterId,
+      registrationCountry: registrationCountryInput,
       addressStreet,
       addressZip,
       addressCity,
@@ -126,14 +139,22 @@ export async function PUT(request: Request) {
       country,
     } = body
 
-    // Hole aktuelles Profil für Audit Log
+    // registration_country immer setzen: explizit oder Fallback auf Adressland (ISO-2)
+    const countryVal = country != null ? String(country).trim() : ""
+    const registrationCountryVal = registrationCountryInput != null ? String(registrationCountryInput).trim() : ""
+    const registrationCountry = registrationCountryVal !== "" ? registrationCountryVal : (countryVal !== "" ? countryVal : null)
+
+    // Hole aktuelle Organisation für Audit Logs
     const currentOrg = await prisma.organization.findUnique({
       where: { id: user.organizationId },
       select: {
+        name: true,
         legalName: true,
         companyType: true,
         vatId: true,
+        eori: true,
         commercialRegisterId: true,
+        registrationCountry: true,
         addressStreet: true,
         addressZip: true,
         addressCity: true,
@@ -149,23 +170,49 @@ export async function PUT(request: Request) {
       )
     }
 
-    // Aktualisiere Company Details
+    const actorRole = await getUserRole(session.user.id, user.organizationId)
+
+    // Optional: Organisationsname aktualisieren (aus ehem. Allgemeine Einstellungen)
+    if (nameInput !== undefined) {
+      const name = typeof nameInput === "string" ? nameInput.trim() : ""
+      if (!name) {
+        return NextResponse.json(
+          { error: "Organisationsname ist erforderlich" },
+          { status: 400 }
+        )
+      }
+      if (currentOrg.name !== name) {
+        await prisma.organization.update({
+          where: { id: user.organizationId },
+          data: { name },
+        })
+        await logOrganizationUpdated(
+          session.user.id,
+          user.organizationId,
+          actorRole || "ORG_ADMIN",
+          "name",
+          currentOrg.name,
+          name
+        )
+      }
+    }
+
+    // Aktualisiere Company Details (registration_country immer gesetzt, Fallback Adressland)
     await updateCompanyDetails(user.organizationId, {
       legalName,
       companyType,
       vatId,
+      eori,
       commercialRegisterId,
+      registrationCountry: registrationCountry ?? undefined,
       addressStreet,
       addressZip,
       addressCity,
       addressCountry,
-      country,
+      country: countryVal ?? undefined,
     })
 
-    // Hole Rolle für Audit Log
-    const actorRole = await getUserRole(session.user.id, user.organizationId)
-
-    // Audit Log
+    // Audit Log für Firmendaten
     await logCompanyDetailsUpdated(
       user.organizationId,
       session.user.id,
@@ -175,12 +222,14 @@ export async function PUT(request: Request) {
         legalName,
         companyType,
         vatId,
+        eori,
         commercialRegisterId,
+        registrationCountry,
         addressStreet,
         addressZip,
         addressCity,
         addressCountry,
-        country,
+        country: countryVal || null,
       }
     )
 

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dpp-saas.example.com/schemas/OBJ-009-dpp-version-media.json",
+  "title": "DppVersionMedia",
+  "description": "OBJ-009: DPP Version Media – Medien pro publizierter Version",
+  "type": "object",
+  "required": ["id", "versionId", "fileName", "fileType", "fileSize", "storageUrl"],
+  "properties": {
+    "id": { "type": "string", "description": "CUID" },
+    "versionId": { "type": "string" },
+    "fileName": { "type": "string" },
+    "fileType": { "type": "string" },
+    "fileSize": { "type": "integer", "minimum": 0 },
+    "storageUrl": { "type": "string", "format": "uri-reference" },
+    "role": { "type": ["string", "null"] },
+    "blockId": { "type": ["string", "null"] },
+    "fieldKey": { "type": ["string", "null"] },
+    "uploadedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

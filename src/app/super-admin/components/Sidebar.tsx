@@ -167,17 +167,7 @@ function SidebarContent({
         {isCollapsed ? (
           <TPassLogo size={32} color="#24c598" iconOnly={true} />
         ) : (
-          <>
-            <TPassLogo size={32} color="#24c598" iconOnly={false} textColor="#FFFFFF" />
-            <span style={{ 
-              marginLeft: "auto",
-              fontSize: "0.875rem", 
-              fontWeight: "500", 
-              color: "rgba(255, 255, 255, 0.6)",
-            }}>
-              Super Admin
-            </span>
-          </>
+          <TPassLogo size={32} color="#24c598" iconOnly={false} textColor="#FFFFFF" />
         )}
       </div>
 

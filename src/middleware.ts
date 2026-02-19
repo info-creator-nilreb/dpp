@@ -99,6 +99,7 @@ export const config = {
   matcher: [
     "/super-admin/:path*",
     "/api/super-admin/:path*",
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)).*)"
+    // Auth.js braucht JSON-Antworten; /api/auth/* aus Middleware ausnehmen, sonst kann HTML (z. B. Fehlerseite) zurückkommen → ClientFetchError
+    "/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)).*)"
   ]
 }
