@@ -131,8 +131,10 @@ function LoginForm() {
           }
         }
         
-        // Fehlermeldung anzeigen
-        if (requires2FA && totpCode) {
+        // Fehlermeldung anzeigen (z. B. Datenbankfehler von authorize())
+        if (typeof result?.error === "string" && result.error !== "CredentialsSignin" && result.error.length > 0) {
+          setError(result.error)
+        } else if (requires2FA && totpCode) {
           setError("Ungültiger 2FA-Code. Bitte versuchen Sie es erneut.")
         } else {
           setError("Ungültige E-Mail oder Passwort")

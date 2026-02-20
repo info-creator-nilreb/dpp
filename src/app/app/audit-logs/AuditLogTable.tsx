@@ -5,7 +5,7 @@
  */
 
 import { AuditLog } from "./AuditLogsClient"
-import { getActionLabel, getEntityLabel, getSourceLabel } from "@/lib/audit/audit-labels"
+import { getActionLabel, getEntityLabel } from "@/lib/audit/audit-labels"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 
 interface AuditLogTableProps {
@@ -43,19 +43,6 @@ export default function AuditLogTable({
     return "#6B7280" // Default: gray
   }
 
-  const getSourceBadgeColor = (source: string) => {
-    switch (source) {
-      case "AI":
-        return "#24c598"
-      case "SYSTEM":
-        return "#6B7280"
-      case "API":
-        return "#3B82F6"
-      default:
-        return "#10B981"
-    }
-  }
-
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)
     return date.toLocaleString("de-DE", {
@@ -66,12 +53,6 @@ export default function AuditLogTable({
       minute: "2-digit",
       second: "2-digit",
     })
-  }
-
-  const truncateValue = (value: any, maxLength: number = 50) => {
-    if (!value) return "-"
-    const str = typeof value === "string" ? value : JSON.stringify(value)
-    return str.length > maxLength ? str.substring(0, maxLength) + "..." : str
   }
 
   if (loading) {
@@ -98,32 +79,35 @@ export default function AuditLogTable({
       width: "100%",
       maxWidth: "100%",
       boxSizing: "border-box",
-      overflowX: "auto"
     }}>
-      {/* Desktop Table */}
-      <div style={{
-        backgroundColor: "#FFFFFF",
-        borderRadius: "8px",
-        border: "1px solid #E5E5E5",
-        overflow: "hidden",
-        display: "none",
-        width: "100%",
-        maxWidth: "100%",
-        boxSizing: "border-box"
-      }}
-      className="audit-log-table-desktop"
+      {/* Desktop Table – feste Spaltenbreiten, passt bei ausgeklappter Sidebar ohne horizontales Scrollen */}
+      <div
+        className="audit-log-table-desktop"
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: "8px",
+          border: "1px solid #E5E5E5",
+          overflow: "hidden",
+          display: "none",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
       >
-        <div style={{ overflowX: "auto", width: "100%" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "800px" }}>
+        <div style={{ width: "100%", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "28%" }} />
+            <col style={{ width: "22%" }} />
+            <col style={{ width: "32%" }} />
+          </colgroup>
           <thead>
             <tr style={{ backgroundColor: "#F9F9F9", borderBottom: "1px solid #E5E5E5" }}>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Zeit</th>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Ausführende Person</th>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Aktion</th>
               <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Objekt</th>
-              <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Feld</th>
-              <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Änderung</th>
-              <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#0A0A0A" }}>Quelle</th>
             </tr>
           </thead>
           <tbody>
@@ -143,7 +127,7 @@ export default function AuditLogTable({
                   e.currentTarget.style.backgroundColor = "#FFFFFF"
                 }}
               >
-                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A", fontFamily: "monospace" }}>
+                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A", fontFamily: "inherit" }}>
                   {formatTimestamp(log.timestamp)}
                 </td>
                 <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A" }}>
@@ -193,35 +177,6 @@ export default function AuditLogTable({
                 </td>
                 <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A" }}>
                   {getEntityLabel(log.entityType)} {log.entityId ? `(${log.entityId.substring(0, 8)}...)` : ""}
-                </td>
-                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#7A7A7A" }}>
-                  {log.fieldName || "-"}
-                </td>
-                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#0A0A0A", fontFamily: "monospace", maxWidth: "200px" }}>
-                  {log.oldValue && log.newValue ? (
-                    <span>
-                      <span style={{ color: "#EF4444" }}>{truncateValue(log.oldValue)}</span>
-                      {" → "}
-                      <span style={{ color: "#10B981" }}>{truncateValue(log.newValue)}</span>
-                    </span>
-                  ) : log.newValue ? (
-                    <span style={{ color: "#10B981" }}>{truncateValue(log.newValue)}</span>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-                <td style={{ padding: "0.75rem" }}>
-                  <span style={{
-                    display: "inline-block",
-                    padding: "0.25rem 0.5rem",
-                    borderRadius: "4px",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    color: "#FFFFFF",
-                    backgroundColor: getSourceBadgeColor(log.source)
-                  }}>
-                    {getSourceLabel(log.source)}
-                  </span>
                 </td>
               </tr>
             ))}

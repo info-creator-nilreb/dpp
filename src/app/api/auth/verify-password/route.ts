@@ -45,10 +45,16 @@ export async function POST(request: Request) {
         }
       })
     } catch (dbError: any) {
-      console.error("[VERIFY_PASSWORD] Database error:", dbError)
+      const msg = dbError?.message ?? String(dbError)
+      const code = dbError?.code ?? ""
+      console.error("[VERIFY_PASSWORD] Database error:", msg, code, dbError?.meta ?? "")
       // Bei Datenbankfehlern (z.B. Connection Pool) 500 zurückgeben, nicht 401
+      const isDev = process.env.NODE_ENV === "development"
+      const userMessage = isDev
+        ? `Datenbankfehler: ${msg}`
+        : "Datenbankfehler - bitte versuchen Sie es erneut"
       return NextResponse.json(
-        { error: "Datenbankfehler - bitte versuchen Sie es erneut" },
+        { error: userMessage },
         { status: 500 }
       )
     }

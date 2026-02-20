@@ -166,7 +166,7 @@ export default function AuditLogDetailDrawer({
                 backgroundColor: "#F9F9F9",
                 padding: "1rem",
                 borderRadius: "8px",
-                fontFamily: "monospace",
+                fontFamily: "inherit",
                 fontSize: "0.875rem",
               }}>
                 {log.oldValue && (
@@ -257,7 +257,7 @@ export default function AuditLogDetailDrawer({
                 {log.aiPromptId && (
                   <div>
                     <strong style={{ color: "#7A7A7A" }}>Prompt ID:</strong>{" "}
-                    <span style={{ color: "#0A0A0A", fontFamily: "monospace" }}>{log.aiPromptId}</span>
+                    <span style={{ color: "#0A0A0A", fontFamily: "inherit" }}>{log.aiPromptId}</span>
                   </div>
                 )}
                 {log.aiInputSources && log.aiInputSources.length > 0 && (
@@ -326,7 +326,7 @@ export default function AuditLogDetailDrawer({
               </h3>
               <div>
                 <strong style={{ color: "#7A7A7A" }}>Version ID:</strong>{" "}
-                <span style={{ color: "#0A0A0A", fontFamily: "monospace" }}>{log.versionId}</span>
+                <span style={{ color: "#0A0A0A", fontFamily: "inherit" }}>{log.versionId}</span>
               </div>
             </section>
           )}
@@ -347,7 +347,7 @@ export default function AuditLogDetailDrawer({
               borderRadius: "8px",
               overflow: "auto",
               fontSize: "0.75rem",
-              fontFamily: "monospace",
+              fontFamily: "inherit",
               maxHeight: "300px",
             }}>
               {JSON.stringify(log, null, 2)}

@@ -82,7 +82,7 @@ export default function AuditLogCard({ log, onClick }: AuditLogCardProps) {
         <span style={{
           fontSize: "0.75rem",
           color: "#7A7A7A",
-          fontFamily: "monospace",
+          fontFamily: "inherit",
           whiteSpace: "nowrap"
         }}>
           {formatTimestamp(log.timestamp)}

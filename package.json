@@ -12,7 +12,8 @@
     "db:check": "./scripts/check-database-environment.sh",
     "db:push": "./scripts/safe-prisma-wrapper.sh db push",
     "db:migrate:dev": "./scripts/safe-prisma-wrapper.sh migrate dev",
-    "db:migrate:deploy": "echo '⚠️  Verwende ./scripts/migrate-production.sh für Production-Migrationen' && exit 1"
+    "db:migrate:deploy": "echo '⚠️  Verwende ./scripts/migrate-production.sh für Production-Migrationen' && exit 1",
+    "db:migrate:deploy:local": "./scripts/migrate-deploy-local.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

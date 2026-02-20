@@ -37,23 +37,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // STEP 2: User aus Datenbank laden
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-          select: {
-            id: true,
-            email: true,
-            password: true,
-            name: true,
-            systemRole: true,
-            isPlatformAdmin: true,
-            emailVerified: true,
-            totpEnabled: true,
-            totpSecret: true,
-            twoFactorMethod: true,
-            email2FACodeHash: true,
-            email2FACodeExpiresAt: true,
-          }
-        })
+        let user
+        try {
+          user = await prisma.user.findUnique({
+            where: { email: credentials.email as string },
+            select: {
+              id: true,
+              email: true,
+              password: true,
+              name: true,
+              systemRole: true,
+              isPlatformAdmin: true,
+              emailVerified: true,
+              totpEnabled: true,
+              totpSecret: true,
+              twoFactorMethod: true,
+              email2FACodeHash: true,
+              email2FACodeExpiresAt: true,
+            }
+          })
+        } catch (dbError: any) {
+          const msg = dbError?.message ?? String(dbError)
+          const code = dbError?.code ?? ""
+          console.error("[AUTH] Database error in authorize():", msg, code, dbError?.meta ?? "")
+          throw new Error(process.env.NODE_ENV === "development" ? `Datenbankfehler: ${msg}` : "Datenbankfehler")
+        }
 
         if (!user) {
           console.error("[AUTH] User nicht gefunden")
