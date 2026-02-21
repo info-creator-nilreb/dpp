@@ -72,11 +72,11 @@ export default function AppLayoutClient({
               }
               @media (max-width: 767px) {
                 .app-main-content {
-                  padding-top: 57px !important;
+                  padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important;
                 }
                 .app-main-content.dpp-editor-page {
                   padding: 0 !important;
-                  padding-top: 57px !important;
+                  padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important;
                 }
               }
             `

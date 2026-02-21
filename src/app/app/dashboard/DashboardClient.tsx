@@ -292,7 +292,7 @@ export default function DashboardClient() {
             </div>
             <div
               style={{
-                overflow: "hidden",
+                overflow: "visible",
                 transition: "max-height 250ms ease",
                 maxHeight: activeKpi ? 320 : 0,
                 marginTop: activeKpi ? SUBSECTION_GAP : 0,

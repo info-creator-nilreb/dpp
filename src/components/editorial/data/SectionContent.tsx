@@ -206,7 +206,7 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
                               transition: 'background-color 0.2s, border-color 0.2s',
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(36, 197, 152, 0.16)'
+                              e.currentTarget.style.backgroundColor = editorialTheme.color.accentSubtleHover
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.backgroundColor = editorialTheme.color.accentSubtle

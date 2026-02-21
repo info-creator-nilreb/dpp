@@ -87,12 +87,17 @@ export default function KpiChart({
   label: string;
 }) {
   const [tooltip, setTooltip] = useState<{
-    clientX: number;
-    clientY: number;
+    centered?: boolean;
+    left?: number;
+    top?: number;
     date: string;
     current: number;
     previous: number;
   } | null>(null);
+
+  const TOOLTIP_PADDING = 16;
+  const TOOLTIP_APPROX_WIDTH = 260;
+  const MOBILE_BREAKPOINT = 480;
 
   const key = kpiId === "avgScans" ? "scans" : METRIC_KEYS[kpiId];
   const hasData = Boolean(timeSeries?.dates?.length);
@@ -101,6 +106,42 @@ export default function KpiChart({
   const dates = hasData ? timeSeries!.dates : [];
   const nCurrent = current.length;
   const nPrevious = previous.length;
+
+  const updateTooltipFromPosition = useCallback(
+    (clientX: number, clientY: number, idx: number) => {
+      if (idx < 0 || !dates[idx]) return;
+      const vp =
+        typeof window !== "undefined" && window.visualViewport
+          ? { w: window.visualViewport.width }
+          : null;
+      const w = vp ? vp.w : (typeof window !== "undefined" ? window.innerWidth : 400);
+      const isMobile = w < MOBILE_BREAKPOINT;
+      if (isMobile) {
+        setTooltip({
+          centered: true,
+          date: dates[idx],
+          current: current[idx] ?? 0,
+          previous: previous[Math.min(idx, nPrevious - 1)] ?? 0,
+        });
+        return;
+      }
+      const h =
+        typeof window !== "undefined" && window.visualViewport
+          ? window.visualViewport.height
+          : (typeof window !== "undefined" ? window.innerHeight : 600);
+      const left = Math.max(TOOLTIP_PADDING, Math.min(clientX + TOOLTIP_PADDING, w - TOOLTIP_APPROX_WIDTH));
+      const top = Math.max(TOOLTIP_PADDING, Math.min(clientY + 8, h - 180));
+      setTooltip({
+        centered: false,
+        left,
+        top,
+        date: dates[idx],
+        current: current[idx] ?? 0,
+        previous: previous[Math.min(idx, nPrevious - 1)] ?? 0,
+      });
+    },
+    [dates, current, previous, nPrevious]
+  );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
@@ -112,20 +153,29 @@ export default function KpiChart({
         Math.max(0, Math.round(percent * (nCurrent - 1))),
         nCurrent - 1
       );
-      if (idx >= 0 && dates[idx]) {
-        setTooltip({
-          clientX: e.clientX,
-          clientY: e.clientY,
-          date: dates[idx],
-          current: current[idx] ?? 0,
-          previous: previous[Math.min(idx, nPrevious - 1)] ?? 0,
-        });
-      }
+      updateTooltipFromPosition(e.clientX, e.clientY, idx);
     },
-    [dates, current, previous, nCurrent, nPrevious]
+    [dates, nCurrent, updateTooltipFromPosition]
   );
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent<SVGSVGElement>) => {
+      if (nCurrent === 0 || dates.length === 0 || !e.touches[0]) return;
+      const touch = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const percent = Math.max(0, Math.min(1, (x - PADDING.left) / INNER_W));
+      const idx = Math.min(Math.max(0, Math.round(percent * (nCurrent - 1))), nCurrent - 1);
+      updateTooltipFromPosition(touch.clientX, touch.clientY, idx);
+    },
+    [dates, nCurrent, updateTooltipFromPosition]
+  );
+
+  const handleTouchEnd = useCallback(() => setTooltip(null), []);
+
+  const clipId = useId();
 
   if (!timeSeries || !timeSeries.dates.length) {
     return (
@@ -187,7 +237,6 @@ export default function KpiChart({
 
   const yTicks = getYTicks(max);
   const xTickIndices = getXTickIndices(dates.length);
-  const clipId = useId();
 
   return (
     <div
@@ -197,6 +246,9 @@ export default function KpiChart({
         borderRadius: "8px",
         border: "1px solid #e2e8f0",
         position: "relative",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -217,6 +269,9 @@ export default function KpiChart({
         style={{ overflow: "visible" }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchMove}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <defs>
           <clipPath id={clipId}>
@@ -263,17 +318,17 @@ export default function KpiChart({
           <path
             d={previousPath}
             fill="none"
-            stroke="#94a3b8"
-            strokeWidth="1.25"
-            strokeDasharray="4 3"
+            stroke="#64748b"
+            strokeWidth="1.5"
+            strokeDasharray="5 4"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
           <path
             d={currentPath}
             fill="none"
-            stroke="#3b82f6"
-            strokeWidth="1.5"
+            stroke="#24c598"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -285,7 +340,7 @@ export default function KpiChart({
                 cx={toXCurrent(idx)}
                 cy={toY(current[idx])}
                 r={4}
-                fill="#3b82f6"
+                fill="#24c598"
                 stroke="#fff"
                 strokeWidth={1.5}
               />
@@ -299,12 +354,9 @@ export default function KpiChart({
             ? (tooltip.current > 0 ? 100 : 0)
             : Math.round(((tooltip.current - tooltip.previous) / tooltip.previous) * 100);
         const pctPositive = pct >= 0;
-        return (
+        const content = (
           <div
             style={{
-              position: "fixed",
-              left: tooltip.clientX + 12,
-              top: tooltip.clientY + 8,
               padding: "10px 14px",
               backgroundColor: "#fff",
               color: "#0f172a",
@@ -312,8 +364,9 @@ export default function KpiChart({
               borderRadius: "8px",
               boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
               pointerEvents: "none",
-              zIndex: 9999,
               minWidth: 180,
+              maxWidth: "calc(100vw - 32px)",
+              boxSizing: "border-box",
             }}
           >
             <div style={{ fontWeight: 600, marginBottom: 8 }}>{label}</div>
@@ -323,7 +376,7 @@ export default function KpiChart({
                   width: 8,
                   height: 8,
                   borderRadius: "50%",
-                  backgroundColor: "#3b82f6",
+                  backgroundColor: "#24c598",
                   flexShrink: 0,
                 }}
               />
@@ -333,7 +386,7 @@ export default function KpiChart({
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span
                 style={{
-                  color: pctPositive ? "#059669" : "#dc2626",
+                  color: pctPositive ? "#24c598" : "#dc2626",
                   fontWeight: 500,
                   display: "inline-flex",
                   alignItems: "center",
@@ -349,12 +402,36 @@ export default function KpiChart({
                   width: 8,
                   height: 8,
                   borderRadius: "50%",
-                  backgroundColor: "#94a3b8",
+                  backgroundColor: "#64748b",
                   flexShrink: 0,
                 }}
               />
               <span>Vorperiode: {tooltip.previous}</span>
             </div>
+          </div>
+        );
+        return tooltip.centered ? (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 9999,
+            }}
+          >
+            {content}
+          </div>
+        ) : (
+          <div
+            style={{
+              position: "fixed",
+              left: tooltip.left ?? 0,
+              top: tooltip.top ?? 0,
+              zIndex: 9999,
+            }}
+          >
+            {content}
           </div>
         );
       })()}
@@ -374,9 +451,19 @@ export default function KpiChart({
             {formatDateLong(dates[0])}–{formatDateLong(dates[dates.length - 1])}
           </div>
         )}
-        <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
-          <span>— Aktueller Zeitraum</span>
-          <span>— Vorperiode</span>
+        <div style={{ display: "flex", gap: 20, justifyContent: "center", flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width={24} height={8} style={{ flexShrink: 0 }}>
+              <line x1={0} y1={4} x2={24} y2={4} stroke="#24c598" strokeWidth={2} strokeLinecap="round" />
+            </svg>
+            Aktueller Zeitraum
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width={24} height={8} style={{ flexShrink: 0 }}>
+              <line x1={0} y1={4} x2={24} y2={4} stroke="#64748b" strokeWidth={1.5} strokeDasharray="5 4" strokeLinecap="round" />
+            </svg>
+            Vorperiode
+          </span>
         </div>
       </div>
     </div>

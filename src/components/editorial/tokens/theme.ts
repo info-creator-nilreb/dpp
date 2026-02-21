@@ -68,10 +68,13 @@ export const color = {
   textSecondary: '#6F6F6F',
   textLabel: '#777777',
   accent: editorialColors.brand.accentVar,
-  accentSubtle: 'rgba(36, 197, 152, 0.12)',
+  /** Accent at 12% opacity – folgt --editorial-accent aus Styling */
+  accentSubtle: 'color-mix(in srgb, var(--editorial-accent, #24c598) 12%, transparent)',
   accentRaw: '#24c598',
-  /** Accent at 85% intensity for subdued use */
-  accent85: 'rgba(36, 197, 152, 0.85)',
+  /** Accent at 85% opacity – folgt --editorial-accent aus Styling */
+  accent85: 'color-mix(in srgb, var(--editorial-accent, #24c598) 85%, transparent)',
+  /** Accent at 16% opacity für Hover – folgt --editorial-accent */
+  accentSubtleHover: 'color-mix(in srgb, var(--editorial-accent, #24c598) 16%, transparent)',
 } as const
 
 // ---------------------------------------------------------------------------

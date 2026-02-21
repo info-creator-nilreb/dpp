@@ -30,6 +30,7 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "1rem 1.5rem",
+          paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))",
           backgroundColor: "#FFFFFF",
           borderBottom: "1px solid #E5E5E5",
           position: "fixed",
