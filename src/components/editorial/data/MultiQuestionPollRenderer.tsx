@@ -16,6 +16,8 @@ interface MultiQuestionPollRendererProps {
   block: UnifiedContentBlock
   dppId: string
   fillCard?: boolean
+  /** true = Vorschau (Editor/Version) – Antworten werden nicht gespeichert */
+  isPreview?: boolean
 }
 
 interface Question {
@@ -23,7 +25,7 @@ interface Question {
   options: string[]
 }
 
-export default function MultiQuestionPollRenderer({ block, dppId, fillCard = false }: MultiQuestionPollRendererProps) {
+export default function MultiQuestionPollRenderer({ block, dppId, fillCard = false, isPreview = false }: MultiQuestionPollRendererProps) {
   const pollBlockId = block.id
   
   console.log('[MultiQuestionPollRenderer] Initialized', { 
@@ -116,6 +118,12 @@ export default function MultiQuestionPollRenderer({ block, dppId, fillCard = fal
   }
 
   const handleSubmit = async () => {
+    // In der Vorschau keine Antworten speichern – nur veröffentlichte DPPs zählen
+    if (isPreview) {
+      setError('In der Vorschau können keine Antworten gespeichert werden. Nutzen Sie die veröffentlichte Ansicht.')
+      return
+    }
+
     console.log('[MultiQuestionPollRenderer] handleSubmit called', { pollBlockId, dppId, answers })
     
     // Prüfe ob alle Fragen beantwortet wurden

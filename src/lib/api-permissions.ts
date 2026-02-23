@@ -6,6 +6,7 @@ import {
   canEditSection,
   canManageOrganization,
   isSuperAdmin,
+  canViewDppStats,
 } from "@/lib/permissions"
 import { DPP_SECTIONS, type DppSection } from "@/lib/dpp-sections"
 
@@ -35,6 +36,33 @@ export async function requireViewDPP(
   if (!canView) {
     return NextResponse.json(
       { error: "Kein Zugriff auf diesen DPP" },
+      { status: 403 }
+    )
+  }
+
+  return null
+}
+
+/**
+ * Prüft ob User DPP-Statistiken ansehen kann
+ * Super-Admin und Supplier haben keinen Zugriff
+ */
+export async function requireViewDppStats(
+  dppId: string,
+  userId?: string
+): Promise<NextResponse | null> {
+  if (!userId) {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
+    }
+    userId = session.user.id
+  }
+
+  const canView = await canViewDppStats(userId, dppId)
+  if (!canView) {
+    return NextResponse.json(
+      { error: "Kein Zugriff auf die Statistiken dieses DPPs" },
       { status: 403 }
     )
   }

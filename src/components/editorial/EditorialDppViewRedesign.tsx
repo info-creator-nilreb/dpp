@@ -92,6 +92,7 @@ export default function EditorialDppViewRedesign({
       <DataSectionsContainer 
         blocks={blocks} 
         dppId={dppId}
+        isPreview={isPreview}
         hasStoryText={
           !!description ||
           blocks.some(b => 

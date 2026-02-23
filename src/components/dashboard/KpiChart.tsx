@@ -93,6 +93,8 @@ export default function KpiChart({
     date: string;
     current: number;
     previous: number;
+    /** Exakte X-Position in ViewBox-Koordinaten (wie bei Recharts/Statistik) */
+    hoverX?: number;
   } | null>(null);
 
   const TOOLTIP_PADDING = 16;
@@ -108,7 +110,7 @@ export default function KpiChart({
   const nPrevious = previous.length;
 
   const updateTooltipFromPosition = useCallback(
-    (clientX: number, clientY: number, idx: number) => {
+    (clientX: number, clientY: number, idx: number, hoverXViewBox: number) => {
       if (idx < 0 || !dates[idx]) return;
       const vp =
         typeof window !== "undefined" && window.visualViewport
@@ -116,13 +118,14 @@ export default function KpiChart({
           : null;
       const w = vp ? vp.w : (typeof window !== "undefined" ? window.innerWidth : 400);
       const isMobile = w < MOBILE_BREAKPOINT;
+      const base = {
+        date: dates[idx],
+        current: current[idx] ?? 0,
+        previous: previous[Math.min(idx, nPrevious - 1)] ?? 0,
+        hoverX: hoverXViewBox,
+      };
       if (isMobile) {
-        setTooltip({
-          centered: true,
-          date: dates[idx],
-          current: current[idx] ?? 0,
-          previous: previous[Math.min(idx, nPrevious - 1)] ?? 0,
-        });
+        setTooltip({ centered: true, ...base });
         return;
       }
       const h =
@@ -131,31 +134,37 @@ export default function KpiChart({
           : (typeof window !== "undefined" ? window.innerHeight : 600);
       const left = Math.max(TOOLTIP_PADDING, Math.min(clientX + TOOLTIP_PADDING, w - TOOLTIP_APPROX_WIDTH));
       const top = Math.max(TOOLTIP_PADDING, Math.min(clientY + 8, h - 180));
-      setTooltip({
-        centered: false,
-        left,
-        top,
-        date: dates[idx],
-        current: current[idx] ?? 0,
-        previous: previous[Math.min(idx, nPrevious - 1)] ?? 0,
-      });
+      setTooltip({ centered: false, left, top, ...base });
     },
     [dates, current, previous, nPrevious]
   );
+
+  /** Pixel → ViewBox mit preserveAspectRatio xMidYMid meet (Letterboxing beachten) */
+  const pixelToViewBoxX = useCallback((pixelX: number, rect: DOMRect) => {
+    const vbW = 600;
+    const vbH = CHART_HEIGHT;
+    const scale = Math.min(rect.width / vbW, rect.height / vbH);
+    const offsetX = (rect.width - vbW * scale) / 2;
+    return (pixelX - offsetX) / scale;
+  }, []);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
       if (nCurrent === 0 || dates.length === 0) return;
       const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const percent = Math.max(0, Math.min(1, (x - PADDING.left) / INNER_W));
+      if (rect.width <= 0) return;
+      const vbW = 600;
+      const pixelX = e.clientX - rect.left;
+      const hoverXViewBox = Math.max(PADDING.left, Math.min(vbW - PADDING.right, pixelToViewBoxX(pixelX, rect)));
+      const percent = Math.max(0, Math.min(1, (hoverXViewBox - PADDING.left) / INNER_W));
+      const fracIdx = percent * (nCurrent - 1);
       const idx = Math.min(
-        Math.max(0, Math.round(percent * (nCurrent - 1))),
+        Math.max(0, Math.floor(fracIdx)),
         nCurrent - 1
       );
-      updateTooltipFromPosition(e.clientX, e.clientY, idx);
+      updateTooltipFromPosition(e.clientX, e.clientY, idx, hoverXViewBox);
     },
-    [dates, nCurrent, updateTooltipFromPosition]
+    [dates, nCurrent, updateTooltipFromPosition, pixelToViewBoxX]
   );
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
@@ -165,12 +174,16 @@ export default function KpiChart({
       if (nCurrent === 0 || dates.length === 0 || !e.touches[0]) return;
       const touch = e.touches[0];
       const rect = e.currentTarget.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const percent = Math.max(0, Math.min(1, (x - PADDING.left) / INNER_W));
-      const idx = Math.min(Math.max(0, Math.round(percent * (nCurrent - 1))), nCurrent - 1);
-      updateTooltipFromPosition(touch.clientX, touch.clientY, idx);
+      if (rect.width <= 0) return;
+      const vbW = 600;
+      const pixelX = touch.clientX - rect.left;
+      const hoverXViewBox = Math.max(PADDING.left, Math.min(vbW - PADDING.right, pixelToViewBoxX(pixelX, rect)));
+      const percent = Math.max(0, Math.min(1, (hoverXViewBox - PADDING.left) / INNER_W));
+      const fracIdx = percent * (nCurrent - 1);
+      const idx = Math.min(Math.max(0, Math.floor(fracIdx)), nCurrent - 1);
+      updateTooltipFromPosition(touch.clientX, touch.clientY, idx, hoverXViewBox);
     },
-    [dates, nCurrent, updateTooltipFromPosition]
+    [dates, nCurrent, updateTooltipFromPosition, pixelToViewBoxX]
   );
 
   const handleTouchEnd = useCallback(() => setTooltip(null), []);
@@ -332,18 +345,36 @@ export default function KpiChart({
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {tooltip && (() => {
+          {tooltip && tooltip.hoverX != null && (() => {
             const idx = dates.indexOf(tooltip.date);
             if (idx < 0) return null;
+            const x = tooltip.hoverX;
+            const fracIdx = Math.max(0, Math.min(nCurrent - 1, (x - PADDING.left) / innerW * (nCurrent - 1)));
+            const i0 = Math.floor(fracIdx);
+            const i1 = Math.min(i0 + 1, nCurrent - 1);
+            const t = fracIdx - i0;
+            const value = (current[i0] ?? 0) * (1 - t) + (current[i1] ?? 0) * t;
+            const cy = toY(value);
             return (
-              <circle
-                cx={toXCurrent(idx)}
-                cy={toY(current[idx])}
-                r={4}
-                fill="#24c598"
-                stroke="#fff"
-                strokeWidth={1.5}
-              />
+              <g>
+                <line
+                  x1={x}
+                  y1={PADDING.top}
+                  x2={x}
+                  y2={PADDING.top + innerH}
+                  stroke="#9CA3AF"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                />
+                <circle
+                  cx={x}
+                  cy={cy}
+                  r={4}
+                  fill="#24c598"
+                  stroke="#fff"
+                  strokeWidth={1.5}
+                />
+              </g>
             );
           })()}
         </g>

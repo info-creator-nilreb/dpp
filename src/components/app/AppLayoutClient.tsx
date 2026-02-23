@@ -14,6 +14,9 @@ const WRAPPER_STYLE: React.CSSProperties = {
   backgroundColor: "#F5F5F5",
 }
 
+/** Default style content – identisch bei SSR und erstem Client-Render (vermeidet Hydration-Mismatch). */
+const DEFAULT_STYLE = "/* hydrated */"
+
 interface AppLayoutClientProps {
   children: React.ReactNode
 }
@@ -24,11 +27,21 @@ export default function AppLayoutClient({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [styleContent, setStyleContent] = useState(DEFAULT_STYLE)
   const pathname = usePathname()
   const { data: session } = useSession()
   const { availableFeatures, isLoading: featuresLoading } = useAppData()
 
   useEffect(() => setMounted(true), [])
+
+  useEffect(() => {
+    const show = !pathname?.startsWith("/login") && !pathname?.startsWith("/signup") && !pathname?.startsWith("/api/auth") && !pathname?.startsWith("/public/dpp/")
+    setStyleContent(
+      show
+        ? `:root{--sidebar-width:${isSidebarCollapsed?"64px":"280px"}}@media(min-width:768px){.app-main-content{margin-left:${isSidebarCollapsed?"64px":"280px"}!important;width:calc(100vw - ${isSidebarCollapsed?"64px":"280px"})!important;max-width:calc(100vw - ${isSidebarCollapsed?"64px":"280px"})!important;transition:margin-left .3s ease,width .3s ease,max-width .3s ease}}@media(max-width:767px){.app-main-content{padding-top:calc(88px + env(safe-area-inset-top,0))!important}.app-main-content.dpp-editor-page{padding:0!important;padding-top:calc(88px + env(safe-area-inset-top,0))!important}}`
+        : "/* no sidebar */"
+    )
+  }, [mounted, pathname, isSidebarCollapsed])
 
   // Hide sidebar on login/signup pages and public DPP views
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname?.startsWith("/api/auth")
@@ -53,36 +66,11 @@ export default function AppLayoutClient({
   const userRole = session?.user?.role ?? undefined
 
   return (
-    <div style={WRAPPER_STYLE}>
-      {/* Immer zuerst style + main, damit Server und Client dieselbe Kind-Reihenfolge haben (vermeidet Hydration-Mismatch) */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: shouldShowSidebar
-            ? `
-              :root {
-                --sidebar-width: ${isSidebarCollapsed ? "64px" : "280px"};
-              }
-              @media (min-width: 768px) {
-                .app-main-content {
-                  margin-left: ${isSidebarCollapsed ? "64px" : "280px"} !important;
-                  width: calc(100vw - ${isSidebarCollapsed ? "64px" : "280px"}) !important;
-                  max-width: calc(100vw - ${isSidebarCollapsed ? "64px" : "280px"}) !important;
-                  transition: margin-left 0.3s ease, width 0.3s ease, max-width 0.3s ease;
-                }
-              }
-              @media (max-width: 767px) {
-                .app-main-content {
-                  padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important;
-                }
-                .app-main-content.dpp-editor-page {
-                  padding: 0 !important;
-                  padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important;
-                }
-              }
-            `
-            : "/* no sidebar */",
-        }}
-      />
+    <div style={WRAPPER_STYLE} suppressHydrationWarning>
+      {/* Style erst nach Mount mit echtem Inhalt (vermeidet Hydration-Mismatch durch SSR/Client-Unterschiede) */}
+      {mounted && (
+        <style dangerouslySetInnerHTML={{ __html: styleContent }} />
+      )}
       <main
         className={shouldShowSidebar ? "app-main-content" + (isDppEditorPage ? " dpp-editor-page" : "") : ""}
         style={{

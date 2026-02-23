@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
+import { isSuperAdmin } from "@/lib/permissions"
 import AuthGate from "../_auth/AuthGate"
 import DppsContent from "./DppsContent"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
@@ -69,6 +70,8 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
     new Set(allUserDpps.map(dpp => dpp.status || "DRAFT").filter(Boolean))
   ).sort() as string[]
 
+  const showStatsIcon = !(await isSuperAdmin(session.user.id))
+
   if (organizationIds.length === 0) {
     return (
       <DppsContent
@@ -81,6 +84,7 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
         categoryFilter={categoryFilter}
         availableCategories={[]}
         availableStatuses={[]}
+        showStatsIcon={showStatsIcon}
       />
     )
   }
@@ -187,6 +191,7 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
       categoryFilter={categoryFilter}
       availableCategories={availableCategories}
       availableStatuses={availableStatuses}
+      showStatsIcon={showStatsIcon}
     />
   )
 }

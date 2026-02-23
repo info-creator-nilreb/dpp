@@ -17,9 +17,10 @@ import CmsBlockRenderer from './CmsBlockRenderer'
 interface CmsBlockDirectProps {
   block: UnifiedContentBlock
   dppId?: string
+  isPreview?: boolean
 }
 
-export default function CmsBlockDirect({ block, dppId }: CmsBlockDirectProps) {
+export default function CmsBlockDirect({ block, dppId, isPreview = false }: CmsBlockDirectProps) {
   // Prüfe ob es einen benutzerdefinierten Titel im Content gibt
   // Titel-Felder: title, heading, name (je nach Block-Typ)
   const customTitle = block.content?.fields?.title?.value || 
@@ -64,7 +65,7 @@ export default function CmsBlockDirect({ block, dppId }: CmsBlockDirectProps) {
             </h3>
           </div>
         )}
-        <CmsBlockRenderer block={block} dppId={dppId} />
+        <CmsBlockRenderer block={block} dppId={dppId} isPreview={isPreview} />
       </div>
     )
   }
@@ -103,7 +104,7 @@ export default function CmsBlockDirect({ block, dppId }: CmsBlockDirectProps) {
           {customTitle}
         </h3>
       )}
-      <CmsBlockRenderer block={block} dppId={dppId} fillCard={isFillCardBlock} />
+      <CmsBlockRenderer block={block} dppId={dppId} fillCard={isFillCardBlock} isPreview={isPreview} />
     </div>
   )
 }

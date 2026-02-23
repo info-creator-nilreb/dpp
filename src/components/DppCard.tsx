@@ -14,6 +14,7 @@ interface DppCardProps {
   mediaCount: number
   status?: string
   updatedAt?: Date
+  showStatsIcon?: boolean
   latestVersion?: {
     version: number
     createdAt: string
@@ -27,7 +28,7 @@ interface DppCardProps {
  * 
  * Client Component für die DPP-Karte mit Aktions-Icons
  */
-export default function DppCard({ id, name, description, organizationName, mediaCount, status, updatedAt, latestVersion }: DppCardProps) {
+export default function DppCard({ id, name, description, organizationName, mediaCount, status, updatedAt, showStatsIcon = true, latestVersion }: DppCardProps) {
   const router = useRouter()
   const { showNotification } = useNotification()
   const [publishing, setPublishing] = useState(false)
@@ -152,6 +153,14 @@ export default function DppCard({ id, name, description, organizationName, media
     <svg {...iconProps}>
       <polyline points="16 18 22 12 16 6"/>
       <polyline points="8 6 2 12 8 18"/>
+    </svg>
+  )
+
+  const StatsIcon = () => (
+    <svg {...iconProps}>
+      <line x1="18" y1="20" x2="18" y2="10"/>
+      <line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="14"/>
     </svg>
   )
 
@@ -428,6 +437,28 @@ export default function DppCard({ id, name, description, organizationName, media
         >
           <VersionsIcon />
         </Link>
+
+        {/* Statistik */}
+        {showStatsIcon && (
+          <Link
+            href={`/app/dpps/${id}/stats`}
+            title="Statistik"
+            onClick={(e) => e.stopPropagation()}
+            style={iconContainerStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#24c598"
+              e.currentTarget.style.color = "#24c598"
+              e.currentTarget.style.backgroundColor = "#ECFDF5"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#CDCDCD"
+              e.currentTarget.style.color = "#7A7A7A"
+              e.currentTarget.style.backgroundColor = "transparent"
+            }}
+          >
+            <StatsIcon />
+          </Link>
+        )}
       </div>
 
       {/* Publish Confirmation Dialog */}

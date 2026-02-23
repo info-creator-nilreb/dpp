@@ -131,6 +131,25 @@ export async function getDppPermission(
 }
 
 /**
+ * Kann User DPP-Statistiken ansehen?
+ * Super-Admin: kein Zugriff. Supplier: kein Zugriff. Sonst wie canViewDPP.
+ */
+export async function canViewDppStats(userId: string, dppId: string): Promise<boolean> {
+  if (await isSuperAdmin(userId)) return false
+  try {
+    const permission = await getDppPermission(userId, dppId)
+    if (permission?.role === EXTERNAL_ROLES.SUPPLIER) return false
+    return canViewDPP(userId, dppId)
+  } catch (e) {
+    if (isPrismaConnectionError(e)) {
+      console.warn("[permissions] canViewDppStats: DB nicht erreichbar, Fallback false:", (e as Error)?.message)
+      return false
+    }
+    throw e
+  }
+}
+
+/**
  * Kann User einen DPP ansehen?
  */
 export async function canViewDPP(userId: string, dppId: string): Promise<boolean> {

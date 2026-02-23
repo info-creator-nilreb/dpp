@@ -23,13 +23,15 @@ interface DataSectionsContainerProps {
   maxExpandedSections?: number
   hasStoryText?: boolean
   dppId?: string
+  isPreview?: boolean
 }
 
 export default function DataSectionsContainer({
   blocks,
   maxExpandedSections: maxExpandedProp = 3,
   hasStoryText = false,
-  dppId
+  dppId,
+  isPreview = false
 }: DataSectionsContainerProps) {
   // Mobile: only ONE section expanded at a time
   const [isMobile, setIsMobile] = useState(false)
@@ -273,7 +275,7 @@ export default function DataSectionsContainer({
                 marginBottom: editorialSpacing.betweenSections,
               }}
             >
-              <CmsBlockDirect block={block} dppId={dppId} />
+              <CmsBlockDirect block={block} dppId={dppId} isPreview={isPreview} />
             </div>
           )
           if (isFullbleedBlock(block)) {

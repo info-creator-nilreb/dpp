@@ -26,6 +26,7 @@ interface DppsContentProps {
   categoryFilter: string
   availableCategories: string[]
   availableStatuses: string[]
+  showStatsIcon?: boolean
 }
 
 export default function DppsContent({
@@ -37,7 +38,8 @@ export default function DppsContent({
   statusFilter,
   categoryFilter,
   availableCategories,
-  availableStatuses
+  availableStatuses,
+  showStatsIcon = true
 }: DppsContentProps) {
   const hasActiveFilters = !!(searchQuery || statusFilter || categoryFilter)
 
@@ -132,6 +134,7 @@ export default function DppsContent({
                 mediaCount={dpp.mediaCount}
                 status={dpp.status}
                 updatedAt={dpp.updatedAt}
+                showStatsIcon={showStatsIcon}
                 latestVersion={null}
               />
             ))}

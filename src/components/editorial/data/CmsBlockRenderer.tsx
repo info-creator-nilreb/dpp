@@ -223,9 +223,11 @@ interface CmsBlockRendererProps {
   dppId?: string
   /** Umfrage/Video: füllt Card komplett ohne grauen Rand */
   fillCard?: boolean
+  /** true = Editor-/Versions-Vorschau – Umfrage-Antworten werden nicht gespeichert */
+  isPreview?: boolean
 }
 
-export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId, fillCard = false }: CmsBlockRendererProps) {
+export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId, fillCard = false, isPreview = false }: CmsBlockRendererProps) {
   const blockType = block.blockKey // z.B. "text_block", "image_gallery", "timeline"
   const content = block.content?.fields || {}
   
@@ -511,7 +513,7 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
       )
     }
     console.log('[CmsBlockRenderer] Rendering Multi-Question Poll mit dppId:', pollDppId)
-    return <MultiQuestionPollRenderer block={block} dppId={pollDppId} fillCard={fillCard} />
+    return <MultiQuestionPollRenderer block={block} dppId={pollDppId} fillCard={fillCard} isPreview={isPreview} />
   }
   
   // Legacy Quick Poll Block - Mit dunklem Hintergrund (wie in bisheriger public DPP view für Firmennamen)
