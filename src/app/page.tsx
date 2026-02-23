@@ -42,8 +42,13 @@ const jsonLd = {
 }
 
 export default async function Home() {
-  // Get cheapest price for teaser
-  const cheapestPrice = await getCheapestPrice()
+  // Get cheapest price for teaser (fallback to null if DB unreachable)
+  let cheapestPrice: Awaited<ReturnType<typeof getCheapestPrice>> = null
+  try {
+    cheapestPrice = await getCheapestPrice()
+  } catch (e) {
+    console.error("[Home] getCheapestPrice failed:", e)
+  }
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF', overflowX: 'hidden' }}>
       <script
