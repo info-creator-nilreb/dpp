@@ -46,12 +46,12 @@ function formatDateLong(s: string): string {
   })
 }
 
-/** Tooltip für Basis-Kurve oder mehrere Regionen */
+/** Tooltip für Basis-Kurve oder mehrere Regionen. Recharts übergibt active, payload etc. zur Laufzeit. */
 function CustomTooltip({
   active,
   payload,
   onActiveChange,
-}: TooltipContentProps<number, string> & { onActiveChange?: (active: boolean) => void }) {
+}: Partial<TooltipContentProps<number, string>> & { onActiveChange?: (active: boolean) => void }) {
   useEffect(() => {
     onActiveChange?.(!!active && !!payload?.length)
   }, [active, payload?.length, onActiveChange])
