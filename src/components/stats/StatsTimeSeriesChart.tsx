@@ -10,7 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  TooltipProps,
+  TooltipContentProps,
 } from "recharts"
 
 export interface ScanDataPoint {
@@ -51,7 +51,7 @@ function CustomTooltip({
   active,
   payload,
   onActiveChange,
-}: TooltipProps<number, string> & { onActiveChange?: (active: boolean) => void }) {
+}: TooltipContentProps<number, string> & { onActiveChange?: (active: boolean) => void }) {
   useEffect(() => {
     onActiveChange?.(!!active && !!payload?.length)
   }, [active, payload?.length, onActiveChange])
