@@ -96,7 +96,7 @@ export async function GET(
     })
 
     const blocks = Array.isArray(dppContent?.blocks) ? dppContent.blocks : []
-    const pollBlocks = (blocks as { id?: string; type?: string; config?: { questions?: unknown[] } }[]).filter(
+    const pollBlocks = (blocks as { id?: string; type?: string; config?: { questions?: unknown[]; title?: string }; content?: { questions?: unknown[]; title?: string } }[]).filter(
       (b) => b.type === "multi_question_poll"
     )
 
