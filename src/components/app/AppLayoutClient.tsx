@@ -8,10 +8,18 @@ import { useSession } from "next-auth/react"
 import { useAutoLogout } from "@/hooks/useAutoLogout"
 import { useAppData } from "@/contexts/AppDataContext"
 
-/** Stable style so server and client serialize the same (avoids hydration mismatch). */
+/** Stable wrapper style – gleiches Element (main) auf Server und Client verhindert Hydration-Mismatch. */
 const WRAPPER_STYLE: React.CSSProperties = {
   minHeight: "100vh",
   backgroundColor: "#F5F5F5",
+  marginLeft: "0",
+  paddingLeft: "0",
+  boxSizing: "border-box",
+  width: "100%",
+  maxWidth: "100vw",
+  overflowX: "hidden",
+  position: "relative",
+  transition: "margin-left 0.3s ease, width 0.3s ease, max-width 0.3s ease",
 }
 
 /** Default style content – identisch bei SSR und erstem Client-Render (vermeidet Hydration-Mismatch). */
@@ -65,30 +73,21 @@ export default function AppLayoutClient({
   const userLastName = session?.user?.lastName ?? undefined
   const userRole = session?.user?.role ?? undefined
 
+  // Ein einziges <main> als Wrapper – gleiche Struktur auf Server und Client (vermeidet Hydration-Mismatch)
+  const contentPadding = shouldShowSidebar ? "clamp(1rem, 2vw, 2rem)" : "0"
   return (
-    <div style={WRAPPER_STYLE} suppressHydrationWarning>
-      {/* Style erst nach Mount mit echtem Inhalt (vermeidet Hydration-Mismatch durch SSR/Client-Unterschiede) */}
+    <main
+      className={shouldShowSidebar ? "app-main-content" + (isDppEditorPage ? " dpp-editor-page" : "") : ""}
+      style={{
+        ...WRAPPER_STYLE,
+        padding: contentPadding,
+      }}
+      suppressHydrationWarning
+    >
       {mounted && (
         <style dangerouslySetInnerHTML={{ __html: styleContent }} />
       )}
-      <main
-        className={shouldShowSidebar ? "app-main-content" + (isDppEditorPage ? " dpp-editor-page" : "") : ""}
-        style={{
-          marginLeft: "0",
-          paddingLeft: "0",
-          minHeight: "100vh",
-          transition: "margin-left 0.3s ease, width 0.3s ease, max-width 0.3s ease",
-          boxSizing: "border-box",
-          width: "100%",
-          maxWidth: "100vw",
-          overflowX: "hidden",
-          position: "relative",
-          padding: shouldShowSidebar ? "clamp(1rem, 2vw, 2rem)" : "0",
-        }}
-      >
-        {children}
-      </main>
-      {/* Mobile Header und Sidebar nach main, erst nach Mount (showChrome) */}
+      {children}
       {showChrome && (
         <MobileHeader onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
       )}
@@ -105,7 +104,7 @@ export default function AppLayoutClient({
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
       )}
-    </div>
+    </main>
   )
 }
 

@@ -160,6 +160,7 @@ model Dpp {
   supplierInvites     DppSupplierInvite[]
   pollResponses       PollResponse[]
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scans                DppScan[]
 
   @@index([templateId])
   @@index([templateVersionId])
@@ -296,6 +297,21 @@ model PollResponse {
   @@index([dppId])
   @@index([dppId, pollBlockId])
   @@map("poll_responses")
+}
+
+// Scan-Event: Ein Aufruf der öffentlichen DPP-Ansicht (QR/Link) – für Nutzungsstatistik
+model DppScan {
+  id         String   @id @default(cuid())
+  dppId     String
+  scannedAt DateTime @default(now())
+  region    String?  // Optional: ISO-Land oder Region (z.B. aus Header/Geo später)
+  version   Int?     // Optional: angezeigte Version
+  dpp       Dpp      @relation(fields: [dppId], references: [id], onDelete: Cascade)
+
+  @@index([dppId])
+  @@index([dppId, scannedAt])
+  @@index([scannedAt])
+  @@map("dpp_scans")
 }
 
 model DppPermission {

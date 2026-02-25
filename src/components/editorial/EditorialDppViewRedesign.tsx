@@ -7,7 +7,7 @@
 
 "use client"
 
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Page, Section } from './index'
 import { UnifiedContentBlock } from '@/lib/content-adapter'
 import type { StylingConfig } from '@/lib/cms/types'
@@ -69,6 +69,17 @@ export default function EditorialDppViewRedesign({
   styling,
   isPreview = false
 }: EditorialDppViewRedesignProps) {
+  const scanRecorded = useRef(false)
+  useEffect(() => {
+    if (isPreview || !dppId || scanRecorded.current) return
+    scanRecorded.current = true
+    fetch(`/api/public/dpp/${dppId}/scan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ version: versionInfo?.version ?? undefined }),
+    }).catch(() => {})
+  }, [dppId, isPreview, versionInfo?.version])
+
   return (
     <Page styling={styling ?? undefined} fillViewport={!isPreview}>
       {/* Editorial Spine mit Logo + optionalem Hinweis bei fehlendem Hero */}

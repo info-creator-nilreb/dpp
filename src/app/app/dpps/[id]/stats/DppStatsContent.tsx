@@ -23,7 +23,11 @@ interface Survey {
 
 interface StatsData {
   dpp: { id: string; name: string; status: string }
-  usage: { totalScans: number; topRegions?: Array<{ region: string; scans: number }> }
+  usage: {
+    totalScans: number
+    topRegions?: Array<{ region: string; scans: number }>
+    scanTimeSeries?: Array<{ date: string; scans: number }>
+  }
   surveys: Survey[]
 }
 
@@ -42,10 +46,12 @@ export default function DppStatsContent({ dppId }: { dppId: string }) {
     return () => mq.removeEventListener("change", handler)
   }, [])
 
-  const scanData = useMemo(
-    () => (data ? generateScanDataFromTotal(data.usage.totalScans) : []),
-    [data?.usage?.totalScans ?? 0]
-  )
+  const scanData = useMemo(() => {
+    if (!data?.usage) return []
+    const series = data.usage.scanTimeSeries
+    if (series?.length) return series
+    return generateScanDataFromTotal(data.usage.totalScans)
+  }, [data?.usage?.totalScans, data?.usage?.scanTimeSeries])
 
   useEffect(() => {
     async function load() {

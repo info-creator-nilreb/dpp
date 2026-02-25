@@ -46,11 +46,48 @@ export async function GET(
       return NextResponse.json({ error: "DPP nicht gefunden" }, { status: 404 })
     }
 
-    // Nutzung: Scans (MVP: kein Scan-Tracking, immer 0)
-    const totalScans = 0
+    // Nutzung: Scans aus DppScan (Fallback wenn Tabelle/Client fehlt)
+    let totalScans = 0
+    let topRegions: Array<{ region: string; scans: number }> = []
+    let scanTimeSeries: Array<{ date: string; scans: number }> = []
 
-    // Top-Regionen nach Scans (datenbasiert; MVP: leer, später aus Scan-Events mit region)
-    const topRegions: Array<{ region: string; scans: number }> = []
+    if (typeof prisma.dppScan?.count === "function") {
+      try {
+        const [totalScansResult, topRegionsResult, scanTimeSeriesRaw] = await Promise.all([
+          prisma.dppScan.count({ where: { dppId } }),
+          prisma.dppScan.groupBy({
+            by: ["region"],
+            where: {
+              dppId,
+              region: { not: null },
+            },
+            _count: { id: true },
+          }),
+          prisma.$queryRaw<Array<{ date: string; scans: bigint }>>`
+            SELECT date_trunc('day', "scannedAt")::date::text AS date, count(*)::bigint AS scans
+            FROM dpp_scans
+            WHERE "dppId" = ${dppId}
+              AND "scannedAt" >= (current_date - interval '14 days')
+            GROUP BY date_trunc('day', "scannedAt")
+            ORDER BY date ASC
+          `,
+        ])
+        totalScans = totalScansResult
+        topRegions = topRegionsResult
+          .sort((a, b) => b._count.id - a._count.id)
+          .slice(0, 3)
+          .map((r) => ({
+            region: r.region ?? "Unbekannt",
+            scans: r._count.id,
+          }))
+        scanTimeSeries = (scanTimeSeriesRaw ?? []).map((row) => ({
+          date: row.date,
+          scans: Number(row.scans),
+        }))
+      } catch (scanErr) {
+        console.warn("[DPP Stats API] DppScan abfrage fehlgeschlagen (Tabelle fehlt?), Fallback 0:", scanErr)
+      }
+    }
 
     // Umfragen: Poll-Blöcke aus published content
     const dppContent = await prisma.dppContent.findFirst({
@@ -81,8 +118,10 @@ export async function GET(
         where: { pollBlockId, dppId },
       })
 
-      const config = pollBlock.config || {}
-      const questions = (config.questions || []) as Array<{ question?: string; options?: string[] }>
+      // Blöcke werden mit content.questions gespeichert (Editor), ggf. Legacy config.questions
+      const blockConfig = pollBlock.config || {}
+      const blockContent = pollBlock.content || {}
+      const questions = (blockContent.questions ?? blockConfig.questions ?? []) as Array<{ question?: string; options?: string[] }>
 
       const questionResults = questions.map((q, questionIndex) => {
         const questionResponses = responses
@@ -113,7 +152,7 @@ export async function GET(
 
       const totalVotes = responses.length
       const firstQuestion = questionResults[0]?.question
-      const title = (config as { title?: string }).title || firstQuestion || "Umfrage"
+      const title = (blockContent as { title?: string }).title ?? (blockConfig as { title?: string }).title ?? firstQuestion ?? "Umfrage"
 
       surveys.push({
         pollBlockId,
@@ -125,7 +164,7 @@ export async function GET(
 
     return NextResponse.json({
       dpp: { id: dpp.id, name: dpp.name, status: dpp.status },
-      usage: { totalScans, topRegions },
+      usage: { totalScans, topRegions, scanTimeSeries },
       surveys,
     })
   } catch (error) {

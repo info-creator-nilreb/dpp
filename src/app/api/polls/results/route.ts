@@ -112,8 +112,10 @@ export async function GET(request: Request) {
       )
     }
 
+    // Blöcke werden mit content.questions gespeichert (Editor), ggf. Legacy config.questions
     const config = pollBlock.config || {}
-    const questions = config.questions || []
+    const content = pollBlock.content || {}
+    const questions = content.questions ?? config.questions ?? []
 
     // Aggregiere Antworten
     const results = questions.map((question: any, questionIndex: number) => {
