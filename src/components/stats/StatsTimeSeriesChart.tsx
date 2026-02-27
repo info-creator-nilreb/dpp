@@ -215,6 +215,7 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
             tickLine={false}
             tickCount={5}
             allowDecimals={false}
+            domain={[0, "auto"]}
             tickFormatter={(v) => {
               const n = Math.round(Number(v))
               return isMobile && n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString("de-DE")
@@ -225,7 +226,7 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
             cursor={{ stroke: "#9CA3AF", strokeWidth: 1, strokeDasharray: "3 3" }}
           />
           <Line
-            type="natural"
+            type="monotoneY"
             dataKey="scans"
             name="Gesamt"
             stroke={gesamtColor}
@@ -237,7 +238,7 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
           {regionalSeries.map((s) => (
             <Line
               key={s.region}
-              type="natural"
+              type="monotoneY"
               dataKey={s.region}
               name={s.region}
               stroke={s.color}
