@@ -29,7 +29,7 @@ export default function SectionContent({ block, variant = 'minimal', visualStyle
   // Prüfe ob es ein CMS-Block ist (hat blockKey als BlockType.key)
   // CMS-Blocks haben bekannte BlockType-Keys wie "timeline", "accordion", etc.
   // Template-Blocks haben keys wie "data-1", "data-2" oder lange IDs
-  const cmsBlockTypes = ['text_block', 'text', 'storytelling', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll']
+  const cmsBlockTypes = ['text_block', 'text', 'storytelling', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll', 'social_links']
   const isCmsBlock = block.blockKey && cmsBlockTypes.includes(block.blockKey.toLowerCase())
 
   if (isCmsBlock) {

@@ -16,6 +16,8 @@ interface BlockPickerModalProps {
   availableFeatures: string[]
   onSelectBlock: (type: string) => void
   onClose: () => void
+  /** Block-Typen, die bereits im DPP vorkommen (z. B. für "max. 1 Social Media Footer") */
+  existingBlockTypes?: string[]
 }
 
 // SVG Icons im Projekt-Stil (viewBox 0 0 24 24, stroke currentColor, strokeWidth 2)
@@ -75,6 +77,13 @@ const BlockIcons: Record<BlockTypeKey, React.ReactNode> = {
       <polyline points="12 6 12 12 16 14"/>
     </svg>
   ),
+  social_links: (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+    </svg>
+  ),
   template_block: (
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -117,17 +126,26 @@ const BLOCK_TYPE_INFO: Record<BlockTypeKey, { name: string; description: string 
     name: "Timeline",
     description: "Zeitstrahl-Darstellung"
   },
+  social_links: {
+    name: "Social Media Footer",
+    description: "Footer-Bereich mit Links zu Ihren Social-Media-Kanälen"
+  },
   template_block: {
     name: "Template Block",
     description: "Legacy-Block aus Template-System"
   }
 }
 
+const SOCIAL_MEDIA_FOOTER_BLOCK_TYPE = "social_links"
+
 export default function BlockPickerModal({
   availableFeatures,
   onSelectBlock,
-  onClose
+  onClose,
+  existingBlockTypes = []
 }: BlockPickerModalProps) {
+  const hasSocialFooter = existingBlockTypes.includes(SOCIAL_MEDIA_FOOTER_BLOCK_TYPE)
+  const socialFooterDisabled = hasSocialFooter
   // Get available block types – nur anzeigen wenn Feature für Tarif aktiviert (kein Fail-Open)
   const availableBlockTypes = (Object.keys(BLOCK_TYPE_FEATURE_MAP) as BlockTypeKey[]).filter(type => {
     if (type === "template_block") return false
@@ -146,6 +164,7 @@ export default function BlockPickerModal({
   const availableTemplates = getAvailableTemplates(availableFeatures)
 
   function handleSelectType(type: BlockTypeKey) {
+    if (type === SOCIAL_MEDIA_FOOTER_BLOCK_TYPE && socialFooterDisabled) return
     onSelectBlock(type)
     onClose()
   }
@@ -274,37 +293,42 @@ export default function BlockPickerModal({
                   console.warn(`[BlockPickerModal] Missing info for block type: ${type}`)
                   return null
                 }
+                const isDisabled = type === SOCIAL_MEDIA_FOOTER_BLOCK_TYPE && socialFooterDisabled
                 return (
                   <button
                     key={type}
+                    type="button"
                     onClick={() => handleSelectType(type)}
+                    disabled={isDisabled}
                     style={{
                       padding: "2rem 1.5rem",
-                      backgroundColor: "#FFFFFF",
-                      border: "1px solid #E5E5E5",
+                      backgroundColor: isDisabled ? "#F5F5F5" : "#FFFFFF",
+                      border: `1px solid ${isDisabled ? "#E5E5E5" : "#E5E5E5"}`,
                       borderRadius: "12px",
-                      cursor: "pointer",
+                      cursor: isDisabled ? "not-allowed" : "pointer",
                       transition: "all 0.2s",
                       textAlign: "center",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       gap: "1rem",
-                      width: "100%"
+                      width: "100%",
+                      opacity: isDisabled ? 0.8 : 1
                     }}
                     onMouseEnter={(e) => {
+                      if (isDisabled) return
                       e.currentTarget.style.borderColor = "#24c598"
                       e.currentTarget.style.backgroundColor = "#F0FDF4"
                       e.currentTarget.style.boxShadow = "0 4px 12px rgba(36, 197, 152, 0.1)"
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = "#E5E5E5"
-                      e.currentTarget.style.backgroundColor = "#FFFFFF"
+                      e.currentTarget.style.backgroundColor = isDisabled ? "#F5F5F5" : "#FFFFFF"
                       e.currentTarget.style.boxShadow = "none"
                     }}
                   >
                     <div style={{
-                      color: "#24c598",
+                      color: isDisabled ? "#9CA3AF" : "#24c598",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center"
@@ -315,7 +339,7 @@ export default function BlockPickerModal({
                       <h3 style={{
                         fontSize: "1rem",
                         fontWeight: "600",
-                        color: "#0A0A0A",
+                        color: isDisabled ? "#6B7280" : "#0A0A0A",
                         marginBottom: "0.5rem"
                       }}>
                         {info.name}
@@ -327,6 +351,11 @@ export default function BlockPickerModal({
                         margin: 0
                       }}>
                         {info.description}
+                        {isDisabled && (
+                          <span style={{ display: "block", marginTop: "0.25rem", fontWeight: 500, color: "#6B7280" }}>
+                            Bereits vorhanden
+                          </span>
+                        )}
                       </p>
                     </div>
                   </button>

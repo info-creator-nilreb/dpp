@@ -58,7 +58,11 @@ export default function DppContentTabV2({
   const isContentBlock = (b: Block) => b.type !== "template_block"
   const templateBlocks = [...(blocks || [])].filter(b => !isContentBlock(b)).sort((a, b) => (a.order || 0) - (b.order || 0))
   const contentBlocks = [...(blocks || [])].filter(isContentBlock)
-  const sortedContentBlocks = [...contentBlocks].sort((a, b) => (a.order || 0) - (b.order || 0))
+  // Social Media Footer immer ans Ende: nicht verschiebbar, max. 1
+  const contentWithoutFooter = contentBlocks.filter(b => b.type !== "social_links")
+  const socialFooterBlock = contentBlocks.find(b => b.type === "social_links")
+  const reorderableBlocks = [...contentWithoutFooter].sort((a, b) => (a.order || 0) - (b.order || 0))
+  const sortedContentBlocks = [...reorderableBlocks, ...(socialFooterBlock ? [socialFooterBlock] : [])]
 
   // Auto-Save: Save block changes
   // CRITICAL: Receives blocks as parameter - no refs for content data
@@ -274,18 +278,25 @@ export default function DppContentTabV2({
     setDragOverIndex(null)
 
     if (!draggedBlockId) return
+    // Social Media Footer ist nicht verschiebbar
+    const draggedBlock = blocks.find(b => b.id === draggedBlockId)
+    if (draggedBlock?.type === "social_links") {
+      setDraggedBlockId(null)
+      return
+    }
 
-    const draggedIndex = sortedContentBlocks.findIndex(b => b.id === draggedBlockId)
+    const draggedIndex = reorderableBlocks.findIndex(b => b.id === draggedBlockId)
     if (draggedIndex === -1 || draggedIndex === dropIndex) {
       setDraggedBlockId(null)
       return
     }
 
-    const newContentBlocks = [...sortedContentBlocks]
-    const [removed] = newContentBlocks.splice(draggedIndex, 1)
-    newContentBlocks.splice(dropIndex, 0, removed)
-    const newContentOrder = newContentBlocks.map(b => b.id)
-    const fullOrder = [...templateBlocks.map(b => b.id), ...newContentOrder]
+    const newReorderable = [...reorderableBlocks]
+    const [removed] = newReorderable.splice(draggedIndex, 1)
+    newReorderable.splice(dropIndex, 0, removed)
+    const newContentOrder = newReorderable.map(b => b.id)
+    const footerId = socialFooterBlock?.id
+    const fullOrder = [...templateBlocks.map(b => b.id), ...newContentOrder, ...(footerId ? [footerId] : [])]
     handleReorderBlocks(fullOrder)
     setDraggedBlockId(null)
   }
@@ -391,7 +402,10 @@ export default function DppContentTabV2({
               </button>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {sortedContentBlocks.map((block, index) => (
+              {sortedContentBlocks.map((block, index) => {
+                const isFooterBlock = block.type === "social_links"
+                const reorderableIndex = isFooterBlock ? -1 : reorderableBlocks.findIndex(b => b.id === block.id)
+                return (
                 <div 
                   key={block.id} 
                   style={{ 
@@ -400,8 +414,8 @@ export default function DppContentTabV2({
                     transition: "opacity 0.2s"
                   }}
                 >
-                  {/* Drop Indicator */}
-                  {dragOverIndex === index && draggedBlockId !== block.id && (
+                  {/* Drop Indicator – nur bei nicht-Footer-Blöcken */}
+                  {!isFooterBlock && dragOverIndex === reorderableIndex && draggedBlockId !== block.id && (
                     <div style={{
                       position: "absolute",
                       top: "-4px",
@@ -416,7 +430,7 @@ export default function DppContentTabV2({
                   )}
                   <div style={{
                     backgroundColor: "#FFFFFF",
-                    border: dragOverIndex === index && draggedBlockId !== block.id 
+                    border: !isFooterBlock && dragOverIndex === reorderableIndex && draggedBlockId !== block.id 
                       ? "1px solid #24c598" 
                       : "1px solid #E5E5E5",
                     borderRadius: "12px",
@@ -431,15 +445,16 @@ export default function DppContentTabV2({
                       onUpdate={(updates) => handleUpdateBlock(block.id, updates)}
                       onDelete={() => handleDeleteClick(block.id)}
                       onDragStart={(e) => handleDragStart(e, block.id)}
-                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragOver={(e) => !isFooterBlock && handleDragOver(e, reorderableIndex)}
                       onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, index)}
+                      onDrop={(e) => !isFooterBlock && handleDrop(e, reorderableIndex)}
                       onDragEnd={handleDragEnd}
                       dppId={dppId}
+                      isSocialMediaFooter={isFooterBlock}
                     />
                   </div>
                 </div>
-              ))}
+              )})}
               <button
                 onClick={() => setShowBlockPicker(true)}
                 style={{
@@ -486,6 +501,7 @@ export default function DppContentTabV2({
           availableFeatures={availableFeatures}
           onSelectBlock={handleAddBlock}
           onClose={() => setShowBlockPicker(false)}
+          existingBlockTypes={contentBlocks.map(b => b.type)}
         />
       )}
     </>

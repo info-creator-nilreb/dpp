@@ -307,6 +307,21 @@ export const FEATURE_MANIFEST: Record<string, FeatureDefinition> = {
     usableInTrial: true,
   },
 
+  block_social_links: {
+    key: "block_social_links",
+    kind: "optional",
+    category: "content",
+    defaultName: "Social Media Footer",
+    defaultDescription: "Footer-Bereich mit Links zu Ihren Social-Media-Kanälen",
+    isCore: false,
+    isBillable: true,
+    systemFeature: false,
+    minimumPlan: "basic",
+    requiresActiveSubscription: true,
+    visibleInTrial: true,
+    usableInTrial: true,
+  },
+
   cms_styling: {
     key: "cms_styling",
     kind: "optional",

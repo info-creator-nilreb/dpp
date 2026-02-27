@@ -100,9 +100,9 @@ export default function DataSectionsContainer({
   }
   
   // Eine gemeinsame, nach order sortierte Liste: Template- und CMS-Blöcke gemischt, damit Position = Mehrwert-Tab
-  const cmsBlockTypes = ['text_block', 'text', 'storytelling', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll']
+  const cmsBlockTypes = ['text_block', 'text', 'storytelling', 'quote_block', 'image', 'image_gallery', 'list_block', 'video_block', 'video', 'timeline', 'timeline_block', 'accordion', 'accordion_block', 'faq', 'quick_poll', 'poll', 'multi_question_poll', 'social_links']
   
-  const { templateBlocks, orderedBlocks } = useMemo(() => {
+  const { templateBlocks, orderedBlocks, socialFooterBlock } = useMemo(() => {
     const template: UnifiedContentBlock[] = []
     const cmsBlocks: UnifiedContentBlock[] = []
     
@@ -121,14 +121,17 @@ export default function DataSectionsContainer({
       }
     })
     
-    // Pflichtangaben (Template-Blöcke) zuerst, dann Mehrwert-Blöcke (CMS-Blöcke) – CMS exakt wie im Mehrwert-Tab
+    // Pflichtangaben (Template-Blöcke) zuerst, dann Mehrwert-Blöcke (ohne Social Media Footer)
+    // Social Media Footer wird immer als letztes Element separat gerendert
     const cmsSorted = [...cmsBlocks].sort((a, b) => a.order - b.order)
+    const socialFooterBlock = cmsSorted.find(b => b.blockKey?.toLowerCase() === 'social_links')
+    const cmsWithoutFooter = cmsSorted.filter(b => b.blockKey?.toLowerCase() !== 'social_links')
     const ordered: Array<{ type: 'template' | 'cms'; block: UnifiedContentBlock }> = [
       ...template.map(block => ({ type: 'template' as const, block })),
-      ...cmsSorted.map(block => ({ type: 'cms' as const, block })),
+      ...cmsWithoutFooter.map(block => ({ type: 'cms' as const, block })),
     ]
     
-    return { templateBlocks: template, orderedBlocks: ordered }
+    return { templateBlocks: template, orderedBlocks: ordered, socialFooterBlock: socialFooterBlock ?? null }
   }, [dataBlocks])
   
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set())
@@ -190,7 +193,7 @@ export default function DataSectionsContainer({
         padding: 0,
         textAlign: 'left',
         paddingTop: hasStoryText ? 0 : editorialSpacing.introToData,
-        paddingBottom: editorialSpacing.xl,
+        paddingBottom: socialFooterBlock ? 0 : editorialSpacing.xl,
       }}
     >
       {showStickyNavPlaceholder && (
@@ -285,6 +288,21 @@ export default function DataSectionsContainer({
         })
       })()}
       </div>
+      {/* Social Media Footer: volle Seitenbreite (100vw), bis zum Seitenende, immer als letztes Element */}
+      {socialFooterBlock && (
+        <div
+          key={socialFooterBlock.id}
+          className="social-media-footer-outer"
+          style={{
+            width: '100vw',
+            marginLeft: 'calc(-50vw + 50%)',
+            marginTop: editorialSpacing.betweenSections,
+            boxSizing: 'border-box',
+          }}
+        >
+          <CmsBlockDirect block={socialFooterBlock} dppId={dppId} isPreview={isPreview} />
+        </div>
+      )}
     </div>
   )
 }

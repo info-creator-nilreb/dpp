@@ -169,23 +169,40 @@ export async function updateCompanyDetails(
     addressCity?: string
     addressCountry?: string
     country?: string
+    socialInstagram?: string | null
+    socialFacebook?: string | null
+    socialTiktok?: string | null
+    socialPinterest?: string | null
+    socialYoutube?: string | null
+    socialLinkedin?: string | null
+    defaultStyling?: Record<string, unknown> | null
   }
 ): Promise<void> {
+  const updateData: Record<string, unknown> = {
+    legalName: data.legalName,
+    companyType: data.companyType,
+    vatId: data.vatId,
+    eori: data.eori,
+    commercialRegisterId: data.commercialRegisterId,
+    registrationCountry: data.registrationCountry,
+    addressStreet: data.addressStreet,
+    addressZip: data.addressZip,
+    addressCity: data.addressCity,
+    addressCountry: data.addressCountry,
+    country: data.country,
+    socialInstagram: data.socialInstagram,
+    socialFacebook: data.socialFacebook,
+    socialTiktok: data.socialTiktok,
+    socialPinterest: data.socialPinterest,
+    socialYoutube: data.socialYoutube,
+    socialLinkedin: data.socialLinkedin,
+  }
+  if (data.defaultStyling !== undefined) {
+    updateData.defaultStyling = data.defaultStyling
+  }
   await prisma.organization.update({
     where: { id: organizationId },
-    data: {
-      legalName: data.legalName,
-      companyType: data.companyType,
-      vatId: data.vatId,
-      eori: data.eori,
-      commercialRegisterId: data.commercialRegisterId,
-      registrationCountry: data.registrationCountry,
-      addressStreet: data.addressStreet,
-      addressZip: data.addressZip,
-      addressCity: data.addressCity,
-      addressCountry: data.addressCountry,
-      country: data.country,
-    },
+    data: updateData as any,
   })
 }
 

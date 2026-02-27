@@ -249,12 +249,30 @@ export const stylingConfigSchema = {
 }
 
 /**
+ * Social Links Block Schema
+ */
+export const socialLinksBlockSchema = {
+  type: "object",
+  properties: {
+    instagram: { type: "string", maxLength: 500 },
+    facebook: { type: "string", maxLength: 500 },
+    tiktok: { type: "string", maxLength: 500 },
+    pinterest: { type: "string", maxLength: 500 },
+    youtube: { type: "string", maxLength: 500 },
+    linkedin: { type: "string", maxLength: 500 },
+    iconStyle: { type: "string", enum: ["light", "dark"], default: "light" },
+    backgroundColorKey: { type: "string", enum: ["accent", "primary", "secondary"], default: "accent" },
+  },
+}
+
+/**
  * Block Schema Registry
  */
 export const blockSchemas: Record<string, any> = {
   storytelling: storytellingBlockSchema,
   multi_question_poll: multiQuestionPollBlockSchema,
-  image_text: imageTextBlockSchema
+  image_text: imageTextBlockSchema,
+  social_links: socialLinksBlockSchema,
 }
 
 /**

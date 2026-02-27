@@ -21,6 +21,7 @@ export type BlockTypeKey =
   | "video"
   | "accordion"
   | "timeline"
+  | "social_links"
   | "template_block" // Legacy block type from template system
 
 /**

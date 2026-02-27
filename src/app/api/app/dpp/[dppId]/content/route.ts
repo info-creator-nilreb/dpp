@@ -36,7 +36,34 @@ export async function GET(
     })
 
     const blocks = Array.isArray(dppContent?.blocks) ? dppContent.blocks : []
-    const styling = dppContent?.styling ?? null
+    let styling = dppContent?.styling ?? null
+
+    const dpp = await prisma.dpp.findUnique({
+      where: { id: dppId },
+      select: { organizationId: true },
+    })
+    if (dpp?.organizationId) {
+      const org = await prisma.organization.findUnique({
+        where: { id: dpp.organizationId },
+        select: { defaultStyling: true },
+      })
+      const defaultStyling = (org?.defaultStyling as Record<string, unknown> | null) ?? null
+      if (defaultStyling && typeof defaultStyling === "object") {
+        const existing = (styling as Record<string, unknown>) ?? {}
+        const defLogo = (defaultStyling.logo as Record<string, unknown>) ?? {}
+        const defColors = (defaultStyling.colors as Record<string, unknown>) ?? {}
+        const existingColors = (existing.colors as Record<string, unknown>) ?? {}
+        styling = {
+          ...existing,
+          logo: existing.logo ?? (defLogo?.url || defLogo?.alt ? { url: defLogo.url ?? "", alt: defLogo.alt ?? "" } : undefined),
+          colors: {
+            primary: existingColors.primary ?? defColors.primary ?? "#0A0A0A",
+            secondary: existingColors.secondary ?? defColors.secondary ?? "#7A7A7A",
+            accent: existingColors.accent ?? defColors.accent ?? "#24c598",
+          },
+        }
+      }
+    }
 
     return NextResponse.json({ content: { blocks, styling } })
   } catch (error) {

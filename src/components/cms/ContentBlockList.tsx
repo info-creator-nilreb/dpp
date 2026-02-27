@@ -26,6 +26,7 @@ const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
   video: "Video",
   accordion: "Akkordeon",
   timeline: "Timeline",
+  social_links: "Social Media Footer",
   template_block: "Template-Block"
 }
 
@@ -38,6 +39,7 @@ const BLOCK_TYPE_ICONS: Record<BlockTypeKey, string> = {
   video: "🎥",
   accordion: "📋",
   timeline: "⏱️",
+  social_links: "🔗",
   template_block: "📄"
 }
 

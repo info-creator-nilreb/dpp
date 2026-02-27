@@ -11,6 +11,7 @@ const OUTER_WRAPPER_STYLE: React.CSSProperties = {
   minHeight: "100vh",
   backgroundColor: "#FFFFFF",
 }
+/** Ein einziges Wrapper-Element für den Content – gleiche Struktur auf Server und Client (vermeidet Hydration-Mismatch mit nachfolgendem App main). */
 const MAIN_CONTENT_STYLE: React.CSSProperties = {
   marginLeft: "0",
   padding: "0",
@@ -57,39 +58,33 @@ export default function PublicLayoutClient({ children, useChrome = true }: Publi
     }
   }, [isMobileMenuOpen])
 
-  return (
-    <div style={OUTER_WRAPPER_STYLE}>
-      {/* Floating Burger Menu Button - always visible when at top */}
-      {!shouldHideSidebar && (
-        <>
-          <FloatingBurgerButton 
-            onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            isVisible={!isMobileMenuOpen}
-          />
-          {/* Sticky Header - appears on scroll up */}
-          <PublicHeader onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
-        </>
-      )}
-
-      {/* Sidebar - only show when not on auth pages, always as overlay */}
-      {!shouldHideSidebar && (
+  /* Immer dieselbe Struktur: Chrome (Sidebar/Header/Burger) im gleichen Baum wie Content – gleiche Struktur auf Server und Client (vermeidet Hydration-Mismatch). Fixed-Position-Elemente wirken unverändert. */
+  const chrome =
+    !shouldHideSidebar ? (
+      <>
+        <FloatingBurgerButton
+          onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          isVisible={!isMobileMenuOpen}
+        />
+        <PublicHeader onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
         <PublicSidebar
           isMobileOpen={isMobileMenuOpen}
           onMobileClose={() => setIsMobileMenuOpen(false)}
           isCollapsed={false}
           onToggleCollapse={() => {}}
         />
-      )}
+      </>
+    ) : null
 
-      {/* Main Content – div statt main: AppLayoutClient/PlatformLayout haben bereits main; vermeidet main-in-main und Hydration-Mismatch */}
-      <div
-        role="main"
-        style={MAIN_CONTENT_STYLE}
-        suppressHydrationWarning
-      >
-        {children}
+  return (
+    <>
+      <div style={OUTER_WRAPPER_STYLE}>
+        <div style={MAIN_CONTENT_STYLE}>
+          {children}
+        </div>
       </div>
-    </div>
+      {chrome}
+    </>
   )
 }
 

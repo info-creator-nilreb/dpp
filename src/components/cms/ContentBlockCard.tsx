@@ -23,6 +23,7 @@ const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
   video: "Video",
   accordion: "Akkordeon",
   timeline: "Timeline",
+  social_links: "Social Media Footer",
   template_block: "Template-Block"
 }
 
@@ -83,6 +84,13 @@ const BlockIcons: Record<BlockTypeKey, React.ReactNode> = {
       <polyline points="12 6 12 12 16 14"/>
     </svg>
   ),
+  social_links: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+    </svg>
+  ),
   template_block: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -105,6 +113,8 @@ interface ContentBlockCardProps {
   onDrop: (e: React.DragEvent) => void
   onDragEnd: () => void
   dppId: string
+  /** Social Media Footer: nicht verschiebbar, kein Drag-Handle */
+  isSocialMediaFooter?: boolean
 }
 
 export default function ContentBlockCard({
@@ -119,7 +129,8 @@ export default function ContentBlockCard({
   onDragLeave,
   onDrop,
   onDragEnd,
-  dppId
+  dppId,
+  isSocialMediaFooter = false
 }: ContentBlockCardProps) {
   // Neuer Block (kein Content) -> direkt in Edit-Modus
   const isEmpty = !block.content || Object.keys(block.content).length === 0
@@ -264,7 +275,7 @@ export default function ContentBlockCard({
 
   return (
     <div
-      draggable={!isEditing}
+      draggable={!isEditing && !isSocialMediaFooter}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -294,19 +305,21 @@ export default function ContentBlockCard({
         alignItems: "center",
         gap: "0.75rem"
       }}>
-        {/* Drag Handle */}
-        <div style={{
-          flexShrink: 0,
-          color: "#7A7A7A",
-          cursor: "move",
-          display: "flex",
-          alignItems: "center"
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="9" y1="3" x2="9" y2="21"/>
-            <line x1="15" y1="3" x2="15" y2="21"/>
-          </svg>
-        </div>
+        {/* Drag Handle – bei Social Media Footer ausblenden */}
+        {!isSocialMediaFooter && (
+          <div style={{
+            flexShrink: 0,
+            color: "#7A7A7A",
+            cursor: "move",
+            display: "flex",
+            alignItems: "center"
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="9" y1="3" x2="9" y2="21"/>
+              <line x1="15" y1="3" x2="15" y2="21"/>
+            </svg>
+          </div>
+        )}
 
         {/* Icon */}
         <div style={{

@@ -45,7 +45,8 @@ export async function GET(
         organization: {
           select: {
             id: true,
-            name: true
+            name: true,
+            defaultStyling: true
           }
         },
         media: {
@@ -202,6 +203,27 @@ export async function GET(
         const dppUpdatedAt = (dppWithMedia as any).updatedAt?.getTime?.() ?? 0
         hasDraftChanges = draftContentUpdatedAt > lastPublishedAt || dppUpdatedAt > lastPublishedAt
       }
+    }
+
+    // Styling mit Organisations-Defaults mergen (Vorgabe für Vorschau, wenn DPP-Styling leer)
+    const org = (dppWithMedia as any).organization
+    const defaultStyling = (org?.defaultStyling as Record<string, unknown> | null) ?? null
+    if (dppWithMedia.content && dppWithMedia.content.length > 0 && defaultStyling && typeof defaultStyling === "object") {
+      const draftContent = dppWithMedia.content[0] as any
+      const existingStyling = (draftContent.styling as Record<string, unknown>) ?? {}
+      const defLogo = (defaultStyling.logo as Record<string, unknown>) ?? {}
+      const defColors = (defaultStyling.colors as Record<string, unknown>) ?? {}
+      const existingColors = (existingStyling.colors as Record<string, unknown>) ?? {}
+      const mergedStyling = {
+        ...existingStyling,
+        logo: existingStyling.logo ?? (defLogo?.url || defLogo?.alt ? { url: defLogo.url ?? "", alt: defLogo.alt ?? "" } : undefined),
+        colors: {
+          primary: existingColors.primary ?? defColors.primary ?? "#0A0A0A",
+          secondary: existingColors.secondary ?? defColors.secondary ?? "#7A7A7A",
+          accent: existingColors.accent ?? defColors.accent ?? "#24c598",
+        },
+      }
+      dppWithMedia.content[0] = { ...draftContent, styling: mergedStyling }
     }
 
     return NextResponse.json({ 

@@ -101,6 +101,17 @@ export async function POST(
     })
 
     const existingBlocks = ((existingContent?.blocks as unknown) as Block[]) || []
+
+    // Social Media Footer: max. 1 Instanz pro DPP
+    if (type === 'social_links') {
+      const hasSocialFooter = existingBlocks.some(b => b.type === 'social_links')
+      if (hasSocialFooter) {
+        return NextResponse.json(
+          { error: 'Es darf nur einen Social-Media-Footer pro DPP geben.' },
+          { status: 400 }
+        )
+      }
+    }
     
     // Determine order (append if not provided)
     const blockOrder = order !== undefined 

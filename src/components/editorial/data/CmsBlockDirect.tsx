@@ -36,10 +36,11 @@ export default function CmsBlockDirect({ block, dppId, isPreview = false }: CmsB
     (typeof customTitle === 'string' && genericBlockNames.includes(customTitle))
   const showTitle = !isTextBlock && !!customTitle && typeof customTitle === 'string' && customTitle.trim().length > 0 && !isGenericName
   
+  const isSocialLinksBlock = block.blockKey === 'social_links'
   const isFullBleedBlock = isTextBlock
   const isPollBlock = block.blockKey === 'multi_question_poll' || block.blockKey === 'quick_poll' || block.blockKey === 'poll'
   const isVideoBlock = block.blockKey === 'video_block' || block.blockKey === 'video'
-  const isFillCardBlock = isPollBlock || isVideoBlock
+  const isFillCardBlock = isPollBlock || isVideoBlock || isSocialLinksBlock
 
   const { spacing, radius, color } = editorialTheme
 
@@ -71,13 +72,14 @@ export default function CmsBlockDirect({ block, dppId, isPreview = false }: CmsB
   }
 
   // Card-Blöcke: Umfrage + Video füllen den Container vollständig (kein grauer Rand)
+  // Social Media Footer: kein Border-Radius, kein Overflow-Hidden
   const cardClassName = isVideoBlock ? 'editorial-video-wrapper-desktop' : undefined
   const cardStyle: React.CSSProperties = isFillCardBlock
     ? {
-        marginBottom: editorialSpacing.xl,
-        borderRadius: radius.lg,
+        marginBottom: 0,
+        borderRadius: isSocialLinksBlock ? 0 : radius.lg,
         padding: 0,
-        overflow: 'hidden',
+        overflow: isSocialLinksBlock ? 'visible' : 'hidden',
         border: 'none',
         boxShadow: 'none',
       }

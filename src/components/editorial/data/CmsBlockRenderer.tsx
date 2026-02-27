@@ -51,7 +51,7 @@ function StorytellingBlockPlakativ({
       style={{
         width: '100%',
         padding: 'clamp(2.25rem, 5.5vw, 3.25rem) 0',
-        backgroundColor: 'hsl(165, 57%, 46%)',
+        backgroundColor: editorialColors.brand.accentVar,
         boxSizing: 'border-box',
       }}
     >
@@ -888,6 +888,163 @@ export default function CmsBlockRenderer({ block, visualStyle = 'default', dppId
             verticalAlign: 'bottom',
           }}
         />
+      </div>
+    )
+  }
+
+  // Social Media Footer: DPP-Hintergrund, 1px Akzent-Linie oben, kompakt, Icons dunkel
+  if (blockType === 'social_links') {
+    const channels = [
+      { key: 'instagram', url: content.instagram?.value },
+      { key: 'facebook', url: content.facebook?.value },
+      { key: 'tiktok', url: content.tiktok?.value },
+      { key: 'pinterest', url: content.pinterest?.value },
+      { key: 'youtube', url: content.youtube?.value },
+      { key: 'linkedin', url: content.linkedin?.value },
+    ].filter((c) => c.url && String(c.url).trim()) as Array<{ key: string; url: string }>
+    const iconColor = editorialColors.text.primary
+    const { spacing } = editorialTheme
+
+    const channelLabels: Record<string, string> = {
+      instagram: 'Instagram',
+      facebook: 'Facebook',
+      tiktok: 'TikTok',
+      pinterest: 'Pinterest',
+      youtube: 'YouTube',
+      linkedin: 'LinkedIn',
+    }
+
+    // Äußerer Streifen: eine zusammenhängende Footer-Fläche, Inhalt vertikal mittig
+    const footerStripOuterStyle: React.CSSProperties = {
+      width: '100%',
+      marginTop: 0,
+      marginLeft: 0,
+      marginRight: 0,
+      boxSizing: 'border-box',
+      backgroundColor: editorialColors.background.secondary,
+      border: 'none',
+      borderTop: `1px solid ${editorialColors.brand.accentVar}`,
+      borderRadius: 0,
+      minHeight: 'clamp(7rem, 20vh, 10rem)',
+      padding: `${spacing.lg} ${spacing.lg}`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }
+    const footerStripInnerStyle: React.CSSProperties = {
+      maxWidth: '900px',
+      margin: '0 auto',
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+    }
+
+    if (channels.length === 0) {
+      return (
+        <div
+          className="social-links-strip social-links-strip--empty social-media-footer"
+          style={footerStripOuterStyle}
+          role="contentinfo"
+          aria-label="Social-Media-Links"
+        >
+          <div style={{ ...footerStripInnerStyle, textAlign: 'center', color: editorialColors.text.secondaryVar, fontSize: editorialTheme.typography.fontSizeBody }}>
+            Social-Media-Links können in den Firmendaten oder im Mehrwert-Block hinterlegt werden.
+          </div>
+        </div>
+      )
+    }
+
+    const iconSize = 28
+    const socialIcons: Record<string, React.ReactNode> = {
+      instagram: (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+        </svg>
+      ),
+      facebook: (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+        </svg>
+      ),
+      tiktok: (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+        </svg>
+      ),
+      pinterest: (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M8 20l4 -9M10.7 14c.44 1.26 1.43 2 2.55 2 2.07 0 3.75-1.55 3.75-4a5 5 0 1 0-9.7 1.7"/>
+        </svg>
+      ),
+      youtube: (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+          <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill={iconColor}/>
+        </svg>
+      ),
+      linkedin: (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+          <rect x="2" y="9" width="4" height="12"/>
+          <circle cx="4" cy="4" r="2"/>
+        </svg>
+      ),
+    }
+
+    const footerLabel = 'Folge uns'
+
+    return (
+      <div className="social-links-strip social-media-footer" style={footerStripOuterStyle} role="contentinfo" aria-label="Social-Media-Links">
+        <div style={footerStripInnerStyle}>
+          <span
+            style={{
+              fontSize: editorialTheme.typography.fontSizeLabel,
+              fontWeight: 500,
+              letterSpacing: editorialTheme.typography.letterSpacingLabel,
+              color: editorialColors.text.secondaryVar,
+              flexShrink: 0,
+            }}
+            aria-hidden
+          >
+            {footerLabel}
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: spacing.xl }}>
+          {channels.map(({ key, url }) => (
+            <a
+              key={key}
+              href={url.startsWith('http') ? url : `https://${url}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={channelLabels[key] || key}
+              title={channelLabels[key] || key}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: iconColor,
+                textDecoration: 'none',
+                transition: 'opacity 0.2s ease, transform 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.75'
+                e.currentTarget.style.transform = 'scale(1.05)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+            {socialIcons[key]}
+          </a>
+        ))}
+          </div>
+        </div>
       </div>
     )
   }

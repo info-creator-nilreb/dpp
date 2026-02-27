@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma"
 import { updateCompanyDetails, getOrganizationWithDetails } from "@/lib/phase1/organization"
 import { canEditOrganization, getUserRole } from "@/lib/phase1/permissions"
 import { logCompanyDetailsUpdated, logOrganizationUpdated } from "@/lib/phase1/audit"
+import { hasFeature, CapabilityContext } from "@/lib/capabilities/resolver"
 
 /**
  * GET /api/app/organization/company-details
@@ -53,6 +54,35 @@ export async function GET(request: Request) {
 
     const canEdit = await canEditOrganization(session.user.id, user.organizationId)
 
+    const context: CapabilityContext = {
+      organizationId: user.organizationId,
+      userId: session.user.id,
+    }
+    const hasCmsStyling = await hasFeature("cms_styling", context)
+
+    const companyDetailsPayload: Record<string, unknown> = {
+      legalName: organization.legalName,
+      companyType: organization.companyType,
+      vatId: organization.vatId,
+      eori: organization.eori,
+      commercialRegisterId: organization.commercialRegisterId,
+      registrationCountry: organization.registrationCountry,
+      addressStreet: organization.addressStreet,
+      addressZip: organization.addressZip,
+      addressCity: organization.addressCity,
+      addressCountry: organization.addressCountry,
+      country: organization.country,
+      socialInstagram: organization.socialInstagram ?? null,
+      socialFacebook: organization.socialFacebook ?? null,
+      socialTiktok: organization.socialTiktok ?? null,
+      socialPinterest: organization.socialPinterest ?? null,
+      socialYoutube: organization.socialYoutube ?? null,
+      socialLinkedin: organization.socialLinkedin ?? null,
+    }
+    if (hasCmsStyling) {
+      companyDetailsPayload.defaultStyling = (organization as any).defaultStyling ?? null
+    }
+
     return NextResponse.json(
       {
         organization: {
@@ -61,19 +91,8 @@ export async function GET(request: Request) {
           createdAt: organization.createdAt.toISOString(),
           canEdit,
         },
-        companyDetails: {
-          legalName: organization.legalName,
-          companyType: organization.companyType,
-          vatId: organization.vatId,
-          eori: organization.eori,
-          commercialRegisterId: organization.commercialRegisterId,
-          registrationCountry: organization.registrationCountry,
-          addressStreet: organization.addressStreet,
-          addressZip: organization.addressZip,
-          addressCity: organization.addressCity,
-          addressCountry: organization.addressCountry,
-          country: organization.country,
-        },
+        hasCmsStyling,
+        companyDetails: companyDetailsPayload,
       },
       { status: 200 }
     )
@@ -137,6 +156,13 @@ export async function PUT(request: Request) {
       addressCity,
       addressCountry,
       country,
+      socialInstagram,
+      socialFacebook,
+      socialTiktok,
+      socialPinterest,
+      socialYoutube,
+      socialLinkedin,
+      defaultStyling: defaultStylingInput,
     } = body
 
     // registration_country immer setzen: explizit oder Fallback auf Adressland (ISO-2)
@@ -172,6 +198,12 @@ export async function PUT(request: Request) {
 
     const actorRole = await getUserRole(session.user.id, user.organizationId)
 
+    const context: CapabilityContext = {
+      organizationId: user.organizationId,
+      userId: session.user.id,
+    }
+    const hasCmsStyling = await hasFeature("cms_styling", context)
+
     // Optional: Organisationsname aktualisieren (aus ehem. Allgemeine Einstellungen)
     if (nameInput !== undefined) {
       const name = typeof nameInput === "string" ? nameInput.trim() : ""
@@ -198,7 +230,7 @@ export async function PUT(request: Request) {
     }
 
     // Aktualisiere Company Details (registration_country immer gesetzt, Fallback Adressland)
-    await updateCompanyDetails(user.organizationId, {
+    const companyDetailsUpdate: Parameters<typeof updateCompanyDetails>[1] = {
       legalName,
       companyType,
       vatId,
@@ -210,7 +242,20 @@ export async function PUT(request: Request) {
       addressCity,
       addressCountry,
       country: countryVal ?? undefined,
-    })
+      socialInstagram: socialInstagram !== undefined ? (socialInstagram === "" ? null : socialInstagram) : undefined,
+      socialFacebook: socialFacebook !== undefined ? (socialFacebook === "" ? null : socialFacebook) : undefined,
+      socialTiktok: socialTiktok !== undefined ? (socialTiktok === "" ? null : socialTiktok) : undefined,
+      socialPinterest: socialPinterest !== undefined ? (socialPinterest === "" ? null : socialPinterest) : undefined,
+      socialYoutube: socialYoutube !== undefined ? (socialYoutube === "" ? null : socialYoutube) : undefined,
+      socialLinkedin: socialLinkedin !== undefined ? (socialLinkedin === "" ? null : socialLinkedin) : undefined,
+    }
+    if (hasCmsStyling && defaultStylingInput !== undefined) {
+      companyDetailsUpdate.defaultStyling =
+        defaultStylingInput === null || defaultStylingInput === ""
+          ? null
+          : (typeof defaultStylingInput === "object" && defaultStylingInput !== null ? defaultStylingInput : null)
+    }
+    await updateCompanyDetails(user.organizationId, companyDetailsUpdate)
 
     // Audit Log für Firmendaten
     await logCompanyDetailsUpdated(

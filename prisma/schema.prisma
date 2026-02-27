@@ -81,6 +81,17 @@ model Organization {
   addressCountry       String?
   country              String? // ISO country code (Adresse)
 
+  // Social Media (Firmendaten; werden als Default im Mehrwert-Block „Social Media“ genutzt)
+  socialInstagram      String?
+  socialFacebook       String?
+  socialTiktok         String?
+  socialPinterest      String?
+  socialYoutube       String?
+  socialLinkedin      String?
+
+  // Styling-Defaults (Logo, Farben) – Standard für DPP-Vorschau, nur bei Premium/cms_styling
+  defaultStyling       Json?    // { logo?: { url, alt? }, colors?: { primary?, secondary?, accent? } }
+
   // Phase 1: Billing Information (separate from company details)
   billingEmail          String?
   billingContactUserId  String? // Reference to User.id

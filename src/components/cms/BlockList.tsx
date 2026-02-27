@@ -31,6 +31,7 @@ const BLOCK_TYPE_LABELS: Record<BlockTypeKey, string> = {
   video: "Video",
   accordion: "Akkordeon",
   timeline: "Timeline",
+  social_links: "Social Media Footer",
   template_block: "Template-Block"
 }
 

@@ -17,6 +17,7 @@ import ImageBlockEditor from "./blocks/ImageBlockEditor"
 import VideoBlockEditor from "./blocks/VideoBlockEditor"
 import TimelineBlockEditor from "./blocks/TimelineBlockEditor"
 import AccordionBlockEditor from "./blocks/AccordionBlockEditor"
+import SocialLinksBlockEditor from "./blocks/SocialLinksBlockEditor"
 
 interface ContentBlockEditorProps {
   block: Block
@@ -187,6 +188,13 @@ export default function ContentBlockEditor({ block, onUpdate, dppId }: ContentBl
       case "accordion":
         return (
           <AccordionBlockEditor
+            content={content}
+            onChange={handleContentChange}
+          />
+        )
+      case "social_links":
+        return (
+          <SocialLinksBlockEditor
             content={content}
             onChange={handleContentChange}
           />

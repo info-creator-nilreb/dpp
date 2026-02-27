@@ -184,6 +184,15 @@ export async function adaptCmsBlockToUnified(
       label: 'DPP ID',
       key: 'dppId'
     }
+  } else if (cmsBlock.type === 'social_links') {
+    fields.instagram = { value: content.instagram || '', type: 'text', label: 'Instagram', key: 'instagram' }
+    fields.facebook = { value: content.facebook || '', type: 'text', label: 'Facebook', key: 'facebook' }
+    fields.tiktok = { value: content.tiktok || '', type: 'text', label: 'TikTok', key: 'tiktok' }
+    fields.pinterest = { value: content.pinterest || '', type: 'text', label: 'Pinterest', key: 'pinterest' }
+    fields.youtube = { value: content.youtube || '', type: 'text', label: 'YouTube', key: 'youtube' }
+    fields.linkedin = { value: content.linkedin || '', type: 'text', label: 'LinkedIn', key: 'linkedin' }
+    fields.iconStyle = { value: content.iconStyle || 'light', type: 'text', label: 'Icon-Darstellung', key: 'iconStyle' }
+    fields.backgroundColorKey = { value: content.backgroundColorKey || 'accent', type: 'text', label: 'Hintergrundfarbe (Styling)', key: 'backgroundColorKey' }
   } else {
     // Generische Behandlung für andere Block-Typen
     Object.entries(content).forEach(([key, value]) => {

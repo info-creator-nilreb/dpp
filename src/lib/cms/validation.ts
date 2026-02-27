@@ -31,6 +31,7 @@ export const BLOCK_TYPE_FEATURE_MAP: Record<BlockTypeKey, string> = {
   video: "block_video",
   accordion: "block_accordion",
   timeline: "block_timeline",
+  social_links: "block_social_links",
   template_block: "cms_access" // Legacy block type from template system
 }
 
