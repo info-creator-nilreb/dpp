@@ -64,12 +64,21 @@ export async function GET(
             _count: { id: true },
           }),
           prisma.$queryRaw<Array<{ date: string; scans: bigint }>>`
-            SELECT date_trunc('day', "scannedAt")::date::text AS date, count(*)::bigint AS scans
-            FROM dpp_scans
-            WHERE "dppId" = ${dppId}
-              AND "scannedAt" >= (current_date - interval '30 days')
-            GROUP BY date_trunc('day', "scannedAt")
-            ORDER BY date ASC
+            SELECT d::date::text AS date, COALESCE(s.cnt, 0)::bigint AS scans
+            FROM generate_series(
+              (current_date - interval '29 days')::date,
+              current_date,
+              '1 day'::interval
+            ) AS d
+            LEFT JOIN (
+              SELECT date_trunc('day', "scannedAt")::date AS day, count(*)::bigint AS cnt
+              FROM dpp_scans
+              WHERE "dppId" = ${dppId}
+                AND "scannedAt" >= (current_date - interval '29 days')
+                AND "scannedAt" < (current_date + interval '1 day')
+              GROUP BY date_trunc('day', "scannedAt")::date
+            ) s ON s.day = d::date
+            ORDER BY d
           `,
         ])
         totalScans = totalScansResult
