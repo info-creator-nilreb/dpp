@@ -67,7 +67,7 @@ export async function GET(
             SELECT date_trunc('day', "scannedAt")::date::text AS date, count(*)::bigint AS scans
             FROM dpp_scans
             WHERE "dppId" = ${dppId}
-              AND "scannedAt" >= (current_date - interval '14 days')
+              AND "scannedAt" >= (current_date - interval '30 days')
             GROUP BY date_trunc('day', "scannedAt")
             ORDER BY date ASC
           `,

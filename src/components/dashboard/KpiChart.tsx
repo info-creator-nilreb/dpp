@@ -9,7 +9,7 @@ export interface KpiTimeSeries {
   previous: { created: number[]; published: number[]; scans: number[] };
 }
 
-const CHART_HEIGHT = 200;
+const CHART_HEIGHT = 280;
 const PADDING = { top: 16, right: 16, bottom: 28, left: 36 };
 
 const METRIC_KEYS: Record<KpiId, keyof KpiTimeSeries["current"]> = {

@@ -95,13 +95,16 @@ function CustomTooltip({
   )
 }
 
-const CHART_HEIGHT_DESKTOP = 240
-const CHART_HEIGHT_MOBILE = 200
-const CHART_HEIGHT_SMALL_MOBILE = 180
+const CHART_HEIGHT_DESKTOP = 280
+const CHART_HEIGHT_MOBILE = 240
+const CHART_HEIGHT_SMALL_MOBILE = 200
 const CHART_MARGIN_DESKTOP = { top: 12, right: 36, bottom: 12, left: 40 }
 const CHART_MARGIN_MOBILE = { top: 12, right: 16, bottom: 12, left: 20 }
 
-export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamtColor = "#64748b" }: StatsTimeSeriesChartProps) {
+/** Standardfarbe Gesamt-Linie: Grün wie im Dashboard (einheitliche Darstellung). */
+const DEFAULT_GESAMT_COLOR = "#24c598"
+
+export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamtColor = DEFAULT_GESAMT_COLOR }: StatsTimeSeriesChartProps) {
   const hasRegional = regionalSeries.length > 0
   const [tooltipActive, setTooltipActive] = useState(false)
   const [chartKey, setChartKey] = useState(0)
@@ -222,7 +225,7 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
             cursor={{ stroke: "#9CA3AF", strokeWidth: 1, strokeDasharray: "3 3" }}
           />
           <Line
-            type="monotone"
+            type="natural"
             dataKey="scans"
             name="Gesamt"
             stroke={gesamtColor}
@@ -234,7 +237,7 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
           {regionalSeries.map((s) => (
             <Line
               key={s.region}
-              type="monotone"
+              type="natural"
               dataKey={s.region}
               name={s.region}
               stroke={s.color}

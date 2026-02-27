@@ -4,11 +4,11 @@ import { useState, useMemo, useEffect } from "react"
 import { BREAKPOINTS_MQ } from "@/lib/breakpoints"
 import StatsTimeSeriesChart, { type ScanDataPoint } from "@/components/stats/StatsTimeSeriesChart"
 
-/** Farben für Regionen (indiziert; Gesamt nutzt eigene Farbe) */
-const REGION_COLORS = ["#24c598", "#3B82F6", "#F59E0B"] as const
+/** Farben für Regionen (1. = z. B. Deutschland, 2., 3. – Gesamt ist immer Grün) */
+const REGION_COLORS = ["#3B82F6", "#F59E0B", "#8B5CF6"] as const
 
-/** Farbe der Gesamt-Linie (deutlich abgesetzt von Top1) */
-const GESAMT_COLOR = "#64748b"
+/** Gesamt-Linie: Grün wie im Dashboard */
+const GESAMT_COLOR = "#24c598"
 
 interface StatsExpandedUsageProps {
   scanData: ScanDataPoint[]
@@ -18,10 +18,10 @@ interface StatsExpandedUsageProps {
   topRegions?: Array<{ region: string; scans: number }>
 }
 
-/** Generiert Demo-Scan-Daten aus totalScans (letzte 14 Tage) wenn API keine Zeitreihen liefert. */
+/** Generiert Demo-Scan-Daten aus totalScans (letzte 30 Tage) wenn API keine Zeitreihen liefert. */
 export function generateScanDataFromTotal(totalScans: number): ScanDataPoint[] {
   if (totalScans <= 0) return []
-  const days = 14
+  const days = 30
   const result: ScanDataPoint[] = []
   const now = new Date()
   let remaining = totalScans
