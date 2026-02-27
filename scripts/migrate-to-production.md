@@ -8,10 +8,12 @@
    pg_dump -h <prod-host> -U <user> -d <database> > backup_$(date +%Y%m%d_%H%M%S).sql
    ```
 
-2. **Umgebungsvariablen prüfen**
-   - Die `DATABASE_URL` wird automatisch aus der `.env` Datei geladen
-   - Stelle sicher, dass die `.env` Datei die Production-Datenbank-URL enthält
-   - Format: `DATABASE_URL="postgresql://user:password@host:port/database"`
+2. **Umgebungsvariablen für Produktions-DB**
+   - In `.env`: **`DATABASE_URL`** = Entwicklungs-DB (bleibt für lokales Arbeiten).
+   - Für Migrationen gegen die **Produktions-DB** in `.env` ergänzen:
+     - `DATABASE_URL_PRODUCTION="postgresql://...@db.fnfuklgbsojzdfnmrfad.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1"`
+     - `DIRECT_URL_PRODUCTION="postgresql://...@db.fnfuklgbsojzdfnmrfad.supabase.co:5432/postgres?sslmode=require"`
+   - Das Script `migrate-production.sh` verwendet beim Ausführen automatisch diese Variablen für die Migrationen.
 
 ## Migrations-Status prüfen
 

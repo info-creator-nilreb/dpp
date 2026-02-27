@@ -358,47 +358,13 @@ export default function FileField({
         </p>
       )}
 
-      {/* Upload-Status während Upload */}
-      {uploading && uploadProgress && (
-        <div style={{
-          padding: "1.5rem",
-          backgroundColor: "#F9F9F9",
-          border: "1px solid #E5E5E5",
-          borderRadius: "8px",
-          textAlign: "center"
-        }}>
-          <div style={{
-            display: "inline-block",
-            width: "24px",
-            height: "24px",
-            border: "3px solid #E5E5E5",
-            borderTopColor: "#24c598",
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
-            marginBottom: "0.75rem"
-          }} />
-          <p style={{
-            fontSize: "0.875rem",
-            color: "#7A7A7A",
-            margin: 0
-          }}>
-            {uploadProgress}
-          </p>
-          <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      )}
-
-      {/* File Upload – bei hideAddWhenMaxReached und vorhandenem Bild nicht anzeigen (Storytelling: nur Thumbnail, kein Plus) */}
-      {!(hideAddWhenMaxReached && value && (Array.isArray(value) ? value.length > 0 : true)) && (!value || (Array.isArray(value) && value.length === 0) || (!isMultiFile && value)) && !uploading && (
+      {/* File Upload – bei hideAddWhenMaxReached und vorhandenem Bild nicht anzeigen (Storytelling: nur Thumbnail, kein Plus); Upload-Overlay kommt von FileUploadArea */}
+      {!(hideAddWhenMaxReached && value && (Array.isArray(value) ? value.length > 0 : true)) && (!value || (Array.isArray(value) && value.length === 0) || (!isMultiFile && value)) && (
         <FileUploadArea
           accept={effectiveAccept}
           maxSize={maxSize}
           onFileSelect={handleFileUpload}
-          disabled={uploading}
+          uploading={uploading}
           label={isMultiFile ? "Dateien auswählen" : "Datei auswählen"}
           description={description || (
             fileType === "document"

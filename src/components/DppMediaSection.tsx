@@ -238,9 +238,9 @@ export default function DppMediaSection({
       <div style={{ marginBottom: "2rem" }}>
         <FileUploadArea
           accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/mp4,video/webm,video/ogg,video/quicktime"
-          maxSize={100 * 1024 * 1024} // 100 MB (für Videos)
+          maxSize={100 * 1024 * 1024}
           onFileSelect={handleFileSelect}
-          disabled={uploading}
+          uploading={uploading}
           label="Datei hochladen"
           description="Bilder, Videos, PDFs oder Dokumente. Maximale Dateigröße: 10 MB (Bilder/Dokumente), 100 MB (Videos)"
         />

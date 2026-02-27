@@ -317,7 +317,7 @@ export default function StylingEditor({ styling, onUpdate, dppId }: StylingEdito
             accept="image/*"
             maxSize={2 * 1024 * 1024} // 2 MB
             onFileSelect={handleLogoUpload}
-            disabled={uploadingLogo}
+            uploading={uploadingLogo}
             description="PNG, JPG oder SVG (max. 2 MB)"
           />
         )}

@@ -10,24 +10,35 @@ echo "Production Migration Script"
 echo "=========================================="
 echo ""
 
-# Lade .env Datei falls vorhanden
+# Lade .env Datei falls vorhanden (set -a = export aller gesetzten Variablen)
 if [ -f .env ]; then
     echo "📄 Lade .env Datei..."
-    export $(cat .env | grep -v '^#' | xargs)
+    set -a
+    # shellcheck source=/dev/null
+    source .env 2>/dev/null || true
+    set +a
     echo "✅ .env Datei geladen"
 else
     echo "⚠️  Keine .env Datei gefunden"
 fi
 
-# Prüfe ob DATABASE_URL gesetzt ist
+# Produktions-DB: DATABASE_URL_PRODUCTION hat Vorrang (für getrennte Dev/Prod)
+if [ -n "$DATABASE_URL_PRODUCTION" ]; then
+    export DATABASE_URL="$DATABASE_URL_PRODUCTION"
+    export DIRECT_URL="$DIRECT_URL_PRODUCTION"
+    echo "✅ DATABASE_URL_PRODUCTION wird für Migrationen verwendet (Produktions-DB)"
+else
+    echo "ℹ️  DATABASE_URL wird verwendet (setze DATABASE_URL_PRODUCTION für Produktions-DB)"
+fi
+
 if [ -z "$DATABASE_URL" ]; then
     echo "❌ FEHLER: DATABASE_URL ist nicht gesetzt!"
-    echo "Bitte setze die Umgebungsvariable in der .env Datei oder:"
-    echo "  export DATABASE_URL='postgresql://user:password@host:port/database'"
+    echo "Bitte setze in .env: DATABASE_URL oder für Produktion: DATABASE_URL_PRODUCTION"
+    echo "  (und optional DIRECT_URL_PRODUCTION für Migrations)"
     exit 1
 fi
 
-echo "✅ DATABASE_URL ist gesetzt"
+echo "✅ Datenbank-URL ist gesetzt"
 echo "   (URL wird aus Sicherheitsgründen nicht angezeigt)"
 echo ""
 

@@ -1,5 +1,14 @@
 # Cursor Coding Rules – React / Next.js (ESLint-safe)
 
+## Pflichtfelder (Required Fields)
+
+- Pflichtfelder werden **einheitlich** mit einem **grünen Stern** hinter dem Feldnamen markiert.
+- Immer dieselbe Darstellung: `<span style={{ color: "#24c598" }}>*</span>` (Akzentfarbe des Projekts).
+- **Nicht** den Stern in Grau oder schwarz setzen; **nicht** zusätzlich „Pflichtfeld“ o. Ä. hinter jedem Feld schreiben.
+- Komponenten wie `CountrySelect` haben eine `required`-Prop und rendern den grünen Stern intern; dann nur `required` setzen und **keinen** Stern in den Label-Text schreiben.
+
+---
+
 ## JSX Text Safety (CRITICAL)
 
 When writing text content inside JSX / TSX:

@@ -6,6 +6,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner"
 import CountrySelect from "@/components/CountrySelect"
 import VatIdInput from "@/components/VatIdInput"
 import FileUploadArea from "@/components/FileUploadArea"
+import { useNotification } from "@/components/NotificationProvider"
 import { editorialColors } from "@/components/editorial/tokens/colors"
 
 const DEFAULT_PRIMARY = editorialColors.brand.primary
@@ -49,8 +50,7 @@ export default function CompanyDetailsClient() {
   const [hasCmsStyling, setHasCmsStyling] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
+  const { showNotification } = useNotification()
 
   // Form fields – Grunddaten (ehem. Allgemeine Einstellungen)
   const [organizationName, setOrganizationName] = useState("")
@@ -75,9 +75,9 @@ export default function CompanyDetailsClient() {
   // Styling-Defaults (nur bei Premium/cms_styling)
   const [stylingLogoUrl, setStylingLogoUrl] = useState("")
   const [stylingLogoAlt, setStylingLogoAlt] = useState("")
-  const [stylingPrimaryColor, setStylingPrimaryColor] = useState(DEFAULT_PRIMARY)
-  const [stylingSecondaryColor, setStylingSecondaryColor] = useState("")
-  const [stylingAccentColor, setStylingAccentColor] = useState("")
+  const [stylingPrimaryColor, setStylingPrimaryColor] = useState<string>(DEFAULT_PRIMARY)
+  const [stylingSecondaryColor, setStylingSecondaryColor] = useState<string>("")
+  const [stylingAccentColor, setStylingAccentColor] = useState<string>("")
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const isUploadingLogoRef = useRef(false)
   const [showApplyStylingModal, setShowApplyStylingModal] = useState(false)
@@ -141,7 +141,7 @@ export default function CompanyDetailsClient() {
       }
     } catch (err) {
       console.error("Error loading company details:", err)
-      setError("Fehler beim Laden der Firmendaten")
+      showNotification("Fehler beim Laden der Firmendaten", "error")
     } finally {
       setLoading(false)
     }
@@ -149,22 +149,20 @@ export default function CompanyDetailsClient() {
 
   async function handleSave() {
     if (organization?.canEdit && !organizationName.trim()) {
-      setError("Bitte geben Sie einen Organisationsnamen ein.")
+      showNotification("Bitte geben Sie einen Organisationsnamen ein.", "error")
       return
     }
     const countryVal = country.trim()
     if (!countryVal) {
-      setError("Bitte wählen Sie das Land der Geschäftsadresse.")
+      showNotification("Bitte wählen Sie das Land der Geschäftsadresse.", "error")
       return
     }
     if (registrationDiffersFromAddress && !registrationCountry.trim()) {
-      setError("Bitte wählen Sie das Land der Registrierung (rechtlicher Sitz).")
+      showNotification("Bitte wählen Sie das Land der Registrierung (rechtlicher Sitz).", "error")
       return
     }
     const registrationCountryVal = registrationDiffersFromAddress ? registrationCountry.trim() : countryVal
     setSaving(true)
-    setError("")
-    setSuccess("")
 
     try {
       const response = await fetch("/api/app/organization/company-details", {
@@ -210,12 +208,10 @@ export default function CompanyDetailsClient() {
         throw new Error(errorData.error || "Fehler beim Aktualisieren der Firmendaten")
       }
 
-      setSuccess("Firmendaten erfolgreich aktualisiert")
+      showNotification("Firmendaten erfolgreich aktualisiert", "success")
       await loadDetails()
-      
-      setTimeout(() => setSuccess(""), 3000)
-    } catch (err: any) {
-      setError(err.message || "Fehler beim Aktualisieren der Firmendaten")
+    } catch (err: unknown) {
+      showNotification(err instanceof Error ? err.message : "Fehler beim Aktualisieren der Firmendaten", "error")
     } finally {
       setSaving(false)
     }
@@ -275,8 +271,8 @@ export default function CompanyDetailsClient() {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || "Fehler beim Speichern")
       }
-    } catch (err: any) {
-      setError(err.message || "Fehler beim Speichern des Stylings")
+    } catch (err: unknown) {
+      showNotification(err instanceof Error ? err.message : "Fehler beim Speichern des Stylings", "error")
     }
   }
 
@@ -300,8 +296,8 @@ export default function CompanyDetailsClient() {
       const newUrl = result.media.storageUrl
       setStylingLogoUrl(newUrl)
       await saveStylingToServer({ logoUrl: newUrl })
-    } catch (err: any) {
-      setError(err.message || "Fehler beim Hochladen des Logos")
+    } catch (err: unknown) {
+      showNotification(err instanceof Error ? err.message : "Fehler beim Hochladen des Logos", "error")
     } finally {
       setUploadingLogo(false)
       isUploadingLogoRef.current = false
@@ -340,7 +336,6 @@ export default function CompanyDetailsClient() {
   async function handleApplyStylingToAllDpps() {
     setApplyingStyling(true)
     setApplyStylingResult(null)
-    setError("")
     try {
       const res = await fetch("/api/app/organization/apply-default-styling", { method: "POST" })
       const data = await res.json().catch(() => ({}))
@@ -349,10 +344,10 @@ export default function CompanyDetailsClient() {
       }
       setApplyStylingResult({ applied: data.applied ?? 0, total: data.total ?? 0 })
       if (data.errors?.length) {
-        setError(data.errors.slice(0, 3).join("; "))
+        showNotification(data.errors.slice(0, 2).join("; "), "error")
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Fehler beim Übernehmen des Stylings")
+      showNotification(e instanceof Error ? e.message : "Fehler beim Übernehmen des Stylings", "error")
     } finally {
       setApplyingStyling(false)
     }
@@ -394,34 +389,6 @@ export default function CompanyDetailsClient() {
       }}>
         Firmendaten
       </h1>
-
-      {error && (
-        <div style={{
-          padding: "0.75rem",
-          marginBottom: "1rem",
-          backgroundColor: "#FEE",
-          border: "1px solid #FCC",
-          borderRadius: "6px",
-          color: "#C33",
-          fontSize: "0.9rem",
-        }}>
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div style={{
-          padding: "0.75rem",
-          marginBottom: "1rem",
-          backgroundColor: "#E8F5E9",
-          border: "1px solid #C8E6C9",
-          borderRadius: "6px",
-          color: "#2E7D32",
-          fontSize: "0.9rem",
-        }}>
-          {success}
-        </div>
-      )}
 
       {organization && !organization.canEdit && (
         <div style={{
@@ -754,10 +721,8 @@ export default function CompanyDetailsClient() {
                 setCountry(v)
                 if (!registrationDiffersFromAddress) setRegistrationCountry(v)
               }}
+              required
             />
-            <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#6B7280" }}>
-              <span style={{ color: "#24c598" }}>*</span> Pflichtfeld
-            </p>
           </div>
         </div>
 
@@ -782,10 +747,8 @@ export default function CompanyDetailsClient() {
                 label="Land der Registrierung (rechtlicher Sitz)"
                 value={registrationCountry}
                 onChange={setRegistrationCountry}
+                required
               />
-              <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#6B7280" }}>
-                <span style={{ color: "#24c598" }}>*</span> Pflichtfeld bei abweichendem Sitz
-              </p>
             </div>
           )}
         </div>
@@ -919,7 +882,8 @@ export default function CompanyDetailsClient() {
                   accept="image/*"
                   maxSize={2 * 1024 * 1024}
                   onFileSelect={handleLogoUpload}
-                  disabled={uploadingLogo || !organization?.canEdit}
+                  disabled={!organization?.canEdit}
+                  uploading={uploadingLogo}
                   description="PNG, JPG oder SVG (max. 2 MB)"
                 />
               )}

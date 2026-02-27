@@ -385,9 +385,9 @@ export default function TemplateBlockField({
                 ? "video/mp4,video/webm,video/ogg"
                 : "image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf,video/mp4,video/webm,video/ogg"
             }
-            maxSize={field.type === "file-video" ? 100 * 1024 * 1024 : 10 * 1024 * 1024} // 100 MB für Videos, 10 MB für andere
+            maxSize={field.type === "file-video" ? 100 * 1024 * 1024 : 10 * 1024 * 1024}
             onFileSelect={handleFileUpload}
-            disabled={uploading}
+            uploading={uploading}
             label="Datei hochladen"
             description={
               field.type === "file-image"
@@ -790,7 +790,7 @@ export default function TemplateBlockField({
                 }
                 maxSize={field.type === "file-video" ? 100 * 1024 * 1024 : 10 * 1024 * 1024}
                 onFileSelect={handleFileUpload}
-                disabled={uploading}
+                uploading={uploading}
                 label=""
                 description=""
                 compact

@@ -11,6 +11,8 @@ interface FileUploadAreaProps {
   description?: string
   /** Kompakt: nur Plus-Kachel (z. B. für „weiteres Bild hinzufügen“) */
   compact?: boolean
+  /** Wenn true: Overlay mit Spinner und „Wird hochgeladen…“ anzeigen (visuelles Feedback während Upload) */
+  uploading?: boolean
 }
 
 /**
@@ -24,6 +26,7 @@ export default function FileUploadArea({
   label,
   description,
   compact = false,
+  uploading = false,
 }: FileUploadAreaProps) {
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -59,7 +62,7 @@ export default function FileUploadArea({
   }
 
   const handleClick = () => {
-    if (!disabled) {
+    if (!disabled && !uploading) {
       fileInputRef.current?.click()
     }
   }
@@ -67,7 +70,7 @@ export default function FileUploadArea({
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!disabled) {
+    if (!disabled && !uploading) {
       setIsDragging(true)
     }
   }
@@ -88,7 +91,7 @@ export default function FileUploadArea({
     e.stopPropagation()
     setIsDragging(false)
 
-    if (disabled) return
+    if (disabled || uploading) return
 
     const file = e.dataTransfer.files[0]
     if (file) {
@@ -140,7 +143,8 @@ export default function FileUploadArea({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         style={{
-          border: `2px dashed ${isDragging ? "#24c598" : "#CDCDCD"}`,
+          position: "relative",
+          border: `2px dashed ${isDragging && !uploading ? "#24c598" : "#CDCDCD"}`,
           borderRadius: "8px",
           padding: compact ? "1rem" : "2rem",
           minHeight: compact ? "150px" : undefined,
@@ -148,12 +152,47 @@ export default function FileUploadArea({
           alignItems: "center",
           justifyContent: "center",
           textAlign: "center",
-          backgroundColor: isDragging ? "#ECFDF5" : "#F5F5F5",
-          cursor: disabled ? "not-allowed" : "pointer",
+          backgroundColor: isDragging && !uploading ? "#ECFDF5" : "#F5F5F5",
+          cursor: disabled || uploading ? "not-allowed" : "pointer",
           transition: "all 0.2s ease",
           opacity: disabled ? 0.5 : 1,
         }}
       >
+        {uploading && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "6px",
+              backgroundColor: "rgba(255,255,255,0.9)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.75rem",
+              zIndex: 10,
+            }}
+          >
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                border: "3px solid #E5E5E5",
+                borderTopColor: "#24c598",
+                borderRadius: "50%",
+                animation: "fileupload-spin 0.8s linear infinite",
+              }}
+            />
+            <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "#0A0A0A" }}>
+              Wird hochgeladen…
+            </span>
+            <style>{`
+              @keyframes fileupload-spin {
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        )}
         {compact ? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
