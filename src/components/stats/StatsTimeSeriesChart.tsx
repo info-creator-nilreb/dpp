@@ -226,7 +226,7 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
             cursor={{ stroke: "#9CA3AF", strokeWidth: 1, strokeDasharray: "3 3" }}
           />
           <Line
-            type="monotoneY"
+            type="bumpY"
             dataKey="scans"
             name="Gesamt"
             stroke={gesamtColor}
@@ -238,7 +238,7 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
           {regionalSeries.map((s) => (
             <Line
               key={s.region}
-              type="monotoneY"
+              type="bumpY"
               dataKey={s.region}
               name={s.region}
               stroke={s.color}
