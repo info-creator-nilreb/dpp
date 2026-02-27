@@ -10,11 +10,13 @@ import DppPublicView from '@/components/public/DppPublicView'
 
 interface PublicDppPageProps {
   params: Promise<{ dppId: string }>
+  searchParams: Promise<{ from?: string }>
 }
 
 export const dynamic = 'force-dynamic'
 
-export default async function PublicDppPage({ params }: PublicDppPageProps) {
+export default async function PublicDppPage({ params, searchParams }: PublicDppPageProps) {
   const { dppId } = await params
-  return <DppPublicView dppId={dppId} />
+  const { from } = await searchParams
+  return <DppPublicView dppId={dppId} skipScan={from === 'app'} />
 }

@@ -11,18 +11,19 @@ import DppPublicView from '@/components/public/DppPublicView'
 
 interface PublicVersionPageProps {
   params: Promise<{ dppId: string; versionNumber: string }>
+  searchParams?: Promise<{ from?: string }>
 }
 
 export const dynamic = 'force-dynamic'
 
-export default async function PublicVersionPage({ params }: PublicVersionPageProps) {
+export default async function PublicVersionPage({ params, searchParams }: PublicVersionPageProps) {
   const resolvedParams = await params
+  const resolvedSearch = searchParams ? await searchParams : {}
   const versionNumber = parseInt(resolvedParams.versionNumber, 10)
   
   if (isNaN(versionNumber)) {
     notFound()
   }
 
-  // Use combined view: Compliance + CMS
-  return <DppPublicView dppId={resolvedParams.dppId} versionNumber={versionNumber} />
+  return <DppPublicView dppId={resolvedParams.dppId} versionNumber={versionNumber} skipScan={resolvedSearch.from === 'app'} />
 }

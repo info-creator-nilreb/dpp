@@ -197,7 +197,7 @@ export default function DppDetailContent({ dpp }: DppDetailContentProps) {
                 </div>
                 {version.publicUrl && (
                   <a
-                    href={version.publicUrl}
+                    href={`${version.publicUrl}${version.publicUrl.includes("?") ? "&" : "?"}from=app`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

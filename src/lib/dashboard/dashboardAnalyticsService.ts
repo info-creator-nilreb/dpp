@@ -3,7 +3,7 @@
  *
  * Server-side analytics for the user dashboard.
  * All data scoped to organizationId (multi-tenant).
- * No scan table exists yet – scan-related KPIs return 0.
+ * Scans aus dpp_scans (öffentliche DPP-Aufrufe).
  */
 
 import { prisma } from "@/lib/prisma";
@@ -100,6 +100,9 @@ export async function getDashboardKpis(
     prevCreatedDpp,
     prevPublishedDpp,
     totalPublishedCount,
+    totalScans,
+    scansInPeriod,
+    prevScansInPeriod,
   ] = await Promise.all([
     prisma.dpp.count({
       where: {
@@ -130,11 +133,28 @@ export async function getDashboardKpis(
     prisma.dpp.count({
       where: { ...orgFilter, status: "PUBLISHED" },
     }),
+    typeof prisma.dppScan?.count === "function"
+      ? prisma.dppScan.count({
+          where: { dpp: { organizationId } },
+        })
+      : 0,
+    typeof prisma.dppScan?.count === "function"
+      ? prisma.dppScan.count({
+          where: {
+            dpp: { organizationId },
+            scannedAt: { gte: startDate, lte: endDate },
+          },
+        })
+      : 0,
+    typeof prisma.dppScan?.count === "function"
+      ? prisma.dppScan.count({
+          where: {
+            dpp: { organizationId },
+            scannedAt: { gte: prevStart, lte: prevEnd },
+          },
+        })
+      : 0,
   ]);
-
-  const totalScans = 0;
-  const scansInPeriod = 0;
-  const prevScansInPeriod = 0;
   const avgScansPerPublishedDpp = totalPublishedCount > 0 ? totalScans / totalPublishedCount : 0;
   const prevAvg = totalPublishedCount > 0 ? prevScansInPeriod / totalPublishedCount : 0;
 
@@ -287,12 +307,16 @@ export async function getKpiTimeSeries(
 
   const createdMap = new Map<string, number>();
   const publishedMap = new Map<string, number>();
+  const scansMap = new Map<string, number>();
   dates.forEach((d) => createdMap.set(d, 0));
   dates.forEach((d) => publishedMap.set(d, 0));
+  dates.forEach((d) => scansMap.set(d, 0));
   const prevCreatedMap = new Map<string, number>();
   const prevPublishedMap = new Map<string, number>();
+  const prevScansMap = new Map<string, number>();
   prevDates.forEach((d) => prevCreatedMap.set(d, 0));
   prevDates.forEach((d) => prevPublishedMap.set(d, 0));
+  prevDates.forEach((d) => prevScansMap.set(d, 0));
 
   type Row = { d: string; c: number };
   const created = await prisma.$queryRaw<Row[]>`
@@ -341,17 +365,46 @@ export async function getKpiTimeSeries(
   `;
   prevPublished.forEach((r) => prevPublishedMap.set(r.d, r.c));
 
+  if (typeof prisma.dppScan?.count === "function") {
+    try {
+      const scanRows = await prisma.$queryRaw<Row[]>`
+        SELECT (date_trunc('day', s."scannedAt"::timestamptz)::date)::text as d, COUNT(*)::int as c
+        FROM dpp_scans s
+        INNER JOIN dpps p ON p.id = s."dppId"
+        WHERE p."organizationId" = ${organizationId}
+          AND s."scannedAt" >= ${startDate}
+          AND s."scannedAt" <= ${endDate}
+        GROUP BY date_trunc('day', s."scannedAt"::timestamptz)::date
+        ORDER BY 1
+      `;
+      scanRows.forEach((r) => scansMap.set(r.d, r.c));
+      const prevScanRows = await prisma.$queryRaw<Row[]>`
+        SELECT (date_trunc('day', s."scannedAt"::timestamptz)::date)::text as d, COUNT(*)::int as c
+        FROM dpp_scans s
+        INNER JOIN dpps p ON p.id = s."dppId"
+        WHERE p."organizationId" = ${organizationId}
+          AND s."scannedAt" >= ${prevStart}
+          AND s."scannedAt" <= ${prevEnd}
+        GROUP BY date_trunc('day', s."scannedAt"::timestamptz)::date
+        ORDER BY 1
+      `;
+      prevScanRows.forEach((r) => prevScansMap.set(r.d, r.c));
+    } catch {
+      // dpp_scans Tabelle fehlt oder Fehler – Zeitreihen bleiben 0
+    }
+  }
+
   return {
     dates,
     current: {
       created: dates.map((d) => createdMap.get(d) ?? 0),
       published: dates.map((d) => publishedMap.get(d) ?? 0),
-      scans: dates.map(() => 0),
+      scans: dates.map((d) => scansMap.get(d) ?? 0),
     },
     previous: {
       created: prevDates.map((d) => prevCreatedMap.get(d) ?? 0),
       published: prevDates.map((d) => prevPublishedMap.get(d) ?? 0),
-      scans: prevDates.map(() => 0),
+      scans: prevDates.map((d) => prevScansMap.get(d) ?? 0),
     },
   };
 }

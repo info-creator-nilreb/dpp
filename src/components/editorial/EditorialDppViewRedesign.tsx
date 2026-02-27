@@ -50,6 +50,8 @@ interface EditorialDppViewRedesignProps {
   styling?: StylingConfig | null
   /** true = Editor-Vorschau (kein 100vh, weniger Abstand unten) */
   isPreview?: boolean
+  /** true = Aufruf aus der App (z. B. Link „Öffentliche Ansicht“) – kein Scan zählen */
+  skipScan?: boolean
 }
 
 export default function EditorialDppViewRedesign({
@@ -67,18 +69,22 @@ export default function EditorialDppViewRedesign({
   versionInfo,
   basicData,
   styling,
-  isPreview = false
+  isPreview = false,
+  skipScan = false
 }: EditorialDppViewRedesignProps) {
   const scanRecorded = useRef(false)
   useEffect(() => {
-    if (isPreview || !dppId || scanRecorded.current) return
+    if (isPreview || skipScan || !dppId || scanRecorded.current) return
     scanRecorded.current = true
     fetch(`/api/public/dpp/${dppId}/scan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ version: versionInfo?.version ?? undefined }),
+      body: JSON.stringify({
+        version: versionInfo?.version ?? undefined,
+        fromApp: false,
+      }),
     }).catch(() => {})
-  }, [dppId, isPreview, versionInfo?.version])
+  }, [dppId, isPreview, skipScan, versionInfo?.version])
 
   return (
     <Page styling={styling ?? undefined} fillViewport={!isPreview}>

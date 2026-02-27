@@ -327,7 +327,7 @@ export default function DppCard({ id, name, description, organizationName, media
         {/* Editorial-Ansicht (nur für veröffentlichte DPPs) */}
         {status === "PUBLISHED" && (
           <Link
-            href={`/public/dpp/${id}`}
+            href={`/public/dpp/${id}?from=app`}
             title="Öffentliche Ansicht öffnen"
             onClick={(e) => e.stopPropagation()}
             style={iconContainerStyle}

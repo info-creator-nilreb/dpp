@@ -23,6 +23,9 @@ export async function POST(
     }
 
     const body = await _request.json().catch(() => ({}))
+    if (body?.fromApp === true) {
+      return NextResponse.json({ ok: true })
+    }
     const version = typeof body?.version === "number" ? body.version : null
     const region =
       typeof body?.region === "string" && body.region.trim() ? body.region.trim() : null

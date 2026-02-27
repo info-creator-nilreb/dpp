@@ -211,9 +211,11 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
             axisLine={false}
             tickLine={false}
             tickCount={5}
-            tickFormatter={(v) =>
-              isMobile && v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toLocaleString("de-DE")
-            }
+            allowDecimals={false}
+            tickFormatter={(v) => {
+              const n = Math.round(Number(v))
+              return isMobile && n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString("de-DE")
+            }}
           />
           <Tooltip
             content={<CustomTooltip onActiveChange={setTooltipActive} />}

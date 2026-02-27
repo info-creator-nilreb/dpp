@@ -14,11 +14,14 @@ import type { MediaItem } from "@/lib/media/hero-logic"
 interface DppPublicViewProps {
   dppId: string
   versionNumber?: number
+  /** true = Aufruf aus der App (z. B. „Öffentliche Ansicht öffnen“) – kein Scan zählen */
+  skipScan?: boolean
 }
 
 export default async function DppPublicView({
   dppId,
-  versionNumber
+  versionNumber,
+  skipScan = false
 }: DppPublicViewProps) {
   // Load DPP to verify it exists and is published
   const dpp = await prisma.dpp.findUnique({
@@ -172,6 +175,7 @@ export default async function DppPublicView({
         gtin: dpp.gtin,
         countryOfOrigin: dpp.countryOfOrigin
       }}
+      skipScan={skipScan}
     />
   )
 }
