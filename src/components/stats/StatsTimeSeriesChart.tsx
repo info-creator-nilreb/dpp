@@ -1,17 +1,7 @@
 "use client"
 
-import { useMemo, useState, useRef, useEffect } from "react"
+import { useMemo, useState, useRef, useEffect, useCallback, useId } from "react"
 import { BREAKPOINTS_MQ } from "@/lib/breakpoints"
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  TooltipContentProps,
-} from "recharts"
 
 export interface ScanDataPoint {
   date: string
@@ -32,6 +22,13 @@ interface StatsTimeSeriesChartProps {
   gesamtColor?: string
 }
 
+/** Exakt gleiche Konstanten und Kurvenlogik wie im Dashboard (KpiChart). */
+const CHART_HEIGHT = 280
+const PADDING = { top: 16, right: 16, bottom: 28, left: 36 }
+const W = 600
+const INNER_W = W - PADDING.left - PADDING.right
+const INNER_H = CHART_HEIGHT - PADDING.top - PADDING.bottom
+
 function formatDate(s: string): string {
   const d = new Date(s)
   return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" })
@@ -46,115 +43,144 @@ function formatDateLong(s: string): string {
   })
 }
 
-/** Tooltip für Basis-Kurve oder mehrere Regionen. Recharts übergibt active, payload etc. zur Laufzeit. */
-function CustomTooltip({
-  active,
-  payload,
-  onActiveChange,
-}: Partial<TooltipContentProps<number, string>> & { onActiveChange?: (active: boolean) => void }) {
-  useEffect(() => {
-    onActiveChange?.(!!active && !!payload?.length)
-  }, [active, payload?.length, onActiveChange])
-  if (!active || !payload?.length) return null
-  const first = payload[0].payload as Record<string, unknown>
-  const date = first.date as string
-
-  return (
-    <div
-      style={{
-        padding: "12px 16px",
-        backgroundColor: "#fff",
-        color: "#0f172a",
-        fontSize: "0.8125rem",
-        borderRadius: "8px",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
-        pointerEvents: "none",
-        minWidth: 140,
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>{formatDateLong(date)}</div>
-      {payload.map((p) => (
-        <div
-          key={p.dataKey as string}
-          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: p.color ?? "#24c598",
-              flexShrink: 0,
-            }}
-          />
-          <span>{p.name}</span>
-          <span style={{ fontWeight: 500 }}>{(p.value as number)?.toLocaleString("de-DE") ?? 0}</span>
-        </div>
-      ))}
-    </div>
-  )
+/** Build smooth cubic Bézier path through points (Catmull-Rom style) – exakt wie im Dashboard. */
+function pointsToSmoothPath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return ""
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
+  const n = points.length
+  const p = (i: number) => points[Math.max(0, Math.min(i, n - 1))]
+  const parts: string[] = [`M ${p(0).x} ${p(0).y}`]
+  const tension = 1 / 6
+  for (let i = 0; i < n - 1; i++) {
+    const c1x = p(i).x + (p(i + 1).x - p(i - 1).x) * tension
+    const c1y = p(i).y + (p(i + 1).y - p(i - 1).y) * tension
+    const c2x = p(i + 1).x - (p(i + 2).x - p(i).x) * tension
+    const c2y = p(i + 1).y - (p(i + 2).y - p(i).y) * tension
+    parts.push(`C ${c1x} ${c1y} ${c2x} ${c2y} ${p(i + 1).x} ${p(i + 1).y}`)
+  }
+  return parts.join(" ")
 }
 
-const CHART_HEIGHT_DESKTOP = 280
-const CHART_HEIGHT_MOBILE = 240
-const CHART_HEIGHT_SMALL_MOBILE = 200
-const CHART_MARGIN_DESKTOP = { top: 12, right: 36, bottom: 12, left: 40 }
-const CHART_MARGIN_MOBILE = { top: 12, right: 16, bottom: 12, left: 20 }
+function getYTicks(max: number): number[] {
+  if (max <= 0) return [0]
+  const step =
+    max <= 5 ? 1 : max <= 10 ? 2 : max <= 20 ? 5 : max <= 50 ? 10 : max <= 100 ? 20 : Math.ceil(max / 5)
+  const ticks: number[] = [0]
+  for (let v = step; v < max; v += step) ticks.push(v)
+  if (max > 0 && ticks[ticks.length - 1] !== max) ticks.push(max)
+  return [...new Set(ticks)].sort((a, b) => a - b)
+}
 
-/** Standardfarbe Gesamt-Linie: Grün wie im Dashboard (einheitliche Darstellung). */
+function getXTickIndices(length: number): number[] {
+  if (length <= 0) return []
+  if (length <= 5) return Array.from({ length }, (_, i) => i)
+  const count = Math.min(7, length)
+  const step = (length - 1) / (count - 1)
+  return Array.from({ length: count }, (_, i) => Math.round(i * step))
+}
+
 const DEFAULT_GESAMT_COLOR = "#24c598"
 
-export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamtColor = DEFAULT_GESAMT_COLOR }: StatsTimeSeriesChartProps) {
+export default function StatsTimeSeriesChart({
+  data,
+  regionalSeries = [],
+  gesamtColor = DEFAULT_GESAMT_COLOR,
+}: StatsTimeSeriesChartProps) {
   const hasRegional = regionalSeries.length > 0
-  const [tooltipActive, setTooltipActive] = useState(false)
-  const [chartKey, setChartKey] = useState(0)
+  const [tooltip, setTooltip] = useState<{
+    date: string
+    index: number
+    scans: number
+    regional: { region: string; color: string; value: number }[]
+    clientX: number
+    clientY: number
+  } | null>(null)
   const [isMobile, setIsMobile] = useState(false)
-  const [isSmallMobile, setIsSmallMobile] = useState(false)
   const chartRef = useRef<HTMLDivElement>(null)
+  const clipId = useId().replace(/:/g, "")
 
   useEffect(() => {
     const mq = window.matchMedia(BREAKPOINTS_MQ.appMobile)
-    const smq = window.matchMedia(BREAKPOINTS_MQ.smallMobile)
-    const handler = () => {
-      setIsMobile(mq.matches)
-      setIsSmallMobile(smq.matches)
-    }
+    const handler = () => setIsMobile(mq.matches)
     handler()
     mq.addEventListener("change", handler)
-    smq.addEventListener("change", handler)
-    return () => {
-      mq.removeEventListener("change", handler)
-      smq.removeEventListener("change", handler)
-    }
+    return () => mq.removeEventListener("change", handler)
   }, [])
 
-  useEffect(() => {
-    if (!tooltipActive) return
-    const handlePointer = (e: PointerEvent) => {
-      if (chartRef.current?.contains(e.target as Node)) return
-      setChartKey((k) => k + 1)
-      setTooltipActive(false)
-    }
-    document.addEventListener("pointerdown", handlePointer, true)
-    return () => document.removeEventListener("pointerdown", handlePointer, true)
-  }, [tooltipActive])
-
-  const chartData = useMemo(() => {
-    const base = data.map((d) => ({ ...d, dateFormatted: formatDate(d.date) }))
-    if (hasRegional) {
-      return base.map((row) => {
-        const r: Record<string, number | string> = { ...row }
-        regionalSeries.forEach((s) => {
-          const pt = s.data.find((d) => d.date === row.date)
-          r[s.region] = pt?.scans ?? 0
-        })
-        return r
+  const n = data.length
+  const scansValues = useMemo(() => data.map((d) => d.scans), [data])
+  const allValues = useMemo(() => {
+    const v = [...scansValues]
+    regionalSeries.forEach((s) => {
+      data.forEach((d, i) => {
+        const pt = s.data.find((p) => p.date === d.date)
+        v.push(pt?.scans ?? 0)
       })
-    }
-    return base
-  }, [data, hasRegional, regionalSeries])
+    })
+    return v
+  }, [data, scansValues, regionalSeries])
+  const max = useMemo(() => Math.max(...allValues.filter(Number.isFinite), 1), [allValues])
 
-  if (chartData.length === 0) {
+  const toX = useCallback(
+    (i: number) => PADDING.left + (n > 1 ? (i / (n - 1)) * INNER_W : 0),
+    [n]
+  )
+  const toY = useCallback((v: number) => PADDING.top + INNER_H - (v / max) * INNER_H, [max])
+
+  const gesamtPoints = useMemo(
+    () => data.map((d, i) => ({ x: toX(i), y: toY(d.scans) })),
+    [data, toX, toY]
+  )
+  const gesamtPath = useMemo(() => pointsToSmoothPath(gesamtPoints), [gesamtPoints])
+
+  const regionalPaths = useMemo(() => {
+    return regionalSeries.map((s) => {
+      const points = data.map((d, i) => {
+        const pt = s.data.find((p) => p.date === d.date)
+        return { x: toX(i), y: toY(pt?.scans ?? 0) }
+      })
+      return { region: s.region, color: s.color, path: pointsToSmoothPath(points) }
+    })
+  }, [data, regionalSeries, toX, toY])
+
+  const yTicks = useMemo(() => getYTicks(max), [max])
+  const xTickIndices = useMemo(() => getXTickIndices(n), [n])
+
+  const pixelToViewBoxX = useCallback((pixelX: number, rect: DOMRect) => {
+    const scale = Math.min(rect.width / W, rect.height / CHART_HEIGHT)
+    const offsetX = (rect.width - W * scale) / 2
+    return (pixelX - rect.left - offsetX) / scale
+  }, [])
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      if (n === 0 || !chartRef.current) return
+      const rect = chartRef.current.getBoundingClientRect()
+      if (rect.width <= 0) return
+      const viewX = Math.max(PADDING.left, Math.min(W - PADDING.right, pixelToViewBoxX(e.clientX - rect.left, rect)))
+      const percent = Math.max(0, Math.min(1, (viewX - PADDING.left) / INNER_W))
+      const fracIdx = percent * (n - 1)
+      const idx = Math.min(Math.max(0, Math.floor(fracIdx)), n - 1)
+      const row = data[idx]
+      if (!row) return
+      setTooltip({
+        date: row.date,
+        index: idx,
+        scans: row.scans,
+        regional: regionalSeries.map((s) => {
+          const pt = s.data.find((p) => p.date === row.date)
+          return { region: s.region, color: s.color, value: pt?.scans ?? 0 }
+        }),
+        clientX: e.clientX,
+        clientY: e.clientY,
+      })
+    },
+    [data, n, regionalSeries, pixelToViewBoxX]
+  )
+
+  const handleMouseLeave = useCallback(() => setTooltip(null), [])
+
+  if (data.length === 0) {
     return (
       <div
         style={{
@@ -190,67 +216,153 @@ export default function StatsTimeSeriesChart({ data, regionalSeries = [], gesamt
         style={{
           width: "100%",
           minWidth: 0,
-          height: isMobile ? (isSmallMobile ? CHART_HEIGHT_SMALL_MOBILE : CHART_HEIGHT_MOBILE) : CHART_HEIGHT_DESKTOP,
+          height: CHART_HEIGHT,
         }}
       >
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          key={chartKey}
-          data={chartData}
-          margin={isMobile ? CHART_MARGIN_MOBILE : CHART_MARGIN_DESKTOP}
+        <svg
+          width="100%"
+          height={CHART_HEIGHT}
+          viewBox={`0 0 ${W} ${CHART_HEIGHT}`}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ overflow: "visible" }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
         >
-          <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
-          <XAxis
-            dataKey="dateFormatted"
-            tick={{ fill: "#64748b", fontSize: isMobile ? 10 : 11 }}
-            axisLine={false}
-            tickLine={false}
-            interval={isMobile ? "preserveStart" : 0}
-            minTickGap={isMobile ? 36 : 20}
-          />
-          <YAxis
-            width={isMobile ? 20 : 40}
-            tick={{ fill: "#64748b", fontSize: isMobile ? 10 : 11 }}
-            axisLine={false}
-            tickLine={false}
-            tickCount={5}
-            allowDecimals={false}
-            domain={[0, "auto"]}
-            tickFormatter={(v) => {
-              const n = Math.round(Number(v))
-              return isMobile && n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString("de-DE")
-            }}
-          />
-          <Tooltip
-            content={<CustomTooltip onActiveChange={setTooltipActive} />}
-            cursor={{ stroke: "#9CA3AF", strokeWidth: 1, strokeDasharray: "3 3" }}
-          />
-          <Line
-            type="bumpY"
-            dataKey="scans"
-            name="Gesamt"
-            stroke={gesamtColor}
-            strokeWidth={2}
-            dot={false}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {regionalSeries.map((s) => (
-            <Line
-              key={s.region}
-              type="bumpY"
-              dataKey={s.region}
-              name={s.region}
-              stroke={s.color}
+          <defs>
+            <clipPath id={clipId}>
+              <rect x={PADDING.left} y={PADDING.top} width={INNER_W} height={INNER_H} />
+            </clipPath>
+          </defs>
+          {/* Y: Gitterlinien + Beschriftung (ganze Zahlen) */}
+          {yTicks.map((v, i) => (
+            <g key={i}>
+              <line
+                x1={PADDING.left}
+                y1={toY(v)}
+                x2={PADDING.left + INNER_W}
+                y2={toY(v)}
+                stroke="#e2e8f0"
+                strokeDasharray="3 3"
+                strokeWidth={1}
+              />
+              <text
+                x={PADDING.left - 8}
+                y={toY(v)}
+                textAnchor="end"
+                dominantBaseline="middle"
+                fill="#64748b"
+                fontSize={isMobile ? 10 : 11}
+              >
+                {v >= 1000 && isMobile ? `${(v / 1000).toFixed(1)}k` : v.toLocaleString("de-DE")}
+              </text>
+            </g>
+          ))}
+          {/* X: Datumsbeschriftung */}
+          {xTickIndices.map((i) => (
+            <text
+              key={i}
+              x={toX(i)}
+              y={CHART_HEIGHT - 8}
+              textAnchor="middle"
+              fill="#64748b"
+              fontSize={isMobile ? 10 : 11}
+            >
+              {formatDate(data[i]?.date ?? "")}
+            </text>
+          ))}
+          {/* Kurven (mit clipPath → nie unter 0 sichtbar) */}
+          <g clipPath={`url(#${clipId})`}>
+            {regionalPaths.map((r) => (
+              <path
+                key={r.region}
+                d={r.path}
+                fill="none"
+                stroke={r.color}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ))}
+            <path
+              d={gesamtPath}
+              fill="none"
+              stroke={gesamtColor}
               strokeWidth={2}
-              dot={false}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+            {tooltip != null && (
+              <>
+                <line
+                  x1={toX(tooltip.index)}
+                  y1={PADDING.top}
+                  x2={toX(tooltip.index)}
+                  y2={PADDING.top + INNER_H}
+                  stroke="#9CA3AF"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                />
+              </>
+            )}
+          </g>
+        </svg>
       </div>
+      {tooltip != null && chartRef.current && (() => {
+        const rect = chartRef.current.getBoundingClientRect()
+        const left = Math.max(0, Math.min(tooltip.clientX - rect.left + 16, rect.width - 170))
+        const top = Math.max(0, Math.min(tooltip.clientY - rect.top + 8, rect.height - 180))
+        return (
+        <div
+          style={{
+            position: "absolute",
+            left,
+            top,
+            padding: "12px 16px",
+            backgroundColor: "#fff",
+            color: "#0f172a",
+            fontSize: "0.8125rem",
+            borderRadius: 8,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+            pointerEvents: "none",
+            minWidth: 140,
+            zIndex: 10,
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>{formatDateLong(tooltip.date)}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                backgroundColor: gesamtColor,
+                flexShrink: 0,
+              }}
+            />
+            <span>Gesamt</span>
+            <span style={{ fontWeight: 500 }}>{tooltip.scans.toLocaleString("de-DE")}</span>
+          </div>
+          {tooltip.regional.map((r) => (
+            <div
+              key={r.region}
+              style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: r.color,
+                  flexShrink: 0,
+                }}
+              />
+              <span>{r.region}</span>
+              <span style={{ fontWeight: 500 }}>{r.value.toLocaleString("de-DE")}</span>
+            </div>
+          ))}
+        </div>
+        )
+      })()}
     </div>
   )
 }
