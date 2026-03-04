@@ -115,15 +115,24 @@ export async function POST(request: Request) {
       )
     }
 
-    // Prüfe ob User bereits Mitglied ist
+    // Prüfe ob unter dieser E-Mail bereits ein Konto existiert (Top-UX: Einladung nur an Nicht-Registrierte)
     const existingUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
       select: { organizationId: true },
     })
 
-    if (existingUser?.organizationId === user.organizationId) {
+    if (existingUser) {
+      if (existingUser.organizationId === user.organizationId) {
+        return NextResponse.json(
+          { error: "Diese Person ist bereits Mitglied Ihrer Organisation." },
+          { status: 400 }
+        )
+      }
       return NextResponse.json(
-        { error: "User ist bereits Mitglied dieser Organisation" },
+        {
+          error:
+            "Unter dieser E-Mail ist bereits ein Konto registriert. Die Person kann sich anmelden; Sie können sie dann unter „Benutzer verwalten“ zur Organisation hinzufügen.",
+        },
         { status: 400 }
       )
     }

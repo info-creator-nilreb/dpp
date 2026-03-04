@@ -86,7 +86,7 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data?.organizationName) setInvitationOrganizationName(data.organizationName)
-          if (data?.email) setEmail(data.email)
+          if (data?.email != null && data.email !== "") setEmail(String(data.email))
           setInvitationEmailLoaded(true)
         })
         .catch(() => setInvitationEmailLoaded(true))
@@ -126,7 +126,12 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
     }
 
     const runSubmit = async () => {
-      const { firstName: submittedFirstName, lastName: submittedLastName, email: submittedEmail, password: submittedPassword, organizationName: submittedOrgName } = readFormValues()
+      const raw = readFormValues()
+      const submittedFirstName = raw.firstName
+      const submittedLastName = raw.lastName
+      const submittedEmail = raw.email || (invitationToken && email ? email.trim() : "")
+      const submittedPassword = raw.password
+      const submittedOrgName = raw.organizationName
 
       try {
         if (!submittedFirstName || !submittedLastName) {
@@ -529,40 +534,30 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
                 >
                   E-Mail *
                 </label>
-                {invitationToken && !invitationEmailLoaded ? (
-                  <div
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #E5E7EB",
-                      borderRadius: "6px",
-                      fontSize: "0.9375rem",
-                      color: "#6B7280",
-                      backgroundColor: "#F9FAFB",
-                    }}
-                  >
-                    E-Mail wird geladen…
-                  </div>
-                ) : (
-                  <input
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={!invitationToken ? "z. B. name@beispiel.de" : undefined}
-                    required
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "1px solid #CDCDCD",
-                      borderRadius: "6px",
-                      fontSize: "1rem",
-                      boxSizing: "border-box",
-                    }}
-                    name="email"
-                  />
-                )}
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={
+                    invitationToken && !invitationEmailLoaded
+                      ? "Wird geladen…"
+                      : !invitationToken
+                        ? "z. B. name@beispiel.de"
+                        : undefined
+                  }
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #CDCDCD",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                  }}
+                  name="email"
+                />
               </div>
 
               <div style={{ marginBottom: "1.5rem" }}>
