@@ -76,19 +76,23 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
   const invitationToken =
     initialInvitationToken ?? searchParams.get("invitation")
   const [invitationOrganizationName, setInvitationOrganizationName] = useState<string | null>(null)
+  const [invitationEmailLoaded, setInvitationEmailLoaded] = useState(false)
 
   useEffect(() => {
     if (invitationToken) {
       setOrganizationAction("request_to_join_organization")
+      setInvitationEmailLoaded(false)
       fetch(`/api/auth/invitation?token=${encodeURIComponent(invitationToken)}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data?.organizationName) setInvitationOrganizationName(data.organizationName)
           if (data?.email) setEmail(data.email)
+          setInvitationEmailLoaded(true)
         })
-        .catch(() => {})
+        .catch(() => setInvitationEmailLoaded(true))
     } else {
       setInvitationOrganizationName(null)
+      setInvitationEmailLoaded(false)
     }
   }, [invitationToken])
 
@@ -490,23 +494,43 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
                 >
                   E-Mail *
                 </label>
-                <input
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    border: "1px solid #CDCDCD",
-                    borderRadius: "6px",
-                    fontSize: "1rem",
-                    boxSizing: "border-box",
-                  }}
-                  name="email"
-                />
+                {invitationToken && !invitationEmailLoaded ? (
+                  <div
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #E5E7EB",
+                      borderRadius: "6px",
+                      fontSize: "0.9375rem",
+                      color: "#6B7280",
+                      backgroundColor: "#F9FAFB",
+                    }}
+                  >
+                    E-Mail wird aus der Einladung übernommen…
+                  </div>
+                ) : (
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    readOnly={!!(invitationToken && invitationEmailLoaded)}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #CDCDCD",
+                      borderRadius: "6px",
+                      fontSize: "1rem",
+                      boxSizing: "border-box",
+                      ...(invitationToken && invitationEmailLoaded
+                        ? { backgroundColor: "#F3F4F6", color: "#374151", cursor: "default" }
+                        : {}),
+                    }}
+                    name="email"
+                  />
+                )}
               </div>
 
               <div style={{ marginBottom: "1.5rem" }}>

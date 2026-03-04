@@ -33,18 +33,21 @@ interface EmailTemplateOptions {
  * Generiert ein konsistentes E-Mail-Template für alle Transaktions-E-Mails
  * Entspricht den B2B SaaS Design-Prinzipien: clean, minimal, produktorientiert
  */
+// Logo-SVG als Data-URI für E-Mail-Clients (viele blockieren inline-SVG; img mit Data-URI wird oft angezeigt)
+const LOGO_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+const LOGO_IMG_SRC =
+  "data:image/svg+xml;base64," + Buffer.from(LOGO_SVG).toString("base64")
+
 function generateEmailTemplate(options: EmailTemplateOptions): string {
   const appName = options.appName || process.env.APP_NAME || "Easy Pass"
-  const baseUrl = options.baseUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
+  const baseUrl = options.baseUrl || getBaseUrl()
   
-  // Logo-Einheit: Icon + „Easy Pass“ mit einheitlich 8px Abstand (wie Sidebar/Screenshot)
+  // Logo-Einheit: Icon (img für Client-Kompatibilität) + „Easy Pass“ – in allen Mails einheitlich
   const logoUnitHtml = `
     <div class="logo-unit" style="display: inline-flex; align-items: center; gap: 8px;">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
-        <circle cx="12" cy="12" r="10" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M9 12l2 2 4-4" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span class="logo-text" style="font-size: 1.25rem; font-weight: 700; color: #0A0A0A; white-space: nowrap;">Easy Pass</span>
+      <img src="${LOGO_IMG_SRC}" width="32" height="32" alt="" style="display: block; border: 0; flex-shrink: 0;" />
+      <span class="logo-text" style="font-size: 1.25rem; font-weight: 700; color: #0A0A0A; white-space: nowrap;">${appName}</span>
     </div>
   `
   
@@ -371,10 +374,10 @@ export async function sendPasswordResetEmail(
   name: string | null,
   resetToken: string
 ): Promise<void> {
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/reseeasy-password?token=${resetToken}`
+  const baseUrl = getBaseUrl()
+  const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`
   const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
 
   const htmlContent = generateEmailTemplate({
     headline: "Passwort zurücksetzen",
@@ -387,7 +390,7 @@ export async function sendPasswordResetEmail(
     ctaUrl: resetUrl,
     infoBox: "Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorieren. Ihr Passwort bleibt unverändert.",
     appName,
-    baseUrl
+    baseUrl,
   })
 
   const textContent = `Passwort zurücksetzen
@@ -511,7 +514,7 @@ export async function sendInvitationEmail(
 ): Promise<void> {
   const appName = process.env.APP_NAME || "Easy Pass"
   const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
+  const baseUrl = getBaseUrl()
   
   // Hole Organisationsname
   const { prisma } = await import("@/lib/prisma")
@@ -521,7 +524,7 @@ export async function sendInvitationEmail(
   })
   
   const organizationName = organization?.name || "eine Organisation"
-  const signupUrl = `${baseUrl}/signup?invitation=${invitationToken}`
+  const signupUrl = `${baseUrl}/signup/accept-invitation?token=${encodeURIComponent(invitationToken)}`
   
   const htmlContent = generateEmailTemplate({
     headline: `Einladung zu ${organizationName}`,
@@ -534,7 +537,7 @@ export async function sendInvitationEmail(
     ctaUrl: signupUrl,
     infoBox: "Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.",
     appName,
-    baseUrl
+    baseUrl,
   })
   
   const textContent = `Einladung zu ${organizationName}
@@ -685,6 +688,7 @@ export async function sendInvoiceResendEmail(
     ],
     infoBox: "Die Rechnung finden Sie im Anhang dieser E-Mail (PDF).",
     appName,
+    baseUrl: getBaseUrl(),
   })
 
   const textContent = `Ihre Rechnung ${invoiceNumber}

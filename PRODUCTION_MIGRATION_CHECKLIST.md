@@ -1,5 +1,27 @@
 # Produktions-Migrations-Checklist
 
+## Migrationen: Billing (Abrechnung)
+
+**Reihenfolge:** Nach `add_trial_system` ausführen.
+
+### 1. `20260228100000_add_billing_models`
+
+- **Subscription:** neue Spalten `nextBillingDate`, `cancelAt`, `discountPercentage` (nullable).
+- **Neue Tabellen:** `invoices`, `invoice_lines`, `payments`, `credit_notes`, `billing_event_logs` (alle mit `IF NOT EXISTS`).
+- **Parity/OBJ:** Entspricht OBJ-041 bis OBJ-045 (PARITY_SPEC.md E).
+
+### 2. `20260303100000_subscription_default_payment_method`
+
+- **Subscription:** neue Spalte `defaultPaymentMethodId` TEXT (nullable, Stripe Payment Method).
+
+### Vor Deploy (Billing)
+
+- Backup erstellen.
+- In Staging: `npx prisma migrate deploy` testen.
+- Nach Migration: `npx prisma migrate status` prüfen; Tabellen `invoices`, `payments`, `credit_notes`, `billing_event_logs` vorhanden.
+
+---
+
 ## Migration: `20251225010453_add_trial_system`
 
 ### Was wird geändert?

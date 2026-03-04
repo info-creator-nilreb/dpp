@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useSession } from "next-auth/react"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
+import Notification from "@/components/Notification"
 import { getRoleLabel, PHASE1_ROLES, ROLE_LABELS } from "@/lib/phase1/roles"
 
 interface User {
@@ -262,31 +263,10 @@ export default function UsersClient() {
       </h1>
 
       {error && (
-        <div style={{
-          padding: "0.75rem",
-          marginBottom: "1rem",
-          backgroundColor: "#FEE",
-          border: "1px solid #FCC",
-          borderRadius: "6px",
-          color: "#C33",
-          fontSize: "0.9rem",
-        }}>
-          {error}
-        </div>
+        <Notification type="error" message={error} onClose={() => setError("")} duration={5000} />
       )}
-
       {success && (
-        <div style={{
-          padding: "0.75rem",
-          marginBottom: "1rem",
-          backgroundColor: "#E8F5E9",
-          border: "1px solid #C8E6C9",
-          borderRadius: "6px",
-          color: "#2E7D32",
-          fontSize: "0.9rem",
-        }}>
-          {success}
-        </div>
+        <Notification type="success" message={success} onClose={() => setSuccess("")} duration={4000} />
       )}
 
       {/* Tabs - Mobile-optimiert mit horizontalem Scroll */}

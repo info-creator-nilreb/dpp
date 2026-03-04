@@ -60,10 +60,10 @@ Account, Profil, Onboarding, Subscription-Status, Notifications und Abo-Upgrade 
 
 | Kategorie | IDs |
 |-----------|-----|
-| CAP | CAP-022 (Subscription), CAP-023 (Notifications), CAP-025 (Account), CAP-026 (Onboarding), CAP-027, CAP-028 |
-| API | API-014 bis API-021, API-091 bis API-096, API-097 bis API-101 |
+| CAP | CAP-022 (Subscription), CAP-023 (Notifications), CAP-025 (Account), CAP-026 (Onboarding), CAP-027, CAP-028, CAP-007 (Org-Billing) |
+| API | API-014 bis API-021, API-091 bis API-101, **API-168 bis API-180** (Org-Billing: overview, invoices, payment-method, setup-intent, subscription, select-plan-context) |
 | FLOW | FLOW-017 (Abo-Upgrade) |
-| OBJ | OBJ-018 (Subscription), OBJ-027 bis OBJ-036 (PricingPlan, Entitlements, SubscriptionModel, Price, etc.) |
+| OBJ | OBJ-018 (Subscription), OBJ-027 bis OBJ-036, **OBJ-041 bis OBJ-045** (Invoice, InvoiceLine, Payment, CreditNote, BillingEventLog) |
 | EVT | EVT-015 (checkout.session.completed), EVT-016 (subscription.updated), EVT-017 (subscription.deleted) |
 
 ### Akzeptanzkriterien
@@ -90,6 +90,13 @@ Account, Profil, Onboarding, Subscription-Status, Notifications und Abo-Upgrade 
 - [ ] POST pricing/checkout: Stripe Checkout Session
 - [ ] POST pricing/webhooks/stripe: checkout.session.completed, subscription.updated/deleted
 
+**Org-Billing (API-168–180):**
+- [ ] GET organization/billing/overview: Kennzahlen, offene Beträge
+- [ ] GET organization/billing/invoices, GET invoices/[id], GET invoices/[id]/pdf
+- [ ] GET/POST/DELETE organization/billing/payment-method, POST setup-intent (Stripe Elements)
+- [ ] GET organization/subscription, POST cancel, GET plans, POST reactivate
+- [ ] GET app/select-plan-context
+
 **Side Effects:**
 - [ ] EVT-015, EVT-016, EVT-017: Stripe-Webhook-Events verarbeiten
 
@@ -105,8 +112,8 @@ Account, Profil, Onboarding, Subscription-Status, Notifications und Abo-Upgrade 
 
 ### Definition of Done
 
-- [ ] Alle API-IDs 014–021, 091–101 implementiert
-- [ ] OBJ-018, OBJ-027 bis OBJ-036 korrekt persistiert
+- [ ] Alle API-IDs 014–021, 091–101, **168–180** implementiert
+- [ ] OBJ-018, OBJ-027 bis OBJ-036, **OBJ-041 bis OBJ-045** korrekt persistiert
 - [ ] EVT-015, EVT-016, EVT-017 verarbeitet
 - [ ] Parity-Harness läuft grün für SLICE-4
 - [ ] Code-Review abgeschlossen
@@ -155,7 +162,7 @@ Keine direkten Änderungen. Subscription-Limits (z.B. max_dpp) werden vom user-s
 
 ### Abnahmekriterien (messbar)
 
-1. [ ] Golden Requests: API-014, API-091, API-094, API-097, API-098
+1. [ ] Golden Requests: API-014, API-091, API-094, API-097, API-098, **API-168 (billing/overview), API-169 (invoices), API-176 (subscription)**
 2. [ ] `MODE=compare ALT_BASE_URL=... NEW_BASE_URL=... npm run parity:ci` endet mit Exit 0
 3. [ ] FLOW-017 (Abo-Upgrade) abgedeckt (Success + Stripe-Fehler-Negative)
 4. [ ] Stripe Test-Mode; Webhook-Payloads als Fixtures (EVT-015/016/017)

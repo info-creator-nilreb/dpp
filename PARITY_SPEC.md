@@ -77,7 +77,7 @@ Dokumentation für Parity-Tests, Golden Master und Slicing. Stand: Februar 2025.
 | CAP-004 | Passwort vergessen/reset | Forgot, Reset | auth/forgot-password, auth/reset-password |
 | CAP-005 | 2FA | TOTP Setup, Check | auth/setup-2fa, auth/check-2fa |
 | CAP-006 | Invitation Accept | Einladung annehmen | app/invitations/accept |
-| CAP-007 | Organisation | Org CRUD, Users, Billing | app/organization/* |
+| CAP-007 | Organisation | Org CRUD, Users, Billing (Overview, Rechnungen, Zahlungsarten) | app/organization/* |
 | CAP-008 | Invitations | Einladungen erstellen/löschen | app/organization/invitations/* |
 | CAP-009 | Join Requests | Beitrittsanfragen | app/organization/join-requests/* |
 | CAP-010 | DPP CRUD | DPP erstellen, lesen, aktualisieren | app/dpp/*, app/dpps/* |
@@ -109,7 +109,7 @@ Dokumentation für Parity-Tests, Golden Master und Slicing. Stand: Februar 2025.
 | CAP-036 | Super Admin Feature Registry | Feature Registry CRUD, Sync | super-admin/feature-registry/*, features/sync |
 | CAP-037 | Super Admin Pricing | Plans, Prices, Models, Entitlements | super-admin/pricing/* |
 | CAP-038 | Super Admin Settings | Password Protection | super-admin/settings/password-protection/* |
-| CAP-039 | Super Admin Audit/Dashboard | Audit Logs, KPIs, Suggestions, Cleanup | super-admin/audit-logs, dashboard, dpps/suggestions, subscriptions/cleanup |
+| CAP-039 | Super Admin Audit/Dashboard/Billing | Audit Logs, KPIs, Billing (Revenue, Invoices, Events), Suggestions, Cleanup | super-admin/audit-logs, dashboard, billing/*, dpps/suggestions, subscriptions/cleanup |
 
 ---
 
@@ -168,6 +168,19 @@ Alle Routen unter `src/app/api/**`. Format: `API-XXX | Methode | Pfad`
 | API-038 | POST | /api/app/organization/join-requests |
 | API-039 | PUT | /api/app/organization/join-requests/[requestId] |
 | API-040 | POST | /api/app/invitations/accept |
+| API-168 | GET | /api/app/organization/billing/overview |
+| API-169 | GET | /api/app/organization/billing/invoices |
+| API-170 | GET | /api/app/organization/billing/invoices/[id] |
+| API-171 | GET | /api/app/organization/billing/invoices/[id]/pdf |
+| API-172 | GET | /api/app/organization/billing/payment-method |
+| API-173 | POST | /api/app/organization/billing/payment-method |
+| API-174 | DELETE | /api/app/organization/billing/payment-method |
+| API-175 | POST | /api/app/organization/billing/setup-intent |
+| API-176 | GET | /api/app/organization/subscription |
+| API-177 | POST | /api/app/organization/subscription/cancel |
+| API-178 | GET | /api/app/organization/subscription/plans |
+| API-179 | POST | /api/app/organization/subscription/reactivate |
+| API-180 | GET | /api/app/select-plan-context |
 
 ### App – DPPs
 | ID | Methode | Pfad |
@@ -330,6 +343,12 @@ Alle Routen unter `src/app/api/**`. Format: `API-XXX | Methode | Pfad`
 | API-164 | GET | /api/super-admin/dpps/suggestions |
 | API-165 | GET | /api/super-admin/subscriptions/cleanup |
 | API-166 | POST | /api/super-admin/subscriptions/cleanup |
+| API-181 | GET | /api/super-admin/billing/overview |
+| API-182 | GET | /api/super-admin/billing/invoices |
+| API-183 | POST | /api/super-admin/billing/invoices/[id]/mark-paid |
+| API-184 | POST | /api/super-admin/billing/invoices/[id]/resend |
+| API-185 | GET | /api/super-admin/billing/credit-notes |
+| API-186 | GET | /api/super-admin/billing/events |
 
 ### Debug
 | ID | Methode | Pfad |
@@ -384,6 +403,11 @@ Prisma-Modelle aus `prisma/schema.prisma`:
 | OBJ-038 | JoinRequest | join_requests | Beitrittsanfragen |
 | OBJ-039 | Notification | notifications | In-App-Benachrichtigungen |
 | OBJ-040 | PasswordProtectionConfig | password_protection_config | Globaler Passwortschutz |
+| OBJ-041 | Invoice | invoices | Rechnungen (Billing) |
+| OBJ-042 | InvoiceLine | invoice_lines | Rechnungszeilen |
+| OBJ-043 | Payment | payments | Zahlungen |
+| OBJ-044 | CreditNote | credit_notes | Gutschriften |
+| OBJ-045 | BillingEventLog | billing_event_logs | Abrechnungs-Ereignisprotokoll |
 
 ---
 
@@ -522,7 +546,7 @@ Damit Snapshots nicht flaky sind, werden folgende Regeln bei Aufnahme und Vergle
 | `*.id` (cuid) | Dynamisch generiert |
 | `*.uploadedAt`, `*.readAt`, `*.emailSentAt`, `*.submittedAt`, `*.reviewedAt` | Zeitabhängig |
 | `*.expiresAt`, `*.verifiedAt`, `*.lastLoginAt` | Zeitabhängig |
-| `*.trialExpiresAt`, `*.currentPeriodStart`, `*.currentPeriodEnd` | Billing-Zeiten |
+| `*.trialExpiresAt`, `*.currentPeriodStart`, `*.currentPeriodEnd`, `*.lastSentAt` | Billing-Zeiten / Rechnungsversand |
 | `*.validFrom`, `*.validTo`, `*.effectiveFrom` | Zeitbereiche |
 | `*.token`, `invitations[].token` | Einmal-Token, nicht vergleichbar |
 | `requestId` (falls von Client gesendet) | Idempotency-IDs |
@@ -648,6 +672,7 @@ Minimale Parity-Tests/Snapshots, die **grün** sein müssen, damit der Slice als
 | API-IDs | FLOW-IDs |
 |---------|----------|
 | API-014 (profile), API-091 (subscription/status), API-094 (notifications), API-097 (pricing/plans), API-098 (checkout) | FLOW-017 |
+| API-168 bis API-180 (Org Billing: overview, invoices, payment-method, setup-intent, subscription, select-plan-context) | — |
 
 ### SLICE-5 Gate
 
@@ -717,15 +742,16 @@ Minimale Parity-Tests/Snapshots, die **grün** sein müssen, damit der Slice als
 
 ### SLICE-4: Subscription & Notifications
 
-**Ziel:** Subscription, Upgrade, Notifications, Pricing
+**Ziel:** Subscription, Upgrade, Notifications, Pricing, Org-Billing (Übersicht, Rechnungen, Zahlungsarten)
 
 | CAP | API | FLOW |
 |-----|-----|------|
 | CAP-022, CAP-023 | API-091 bis API-096 | — |
 | CAP-025, CAP-026 | API-014 bis API-021 | — |
 | CAP-027, CAP-028 | API-097 bis API-101 | FLOW-017 |
+| CAP-007 (Billing) | API-168 bis API-180 (billing/overview, invoices, payment-method, setup-intent, subscription, select-plan-context) | — |
 
-**OBJ:** OBJ-018, OBJ-027 bis OBJ-036  
+**OBJ:** OBJ-018, OBJ-027 bis OBJ-036, OBJ-041 bis OBJ-045 (Invoice, InvoiceLine, Payment, CreditNote, BillingEventLog)  
 **EVT:** EVT-015, EVT-016, EVT-017
 
 ---
@@ -738,7 +764,7 @@ Minimale Parity-Tests/Snapshots, die **grün** sein müssen, damit der Slice als
 |-----|-----|------|
 | CAP-019, CAP-020, CAP-021 | API-085 bis API-090 | — |
 | CAP-029, CAP-030, CAP-031 | API-102 bis API-106 | — |
-| CAP-032 bis CAP-039 | API-112 bis API-166 | FLOW-018, FLOW-019 |
+| CAP-032 bis CAP-039 | API-112 bis API-166, API-181 bis API-186 (billing/overview, invoices, mark-paid, resend, credit-notes, events) | FLOW-018, FLOW-019 |
 
 **OBJ:** OBJ-013 bis OBJ-016, OBJ-019, OBJ-020, OBJ-024, OBJ-025, OBJ-040  
 **EVT:** EVT-001, EVT-002, EVT-018

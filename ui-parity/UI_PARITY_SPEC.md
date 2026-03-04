@@ -28,7 +28,7 @@
 | UI-016 | /app/organization | Org-Übersicht | CAP-007 | — | API-022–024 |
 | UI-017 | /app/organization/users | Benutzerliste, Rollen | CAP-007 | FLOW-007 | API-025, API-027 |
 | UI-018 | /app/organization/general | Org-Einstellungen allgemein | CAP-007 | — | API-022 |
-| UI-019 | /app/organization/billing | Billing, USt-IdNr. | CAP-007 | — | API-031 |
+| UI-019 | /app/organization/billing | Billing: Übersicht, Rechnungen, Rechnungsdaten, Zahlungsarten (4 Tabs) | CAP-007 | — | API-030, API-031, API-168–175 |
 | UI-020 | /app/organization/company-details | Firmenstammdaten | CAP-007 | — | API-022 |
 | UI-021 | /app/account | Account-Übersicht | CAP-025 | — | API-016, API-019 |
 | UI-022 | /app/account/subscription | Subscription, Upgrade | CAP-022 | FLOW-017 | API-091, API-098 |
@@ -75,7 +75,7 @@
 | SLICE-2 | UI-016, UI-017, UI-018, UI-019, UI-020 |
 | SLICE-3 | UI-014, UI-027, UI-028 |
 | SLICE-4 | UI-021, UI-022, UI-023, UI-024, UI-025, UI-029, UI-030, UI-031 |
-| SLICE-5 | UI-032, UI-033, UI-034, UI-035, UI-036, UI-037, UI-038, UI-039, UI-040 |
+| SLICE-5 | UI-032, UI-033, UI-034, UI-035, UI-036, UI-037, UI-038, UI-039, UI-040, UI-041 |
 
 ---
 

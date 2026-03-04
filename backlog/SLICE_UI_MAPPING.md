@@ -34,6 +34,7 @@ Verbindung von Slices, Issues (User Stories) und UI-Parität für konsistente Um
 | **SLICE-5** | Gateway SA | UI-032, UI-040 | FLOW-018 |
 | | User-Service SA | UI-033, UI-034, UI-035, UI-037 | |
 | | DPP-Management SA | UI-036, UI-038, UI-039 | FLOW-019 |
+| | SA Billing (Revenue, Invoices, Events) | UI-041 | — |
 
 ---
 
