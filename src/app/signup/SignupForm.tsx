@@ -112,84 +112,99 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
     setLoading(true)
 
     const form = e.currentTarget
-    const get = (name: string) => (form.elements.namedItem(name) as HTMLInputElement | null)?.value?.trim() ?? ""
-    const submittedFirstName = get("firstName")
-    const submittedLastName = get("lastName")
-    const submittedEmail = get("email")
-    const submittedPassword = (form.elements.namedItem("password") as HTMLInputElement | null)?.value ?? ""
-    const submittedOrgName = get("organizationName")
 
-    try {
-      if (!submittedFirstName || !submittedLastName) {
-        setError("Vorname und Nachname sind erforderlich.")
-        setLoading(false)
-        return
+    const readFormValues = () => {
+      const fd = new FormData(form)
+      const get = (name: string) => fd.get(name)?.toString().trim() ?? ""
+      return {
+        firstName: get("firstName"),
+        lastName: get("lastName"),
+        email: get("email"),
+        password: (fd.get("password") ?? "").toString(),
+        organizationName: get("organizationName"),
       }
-
-      if (!submittedEmail) {
-        setError("Bitte geben Sie Ihre E-Mail-Adresse ein.")
-        setLoading(false)
-        return
-      }
-
-      if (!submittedPassword) {
-        setError("Bitte wählen Sie ein Passwort.")
-        setLoading(false)
-        return
-      }
-
-      if (!invitationToken && organizationAction === "create_new_organization" && !submittedOrgName) {
-        setError("Organisationsname ist erforderlich")
-        setLoading(false)
-        return
-      }
-
-      if (!invitationToken && organizationAction === "request_to_join_organization") {
-        setError("Um einer bestehenden Organisation beizutreten, benötigen Sie eine Einladung. Bitte verwenden Sie den Einladungslink aus Ihrer E-Mail.")
-        setLoading(false)
-        return
-      }
-
-      const effectiveOrganizationAction = invitationToken
-        ? "request_to_join_organization"
-        : organizationAction
-
-      const response = await fetch("/api/auth/signup-phase1", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: submittedFirstName,
-          lastName: submittedLastName,
-          email: submittedEmail,
-          password: submittedPassword,
-          organizationAction: effectiveOrganizationAction,
-          organizationName: submittedOrgName || undefined,
-          invitationToken: invitationToken || undefined,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        const errMsg = data.error || "Ein Fehler ist aufgetreten"
-        if (
-          invitationToken &&
-          (errMsg.includes("bereits registriert") || errMsg.includes("already registered"))
-        ) {
-          setError(
-            "Diese E-Mail ist bereits registriert. Bitte melden Sie sich an, um der Einladung beizutreten."
-          )
-        } else {
-          setError(errMsg)
-        }
-      } else {
-        router.push("/signup?success=true&email=" + encodeURIComponent(submittedEmail))
-      }
-    } catch (err) {
-      setError("Ein Fehler ist aufgetreten")
-    } finally {
-      setLoading(false)
     }
+
+    const runSubmit = async () => {
+      const { firstName: submittedFirstName, lastName: submittedLastName, email: submittedEmail, password: submittedPassword, organizationName: submittedOrgName } = readFormValues()
+
+      try {
+        if (!submittedFirstName || !submittedLastName) {
+          setError("Vorname und Nachname sind erforderlich.")
+          setLoading(false)
+          return
+        }
+
+        if (!submittedEmail) {
+          setError("Bitte geben Sie Ihre E-Mail-Adresse ein.")
+          setLoading(false)
+          return
+        }
+
+        if (!submittedPassword) {
+          setError("Bitte wählen Sie ein Passwort.")
+          setLoading(false)
+          return
+        }
+
+        if (!invitationToken && organizationAction === "create_new_organization" && !submittedOrgName) {
+          setError("Organisationsname ist erforderlich")
+          setLoading(false)
+          return
+        }
+
+        if (!invitationToken && organizationAction === "request_to_join_organization") {
+          setError("Um einer bestehenden Organisation beizutreten, benötigen Sie eine Einladung. Bitte verwenden Sie den Einladungslink aus Ihrer E-Mail.")
+          setLoading(false)
+          return
+        }
+
+        const effectiveOrganizationAction = invitationToken
+          ? "request_to_join_organization"
+          : organizationAction
+
+        const response = await fetch("/api/auth/signup-phase1", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firstName: submittedFirstName,
+            lastName: submittedLastName,
+            email: submittedEmail,
+            password: submittedPassword,
+            organizationAction: effectiveOrganizationAction,
+            organizationName: submittedOrgName || undefined,
+            invitationToken: invitationToken || undefined,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          const errMsg = data.error || "Ein Fehler ist aufgetreten"
+          if (
+            invitationToken &&
+            (errMsg.includes("bereits registriert") || errMsg.includes("already registered"))
+          ) {
+            setError(
+              "Diese E-Mail ist bereits registriert. Bitte melden Sie sich an, um der Einladung beizutreten."
+            )
+          } else {
+            setError(errMsg)
+          }
+        } else {
+          router.push("/signup?success=true&email=" + encodeURIComponent(submittedEmail))
+        }
+      } catch (err) {
+        setError("Ein Fehler ist aufgetreten")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Kurz verzögern, damit Safari (und andere Browser) Autofill vor dem Auslesen anwenden können
+    setTimeout(() => {
+      runSubmit()
+    }, 0)
   }
 
   return (
@@ -526,7 +541,7 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
                       backgroundColor: "#F9FAFB",
                     }}
                   >
-                    E-Mail wird aus der Einladung übernommen…
+                    E-Mail wird geladen…
                   </div>
                 ) : (
                   <input
@@ -535,7 +550,7 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder={invitationToken ? "Wird aus der Einladung übernommen" : undefined}
+                    placeholder={!invitationToken ? "z. B. name@beispiel.de" : undefined}
                     required
                     style={{
                       width: "100%",
