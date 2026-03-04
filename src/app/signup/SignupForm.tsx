@@ -111,14 +111,34 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
     setError("")
     setLoading(true)
 
+    const form = e.currentTarget
+    const get = (name: string) => (form.elements.namedItem(name) as HTMLInputElement | null)?.value?.trim() ?? ""
+    const submittedFirstName = get("firstName")
+    const submittedLastName = get("lastName")
+    const submittedEmail = get("email")
+    const submittedPassword = (form.elements.namedItem("password") as HTMLInputElement | null)?.value ?? ""
+    const submittedOrgName = get("organizationName")
+
     try {
-      if (!firstName.trim() || !lastName.trim()) {
-        setError("Vorname und Nachname sind erforderlich")
+      if (!submittedFirstName || !submittedLastName) {
+        setError("Vorname und Nachname sind erforderlich.")
         setLoading(false)
         return
       }
 
-      if (!invitationToken && organizationAction === "create_new_organization" && !organizationName.trim()) {
+      if (!submittedEmail) {
+        setError("Bitte geben Sie Ihre E-Mail-Adresse ein.")
+        setLoading(false)
+        return
+      }
+
+      if (!submittedPassword) {
+        setError("Bitte wählen Sie ein Passwort.")
+        setLoading(false)
+        return
+      }
+
+      if (!invitationToken && organizationAction === "create_new_organization" && !submittedOrgName) {
         setError("Organisationsname ist erforderlich")
         setLoading(false)
         return
@@ -138,12 +158,12 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email,
-          password,
+          firstName: submittedFirstName,
+          lastName: submittedLastName,
+          email: submittedEmail,
+          password: submittedPassword,
           organizationAction: effectiveOrganizationAction,
-          organizationName: organizationName.trim() || undefined,
+          organizationName: submittedOrgName || undefined,
           invitationToken: invitationToken || undefined,
         }),
       })
@@ -163,7 +183,7 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
           setError(errMsg)
         }
       } else {
-        router.push("/signup?success=true&email=" + encodeURIComponent(email))
+        router.push("/signup?success=true&email=" + encodeURIComponent(submittedEmail))
       }
     } catch (err) {
       setError("Ein Fehler ist aufgetreten")
@@ -515,7 +535,7 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    readOnly={!!(invitationToken && invitationEmailLoaded)}
+                    placeholder={invitationToken ? "Wird aus der Einladung übernommen" : undefined}
                     required
                     style={{
                       width: "100%",
@@ -524,9 +544,6 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
                       borderRadius: "6px",
                       fontSize: "1rem",
                       boxSizing: "border-box",
-                      ...(invitationToken && invitationEmailLoaded
-                        ? { backgroundColor: "#F3F4F6", color: "#374151", cursor: "default" }
-                        : {}),
                     }}
                     name="email"
                   />
