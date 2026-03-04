@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     // Validierung: Pflichtfelder
     if (!firstName || !lastName || !email || !password) {
       return NextResponse.json(
-        { error: "firstName, lastName, email und password sind erforderlich" },
+        { error: "Vorname, Nachname, E-Mail und Passwort sind erforderlich." },
         { status: 400 }
       )
     }
