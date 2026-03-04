@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   // Parse query parameters außerhalb des try-Blocks, damit sie im catch-Block verfügbar sind
   const searchParams = request.nextUrl.searchParams
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
-  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "12", 10)))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "25", 10)))
   
   try {
     const session = await auth()

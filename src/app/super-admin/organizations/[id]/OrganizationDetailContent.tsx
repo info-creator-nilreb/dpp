@@ -1,13 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import ConfirmationModal from "@/components/super-admin/ConfirmationModal"
 import SubscriptionChangeModal from "@/components/super-admin/SubscriptionChangeModal"
 import { getFieldSensitivity, getHighestSensitivityLevel, requiresConfirmation, requiresReason } from "@/lib/phase1.5/organization-sensitivity"
 import { getDisplayTier, isFreeTier } from "@/lib/phase1.7/subscription-state"
+import { getInvoiceStatusLabel } from "@/lib/subscription-status-labels"
 import { Tooltip, TooltipIcon } from "@/components/Tooltip"
 import CountrySelect from "@/components/CountrySelect"
 import VatIdInput from "@/components/VatIdInput"
+import Notification from "@/components/Notification"
+import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from "@/lib/format-date"
+import { getBillingEventTypeLabel, formatBillingEventPayload } from "@/lib/billing/event-labels"
 
 interface User {
   id: string
@@ -57,6 +62,7 @@ interface Organization {
     id: string
     status: string
     subscriptionModelId: string | null
+    discountPercentage: number | { toNumber?: () => number } | null
     subscriptionModel: {
       pricingPlan: {
         id: string
@@ -97,9 +103,30 @@ export default function OrganizationDetailContent({
   const [pendingSave, setPendingSave] = useState<{ section: "basic" | "company" | "billing" | "subscription"; action?: "suspend" | "reactivate" } | null>(null)
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
   const [availablePlans, setAvailablePlans] = useState<Array<{ id: string; name: string }>>([])
-  const [activeTab, setActiveTab] = useState<"details" | "activity">("details")
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<"details" | "activity" | "billing">(() => {
+    const t = searchParams.get("tab")
+    if (t === "billing" || t === "activity") return t
+    return "details"
+  })
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
+  const [billingInvoices, setBillingInvoices] = useState<Array<{ id: string; invoiceNumber: string; totalAmount: number; currency: string; status: string; createdAt: string; lastSentAt?: string | null }>>([])
+  const [creditNotes, setCreditNotes] = useState<Array<{ id: string; amount: number; reason: string | null; createdAt: string; invoiceNumber?: string }>>([])
+  const [loadingBilling, setLoadingBilling] = useState(false)
+  const [showCreditNoteModal, setShowCreditNoteModal] = useState(false)
+  const [creditNoteAmount, setCreditNoteAmount] = useState("")
+  const [creditNoteInvoiceId, setCreditNoteInvoiceId] = useState("")
+  const [creditNoteReason, setCreditNoteReason] = useState("")
+  const [savingCreditNote, setSavingCreditNote] = useState(false)
+  const [discountInput, setDiscountInput] = useState("")
+  const [discountReason, setDiscountReason] = useState("")
+  const [savingDiscount, setSavingDiscount] = useState(false)
+  const [billingEvents, setBillingEvents] = useState<Array<{ id: string; type: string; invoiceNumber: string | null; payload: unknown; createdAt: string }>>([])
+  const [loadingBillingEvents, setLoadingBillingEvents] = useState(false)
+  const [actionInvoiceId, setActionInvoiceId] = useState<string | null>(null)
+  const [billingConfirm, setBillingConfirm] = useState<null | { type: "mark-paid" | "resend"; invoice: { id: string; invoiceNumber: string; totalAmount: number; currency: string; status: string; createdAt: string; lastSentAt?: string | null } }>(null)
+  const [billingConfirmLoading, setBillingConfirmLoading] = useState(false)
 
   // Load available plans for subscription modal
   useEffect(() => {
@@ -127,6 +154,28 @@ export default function OrganizationDetailContent({
       loadAuditLogs()
     }
   }, [activeTab, organization.id])
+
+  // Load billing invoices, credit notes and events when billing tab is active
+  useEffect(() => {
+    if (activeTab === "billing") {
+      setLoadingBilling(true)
+      setLoadingBillingEvents(true)
+      Promise.all([
+        fetch(`/api/super-admin/billing/invoices?organizationId=${organization.id}`).then((r) => r.ok ? r.json() : { invoices: [] }),
+        fetch(`/api/super-admin/billing/credit-notes?organizationId=${organization.id}`).then((r) => r.ok ? r.json() : { creditNotes: [] }),
+        fetch(`/api/super-admin/billing/events?organizationId=${organization.id}&limit=25`).then((r) => r.ok ? r.json() : { events: [] }),
+      ])
+        .then(([invData, cnData, evData]) => {
+          setBillingInvoices(invData.invoices || [])
+          setCreditNotes(cnData.creditNotes || [])
+          setBillingEvents(evData.events || [])
+        })
+        .finally(() => { setLoadingBilling(false); setLoadingBillingEvents(false) })
+    }
+  }, [activeTab, organization.id])
+
+  const formatCents = (cents: number, cur: string) =>
+    new Intl.NumberFormat("de-DE", { style: "currency", currency: cur || "EUR" }).format(cents / 100)
 
   async function loadAuditLogs() {
     setLoadingLogs(true)
@@ -287,7 +336,6 @@ export default function OrganizationDetailContent({
           setOrganization(data.organization)
           setEditing(null)
           setSuccess("Änderungen erfolgreich gespeichert")
-          setTimeout(() => setSuccess(null), 3000)
     } catch (err: any) {
       setError(err.message || "Fehler beim Speichern")
     } finally {
@@ -372,7 +420,6 @@ export default function OrganizationDetailContent({
       const data = await response.json()
       setOrganization(data.organization)
       setSuccess("Organisation wurde gesperrt")
-      setTimeout(() => setSuccess(null), 3000)
     } catch (err: any) {
       setError(err.message || "Fehler beim Sperren")
     } finally {
@@ -408,7 +455,6 @@ export default function OrganizationDetailContent({
       const data = await response.json()
       setOrganization(data.organization)
       setSuccess("Organisation wurde aktiviert")
-      setTimeout(() => setSuccess(null), 3000)
     } catch (err: any) {
       setError(err.message || "Fehler beim Aktivieren")
     } finally {
@@ -568,7 +614,350 @@ export default function OrganizationDetailContent({
         >
           Organisationsaktivität
         </button>
+        <button
+          onClick={() => setActiveTab("billing")}
+          style={{
+            padding: "clamp(0.625rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)",
+            border: "none",
+            backgroundColor: "transparent",
+            color: activeTab === "billing" ? "#24c598" : "#7A7A7A",
+            fontWeight: activeTab === "billing" ? "600" : "400",
+            borderBottom: activeTab === "billing" ? "2px solid #24c598" : "2px solid transparent",
+            cursor: "pointer",
+            fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+            whiteSpace: "nowrap",
+            flexShrink: 0
+          }}
+        >
+          Abrechnung
+        </button>
       </div>
+
+      {activeTab === "billing" && (
+        <div style={{ marginBottom: "2rem" }}>
+          <p style={{ marginBottom: "1rem", color: "#7A7A7A", fontSize: "0.95rem" }}>
+            Rechnungen und Zahlungsstatus dieser Organisation. Vollständige Aktionen in{" "}
+            <a href={`/super-admin/billing?organizationId=${organization.id}`} style={{ color: "#24c598" }}>Abrechnung &amp; Erlöse</a>.
+          </p>
+
+          {/* Rabatt (S-8) */}
+          {canEdit && organization.subscription && (
+            <div style={{ marginBottom: "1.5rem", padding: "1rem", border: "1px solid #E5E5E5", borderRadius: "8px", backgroundColor: "#FAFAFA" }}>
+              <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>Rabatt</div>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem 1rem" }}>
+                <label style={{ fontSize: "0.9rem" }}>Aktuell: </label>
+                <span style={{ fontWeight: "500" }}>
+                  {organization.subscription.discountPercentage != null
+                    ? `${Number(organization.subscription.discountPercentage)} %`
+                    : "—"}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="Neu (z. B. 10)"
+                  value={discountInput}
+                  onChange={(e) => setDiscountInput(e.target.value)}
+                  style={{ width: "80px", padding: "0.35rem 0.5rem", border: "1px solid #CDCDCD", borderRadius: "6px" }}
+                />
+                <span style={{ fontSize: "0.85rem", color: "#7A7A7A" }}>%</span>
+                <input
+                  type="text"
+                  placeholder="Grund (mind. 10 Zeichen)"
+                  value={discountReason}
+                  onChange={(e) => setDiscountReason(e.target.value)}
+                  style={{ minWidth: "200px", padding: "0.35rem 0.5rem", border: "1px solid #CDCDCD", borderRadius: "6px" }}
+                />
+                <button
+                  type="button"
+                  disabled={savingDiscount || discountReason.trim().length < 10 || discountInput === ""}
+                  onClick={async () => {
+                    const val = parseFloat(discountInput.replace(",", "."))
+                    if (Number.isNaN(val) || val < 0 || val > 100) return
+                    setSavingDiscount(true)
+                    try {
+                      const res = await fetch(`/api/super-admin/organizations/${organization.id}/subscription`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          status: organization.subscription?.status,
+                          subscriptionModelId: organization.subscription?.subscriptionModelId,
+                          discountPercentage: val,
+                          reason: discountReason.trim(),
+                          _confirmed: true,
+                        }),
+                      })
+                      if (!res.ok) {
+                        const d = await res.json()
+                        setError(d.error || "Fehler")
+                        return
+                      }
+                      const data = await res.json()
+                      if (data.organization?.subscription) {
+                        setOrganization((prev) => prev && { ...prev, subscription: data.organization.subscription })
+                      }
+                      setDiscountInput("")
+                      setDiscountReason("")
+                      setSuccess("Rabatt gespeichert")
+                    } finally {
+                      setSavingDiscount(false)
+                    }
+                  }}
+                  style={{
+                    padding: "0.35rem 0.75rem",
+                    backgroundColor: savingDiscount ? "#CCC" : "#24c598",
+                    color: "#FFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: savingDiscount ? "not-allowed" : "pointer",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  {savingDiscount ? "Speichern…" : "Rabatt setzen"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loadingBilling ? (
+            <p style={{ color: "#7A7A7A" }}>Lade Rechnungen…</p>
+          ) : billingInvoices.length === 0 ? (
+            <p style={{ color: "#7A7A7A" }}>Keine Rechnungen für diese Organisation.</p>
+          ) : (
+            <div style={{ overflowX: "auto", border: "1px solid #E5E5E5", borderRadius: "8px", marginBottom: "1.5rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#F8F9FA", textAlign: "left" }}>
+                    <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Rechnungsnummer</th>
+                    <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Datum</th>
+                    <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Betrag</th>
+                    <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Status</th>
+                    {canEdit && <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Aktionen</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {billingInvoices.map((inv: { id: string; invoiceNumber: string; totalAmount: number; currency: string; status: string; createdAt: string; lastSentAt?: string | null }) => (
+                    <tr key={inv.id} style={{ borderBottom: "1px solid #E5E5E5" }}>
+                      <td style={{ padding: "0.6rem" }}>{inv.invoiceNumber}</td>
+                      <td style={{ padding: "0.6rem" }}>{formatDateDDMMYYYY(inv.createdAt)}</td>
+                      <td style={{ padding: "0.6rem" }}>{formatCents(inv.totalAmount, inv.currency)}</td>
+                      <td style={{ padding: "0.6rem" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.35rem" }}>
+                          <span>{getInvoiceStatusLabel(inv.status)}</span>
+                          {inv.lastSentAt && (
+                            <span
+                              title={`Zuletzt versendet: ${formatDateDDMMYYYY(inv.lastSentAt)}`}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                padding: "0.2rem 0.5rem",
+                                fontSize: "0.7rem",
+                                fontWeight: "500",
+                                color: "#0d9488",
+                                backgroundColor: "#ccfbf1",
+                                border: "1px solid #99f6e4",
+                                borderRadius: "9999px",
+                              }}
+                            >
+                              Versendet
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      {canEdit && (
+                        <td style={{ padding: "0.6rem" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.5rem" }}>
+                            {inv.status !== "paid" && (
+                              <button
+                                type="button"
+                                disabled={actionInvoiceId !== null}
+                                onClick={() => { setActionInvoiceId(inv.id); setBillingConfirm({ type: "mark-paid", invoice: inv }) }}
+                                style={{ padding: "0.35rem 0.6rem", fontSize: "0.8rem", whiteSpace: "nowrap", border: "1px solid #24c598", color: "#24c598", background: "none", borderRadius: "6px", cursor: actionInvoiceId ? "not-allowed" : "pointer" }}
+                              >
+                                Als bezahlt markieren
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={actionInvoiceId !== null}
+                                onClick={() => { setActionInvoiceId(inv.id); setBillingConfirm({ type: "resend", invoice: inv }) }}
+                              style={{ padding: "0.35rem 0.6rem", fontSize: "0.8rem", whiteSpace: "nowrap", border: "1px solid #7A7A7A", color: "#7A7A7A", background: "none", borderRadius: "6px", cursor: actionInvoiceId ? "not-allowed" : "pointer" }}
+                            >
+                              Rechnung versenden
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Gutschriften (S-7) */}
+          <div style={{ marginBottom: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+              <div style={{ fontWeight: "600" }}>Gutschriften</div>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => { setShowCreditNoteModal(true); setCreditNoteAmount(""); setCreditNoteInvoiceId(""); setCreditNoteReason("") }}
+                  style={{ padding: "0.35rem 0.75rem", backgroundColor: "#24c598", color: "#FFF", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.9rem" }}
+                >
+                  Gutschrift erstellen
+                </button>
+              )}
+            </div>
+            {creditNotes.length === 0 ? (
+              <p style={{ color: "#7A7A7A", fontSize: "0.9rem" }}>Keine Gutschriften.</p>
+            ) : (
+              <div style={{ overflowX: "auto", border: "1px solid #E5E5E5", borderRadius: "8px" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#F8F9FA", textAlign: "left" }}>
+                      <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Datum</th>
+                      <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Betrag</th>
+                      <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Rechnung</th>
+                      <th style={{ padding: "0.6rem", borderBottom: "1px solid #E5E5E5" }}>Grund</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {creditNotes.map((cn: { id: string; amount: number; reason: string | null; createdAt: string; invoiceNumber?: string }) => (
+                      <tr key={cn.id} style={{ borderBottom: "1px solid #E5E5E5" }}>
+                        <td style={{ padding: "0.6rem" }}>{formatDateDDMMYYYY(cn.createdAt)}</td>
+                        <td style={{ padding: "0.6rem" }}>{formatCents(cn.amount, "EUR")}</td>
+                        <td style={{ padding: "0.6rem" }}>{cn.invoiceNumber ?? "—"}</td>
+                        <td style={{ padding: "0.6rem", color: "#7A7A7A" }}>{cn.reason ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Ereignisprotokoll Abrechnung (S-10) */}
+          <div style={{ marginBottom: "1.5rem" }}>
+            <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>Ereignisprotokoll Abrechnung</div>
+            <p style={{ color: "#7A7A7A", fontSize: "0.85rem", marginBottom: "0.5rem" }}>Rechnungs- und Zahlungsereignisse dieser Organisation.</p>
+            {loadingBillingEvents ? (
+              <p style={{ color: "#7A7A7A", fontSize: "0.9rem" }}>Lade…</p>
+            ) : billingEvents.length === 0 ? (
+              <p style={{ color: "#7A7A7A", fontSize: "0.9rem" }}>Keine Events für diese Organisation.</p>
+            ) : (
+              <div style={{ overflowX: "auto", border: "1px solid #E5E5E5", borderRadius: "8px" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#F8F9FA", textAlign: "left" }}>
+                      <th style={{ padding: "0.5rem", borderBottom: "1px solid #E5E5E5" }}>Datum</th>
+                      <th style={{ padding: "0.5rem", borderBottom: "1px solid #E5E5E5" }}>Typ</th>
+                      <th style={{ padding: "0.5rem", borderBottom: "1px solid #E5E5E5" }}>Rechnung</th>
+                      <th style={{ padding: "0.5rem", borderBottom: "1px solid #E5E5E5" }}>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {billingEvents.map((e: { id: string; type: string; invoiceNumber: string | null; payload: unknown; createdAt: string }) => (
+                      <tr key={e.id} style={{ borderBottom: "1px solid #E5E5E5" }}>
+                        <td style={{ padding: "0.5rem" }}>{formatDateTimeDDMMYYYY(e.createdAt)}</td>
+                        <td style={{ padding: "0.5rem" }}>{getBillingEventTypeLabel(e.type)}</td>
+                        <td style={{ padding: "0.5rem" }}>{e.invoiceNumber ?? "—"}</td>
+                        <td style={{ padding: "0.5rem", color: "#7A7A7A", maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis" }} title={formatBillingEventPayload(e.type, e.payload)}>
+                          {formatBillingEventPayload(e.type, e.payload)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Modal: Gutschrift erstellen */}
+          {showCreditNoteModal && (
+            <div
+              style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+              onClick={() => !savingCreditNote && setShowCreditNoteModal(false)}
+            >
+              <div style={{ backgroundColor: "#FFF", padding: "1.5rem", borderRadius: "8px", maxWidth: "400px", width: "100%", boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ fontWeight: "600", marginBottom: "1rem" }}>Gutschrift erstellen</div>
+                <div style={{ marginBottom: "0.75rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem" }}>Betrag (EUR)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="z. B. 29.99"
+                    value={creditNoteAmount}
+                    onChange={(e) => setCreditNoteAmount(e.target.value)}
+                    style={{ width: "100%", padding: "0.5rem", border: "1px solid #CDCDCD", borderRadius: "6px", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ marginBottom: "0.75rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem" }}>Rechnung (optional)</label>
+                  <select
+                    value={creditNoteInvoiceId}
+                    onChange={(e) => setCreditNoteInvoiceId(e.target.value)}
+                    style={{ width: "100%", padding: "0.5rem", border: "1px solid #CDCDCD", borderRadius: "6px" }}
+                  >
+                    <option value="">— Keine —</option>
+                    {billingInvoices.map((inv: { id: string; invoiceNumber: string }) => (
+                      <option key={inv.id} value={inv.id}>{inv.invoiceNumber}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ marginBottom: "1rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem" }}>Grund (optional)</label>
+                  <input
+                    type="text"
+                    value={creditNoteReason}
+                    onChange={(e) => setCreditNoteReason(e.target.value)}
+                    style={{ width: "100%", padding: "0.5rem", border: "1px solid #CDCDCD", borderRadius: "6px", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                  <button type="button" onClick={() => !savingCreditNote && setShowCreditNoteModal(false)} style={{ padding: "0.5rem 1rem", border: "1px solid #CDCDCD", borderRadius: "6px", background: "#FFF", cursor: "pointer" }}>Abbrechen</button>
+                  <button
+                    type="button"
+                    disabled={savingCreditNote || !creditNoteAmount || parseFloat(creditNoteAmount.replace(",", ".")) <= 0}
+                    onClick={async () => {
+                      const eur = parseFloat(creditNoteAmount.replace(",", "."))
+                      if (Number.isNaN(eur) || eur <= 0) return
+                      setSavingCreditNote(true)
+                      try {
+                        const res = await fetch("/api/super-admin/billing/credit-notes", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            organizationId: organization.id,
+                            invoiceId: creditNoteInvoiceId || undefined,
+                            amount: Math.round(eur * 100),
+                            reason: creditNoteReason.trim() || undefined,
+                          }),
+                        })
+                        if (!res.ok) {
+                          const d = await res.json()
+                          setError(d.error || "Fehler")
+                          return
+                        }
+                        const data = await res.json()
+                        setCreditNotes((prev) => [{ id: data.creditNote.id, amount: data.creditNote.amount, reason: data.creditNote.reason, createdAt: data.creditNote.createdAt }, ...prev])
+                        setShowCreditNoteModal(false)
+                        setSuccess("Gutschrift erstellt")
+                      } finally {
+                        setSavingCreditNote(false)
+                      }
+                    }}
+                    style={{ padding: "0.5rem 1rem", backgroundColor: savingCreditNote ? "#CCC" : "#24c598", color: "#FFF", border: "none", borderRadius: "6px", cursor: savingCreditNote ? "not-allowed" : "pointer" }}
+                  >
+                    {savingCreditNote ? "Erstellen…" : "Erstellen"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === "details" && (
         <div style={{
@@ -625,27 +1014,20 @@ export default function OrganizationDetailContent({
       </div>
 
       {error && (
-        <div style={{
-          padding: "1rem",
-          backgroundColor: "#FEE",
-          border: "1px solid #FCC",
-          borderRadius: "6px",
-          color: "#C33"
-        }}>
-          {error}
-        </div>
+        <Notification
+          type="error"
+          message={error}
+          onClose={() => setError(null)}
+          duration={5000}
+        />
       )}
-
       {success && (
-        <div style={{
-          padding: "1rem",
-          backgroundColor: "#E8F5E9",
-          border: "1px solid #C8E6C9",
-          borderRadius: "6px",
-          color: "#2E7D32"
-        }}>
-          {success}
-        </div>
+        <Notification
+          type="success"
+          message={success}
+          onClose={() => setSuccess(null)}
+          duration={4000}
+        />
       )}
 
       {/* Basic Info */}
@@ -752,13 +1134,7 @@ export default function OrganizationDetailContent({
               fontSize: "1rem",
               color: "#0A0A0A"
             }}>
-              {new Date(organization.createdAt).toLocaleDateString("de-DE", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit"
-              })}
+              {formatDateTimeDDMMYYYY(organization.createdAt)}
             </div>
           </div>
           <div>
@@ -917,9 +1293,13 @@ export default function OrganizationDetailContent({
                   setEditing(null)
                 } else {
                   setEditing("billing")
+                  const contactEmail = organization.billingContactUserId && organization.users?.length
+                    ? (organization.users.find((u) => u.id === organization.billingContactUserId)?.email ?? organization.users[0]?.email ?? "")
+                    : ""
+                  const defaultBillingEmail = organization.billingEmail ? "" : (contactEmail || (organization.users?.[0]?.email ?? ""))
                   setFormData({
                     ...formData,
-                    billingEmail: organization.billingEmail || "",
+                    billingEmail: organization.billingEmail || defaultBillingEmail || "",
                     billingContactUserId: organization.billingContactUserId || "",
                     invoiceAddressStreet: organization.invoiceAddressStreet || "",
                     invoiceAddressZip: organization.invoiceAddressZip || "",
@@ -948,7 +1328,14 @@ export default function OrganizationDetailContent({
           display: "grid",
           gap: "1rem"
         }}>
-          {renderField("Rechnungs-E-Mail", organization.billingEmail, "billingEmail", "billing")}
+          {(() => {
+            const contactEmail = organization.billingContactUserId
+              ? (organization.users?.find((u) => u.id === organization.billingContactUserId)?.email ?? null)
+              : null
+            const firstUserEmail = organization.users?.[0]?.email ?? null
+            const effectiveBillingEmailDisplay = organization.billingEmail || contactEmail || firstUserEmail || null
+            return renderField("Rechnungs-E-Mail", effectiveBillingEmailDisplay, "billingEmail", "billing")
+          })()}
           {renderField("Rechnungs-Kontakt (User ID)", organization.billingContactUserId, "billingContactUserId", "billing")}
           {renderField("Rechnungsadresse: Straße", organization.invoiceAddressStreet, "invoiceAddressStreet", "billing")}
           {renderField("Rechnungsadresse: PLZ", organization.invoiceAddressZip, "invoiceAddressZip", "billing")}
@@ -1040,9 +1427,10 @@ export default function OrganizationDetailContent({
                     "trial": "Testphase",
                     "expired": "Abgelaufen",
                     "canceled": "Gekündigt",
+                    "cancelled": "Storniert",
                     "past_due": "Überfällig"
                   }
-                  return statusMap[status] || status
+                  return statusMap[status] ?? status
                 })()}
               </div>
             </div>
@@ -1059,7 +1447,7 @@ export default function OrganizationDetailContent({
                   fontSize: "1rem",
                   color: "#0A0A0A"
                 }}>
-                  {new Date(organization.subscription.trialExpiresAt).toLocaleDateString("de-DE")}
+                  {formatDateDDMMYYYY(organization.subscription.trialExpiresAt)}
                 </div>
               </div>
             )}
@@ -1137,7 +1525,7 @@ export default function OrganizationDetailContent({
                       color: "#7A7A7A",
                       marginTop: "0.25rem"
                     }}>
-                      Letzter Login: {new Date(user.lastLoginAt).toLocaleDateString("de-DE")}
+                      Letzter Login: {formatDateDDMMYYYY(user.lastLoginAt)}
                     </div>
                   )}
                 </div>
@@ -1148,7 +1536,7 @@ export default function OrganizationDetailContent({
                   fontSize: "0.85rem",
                   color: user.status === "active" ? "#2E7D32" : user.status === "suspended" ? "#C62828" : "#E65100"
                 }}>
-                  {user.status === "active" ? "Aktiv" : user.status === "suspended" ? "Gesperrt" : user.status}
+                  {user.status === "active" ? "Aktiv" : user.status === "suspended" ? "Gesperrt" : user.status === "invited" ? "Eingeladen" : user.status}
                 </div>
               </div>
             ))
@@ -1396,6 +1784,60 @@ export default function OrganizationDetailContent({
         }
       />
 
+      {/* Billing-Aktionen: Bestätigung vor „Als bezahlt markieren“ / „Rechnung versenden“ */}
+      <ConfirmationModal
+        isOpen={!!billingConfirm}
+        onClose={() => { setBillingConfirm(null); setActionInvoiceId(null) }}
+        onConfirm={async () => {
+          if (!billingConfirm) return
+          setBillingConfirmLoading(true)
+          setError(null)
+          setSuccess(null)
+          const { type, invoice } = billingConfirm
+          try {
+            if (type === "mark-paid") {
+              const res = await fetch(`/api/super-admin/billing/invoices/${invoice.id}/mark-paid`, { method: "POST", credentials: "include" })
+              const data = await res.json().catch(() => ({}))
+              if (!res.ok) { setError(data.error || "Fehler beim Markieren"); setBillingConfirmLoading(false); return }
+              setBillingInvoices((prev) => prev.map((i) => (i.id === invoice.id ? { ...i, status: "paid" } : i)))
+              setSuccess("Rechnung als bezahlt markiert")
+            } else {
+              const res = await fetch(`/api/super-admin/billing/invoices/${invoice.id}/resend`, { method: "POST", credentials: "include" })
+              const data = await res.json().catch(() => ({}))
+              if (!res.ok) { setError(data.error || "Fehler beim Versenden"); setBillingConfirmLoading(false); return }
+              setSuccess(data.sentTo ? `Rechnung an ${data.sentTo} gesendet` : "Rechnung versendet")
+            }
+            setBillingConfirm(null)
+            setActionInvoiceId(null)
+            setLoadingBillingEvents(true)
+            Promise.all([
+              fetch(`/api/super-admin/billing/invoices?organizationId=${organization.id}`).then((r) => (r.ok ? r.json() : { invoices: [] })),
+              fetch(`/api/super-admin/billing/events?organizationId=${organization.id}&limit=25`).then((r) => (r.ok ? r.json() : { events: [] })),
+            ])
+              .then(([invData, evData]) => {
+                setBillingInvoices(invData.invoices ?? [])
+                setBillingEvents(evData.events ?? [])
+              })
+              .finally(() => setLoadingBillingEvents(false))
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten")
+          } finally {
+            setBillingConfirmLoading(false)
+          }
+        }}
+        title={billingConfirm?.type === "mark-paid" ? "Rechnung als bezahlt markieren?" : "Rechnung versenden?"}
+        message={
+          billingConfirm?.type === "mark-paid"
+            ? `Rechnung ${billingConfirm.invoice.invoiceNumber} wird als bezahlt markiert. Die Aktion wird im Ereignisprotokoll erfasst.`
+            : billingConfirm?.invoice.lastSentAt
+            ? `Diese Rechnung wurde bereits versendet (zuletzt am ${formatDateDDMMYYYY(billingConfirm.invoice.lastSentAt)}). Sie versenden sie erneut an die hinterlegte Rechnungs-E-Mail der Organisation.`
+            : `Sie versenden die Rechnung ${billingConfirm?.invoice.invoiceNumber} zum ersten Mal per E-Mail an die hinterlegte Rechnungs-E-Mail der Organisation.`
+        }
+        severity="medium"
+        confirmText={billingConfirm?.type === "mark-paid" ? "Als bezahlt markieren" : "Rechnung versenden"}
+        loading={billingConfirmLoading}
+      />
+
       {/* Phase 1.8: Subscription Change Modal */}
       <SubscriptionChangeModal
         isOpen={showSubscriptionModal}
@@ -1424,7 +1866,6 @@ export default function OrganizationDetailContent({
             setOrganization(result.organization)
             setShowSubscriptionModal(false)
             setSuccess("Subscription erfolgreich geändert")
-            setTimeout(() => setSuccess(null), 3000)
           } catch (err: any) {
             setError(err.message || "Fehler beim Ändern der Subscription")
           } finally {
@@ -1522,7 +1963,7 @@ export default function OrganizationDetailContent({
                         color: "#7A7A7A",
                         whiteSpace: "nowrap"
                       }}>
-                        {new Date(log.timestamp || log.createdAt).toLocaleString("de-DE")}
+                        {formatDateTimeDDMMYYYY(log.timestamp || log.createdAt)}
                       </td>
                       <td style={{ 
                         padding: "clamp(0.5rem, 1.5vw, 0.75rem)", 

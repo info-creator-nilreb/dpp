@@ -27,7 +27,7 @@ export default async function SuperAdminAuditLogsPage({
   const organizationId = typeof resolved.organizationId === "string" ? resolved.organizationId : undefined
   const dppId = typeof resolved.dppId === "string" ? resolved.dppId : undefined
   const page = parseInt(typeof resolved.page === "string" ? resolved.page : "1")
-  const limit = parseInt(typeof resolved.limit === "string" ? resolved.limit : "50")
+  const limit = parseInt(typeof resolved.limit === "string" ? resolved.limit : "25")
 
   return (
     <div style={{

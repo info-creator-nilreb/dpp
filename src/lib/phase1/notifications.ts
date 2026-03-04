@@ -107,7 +107,7 @@ export async function notifyOrgAdmins(
 /**
  * Holt alle Notifications eines Users
  */
-export async function getUserNotifications(userId: string, limit = 50) {
+export async function getUserNotifications(userId: string, limit = 25) {
   return await prisma.notification.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },

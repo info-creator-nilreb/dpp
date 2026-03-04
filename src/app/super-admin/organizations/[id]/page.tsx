@@ -59,18 +59,11 @@ export default async function SuperAdminOrganizationDetailPage({ params }: PageP
         }
       },
       subscription: {
-        select: {
-          id: true,
-          status: true,
-          subscriptionModelId: true,
-          trialExpiresAt: true,
+        include: {
           subscriptionModel: {
             include: {
               pricingPlan: {
-                select: {
-                  id: true,
-                  name: true,
-                },
+                select: { id: true, name: true },
               },
             },
           },

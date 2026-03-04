@@ -1,16 +1,14 @@
 /**
- * SELECT PLAN PAGE
- * 
- * Shown when user has no subscription (state = 'none').
- * Allows user to:
- * - Start free trial (no credit card)
- * - Choose a paid subscription
+ * SELECT PLAN PAGE (context-aware)
+ *
+ * source=subscription (default): Systemdialog aus Abonnement & Plan. Keine Marketing-Elemente.
+ * source=marketing: Von /pricing. Mit Hero und Link zur Preisübersicht.
  */
 
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 
@@ -32,13 +30,20 @@ interface PricingPlan {
 
 type BillingInterval = "monthly" | "yearly"
 
+type Source = "subscription" | "marketing"
+
 export default function SelectPlanPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const source: Source = (searchParams.get("source") === "marketing" ? "marketing" : "subscription") as Source
+
   const [loading, setLoading] = useState(true)
   const [plans, setPlans] = useState<PricingPlan[]>([])
   const [error, setError] = useState<string | null>(null)
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly")
   const [isMobile, setIsMobile] = useState(false)
+  const [hasUsedTrial, setHasUsedTrial] = useState(false)
+  const [currentPlanSlug, setCurrentPlanSlug] = useState<string | null>(null)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -52,12 +57,20 @@ export default function SelectPlanPage() {
   useEffect(() => {
     async function loadPlans() {
       try {
-        const response = await fetch("/api/pricing/plans")
-        if (response.ok) {
-          const data = await response.json()
+        const [plansRes, contextRes] = await Promise.all([
+          fetch("/api/pricing/plans"),
+          fetch("/api/app/select-plan-context", { cache: "no-store" }),
+        ])
+        if (plansRes.ok) {
+          const data = await plansRes.json()
           setPlans(data.plans || [])
         } else {
           setError("Fehler beim Laden der Tarife")
+        }
+        if (contextRes.ok) {
+          const ctx = await contextRes.json()
+          setHasUsedTrial(ctx.hasUsedTrial === true)
+          setCurrentPlanSlug(ctx.subscription?.planSlug ?? null)
         }
       } catch (err) {
         console.error("Error loading plans:", err)
@@ -79,22 +92,20 @@ export default function SelectPlanPage() {
   }
 
   if (error) {
+    const backHref = source === "subscription" ? "/app/organization/subscription" : "/pricing"
+    const backLabel = source === "subscription" ? "Zurück zu Abonnement & Plan" : "Zurück zur Preisübersicht"
     return (
       <div style={{ padding: "2rem", textAlign: "center" }}>
         <p style={{ color: "#DC2626", marginBottom: "1rem" }}>{error}</p>
-        <Link
-          href="/app/dashboard"
-          style={{
-            color: "#24c598",
-            textDecoration: "none",
-            fontWeight: "500"
-          }}
-        >
-          Zurück zum Dashboard →
+        <Link href={backHref} style={{ color: "#24c598", textDecoration: "none", fontWeight: "500" }}>
+          ← {backLabel}
         </Link>
       </div>
     )
   }
+
+  const backHref = source === "subscription" ? "/app/organization/subscription" : "/pricing"
+  const backLabel = source === "subscription" ? "Zurück zu Abonnement & Plan" : "Zurück zur Preisübersicht"
 
   // Calculate savings for yearly billing
   const calculateSavings = (monthlyPrice: number, yearlyPrice: number): number => {
@@ -112,25 +123,40 @@ export default function SelectPlanPage() {
       width: "100%",
       boxSizing: "border-box"
     }}>
-      <div style={{ marginBottom: "3rem", textAlign: "center" }}>
-        <h1 style={{
-          fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
-          fontWeight: "700",
-          color: "#0A0A0A",
-          marginBottom: "1rem"
-        }}>
-          Wählen Sie einen Tarif
-        </h1>
-        <p style={{
-          color: "#7A7A7A",
-          fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
-          maxWidth: "600px",
-          margin: "0 auto",
-          marginBottom: "3rem"
-        }}>
-          Starten Sie mit einer kostenlosen Testphase oder wählen Sie direkt einen bezahlten Tarif.
-        </p>
+      <div style={{ marginBottom: "1rem" }}>
+        <Link
+          href={backHref}
+          style={{ color: "#7A7A7A", textDecoration: "none", fontSize: "0.95rem" }}
+        >
+          ← {backLabel}
+        </Link>
       </div>
+      {source === "marketing" && (
+        <div style={{ marginBottom: "3rem", textAlign: "center" }}>
+          <h1 style={{
+            fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
+            fontWeight: "700",
+            color: "#0A0A0A",
+            marginBottom: "1rem"
+          }}>
+            Wählen Sie einen Tarif
+          </h1>
+          <p style={{
+            color: "#7A7A7A",
+            fontSize: "clamp(1rem, 2.5vw, 1.1rem)",
+            maxWidth: "600px",
+            margin: "0 auto",
+            marginBottom: "3rem"
+          }}>
+            Starten Sie mit einer kostenlosen Testphase oder wählen Sie direkt einen bezahlten Tarif.
+          </p>
+        </div>
+      )}
+      {source === "subscription" && (
+        <h1 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#0A0A0A", marginBottom: "2rem" }}>
+          Tarif wählen
+        </h1>
+      )}
 
       {/* Billing Interval Toggle - zentriert über den Cards (Sidebar wird durch AppLayout berücksichtigt) */}
       {/* Layout wie bei /pricing: Toggle bleibt zentriert, Badge erscheint absolut rechts daneben */}
@@ -187,8 +213,8 @@ export default function SelectPlanPage() {
             Jährlich
           </button>
         </div>
-        {/* Badge - unter Toggle auf Mobile, absolut rechts auf Desktop - nur bei jährlicher Abrechnung */}
-        {billingInterval === "yearly" && (() => {
+        {/* Badge - nur im Marketing-Kontext; App-Kontext ohne Marketing-Claim */}
+        {source === "marketing" && billingInterval === "yearly" && (() => {
           // Calculate max savings across all plans
           let maxSavings = 0
           plans.forEach(plan => {
@@ -382,32 +408,41 @@ export default function SelectPlanPage() {
                 </div>
               )}
 
-              {/* Trial CTA - "7 Tage kostenlos testen" - Feste Position am Ende */}
-              {trialModel && (
+              {/* Aktueller Plan: nur Anzeige, kein Button */}
+              {currentPlanSlug === plan.slug ? (
+                <div
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1.5rem",
+                    backgroundColor: "#E5E7EB",
+                    color: "#6B7280",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    textAlign: "center",
+                    cursor: "default"
+                  }}
+                >
+                  Aktueller Plan
+                </div>
+              ) : trialModel && !hasUsedTrial ? (
+                /* Kostenlos testen – nur wenn Trial noch nie genutzt */
                 <>
                   <button
                     onClick={async () => {
                       try {
-                        // Use trial model that matches selected interval if available, otherwise use any trial model
                         const modelToUse = selectedIntervalModels.find(m => m.trialDays && m.trialDays > 0) || trialModel
-                        
                         const response = await fetch("/api/subscription/assign", {
                           method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({
-                            subscriptionModelId: modelToUse.id,
-                            startTrial: true,
-                          }),
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ subscriptionModelId: modelToUse.id, startTrial: true }),
                         })
-
                         if (response.ok) {
-                          // Redirect to dashboard after successful trial assignment
-                          window.location.href = "/app/dashboard"
+                          window.location.href = source === "subscription" ? "/app/organization/subscription" : "/app/dashboard"
                         } else {
                           const data = await response.json()
-                          alert(`Fehler: ${data.error || "Testphase konnte nicht gestartet werden"}`)
+                          alert(data.error || "Testphase konnte nicht gestartet werden")
                         }
                       } catch (error) {
                         console.error("Error starting trial:", error)
@@ -428,70 +463,49 @@ export default function SelectPlanPage() {
                   >
                     {trialDays} Tag{trialDays !== 1 ? "e" : ""} kostenlos testen
                   </button>
-                  <div style={{ marginTop: "1.5rem" }}>
-                    <p style={{
-                      fontSize: "0.75rem",
-                      color: "#7A7A7A",
-                      textAlign: "center",
-                      margin: 0,
-                      marginBottom: "0.25rem"
-                    }}>
-                      Keine Kreditkarte erforderlich
-                    </p>
-                    <p style={{
-                      fontSize: "0.75rem",
-                      color: "#7A7A7A",
-                      textAlign: "center",
-                      margin: 0,
-                      fontStyle: "italic"
-                    }}>
-                      Das Abo endet nach der Probezeit automatisch
-                    </p>
-                  </div>
+                  {source === "marketing" && (
+                    <div style={{ marginTop: "1.5rem" }}>
+                      <p style={{ fontSize: "0.75rem", color: "#7A7A7A", textAlign: "center", margin: 0 }}>Keine Kreditkarte erforderlich</p>
+                      <p style={{ fontSize: "0.75rem", color: "#7A7A7A", textAlign: "center", margin: "0.25rem 0 0", fontStyle: "italic" }}>Das Abo endet nach der Probezeit automatisch</p>
+                    </div>
+                  )}
                 </>
-              )}
-
-              {/* Paid subscription button - only show if no trial available - Feste Position am Ende */}
-              {!trialModel && paidModel && selectedPrice > 0 ? (
+              ) : (trialModel && hasUsedTrial) || (!trialModel && paidModel && selectedPrice > 0) ? (
+                /* Jetzt aktivieren (bezahlt) – Trial bereits genutzt oder kein Trial */
                 <button
                   onClick={async () => {
                     try {
+                      const modelToUse = paidModel ?? trialModel
+                      if (!modelToUse) return
                       const response = await fetch("/api/subscription/assign", {
                         method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                          subscriptionModelId: paidModel.id,
-                          startTrial: false,
-                        }),
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ subscriptionModelId: modelToUse.id, startTrial: false }),
                       })
-
                       if (response.ok) {
-                        // Redirect to dashboard after successful subscription assignment
-                        window.location.href = "/app/dashboard"
+                        window.location.href = source === "subscription" ? "/app/organization/subscription" : "/app/dashboard"
                       } else {
                         const data = await response.json()
-                        alert(`Fehler: ${data.error || "Subscription konnte nicht aktiviert werden"}`)
+                        alert(data.error || "Aktivierung fehlgeschlagen")
                       }
                     } catch (error) {
                       console.error("Error assigning subscription:", error)
-                      alert("Fehler beim Aktivieren der Subscription")
+                      alert("Fehler beim Aktivieren")
                     }
                   }}
                   style={{
                     width: "100%",
                     padding: "0.75rem 1.5rem",
-                    backgroundColor: "#FFFFFF",
-                    color: "#24c598",
-                    border: "2px solid #24c598",
+                    backgroundColor: "#24c598",
+                    color: "#FFFFFF",
+                    border: "none",
                     borderRadius: "6px",
                     fontSize: "0.875rem",
                     fontWeight: "600",
                     cursor: "pointer"
                   }}
                 >
-                  Jetzt abonnieren
+                  Jetzt aktivieren
                 </button>
               ) : billingInterval === "yearly" && !hasYearlyOption ? (
                 <div style={{
@@ -514,24 +528,14 @@ export default function SelectPlanPage() {
         })}
       </div>
 
-      {/* Link unter allen Cards */}
-      <div style={{ 
-        textAlign: "center",
-        marginTop: "3rem",
-        width: "100%",
-        clear: "both" // Stellt sicher, dass der Link unter dem Grid ist
-      }}>
-        <Link
-          href="/pricing"
-          style={{
-            color: "#7A7A7A",
-            textDecoration: "none",
-            fontSize: "0.875rem"
-          }}
-        >
-          ← Zurück zur Preisübersicht
-        </Link>
-      </div>
+      {/* Footer-Link nur im Marketing-Kontext; App-Kontext hat Back-Link oben */}
+      {source === "marketing" && (
+        <div style={{ textAlign: "center", marginTop: "3rem", width: "100%", clear: "both" }}>
+          <Link href="/pricing" style={{ color: "#7A7A7A", textDecoration: "none", fontSize: "0.875rem" }}>
+            ← Zurück zur Preisübersicht
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

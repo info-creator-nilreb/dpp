@@ -101,14 +101,22 @@ model Organization {
   invoiceAddressCountry String?
   billingCountry        String? // Tax-relevant country
 
+  // Trial (monetär abgesichert: nur einmal pro Organisation)
+  hasUsedTrial   Boolean   @default(false)
+  trialStartedAt DateTime? // Erstes Trial-Startdatum
+  trialEndedAt   DateTime? // Letztes Trial-Enddatum (wenn abgelaufen)
+
   // Relations
-  dpps         Dpp[]
-  memberships  Membership[] // EINZIGE QUELLE DER WAHRHEIT für Organisationsmitgliedschaften
-  users        User[]             @relation("OrganizationUsers") // DEPRECATED: Nur für Cache, verwende memberships statt users
-  subscription Subscription?
-  auditLogs    PlatformAuditLog[]
-  invitations  Invitation[]
-  joinRequests JoinRequest[]
+  dpps             Dpp[]
+  memberships      Membership[] // EINZIGE QUELLE DER WAHRHEIT für Organisationsmitgliedschaften
+  users            User[]             @relation("OrganizationUsers") // DEPRECATED: Nur für Cache, verwende memberships statt users
+  subscription     Subscription?
+  invoices         Invoice[]
+  billingEventLogs BillingEventLog[]
+  creditNotes      CreditNote[]
+  auditLogs        PlatformAuditLog[]
+  invitations      Invitation[]
+  joinRequests     JoinRequest[]
 
   @@index([status])
   @@index([country])
@@ -492,12 +500,18 @@ model Subscription {
   trialStartedAt       DateTime?
   stripeSubscriptionId String?      @unique
   stripeCustomerId     String?
+  defaultPaymentMethodId String?    // Stripe PM id für Abrechnung
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
   cancelAtPeriodEnd    Boolean      @default(false)
   canceledAt           DateTime?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
+
+  // Abrechnung: nächstes Abrechnungsdatum; bei Kündigung Ende der Laufzeit
+  nextBillingDate      DateTime?
+  cancelAt             DateTime? // Geplantes Kündigungsdatum (Ende der bezahlten Periode)
+  discountPercentage   Decimal?     @db.Decimal(5, 2) // z.B. 10.00 für 10 %
 
   // New subscription model reference
   subscriptionModelId  String?
@@ -506,8 +520,115 @@ model Subscription {
   priceSnapshot        PriceSnapshot?        @relation(fields: [priceSnapshotId], references: [id], onDelete: SetNull)
   startedAt            DateTime? // When subscription actually started (after trial)
   entitlementSnapshots EntitlementSnapshot[]
+  invoices             Invoice[]
+
+  // Enterprise: Vertragslogik
+  cancellationNoticePeriodDays Int?   @default(14) // Kündigungsfrist in Tagen
+  featureOverrides             Json?  // Super-Admin Overrides (optional)
 
   @@map("subscriptions")
+}
+
+// ============================================
+// BILLING: Rechnungen, Zahlungen, Gutschriften, Event-Log
+// ============================================
+
+model Invoice {
+  id                String    @id @default(cuid())
+  invoiceNumber     String    @unique // Fortlaufend, eindeutig (systemweit)
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscriptionId    String?
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  periodStart       DateTime
+  periodEnd         DateTime
+  netAmount         Int       // Kleinste Währungseinheit (Cent)
+  taxRate           Decimal   @db.Decimal(5, 2) // z.B. 19.00
+  taxAmount         Int
+  totalAmount       Int
+  currency          String    @default("EUR")
+  status            String    // open | paid | failed | cancelled
+  pdfUrl            String?
+  providerInvoiceId String?   // Stripe/anderer Provider – keine harte Abhängigkeit
+  createdAt         DateTime  @default(now())
+  finalizedAt      DateTime?
+
+  lines   InvoiceLine[]
+  payments Payment[]
+  creditNotes CreditNote[]
+  billingEventLogs BillingEventLog[]
+
+  @@index([organizationId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([periodStart, periodEnd])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int      @default(1)
+  unitAmount  Int      // Pro Einheit in Cent
+  amount      Int      // quantity * unitAmount (oder manuell bei Rabatten)
+  metadata    Json?    // Zusatzinfos (z.B. Entitlement-Key, Overage)
+
+  @@index([invoiceId])
+  @@map("invoice_lines")
+}
+
+model Payment {
+  id                 String   @id @default(cuid())
+  invoiceId          String
+  invoice            Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  providerPaymentId String?
+  status             String   // pending | succeeded | failed | refunded
+  amount             Int     // In Cent
+  method             String? // card | sepa_debit | bank_transfer | manual
+  paidAt             DateTime?
+  retryCount         Int      @default(0)
+  createdAt          DateTime @default(now())
+
+  @@index([invoiceId])
+  @@index([status])
+  @@map("payments")
+}
+
+model CreditNote {
+  id                  String    @id @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoiceId           String?
+  invoice             Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  amount              Int       // Positiv = Gutschrift in Cent
+  reason              String?
+  providerCreditNoteId String?
+  createdAt           DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([invoiceId])
+  @@map("credit_notes")
+}
+
+model BillingEventLog {
+  id              String    @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoiceId       String?
+  invoice         Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  type            String    // z.B. invoice.created | payment.succeeded | webhook.received
+  providerEventId String?
+  payload         Json      // Rohes Event oder relevante Felder
+  createdAt       DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([invoiceId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("billing_event_logs")
 }
 
 model Feature {
@@ -695,12 +816,14 @@ model PricingPlan {
 
 // Links Pricing Plan to Feature Registry (read-only reference)
 model PricingPlanFeature {
-  id            String      @id @default(cuid())
-  pricingPlanId String
-  pricingPlan   PricingPlan @relation(fields: [pricingPlanId], references: [id], onDelete: Cascade)
-  featureKey    String // References FeatureRegistry.key (not a foreign key - read-only registry)
-  included      Boolean     @default(true)
-  note          String? // Optional note (e.g. "Coming soon")
+  id               String      @id @default(cuid())
+  pricingPlanId    String
+  pricingPlan      PricingPlan @relation(fields: [pricingPlanId], references: [id], onDelete: Cascade)
+  featureKey       String // References FeatureRegistry.key (not a foreign key - read-only registry)
+  included         Boolean     @default(true)
+  note             String? // Optional note (e.g. "Coming soon")
+  showInTariffCard Boolean     @default(true) // Show in Organisation → Abonnement tariff card
+  tariffCardOrder  Int         @default(0) // Sort order in tariff card (ascending)
 
   @@unique([pricingPlanId, featureKey])
   @@index([pricingPlanId])

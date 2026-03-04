@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // Nodemailer und Node-Built-ins (crypto, fs, net, dns, tls) nicht bündeln – nur auf dem Server mit require laden
-    serverExternalPackages: ["nodemailer"],
+    // Nodemailer, pdfkit (inkl. Font-Dateien .afm) nicht bündeln – nur auf dem Server laden
+    serverExternalPackages: ["nodemailer", "pdfkit"],
     // Next.js 16: Turbopack ist Standard; leere Config unterdrückt Warnung bei vorhandener webpack-Config
     turbopack: {},
     webpack: (config, { isServer }) => {

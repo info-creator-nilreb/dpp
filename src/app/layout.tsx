@@ -5,6 +5,7 @@ import PublicLayoutClient from '@/components/PublicLayoutClient'
 import ConditionalLayout from '@/components/ConditionalLayout'
 import PasswordProtectionWrapper from '@/components/PasswordProtectionWrapper'
 import PasswordProtectionSessionCheck from '@/components/PasswordProtectionSessionCheck'
+import SessionProviderWrapper from '@/components/SessionProviderWrapper'
 import { getTemplateCategoryKeywordsForSeo } from '@/lib/template-helpers'
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.easyproductpass.com'
@@ -75,13 +76,15 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
       </head>
-      <body style={{ margin: 0, padding: 0, fontFamily: 'var(--ui-font-body, system-ui, -apple-system, sans-serif)' }}>
-        <PasswordProtectionWrapper>
-          <PasswordProtectionSessionCheck />
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
-        </PasswordProtectionWrapper>
+      <body style={{ margin: 0, padding: 0, fontFamily: 'var(--ui-font-body, system-ui, -apple-system, sans-serif)', overflowX: 'hidden' }}>
+        <SessionProviderWrapper>
+          <PasswordProtectionWrapper>
+            <PasswordProtectionSessionCheck />
+            <ConditionalLayout>
+              {children}
+            </ConditionalLayout>
+          </PasswordProtectionWrapper>
+        </SessionProviderWrapper>
       </body>
     </html>
   )

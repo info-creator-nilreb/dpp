@@ -31,6 +31,7 @@ export async function PUT(
     const { 
       status,
       subscriptionModelId,
+      discountPercentage,
       reason,
       _confirmed,
     } = body
@@ -100,6 +101,7 @@ export async function PUT(
     const before = currentSubscription ? {
       status: currentSubscription.status,
       subscriptionModelId: currentSubscription.subscriptionModelId,
+      discountPercentage: currentSubscription.discountPercentage?.toString() ?? null,
       planName: currentSubscription.subscriptionModel?.pricingPlan?.name || null,
     } : null
 
@@ -107,21 +109,25 @@ export async function PUT(
     let updatedSubscription
     if (currentSubscription) {
       // Update existing subscription
+      const updateData: Record<string, unknown> = {
+        status: status || currentSubscription.status,
+        subscriptionModelId: subscriptionModelId || currentSubscription.subscriptionModelId,
+        ...(status === "trial" || status === "trial_active" ? {
+          trialStartedAt: currentSubscription.trialStartedAt || new Date(),
+          trialExpiresAt: currentSubscription.trialExpiresAt || (() => {
+            const expires = new Date()
+            expires.setDate(expires.getDate() + 30)
+            return expires
+          })(),
+        } : {}),
+      }
+      if (discountPercentage !== undefined) {
+        const val = typeof discountPercentage === "number" ? discountPercentage : parseFloat(discountPercentage)
+        updateData.discountPercentage = Number.isNaN(val) ? null : val
+      }
       updatedSubscription = await prisma.subscription.update({
         where: { id: currentSubscription.id },
-        data: {
-          status: status || currentSubscription.status,
-          subscriptionModelId: subscriptionModelId || currentSubscription.subscriptionModelId,
-          // Update trial dates if status changes to trial
-          ...(status === "trial" || status === "trial_active" ? {
-            trialStartedAt: currentSubscription.trialStartedAt || new Date(),
-            trialExpiresAt: currentSubscription.trialExpiresAt || (() => {
-              const expires = new Date()
-              expires.setDate(expires.getDate() + 30) // Default 30 days
-              return expires
-            })(),
-          } : {}),
-        },
+        data: updateData as Parameters<typeof prisma.subscription.update>[0]["data"],
         include: {
           subscriptionModel: {
             include: {
@@ -172,6 +178,7 @@ export async function PUT(
     const after = {
       status: updatedSubscription.status,
       subscriptionModelId: updatedSubscription.subscriptionModelId,
+      discountPercentage: updatedSubscription.discountPercentage?.toString() ?? null,
       planName: updatedSubscription.subscriptionModel?.pricingPlan?.name || null,
     }
 
@@ -179,7 +186,7 @@ export async function PUT(
     await logSuperAdminOrganizationUpdate(
       session.id,
       id,
-      ["subscription.status", "subscription.planId"],
+      ["subscription.status", "subscription.planId", "subscription.discountPercentage"],
       before || {},
       after,
       reason.trim(),

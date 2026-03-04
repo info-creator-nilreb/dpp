@@ -1,12 +1,11 @@
-import AuthGate from "../../_auth/AuthGate";
-import { SubscriptionPageContent } from "./SubscriptionPageContent";
+import { redirect } from "next/navigation";
 
-export default function SubscriptionPage() {
-  return (
-    <AuthGate>
-      <SubscriptionPageContent />
-    </AuthGate>
-  );
+/**
+ * Abonnement wurde unter Organisation → Abonnement & Plan verlagert.
+ * Alte URLs werden hierher umgeleitet.
+ */
+export default function AccountSubscriptionPage() {
+  redirect("/app/organization/subscription");
 }
 
 

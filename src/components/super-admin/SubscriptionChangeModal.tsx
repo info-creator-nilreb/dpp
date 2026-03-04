@@ -176,9 +176,10 @@ export default function SubscriptionChangeModal({
                 "trial": "Testphase",
                 "expired": "Abgelaufen",
                 "canceled": "Gekündigt",
+                "cancelled": "Storniert",
                 "past_due": "Überfällig"
               }
-              return statusMap[status] || status
+              return statusMap[status] ?? status
             })()} {currentPlanName && `(${currentPlanName})`}
           </div>
         </div>
@@ -210,6 +211,7 @@ export default function SubscriptionChangeModal({
               <option value="trial">Testphase</option>
               <option value="active">Aktiv</option>
               <option value="expired">Abgelaufen</option>
+              <option value="past_due">Überfällig</option>
               <option value="canceled">Gekündigt</option>
             </select>
         </div>

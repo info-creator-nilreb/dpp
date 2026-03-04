@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import ConfirmationModal from "@/components/super-admin/ConfirmationModal"
+import { formatDateTimeDDMMYYYY } from "@/lib/format-date"
 
 interface User {
   id: string
@@ -180,13 +181,7 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
 
   const formatDate = (date: Date | null) => {
     if (!date) return "Nie"
-    return new Date(date).toLocaleDateString("de-DE", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    })
+    return formatDateTimeDDMMYYYY(date)
   }
 
   const getRoleLabel = (role: string | null) => {
@@ -807,7 +802,7 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
                         color: "#7A7A7A",
                         whiteSpace: "nowrap"
                       }}>
-                        {new Date(log.timestamp || log.createdAt).toLocaleString("de-DE")}
+                        {formatDateTimeDDMMYYYY(log.timestamp || log.createdAt)}
                       </td>
                       <td style={{ 
                         padding: "clamp(0.5rem, 1.5vw, 0.75rem)", 

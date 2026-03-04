@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
     const page = parseInt(searchParams.get("page") || "1")
-    const limit = parseInt(searchParams.get("limit") || "50")
+    const limit = parseInt(searchParams.get("limit") || "25")
     const skip = (page - 1) * limit
 
     const where: any = {}
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
         logs: [],
         pagination: {
           page: 1,
-          limit: 50,
+          limit: 25,
           total: 0,
           totalPages: 0,
         },

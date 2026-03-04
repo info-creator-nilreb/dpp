@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useNotification } from "@/components/NotificationProvider"
 import ConfirmDialog from "@/components/ConfirmDialog"
+import { formatDateDDMMYYYY } from "@/lib/format-date"
 
 interface TemplateCardProps {
   id: string
@@ -162,7 +163,7 @@ export default function TemplateCard({
           fontSize: "0.875rem",
           color: "#7A7A7A"
         }}>
-          Zuletzt aktualisiert: {new Date(updatedAt).toLocaleDateString("de-DE")}
+          Zuletzt aktualisiert: {formatDateDDMMYYYY(updatedAt)}
         </div>
         {status === "active" && (
           <button

@@ -1,0 +1,108 @@
+/* Content: einheitlicher Wrapper für alle Tabs */
+.contentWrapper {
+  max-width: 1280px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  box-sizing: border-box;
+}
+
+/* KPI-Grid: deterministisch 1 → 2 → 4 Spalten, gleiche Abstände */
+.kpiGrid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+
+@media (min-width: 640px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .kpiGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* KPI-Card: volle Breite, kein Overflow, kein Überlappen */
+.kpiCard {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Rechnungsnummer-Spalte: kein Umbruch, Ellipse bei Platzmangel */
+.invoiceNumberTh {
+  white-space: nowrap;
+  width: 18%;
+}
+
+.invoiceNumberCell {
+  white-space: nowrap;
+  word-break: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.invoiceNumberCell,
+.invoiceNumberTh {
+  box-sizing: border-box;
+}
+
+/* Tabelle: festes Layout, alle Zellen begrenzt → keine Überlappung bei ausgeklappter Sidebar */
+.invoicesTable {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.invoicesTable th,
+.invoicesTable td {
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.invoicesTable th:nth-child(1),
+.invoicesTable td:nth-child(1) { width: 20%; }
+.invoicesTable th:nth-child(2),
+.invoicesTable td:nth-child(2) { width: 14%; white-space: nowrap; }
+.invoicesTable th:nth-child(3),
+.invoicesTable td:nth-child(3) { width: 13%; }
+.invoicesTable th:nth-child(4),
+.invoicesTable td:nth-child(4) { width: 11%; }
+.invoicesTable th:nth-child(5),
+.invoicesTable td:nth-child(5) { width: 14%; }
+.invoicesTable th:nth-child(6),
+.invoicesTable td:nth-child(6) { width: 14%; }
+.invoicesTable th:nth-child(7),
+.invoicesTable td:nth-child(7) { width: 14%; }
+.invoicesTable th:nth-child(7),
+.invoicesTable td:nth-child(7) { text-align: center; white-space: nowrap; }
+
+/* Kompakter bei mittlerer Viewport-Breite (z. B. Sidebar ausgeklappt) */
+@media (max-width: 1100px) {
+  .invoicesTable th,
+  .invoicesTable td {
+    padding: 0.5rem 0.5rem !important;
+  }
+  .invoicesTable {
+    font-size: 0.85rem;
+  }
+}
+
+/* Beträge: rechtsbündig, tabular-nums */
+.amountCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.amountTh {
+  text-align: right;
+}

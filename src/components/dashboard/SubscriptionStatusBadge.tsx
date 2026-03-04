@@ -175,7 +175,7 @@ export default function SubscriptionStatusBadge({
                 Upgrade
               </Link>
               <Link
-                href="/app/account/subscription"
+                href="/app/organization/subscription"
                 style={{
                   fontSize: "0.875rem",
                   color: "#24c598",

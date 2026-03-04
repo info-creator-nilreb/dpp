@@ -44,6 +44,10 @@ const PERMISSIONS: Record<SuperAdminRole, Permission[]> = {
     { resource: "template", action: "update" },
     // Audit
     { resource: "audit", action: "read" },
+    // Billing & Erlöse (Rechnungen, Zahlungen, manuelle Aktionen)
+    { resource: "billing", action: "read" },
+    { resource: "billing", action: "update" },
+    { resource: "billing", action: "write" }, // Rechnung versenden, als bezahlt markieren
     // NO billing deletion, NO admin management
   ],
   read_only_admin: [
@@ -51,6 +55,7 @@ const PERMISSIONS: Record<SuperAdminRole, Permission[]> = {
     { resource: "organization", action: "read" },
     { resource: "user", action: "read" },
     { resource: "subscription", action: "read" },
+    { resource: "billing", action: "read" },
     { resource: "feature", action: "read" },
     { resource: "feature_registry", action: "read" },
     { resource: "template", action: "read" },

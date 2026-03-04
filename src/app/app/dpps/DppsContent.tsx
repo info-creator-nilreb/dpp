@@ -1,9 +1,10 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import DppCard from "@/components/DppCard"
 import FilterBar from "./components/FilterBar"
-import Pagination from "./components/Pagination"
+import Pagination from "@/components/ui/Pagination"
 
 interface Dpp {
   id: string
@@ -21,6 +22,7 @@ interface DppsContentProps {
   currentPage: number
   totalPages: number
   totalCount: number
+  pageSize: number
   searchQuery: string
   statusFilter: string
   categoryFilter: string
@@ -34,6 +36,7 @@ export default function DppsContent({
   currentPage,
   totalPages,
   totalCount,
+  pageSize,
   searchQuery,
   statusFilter,
   categoryFilter,
@@ -41,7 +44,28 @@ export default function DppsContent({
   availableStatuses,
   showStatsIcon = true
 }: DppsContentProps) {
+  const router = useRouter()
   const hasActiveFilters = !!(searchQuery || statusFilter || categoryFilter)
+
+  const buildUrl = (page: number, size?: number) => {
+    const params = new URLSearchParams()
+    if (searchQuery) params.set("q", searchQuery)
+    if (statusFilter) params.set("status", statusFilter)
+    if (categoryFilter) params.set("category", categoryFilter)
+    if (page > 1) params.set("page", String(page))
+    const s = size ?? pageSize
+    if (s !== 25) params.set("pageSize", String(s))
+    const q = params.toString()
+    return `/app/dpps${q ? `?${q}` : ""}`
+  }
+  const handlePageChange = (page: number) => {
+    router.push(buildUrl(page))
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+  const handlePageSizeChange = (size: number) => {
+    router.push(buildUrl(1, size))
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
 
   return (
     <div>
@@ -117,6 +141,9 @@ export default function DppsContent({
       {/* DPPs Grid */}
       {dpps.length > 0 ? (
         <>
+          <div style={{ color: "#7A7A7A", fontSize: "0.875rem", marginBottom: "0.75rem" }}>
+            {totalCount} Produktpässe
+          </div>
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
@@ -140,24 +167,14 @@ export default function DppsContent({
             ))}
           </div>
 
-          {/* Pagination - URL-basiert */}
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            searchQuery={searchQuery}
-            statusFilter={statusFilter}
-            categoryFilter={categoryFilter}
+            totalItems={totalCount}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
           />
-
-          {/* Ergebnisse-Anzeige */}
-          <div style={{
-            textAlign: "center",
-            marginTop: "1rem",
-            color: "#7A7A7A",
-            fontSize: "0.9rem"
-          }}>
-            Zeige {dpps.length > 0 ? (currentPage - 1) * 10 + 1 : 0} - {Math.min(currentPage * 10, totalCount)} von {totalCount} Produktpässen
-          </div>
         </>
       ) : (
         <div style={{

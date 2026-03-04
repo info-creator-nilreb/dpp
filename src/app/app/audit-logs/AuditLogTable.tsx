@@ -7,6 +7,7 @@
 import { AuditLog } from "./AuditLogsClient"
 import { getActionLabel, getEntityLabel } from "@/lib/audit/audit-labels"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
+import Pagination from "@/components/ui/Pagination"
 
 interface AuditLogTableProps {
   logs: AuditLog[]
@@ -80,6 +81,10 @@ export default function AuditLogTable({
       maxWidth: "100%",
       boxSizing: "border-box",
     }}>
+      {/* Total count above table header */}
+      <div style={{ color: "#7A7A7A", fontSize: "0.875rem", marginBottom: "0.75rem" }}>
+        {pagination.total} Einträge
+      </div>
       {/* Desktop Table – feste Spaltenbreiten, passt bei ausgeklappter Sidebar ohne horizontales Scrollen */}
       <div
         className="audit-log-table-desktop"
@@ -185,69 +190,14 @@ export default function AuditLogTable({
         </div>
       </div>
 
-      {/* Pagination */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginTop: "1.5rem",
-        gap: "1rem",
-        flexWrap: "wrap"
-      }}>
-        <div style={{ color: "#7A7A7A", fontSize: "0.875rem" }}>
-          Zeige {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} von {pagination.total}
-        </div>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <button
-            onClick={() => onPageChange(pagination.page - 1)}
-            disabled={pagination.page === 1}
-            style={{
-              padding: "0.5rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #E5E5E5",
-              backgroundColor: pagination.page === 1 ? "#F5F5F5" : "#FFFFFF",
-              color: pagination.page === 1 ? "#7A7A7A" : "#0A0A0A",
-              cursor: pagination.page === 1 ? "not-allowed" : "pointer",
-              fontSize: "0.875rem"
-            }}
-          >
-            Zurück
-          </button>
-          <span style={{ color: "#7A7A7A", fontSize: "0.875rem" }}>
-            Seite {pagination.page} von {pagination.totalPages}
-          </span>
-          <button
-            onClick={() => onPageChange(pagination.page + 1)}
-            disabled={pagination.page >= pagination.totalPages}
-            style={{
-              padding: "0.5rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #E5E5E5",
-              backgroundColor: pagination.page >= pagination.totalPages ? "#F5F5F5" : "#FFFFFF",
-              color: pagination.page >= pagination.totalPages ? "#7A7A7A" : "#0A0A0A",
-              cursor: pagination.page >= pagination.totalPages ? "not-allowed" : "pointer",
-              fontSize: "0.875rem"
-            }}
-          >
-            Weiter
-          </button>
-          <select
-            value={pagination.limit}
-            onChange={(e) => onLimitChange(parseInt(e.target.value))}
-            style={{
-              padding: "0.5rem",
-              borderRadius: "8px",
-              border: "1px solid #E5E5E5",
-              fontSize: "0.875rem"
-            }}
-          >
-            <option value="25">25 pro Seite</option>
-            <option value="50">50 pro Seite</option>
-            <option value="100">100 pro Seite</option>
-            <option value="200">200 pro Seite</option>
-          </select>
-        </div>
-      </div>
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.total}
+        pageSize={[10, 25, 50, 100].includes(pagination.limit) ? pagination.limit : 25}
+        onPageChange={onPageChange}
+        onPageSizeChange={(size) => onLimitChange(size)}
+      />
 
       {/* Mobile View - Hidden on desktop */}
       <div className="audit-log-table-mobile" style={{ display: "none" }}>

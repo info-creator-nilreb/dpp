@@ -8,6 +8,7 @@ import { getEntitlementIcon } from "@/components/EntitlementIcons"
 import { getFeatureDescription } from "@/lib/pricing/feature-translations"
 import TrialOverridesSection from "./TrialOverridesSection"
 import Link from "next/link"
+import { formatDateDDMMYYYY } from "@/lib/format-date"
 
 interface Feature {
   key: string
@@ -1712,8 +1713,8 @@ function SubscriptionModelEditor({
                   color: "#7A7A7A",
                   marginTop: "0.25rem"
                 }}>
-                  Gültig von: {new Date(price.validFrom).toLocaleDateString("de-DE")}
-                  {price.validTo && ` bis ${new Date(price.validTo).toLocaleDateString("de-DE")}`}
+                  Gültig von: {formatDateDDMMYYYY(price.validFrom)}
+                  {price.validTo && ` bis ${formatDateDDMMYYYY(price.validTo)}`}
                   {price.isActive && (
                     <span style={{
                       marginLeft: "0.5rem",

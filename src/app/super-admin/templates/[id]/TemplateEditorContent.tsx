@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation"
 import { createNewTemplateVersion } from "./actions"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import { useNotification } from "@/components/NotificationProvider"
+import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from "@/lib/format-date"
 
 interface TemplateBlock {
   id: string
@@ -739,7 +740,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
             {template.effectiveFrom && (
               <>
                 <span>•</span>
-                <span>Gültig ab: {new Date(template.effectiveFrom).toLocaleDateString("de-DE")}</span>
+                <span>Gültig ab: {formatDateDDMMYYYY(template.effectiveFrom)}</span>
               </>
             )}
             {template.supersedesVersion && (
@@ -1860,13 +1861,7 @@ export default function TemplateEditorContent({ template, canEdit }: TemplateEdi
           </div>
           {template.updatedAt && (
             <span style={{ fontSize: "0.75rem" }}>
-              Zuletzt gespeichert: {new Date(template.updatedAt).toLocaleString("de-DE", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit"
-              })}
+              Zuletzt gespeichert: {formatDateTimeDDMMYYYY(template.updatedAt)}
             </span>
           )}
           <div style={{

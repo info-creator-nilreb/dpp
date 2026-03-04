@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { formatDateDDMMYYYY } from "@/lib/format-date"
 
 interface Organization {
   id: string
@@ -157,7 +158,7 @@ export default function OrganizationsTable({ organizations }: OrganizationsTable
                 fontSize: "clamp(0.8rem, 1.5vw, 0.9rem)",
                 whiteSpace: "nowrap"
               }}>
-                {new Date(org.createdAt).toLocaleDateString("de-DE")}
+                {formatDateDDMMYYYY(org.createdAt)}
               </td>
               <td style={{ 
                 padding: "clamp(0.75rem, 2vw, 1rem)", 

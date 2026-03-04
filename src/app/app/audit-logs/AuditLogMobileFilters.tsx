@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react"
-import { getActionTypeOptions, getEntityTypeOptions } from "@/lib/audit/audit-labels"
+import { getActionTypeOptions, getEntityTypeOptions, getSourceOptions } from "@/lib/audit/audit-labels"
 
 interface AuditLogMobileFiltersProps {
   startDate: string
@@ -20,6 +20,13 @@ interface AuditLogMobileFiltersProps {
   setComplianceOnly: (value: boolean) => void
   includeAIEvents: boolean
   setIncludeAIEvents: (value: boolean) => void
+  /** Optional: für Super-Admin (Objekttyp, Quelle, Systemereignisse) */
+  entityType?: string
+  setEntityType?: (value: string) => void
+  source?: string
+  setSource?: (value: string) => void
+  includeSystemEvents?: boolean
+  setIncludeSystemEvents?: (value: boolean) => void
 }
 
 export default function AuditLogMobileFilters({
@@ -33,8 +40,15 @@ export default function AuditLogMobileFilters({
   setComplianceOnly,
   includeAIEvents,
   setIncludeAIEvents,
+  entityType = "",
+  setEntityType,
+  source = "",
+  setSource,
+  includeSystemEvents = false,
+  setIncludeSystemEvents,
 }: AuditLogMobileFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const isSuperAdmin = setEntityType != null && setSource != null && setIncludeSystemEvents != null
 
   // Date presets
   const setDatePreset = (days: number) => {
@@ -234,6 +248,73 @@ export default function AuditLogMobileFilters({
             </select>
           </div>
 
+          {isSuperAdmin && (
+            <>
+              <div>
+                <label style={{
+                  display: "block",
+                  marginBottom: "0.5rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: "500",
+                  color: "#0A0A0A"
+                }}>
+                  Objekttyp
+                </label>
+                <select
+                  value={entityType}
+                  onChange={(e) => setEntityType(e.target.value)}
+                  style={{
+                    width: "100%",
+                    maxWidth: "100%",
+                    padding: "0.5rem",
+                    borderRadius: "8px",
+                    border: "1px solid #E5E5E5",
+                    fontSize: "0.875rem",
+                    boxSizing: "border-box"
+                  }}
+                >
+                  <option value="">Alle</option>
+                  {getEntityTypeOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{
+                  display: "block",
+                  marginBottom: "0.5rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: "500",
+                  color: "#0A0A0A"
+                }}>
+                  Quelle
+                </label>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  style={{
+                    width: "100%",
+                    maxWidth: "100%",
+                    padding: "0.5rem",
+                    borderRadius: "8px",
+                    border: "1px solid #E5E5E5",
+                    fontSize: "0.875rem",
+                    boxSizing: "border-box"
+                  }}
+                >
+                  <option value="">Alle</option>
+                  {getSourceOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
           {/* Toggles */}
           <div style={{
             display: "flex",
@@ -272,6 +353,24 @@ export default function AuditLogMobileFilters({
                 KI-Ereignisse einbeziehen
               </span>
             </label>
+            {isSuperAdmin && (
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                cursor: "pointer"
+              }}>
+                <input
+                  type="checkbox"
+                  checked={includeSystemEvents}
+                  onChange={(e) => setIncludeSystemEvents(e.target.checked)}
+                  style={{ width: "1rem", height: "1rem" }}
+                />
+                <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>
+                  Systemereignisse einbeziehen
+                </span>
+              </label>
+            )}
           </div>
         </div>
       )}

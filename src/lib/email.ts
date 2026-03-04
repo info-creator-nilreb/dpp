@@ -22,8 +22,8 @@ interface EmailTemplateOptions {
   headline: string
   subline: string
   content: string[]
-  ctaText: string
-  ctaUrl: string
+  ctaText?: string
+  ctaUrl?: string
   infoBox?: string
   appName?: string
   baseUrl?: string
@@ -37,12 +37,15 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
   const appName = options.appName || process.env.APP_NAME || "Easy Pass"
   const baseUrl = options.baseUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
   
-  // Logo SVG (Easy Pass Logo)
-  const logoSvg = `
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M9 12l2 2 4-4" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+  // Logo-Einheit: Icon + „Easy Pass“ mit einheitlich 8px Abstand (wie Sidebar/Screenshot)
+  const logoUnitHtml = `
+    <div class="logo-unit" style="display: inline-flex; align-items: center; gap: 8px;">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+        <circle cx="12" cy="12" r="10" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 12l2 2 4-4" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="logo-text" style="font-size: 1.25rem; font-weight: 700; color: #0A0A0A; white-space: nowrap;">Easy Pass</span>
+    </div>
   `
   
   const infoBoxHtml = options.infoBox ? `
@@ -92,9 +95,16 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
             text-align: left;
             margin-bottom: 32px;
           }
-          .logo svg {
-            display: inline-block;
-            vertical-align: middle;
+          .logo-unit {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0A0A0A;
+            white-space: nowrap;
           }
           .headline {
             font-size: 24px;
@@ -181,9 +191,9 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
       <body>
         <div class="email-wrapper">
           <div class="email-container">
-            <!-- Logo -->
+            <!-- Logo (Icon + Name, 8px Abstand) -->
             <div class="logo">
-              ${logoSvg}
+              ${logoUnitHtml}
             </div>
             
             <!-- Headline -->
@@ -197,13 +207,13 @@ function generateEmailTemplate(options: EmailTemplateOptions): string {
               ${options.content.map(paragraph => `<p>${paragraph}</p>`).join('')}
             </div>
             
+            ${options.ctaUrl && options.ctaText ? `
             <!-- CTA Button -->
             <div style="text-align: left;">
               <a href="${options.ctaUrl}" class="cta-button">${options.ctaText}</a>
             </div>
-            
-            <!-- Link Fallback -->
             <p class="link-fallback">${options.ctaUrl}</p>
+            ` : ''}
             
             <!-- Optional Info Box -->
             ${infoBoxHtml}
@@ -648,6 +658,67 @@ Wenn Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren
     }
   } catch (error) {
     console.error("Error sending supplier data request email:", error)
+    throw error
+  }
+}
+
+/**
+ * Sendet eine Rechnung per E-Mail (PDF-Anhang) – z. B. bei „Rechnung erneut versenden“ (S-5).
+ * Nutzt dasselbe Template wie Einladungs- und Registrierungs-E-Mails (konsistentes Styling).
+ */
+export async function sendInvoiceResendEmail(
+  to: string,
+  invoiceNumber: string,
+  pdfBuffer: Buffer
+): Promise<void> {
+  const appName = process.env.APP_NAME || "Easy Pass"
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com"
+  const fileName = `Rechnung-${invoiceNumber}.pdf`
+
+  const htmlContent = generateEmailTemplate({
+    headline: `Ihre Rechnung ${invoiceNumber}`,
+    subline: `Anbei erhalten Sie Ihre Rechnung als PDF-Anhang.`,
+    content: [
+      "mit dieser E-Mail erhalten Sie Ihre Rechnung im Anhang.",
+      "Bei Fragen stehen wir Ihnen gerne zur Verfügung.",
+      `Mit freundlichen Grüßen,<br>Ihr ${appName}-Team`,
+    ],
+    infoBox: "Die Rechnung finden Sie im Anhang dieser E-Mail (PDF).",
+    appName,
+  })
+
+  const textContent = `Ihre Rechnung ${invoiceNumber}
+
+Anbei erhalten Sie Ihre Rechnung als PDF-Anhang.
+
+Mit freundlichen Grüßen,
+Ihr ${appName}-Team`
+
+  const transport = createEmailTransport()
+  try {
+    const info = await transport.sendMail({
+      from: fromEmail,
+      to,
+      subject: `Ihre Rechnung ${invoiceNumber} – ${appName}`,
+      text: textContent,
+      html: htmlContent,
+      attachments: [
+        { filename: fileName, content: pdfBuffer, contentType: "application/pdf" },
+      ],
+    })
+
+    if (process.env.SMTP_HOST) {
+      console.log(`[Rechnung] E-Mail versendet an ${to} (Rechnung ${invoiceNumber}), messageId: ${info.messageId ?? "–"}`)
+    } else {
+      console.warn(`\n=== Rechnung per E-Mail (Development – NICHT versendet) ===`)
+      console.warn(`An: ${to}`)
+      console.warn(`Von: ${fromEmail}`)
+      console.warn(`Rechnung: ${invoiceNumber}`)
+      console.warn(`Für echten Versand SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD in .env setzen.`)
+      console.warn(`================================================\n`)
+    }
+  } catch (error) {
+    console.error("[Rechnung] Fehler beim E-Mail-Versand:", error)
     throw error
   }
 }

@@ -100,6 +100,15 @@ export function ChevronUpIcon({ size = 16, color = "#7A7A7A" }: IconProps) {
   )
 }
 
+/** Outline checkmark for lists (e.g. tariff card features). No circle/fill. */
+export function CheckIcon({ size = 16, color = "#7A7A7A" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" style={{ color }}>
+      <polyline points="5 12 9 16 19 6" />
+    </svg>
+  )
+}
+
 /**
  * Get icon for section based on block name/key
  */

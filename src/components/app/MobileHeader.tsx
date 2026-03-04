@@ -1,6 +1,7 @@
 "use client"
 
 import { MenuIcon } from "@/app/super-admin/components/Icons"
+import EasyPassLogo from "@/components/EasyPassLogo"
 
 interface MobileHeaderProps {
   onMenuClick: () => void
@@ -40,9 +41,7 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
           zIndex: 30,
         }}
       >
-        <h1 style={{ fontSize: "1.25rem", fontWeight: "700", color: "#0A0A0A" }}>
-          Easy Pass
-        </h1>
+        <EasyPassLogo size={32} color="#24c598" iconOnly={false} textColor="#0A0A0A" />
         <button
           onClick={onMenuClick}
           style={{

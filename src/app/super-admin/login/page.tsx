@@ -112,12 +112,12 @@ function SuperAdminLoginForm() {
 
         {error && (
           <div style={{
-            backgroundColor: "#ECFDF5",
-            border: "1px solid #24c598",
+            backgroundColor: "#FEF2F2",
+            border: "1px solid #dc2626",
             borderRadius: "8px",
             padding: "1rem",
             marginBottom: "1.5rem",
-            color: "#24c598",
+            color: "#b91c1c",
             fontSize: "0.9rem"
           }}>
             {error}

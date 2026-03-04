@@ -24,7 +24,7 @@ interface StatsTimeSeriesChartProps {
 
 /** Exakt gleiche Konstanten und Kurvenlogik wie im Dashboard (KpiChart). */
 const CHART_HEIGHT = 280
-const PADDING = { top: 16, right: 16, bottom: 28, left: 36 }
+const PADDING = { top: 16, right: 16, bottom: 44, left: 36 }
 const W = 600
 const INNER_W = W - PADDING.left - PADDING.right
 const INNER_H = CHART_HEIGHT - PADDING.top - PADDING.bottom
@@ -186,7 +186,7 @@ export default function StatsTimeSeriesChart({
         style={{
           padding: 40,
           textAlign: "center",
-          fontSize: "0.8125rem",
+          fontSize: "0.875rem",
           color: "#94a3b8",
           backgroundColor: "transparent",
         }}
@@ -251,21 +251,21 @@ export default function StatsTimeSeriesChart({
                 textAnchor="end"
                 dominantBaseline="middle"
                 fill="#64748b"
-                fontSize={isMobile ? 10 : 11}
+                fontSize={14}
               >
                 {v >= 1000 && isMobile ? `${(v / 1000).toFixed(1)}k` : v.toLocaleString("de-DE")}
               </text>
             </g>
           ))}
-          {/* X: Datumsbeschriftung */}
+          {/* X: mehr Abstand zur Achse (Shopify-Style), erstes Label vom Schnittpunkt abgerückt */}
           {xTickIndices.map((i) => (
             <text
               key={i}
-              x={toX(i)}
-              y={CHART_HEIGHT - 8}
+              x={i === 0 ? toX(i) + 10 : toX(i)}
+              y={CHART_HEIGHT - 20}
               textAnchor="middle"
               fill="#64748b"
-              fontSize={isMobile ? 10 : 11}
+              fontSize={14}
             >
               {formatDate(data[i]?.date ?? "")}
             </text>
@@ -320,7 +320,7 @@ export default function StatsTimeSeriesChart({
             padding: "12px 16px",
             backgroundColor: "#fff",
             color: "#0f172a",
-            fontSize: "0.8125rem",
+            fontSize: "0.875rem",
             borderRadius: 8,
             boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
             pointerEvents: "none",

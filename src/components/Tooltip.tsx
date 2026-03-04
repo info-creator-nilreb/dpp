@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface TooltipProps {
   content: string;
@@ -9,9 +9,26 @@ interface TooltipProps {
 
 export function Tooltip({ content, children }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const show = () => setIsVisible(true);
+    const hide = (e: FocusEvent) => {
+      if (!el.contains(e.relatedTarget as Node)) setIsVisible(false);
+    };
+    el.addEventListener("focusin", show);
+    el.addEventListener("focusout", hide);
+    return () => {
+      el.removeEventListener("focusin", show);
+      el.removeEventListener("focusout", hide);
+    };
+  }, []);
 
   return (
     <span
+      ref={ref}
       style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}

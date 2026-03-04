@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/dpp-schema.json",
+  "title": "DPP Frontend Schema",
+  "description": "Aktuelles DPP-Schema für das Frontend (API-Responses, Editor, Listen)",
+  "definitions": {
+    "DppStatus": {
+      "type": "string",
+      "enum": ["DRAFT", "PUBLISHED", "DEPRECATED"],
+      "description": "DPP-Status, Prisma default: DRAFT"
+    },
+    "DppCategory": {
+      "type": "string",
+      "enum": ["TEXTILE", "FURNITURE", "OTHER"],
+      "description": "Produktkategorie"
+    },
+    "DppMedia": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "dppId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileSize": { "type": "integer" },
+        "storageUrl": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" },
+        "sortOrder": { "type": "integer" },
+        "displayName": { "type": ["string", "null"] },
+        "role": { "type": ["string", "null"] },
+        "blockId": { "type": ["string", "null"] },
+        "fieldId": { "type": ["string", "null"] },
+        "fieldKey": { "type": ["string", "null"] }
+      },
+      "required": ["id", "dppId", "fileName", "fileType", "fileSize", "storageUrl", "uploadedAt"]
+    },
+    "OrganizationRef": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "defaultStyling": {}
+      },
+      "required": ["id", "name"]
+    },
+    "Dpp": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "category": { "type": "string" },
+        "sku": { "type": ["string", "null"] },
+        "gtin": { "type": ["string", "null"] },
+        "brand": { "type": ["string", "null"] },
+        "countryOfOrigin": { "type": ["string", "null"] },
+        "materials": { "type": ["string", "null"] },
+        "materialSource": { "type": ["string", "null"] },
+        "careInstructions": { "type": ["string", "null"] },
+        "isRepairable": { "type": ["string", "null"] },
+        "sparePartsAvailable": { "type": ["string", "null"] },
+        "lifespan": { "type": ["string", "null"] },
+        "conformityDeclaration": { "type": ["string", "null"] },
+        "disposalInfo": { "type": ["string", "null"] },
+        "takebackOffered": { "type": ["string", "null"] },
+        "takebackContact": { "type": ["string", "null"] },
+        "secondLifeInfo": { "type": ["string", "null"] },
+        "status": { "type": "string" },
+        "supersedesDppId": { "type": ["string", "null"] },
+        "organizationId": { "type": "string" },
+        "templateId": { "type": ["string", "null"] },
+        "templateVersionId": { "type": ["string", "null"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "organization": { "$ref": "#/definitions/OrganizationRef" },
+        "media": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/DppMedia" }
+        },
+        "content": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/DppContentEntry" }
+        }
+      },
+      "required": ["id", "name", "category", "status", "organizationId", "createdAt", "updatedAt", "organization", "media"]
+    },
+    "DppContentEntry": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "dppId": { "type": "string" },
+        "versionId": { "type": ["string", "null"] },
+        "isPublished": { "type": "boolean" },
+        "blocks": { "type": "array", "description": "Array von Block-Objekten (template_block + CMS-Blöcke)" },
+        "styling": { "$ref": "#/definitions/StylingConfig" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": ["string", "null"] }
+      },
+      "required": ["id", "dppId", "isPublished", "blocks", "createdAt", "updatedAt"]
+    },
+    "StylingConfig": {
+      "type": "object",
+      "properties": {
+        "logo": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string" },
+            "alt": { "type": "string" },
+            "width": { "type": "number" },
+            "height": { "type": "number" }
+          }
+        },
+        "colors": {
+          "type": "object",
+          "properties": {
+            "primary": { "type": "string" },
+            "secondary": { "type": "string" },
+            "accent": { "type": "string" }
+          },
+          "required": ["primary"]
+        },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "primary": { "type": "string" },
+            "secondary": { "type": "string" }
+          }
+        },
+        "spacing": {
+          "type": "object",
+          "properties": {
+            "blockSpacing": { "type": "number" },
+            "sectionPadding": { "type": "number" }
+          }
+        }
+      }
+    },
+    "BlockTypeKey": {
+      "type": "string",
+      "enum": [
+        "storytelling",
+        "multi_question_poll",
+        "image_text",
+        "text",
+        "image",
+        "video",
+        "accordion",
+        "timeline",
+        "social_links",
+        "template_block"
+      ]
+    },
+    "BlockStatus": {
+      "type": "string",
+      "enum": ["draft", "published"]
+    },
+    "Block": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "$ref": "#/definitions/BlockTypeKey" },
+        "featureKey": { "type": "string" },
+        "order": { "type": "number" },
+        "status": { "$ref": "#/definitions/BlockStatus" },
+        "content": { "type": "object" },
+        "data": { "type": "object", "description": "Template-basierte Blöcke" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "type", "featureKey", "order", "status", "content"]
+    },
+    "DppContentData": {
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Block" }
+        },
+        "styling": { "$ref": "#/definitions/StylingConfig" }
+      },
+      "required": ["blocks"]
+    },
+    "DppListItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "category": { "type": "string" },
+        "status": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "organizationName": { "type": "string" },
+        "mediaCount": { "type": "integer" },
+        "latestVersion": {
+          "type": ["object", "null"],
+          "properties": {
+            "version": { "type": "integer" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "createdBy": { "type": "string" },
+            "hasQrCode": { "type": "boolean" }
+          },
+          "required": ["version", "createdAt", "createdBy", "hasQrCode"]
+        }
+      },
+      "required": ["id", "name", "category", "status", "updatedAt", "organizationName", "mediaCount"]
+    },
+    "DppListResponse": {
+      "type": "object",
+      "properties": {
+        "dpps": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/DppListItem" }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": { "type": "integer" },
+            "limit": { "type": "integer" },
+            "total": { "type": "integer" },
+            "totalPages": { "type": "integer" }
+          },
+          "required": ["page", "limit", "total", "totalPages"]
+        }
+      },
+      "required": ["dpps", "pagination"]
+    },
+    "DppDetailResponse": {
+      "type": "object",
+      "properties": {
+        "dpp": { "$ref": "#/definitions/Dpp" },
+        "fieldValues": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          }
+        },
+        "fieldInstances": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "instanceId": { "type": "string" },
+                "values": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "oneOf": [
+                      { "type": "string" },
+                      { "type": "array", "items": { "type": "string" } }
+                    ]
+                  }
+                }
+              },
+              "required": ["instanceId", "values"]
+            }
+          }
+        },
+        "hasDraftChanges": { "type": "boolean" }
+      },
+      "required": ["dpp", "fieldValues", "fieldInstances", "hasDraftChanges"]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/Dpp" },
+    { "$ref": "#/definitions/DppListResponse" },
+    { "$ref": "#/definitions/DppDetailResponse" }
+  ]
+}

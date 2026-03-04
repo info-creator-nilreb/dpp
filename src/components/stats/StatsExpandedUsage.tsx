@@ -121,7 +121,7 @@ export default function StatsExpandedUsage({
       }}
     >
       <div style={{ width: "100%", minWidth: 0 }}>
-        <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#6B7280", margin: HEADLINE_MARGIN }}>
+        <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#6B7280", margin: HEADLINE_MARGIN }}>
           Zeitverlauf
         </p>
         <StatsTimeSeriesChart
@@ -133,7 +133,7 @@ export default function StatsExpandedUsage({
 
       {regions.length > 0 && (
         <div>
-          <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#6B7280", margin: HEADLINE_MARGIN }}>
+          <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#6B7280", margin: HEADLINE_MARGIN }}>
             Top 3 Regionen
           </p>
           <div
@@ -179,7 +179,7 @@ export default function StatsExpandedUsage({
 
       {regions.length === 0 && (
         <div>
-          <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#6B7280", margin: HEADLINE_MARGIN }}>
+          <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#6B7280", margin: HEADLINE_MARGIN }}>
             Top 3 Regionen
           </p>
           <p style={{ color: "#9CA3AF", fontSize: "0.875rem", margin: 0 }}>

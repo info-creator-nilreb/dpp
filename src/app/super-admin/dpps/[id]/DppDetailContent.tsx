@@ -1,5 +1,7 @@
 "use client"
 
+import { formatDateTimeDDMMYYYY } from "@/lib/format-date"
+
 interface DppVersion {
   id: string
   version: number
@@ -186,13 +188,7 @@ export default function DppDetailContent({ dpp }: DppDetailContentProps) {
                     Version {version.version}
                   </div>
                   <div style={{ fontSize: "0.85rem", color: "#7A7A7A" }}>
-                    {new Date(version.createdAt).toLocaleDateString("de-DE", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    })}
+                    {formatDateTimeDDMMYYYY(version.createdAt)}
                   </div>
                 </div>
                 {version.publicUrl && (

@@ -38,7 +38,7 @@ export default function EasyPassLogo({
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
       <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <svg
           width={size}

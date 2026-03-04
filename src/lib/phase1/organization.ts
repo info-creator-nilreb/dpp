@@ -221,6 +221,7 @@ export async function updateBillingInfo(
     invoiceAddressCity?: string
     invoiceAddressCountry?: string
     billingCountry?: string
+    vatId?: string | null
   }
 ): Promise<void> {
   await prisma.organization.update({
@@ -233,6 +234,7 @@ export async function updateBillingInfo(
       invoiceAddressCity: data.invoiceAddressCity,
       invoiceAddressCountry: data.invoiceAddressCountry,
       billingCountry: data.billingCountry,
+      vatId: data.vatId,
     },
   })
 }

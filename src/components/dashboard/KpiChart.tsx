@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useCallback, useId } from "react";
+import { useState, useCallback, useId, useEffect } from "react";
 import type { KpiId } from "./DashboardKpiCard";
+
+const MOBILE_BREAKPOINT = 480;
 
 export interface KpiTimeSeries {
   dates: string[];
@@ -10,7 +12,7 @@ export interface KpiTimeSeries {
 }
 
 const CHART_HEIGHT = 280;
-const PADDING = { top: 16, right: 16, bottom: 28, left: 36 };
+const PADDING = { top: 16, right: 16, bottom: 44, left: 36 };
 
 const METRIC_KEYS: Record<KpiId, keyof KpiTimeSeries["current"]> = {
   created: "created",
@@ -96,10 +98,18 @@ export default function KpiChart({
     /** Exakte X-Position in ViewBox-Koordinaten (wie bei Recharts/Statistik) */
     hoverX?: number;
   } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = typeof window !== "undefined" ? window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`) : null;
+    const handler = () => setIsMobile(mq?.matches ?? false);
+    handler();
+    mq?.addEventListener("change", handler);
+    return () => mq?.removeEventListener("change", handler);
+  }, []);
 
   const TOOLTIP_PADDING = 16;
   const TOOLTIP_APPROX_WIDTH = 260;
-  const MOBILE_BREAKPOINT = 480;
 
   const key = kpiId === "avgScans" ? "scans" : METRIC_KEYS[kpiId];
   const hasData = Boolean(timeSeries?.dates?.length);
@@ -266,7 +276,7 @@ export default function KpiChart({
     >
       <div
         style={{
-          fontSize: "0.75rem",
+          fontSize: "0.875rem",
           fontWeight: "500",
           color: "#64748b",
           marginBottom: 12,
@@ -308,21 +318,21 @@ export default function KpiChart({
               textAnchor="end"
               dominantBaseline="middle"
               fill="#64748b"
-              fontSize="10"
+              fontSize={isMobile ? 20 : 13}
             >
               {v}
             </text>
           </g>
         ))}
-        {/* X: nur Datumsbeschriftung, keine Achsenlinie und keine Tick-Striche */}
+        {/* X: wie Statistik-Seite – Abstand zur Achse, erstes Label vom Schnittpunkt abgerückt */}
         {xTickIndices.map((i) => (
           <text
             key={i}
-            x={toXCurrent(i)}
-            y={h - 8}
+            x={i === 0 ? toXCurrent(i) + 10 : toXCurrent(i)}
+            y={h - 20}
             textAnchor="middle"
             fill="#64748b"
-            fontSize="10"
+            fontSize={isMobile ? 20 : 13}
           >
             {formatDate(dates[i])}
           </text>
@@ -473,7 +483,7 @@ export default function KpiChart({
           alignItems: "center",
           gap: 4,
           marginTop: 10,
-          fontSize: "0.6875rem",
+          fontSize: "0.8125rem",
           color: "#64748b",
         }}
       >

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Notification from "@/components/Notification"
 
 export default function CreateOrganizationContent() {
   const router = useRouter()
@@ -68,29 +69,20 @@ export default function CreateOrganizationContent() {
     }}>
       <form onSubmit={handleSubmit}>
         {error && (
-          <div style={{
-            padding: "1rem",
-            backgroundColor: "#FEE",
-            border: "1px solid #FCC",
-            borderRadius: "6px",
-            color: "#C33",
-            marginBottom: "1.5rem"
-          }}>
-            {error}
-          </div>
+          <Notification
+            type="error"
+            message={error}
+            onClose={() => setError(null)}
+            duration={5000}
+          />
         )}
-
         {success && (
-          <div style={{
-            padding: "1rem",
-            backgroundColor: "#E8F5E9",
-            border: "1px solid #C8E6C9",
-            borderRadius: "6px",
-            color: "#2E7D32",
-            marginBottom: "1.5rem"
-          }}>
-            {success}
-          </div>
+          <Notification
+            type="success"
+            message={success}
+            onClose={() => setSuccess(null)}
+            duration={4000}
+          />
         )}
 
         <div style={{ display: "grid", gap: "1.5rem" }}>

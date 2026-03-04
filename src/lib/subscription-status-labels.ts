@@ -54,3 +54,23 @@ export function translateTrialToGerman(text: string): string {
     .replace(/trial/gi, "Testphase")
 }
 
+/**
+ * Rechnungsstatus: deutsche Anzeige (Abrechnung, Super-Admin)
+ */
+export function getInvoiceStatusLabel(status: string): string {
+  const n = status?.toLowerCase() ?? ""
+  switch (n) {
+    case "open":
+      return "Offen"
+    case "paid":
+      return "Bezahlt"
+    case "failed":
+      return "Fehlgeschlagen"
+    case "cancelled":
+    case "canceled":
+      return "Storniert"
+    default:
+      return status || "—"
+  }
+}
+

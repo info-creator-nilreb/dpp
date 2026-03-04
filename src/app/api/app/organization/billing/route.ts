@@ -64,6 +64,7 @@ export async function GET(request: Request) {
           invoiceAddressCity: organization.invoiceAddressCity,
           invoiceAddressCountry: organization.invoiceAddressCountry,
           billingCountry: organization.billingCountry,
+          vatId: organization.vatId ?? null,
         },
         subscription: subscription
           ? {
@@ -129,6 +130,7 @@ export async function PUT(request: Request) {
       invoiceAddressCity,
       invoiceAddressCountry,
       billingCountry,
+      vatId,
     } = body
 
     // Hole aktuelles Profil für Audit Log
@@ -142,6 +144,7 @@ export async function PUT(request: Request) {
         invoiceAddressCity: true,
         invoiceAddressCountry: true,
         billingCountry: true,
+        vatId: true,
       },
     })
 
@@ -180,6 +183,7 @@ export async function PUT(request: Request) {
         invoiceAddressCity,
         invoiceAddressCountry,
         billingCountry,
+        vatId,
       }
     )
 

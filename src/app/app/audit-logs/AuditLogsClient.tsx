@@ -70,7 +70,7 @@ export default function AuditLogsClient({
   organizationId,
   dppId,
   initialPage = 1,
-  initialLimit = 50,
+  initialLimit = 25,
 }: AuditLogsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -348,6 +348,7 @@ export default function AuditLogsClient({
           onCardClick={(log) => setSelectedLog(log)}
           pagination={pagination}
           onPageChange={(page) => setPagination({ ...pagination, page })}
+          onLimitChange={(limit) => setPagination({ ...pagination, limit, page: 1 })}
         />
       </div>
 

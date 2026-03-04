@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { formatDateTimeDDMMYYYY } from "@/lib/format-date"
 
 interface User {
   id: string
@@ -36,13 +37,7 @@ export default function UsersTable({ users, canCreate }: UsersTableProps) {
 
   const formatDate = (date: Date | null) => {
     if (!date) return "Nie"
-    return new Date(date).toLocaleDateString("de-DE", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    })
+    return formatDateTimeDDMMYYYY(date)
   }
 
   const getStatusLabel = (status: string) => {

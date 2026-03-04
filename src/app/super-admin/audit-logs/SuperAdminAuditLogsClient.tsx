@@ -12,7 +12,10 @@ import Link from "next/link"
 import { useNotification } from "@/components/NotificationProvider"
 import AuditLogTable from "../../app/audit-logs/AuditLogTable"
 import AuditLogFilters from "../../app/audit-logs/AuditLogFilters"
+import AuditLogMobileFilters from "../../app/audit-logs/AuditLogMobileFilters"
+import AuditLogMobileView from "../../app/audit-logs/AuditLogMobileView"
 import AuditLogDetailDrawer from "../../app/audit-logs/AuditLogDetailDrawer"
+import AuditLogMobileDetailSheet from "../../app/audit-logs/AuditLogMobileDetailSheet"
 import { getActionTypeOptions, getEntityTypeOptions, getSourceOptions } from "@/lib/audit/audit-labels"
 
 interface AuditLog {
@@ -68,7 +71,7 @@ export default function SuperAdminAuditLogsClient({
   organizationId,
   dppId,
   initialPage = 1,
-  initialLimit = 50,
+  initialLimit = 25,
 }: SuperAdminAuditLogsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -312,215 +315,162 @@ export default function SuperAdminAuditLogsClient({
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{
-        backgroundColor: "#F9F9F9",
-        padding: "1.5rem",
-        borderRadius: "8px",
-        border: "1px solid #E5E5E5",
-        marginBottom: "1.5rem",
-        position: "sticky",
-        top: "1rem",
-        zIndex: 10,
-        width: "100%",
-        maxWidth: "100%",
-        overflow: "hidden",
-        boxSizing: "border-box"
-      }}>
+      {/* Desktop Filters */}
+      <div className="sa-audit-filters-desktop" style={{ marginBottom: "1.5rem" }}>
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-          gap: "1rem",
+          backgroundColor: "#F9F9F9",
+          padding: "1.5rem",
+          borderRadius: "8px",
+          border: "1px solid #E5E5E5",
+          position: "sticky",
+          top: "1rem",
+          zIndex: 10,
           width: "100%",
           maxWidth: "100%",
           overflow: "hidden",
-          boxSizing: "border-box",
-          minWidth: 0
+          boxSizing: "border-box"
         }}>
-          {/* Date Range */}
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>
-              Von Datum
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{
-                width: "100%",
-                maxWidth: "100%",
-                padding: "0.5rem",
-                borderRadius: "8px",
-                border: "1px solid #E5E5E5",
-                fontSize: "0.875rem",
-                fontFamily: "inherit",
-                boxSizing: "border-box"
-              }}
-            />
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: "1rem",
+            width: "100%",
+            maxWidth: "100%",
+            overflow: "hidden",
+            boxSizing: "border-box",
+            minWidth: 0
+          }}>
+            <div>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>Von Datum</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ width: "100%", maxWidth: "100%", padding: "0.5rem", borderRadius: "8px", border: "1px solid #E5E5E5", fontSize: "0.875rem", fontFamily: "inherit", boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>Bis Datum</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ width: "100%", maxWidth: "100%", padding: "0.5rem", borderRadius: "8px", border: "1px solid #E5E5E5", fontSize: "0.875rem", fontFamily: "inherit", boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>Objekttyp</label>
+              <select value={entityType} onChange={(e) => setEntityType(e.target.value)} style={{ width: "100%", maxWidth: "100%", padding: "0.5rem", borderRadius: "8px", border: "1px solid #E5E5E5", fontSize: "0.875rem", boxSizing: "border-box" }}>
+                <option value="">Alle</option>
+                {getEntityTypeOptions().map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>Aktion</label>
+              <select value={actionType} onChange={(e) => setActionType(e.target.value)} style={{ width: "100%", maxWidth: "100%", padding: "0.5rem", borderRadius: "8px", border: "1px solid #E5E5E5", fontSize: "0.875rem", boxSizing: "border-box" }}>
+                <option value="">Alle</option>
+                {getActionTypeOptions().map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>Quelle</label>
+              <select value={source} onChange={(e) => setSource(e.target.value)} style={{ width: "100%", maxWidth: "100%", padding: "0.5rem", borderRadius: "8px", border: "1px solid #E5E5E5", fontSize: "0.875rem", boxSizing: "border-box" }}>
+                <option value="">Alle</option>
+                {getSourceOptions().map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
           </div>
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>
-              Bis Datum
+          <div style={{ display: "flex", flexDirection: "row", gap: "1.5rem", justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #E5E5E5" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+              <input type="checkbox" checked={complianceOnly} onChange={(e) => setComplianceOnly(e.target.checked)} style={{ width: "1rem", height: "1rem", flexShrink: 0 }} />
+              <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>Nur compliance-relevant</span>
             </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              style={{
-                width: "100%",
-                maxWidth: "100%",
-                padding: "0.5rem",
-                borderRadius: "8px",
-                border: "1px solid #E5E5E5",
-                fontSize: "0.875rem",
-                fontFamily: "inherit",
-                boxSizing: "border-box"
-              }}
-            />
-          </div>
-
-          {/* Entity Type */}
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>
-              Objekttyp
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+              <input type="checkbox" checked={includeAIEvents} onChange={(e) => setIncludeAIEvents(e.target.checked)} style={{ width: "1rem", height: "1rem", flexShrink: 0 }} />
+              <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>KI-Ereignisse einbeziehen</span>
             </label>
-            <select
-              value={entityType}
-              onChange={(e) => setEntityType(e.target.value)}
-              style={{
-                width: "100%",
-                maxWidth: "100%",
-                padding: "0.5rem",
-                borderRadius: "8px",
-                border: "1px solid #E5E5E5",
-                fontSize: "0.875rem",
-                boxSizing: "border-box"
-              }}
-            >
-              <option value="">Alle</option>
-              {getEntityTypeOptions().map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Action Type */}
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>
-              Aktion
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+              <input type="checkbox" checked={includeSystemEvents} onChange={(e) => setIncludeSystemEvents(e.target.checked)} style={{ width: "1rem", height: "1rem", flexShrink: 0 }} />
+              <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>Systemereignisse einbeziehen</span>
             </label>
-            <select
-              value={actionType}
-              onChange={(e) => setActionType(e.target.value)}
-              style={{
-                width: "100%",
-                maxWidth: "100%",
-                padding: "0.5rem",
-                borderRadius: "8px",
-                border: "1px solid #E5E5E5",
-                fontSize: "0.875rem",
-                boxSizing: "border-box"
-              }}
-            >
-              <option value="">Alle</option>
-              {getActionTypeOptions().map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
           </div>
-
-          {/* Source */}
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500", color: "#0A0A0A" }}>
-              Quelle
-            </label>
-            <select
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              style={{
-                width: "100%",
-                maxWidth: "100%",
-                padding: "0.5rem",
-                borderRadius: "8px",
-                border: "1px solid #E5E5E5",
-                fontSize: "0.875rem",
-                boxSizing: "border-box"
-              }}
-            >
-              <option value="">Alle</option>
-              {getSourceOptions().map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-        </div>
-
-        {/* Toggles - Outside of grid to ensure horizontal layout */}
-        <div style={{ 
-          display: "flex", 
-          flexDirection: "row", 
-          gap: "1.5rem", 
-          justifyContent: "flex-end", 
-          alignItems: "center", 
-          flexWrap: "wrap",
-          marginTop: "1rem",
-          paddingTop: "1rem",
-          borderTop: "1px solid #E5E5E5"
-        }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
-            <input
-              type="checkbox"
-              checked={complianceOnly}
-              onChange={(e) => setComplianceOnly(e.target.checked)}
-              style={{ width: "1rem", height: "1rem", flexShrink: 0 }}
-            />
-            <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>Nur compliance-relevant</span>
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
-            <input
-              type="checkbox"
-              checked={includeAIEvents}
-              onChange={(e) => setIncludeAIEvents(e.target.checked)}
-              style={{ width: "1rem", height: "1rem", flexShrink: 0 }}
-            />
-            <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>KI-Ereignisse einbeziehen</span>
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
-            <input
-              type="checkbox"
-              checked={includeSystemEvents}
-              onChange={(e) => setIncludeSystemEvents(e.target.checked)}
-              style={{ width: "1rem", height: "1rem", flexShrink: 0 }}
-            />
-            <span style={{ fontSize: "0.875rem", color: "#0A0A0A" }}>Systemereignisse einbeziehen</span>
-          </label>
         </div>
       </div>
 
-      {/* Table */}
-      <AuditLogTable
-        logs={logs}
-        loading={loading}
-        onRowClick={(log) => setSelectedLog(log)}
-        pagination={pagination}
-        onPageChange={(page) => setPagination({ ...pagination, page })}
-        onLimitChange={(limit) => setPagination({ ...pagination, limit, page: 1 })}
-      />
-
-      {/* Detail Drawer */}
-      {selectedLog && (
-        <AuditLogDetailDrawer
-          log={selectedLog}
-          onClose={() => setSelectedLog(null)}
+      {/* Mobile Filters (einklappbar) */}
+      <div className="sa-audit-filters-mobile" style={{ display: "none", marginBottom: "1.5rem" }}>
+        <AuditLogMobileFilters
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          actionType={actionType}
+          setActionType={setActionType}
+          complianceOnly={complianceOnly}
+          setComplianceOnly={setComplianceOnly}
+          includeAIEvents={includeAIEvents}
+          setIncludeAIEvents={setIncludeAIEvents}
+          entityType={entityType}
+          setEntityType={setEntityType}
+          source={source}
+          setSource={setSource}
+          includeSystemEvents={includeSystemEvents}
+          setIncludeSystemEvents={setIncludeSystemEvents}
         />
-      )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="sa-audit-table-desktop">
+        <AuditLogTable
+          logs={logs}
+          loading={loading}
+          onRowClick={(log) => setSelectedLog(log)}
+          pagination={pagination}
+          onPageChange={(page) => setPagination({ ...pagination, page })}
+          onLimitChange={(limit) => setPagination({ ...pagination, limit, page: 1 })}
+        />
+      </div>
+
+      {/* Mobile View (Kartenliste) */}
+      <div className="sa-audit-mobile-wrapper" style={{ display: "none" }}>
+        <AuditLogMobileView
+          logs={logs}
+          loading={loading}
+          onCardClick={(log) => setSelectedLog(log)}
+          pagination={pagination}
+          onPageChange={(page) => setPagination({ ...pagination, page })}
+          onLimitChange={(limit) => setPagination({ ...pagination, limit, page: 1 })}
+        />
+      </div>
+
+      {/* Detail Drawer (Desktop) */}
+      <div className="sa-audit-drawer-desktop">
+        {selectedLog && (
+          <AuditLogDetailDrawer
+            log={selectedLog}
+            onClose={() => setSelectedLog(null)}
+          />
+        )}
+      </div>
+
+      {/* Detail Sheet (Mobile) */}
+      <div className="sa-audit-sheet-mobile" style={{ display: "none" }}>
+        {selectedLog && (
+          <AuditLogMobileDetailSheet
+            log={selectedLog}
+            onClose={() => setSelectedLog(null)}
+          />
+        )}
+      </div>
+
+      <style jsx>{`
+        @media (min-width: 768px) {
+          .sa-audit-filters-desktop { display: block !important; }
+          .sa-audit-filters-mobile { display: none !important; }
+          .sa-audit-table-desktop { display: block !important; }
+          .sa-audit-mobile-wrapper { display: none !important; }
+          .sa-audit-drawer-desktop { display: block !important; }
+          .sa-audit-sheet-mobile { display: none !important; }
+        }
+        @media (max-width: 767px) {
+          .sa-audit-filters-desktop { display: none !important; }
+          .sa-audit-filters-mobile { display: block !important; }
+          .sa-audit-table-desktop { display: none !important; }
+          .sa-audit-mobile-wrapper { display: block !important; }
+          .sa-audit-drawer-desktop { display: none !important; }
+          .sa-audit-sheet-mobile { display: block !important; }
+        }
+      `}</style>
     </div>
   )
 }

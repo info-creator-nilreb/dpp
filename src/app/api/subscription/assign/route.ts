@@ -93,6 +93,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Trial nur einmal pro Organisation (monetär abgesichert)
+    if (startTrial && subscriptionModel.trialDays && subscriptionModel.trialDays > 0) {
+      const orgWithTrial = await prisma.organization.findUnique({
+        where: { id: organization.id },
+        select: { hasUsedTrial: true, trialEndedAt: true },
+      })
+      if (orgWithTrial?.hasUsedTrial === true) {
+        return NextResponse.json(
+          { error: "Trial wurde bereits genutzt. Nur eine Testphase pro Organisation möglich." },
+          { status: 400 }
+        )
+      }
+      if (orgWithTrial?.trialEndedAt != null) {
+        return NextResponse.json(
+          { error: "Trial wurde bereits genutzt. Nur eine Testphase pro Organisation möglich." },
+          { status: 400 }
+        )
+      }
+    }
+
     // Get current price
     const currentPrice = subscriptionModel.prices[0]
     if (!currentPrice && !startTrial) {
@@ -190,6 +210,17 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      if (startTrial) {
+        await prisma.organization.update({
+          where: { id: organization.id },
+          data: {
+            hasUsedTrial: true,
+            trialStartedAt: organization.trialStartedAt ?? now,
+            trialEndedAt: null,
+          },
+        })
+      }
+
       return NextResponse.json({
         success: true,
         subscription: {
@@ -271,6 +302,17 @@ export async function POST(req: NextRequest) {
             }
           })
         }
+      }
+
+      if (startTrial) {
+        await prisma.organization.update({
+          where: { id: organization.id },
+          data: {
+            hasUsedTrial: true,
+            trialStartedAt: now,
+            trialEndedAt: null,
+          },
+        })
       }
 
       return NextResponse.json({

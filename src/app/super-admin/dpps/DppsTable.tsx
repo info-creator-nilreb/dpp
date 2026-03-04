@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import FilterBar from "./FilterBar"
+import { formatDateDDMMYYYY } from "@/lib/format-date"
 
 interface Dpp {
   id: string
@@ -187,7 +188,7 @@ export default function DppsTable({
                 {dpp._count.versions}
               </td>
               <td style={{ padding: "1rem", color: "#7A7A7A" }}>
-                {new Date(dpp.updatedAt).toLocaleDateString("de-DE")}
+                {formatDateDDMMYYYY(dpp.updatedAt)}
               </td>
               <td style={{ padding: "1rem", textAlign: "right" }}>
                 <Link

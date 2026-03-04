@@ -157,7 +157,7 @@ export default function DashboardClient() {
   const prev = k?.previousPeriod;
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto" }}>
+    <div style={{ width: "100%", boxSizing: "border-box" }}>
       <header style={{ marginBottom: SECTION_GAP }}>
         <h1
           style={{
@@ -292,9 +292,9 @@ export default function DashboardClient() {
             </div>
             <div
               style={{
-                overflow: "visible",
+                overflow: "hidden",
                 transition: "max-height 250ms ease",
-                maxHeight: activeKpi ? 320 : 0,
+                maxHeight: activeKpi ? 420 : 0,
                 marginTop: activeKpi ? SUBSECTION_GAP : 0,
               }}
             >

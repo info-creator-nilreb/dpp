@@ -15,6 +15,7 @@ interface DppsPageProps {
     status?: string
     category?: string
     page?: string
+    pageSize?: string
   }>
 }
 
@@ -32,8 +33,9 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
   const categoryFilter = params.category?.trim() || ""
   const pageParam = params.page
   const page = Math.max(1, parseInt(pageParam || "1", 10))
-
-  const pageSize = 10
+  const pageSizeParam = params.pageSize
+  const pageSize = Math.min(100, Math.max(10, parseInt(pageSizeParam || "25", 10)))
+  const validPageSize = [10, 25, 50, 100].includes(pageSize) ? pageSize : 25
 
   // Get user's organization IDs
   const memberships = await prisma.membership.findMany({
@@ -79,6 +81,7 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
         currentPage={1}
         totalPages={0}
         totalCount={0}
+        pageSize={25}
         searchQuery={searchQuery}
         statusFilter={statusFilter}
         categoryFilter={categoryFilter}
@@ -138,13 +141,13 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
 
   // Get total count for pagination
   const totalCount = await prisma.dpp.count({ where })
-  const totalPages = Math.ceil(totalCount / pageSize)
+  const totalPages = Math.ceil(totalCount / validPageSize)
 
   // Get paginated DPPs with select (performance-optimiert)
   const dpps = await prisma.dpp.findMany({
     where,
-    skip: (page - 1) * pageSize,
-    take: pageSize,
+    skip: (page - 1) * validPageSize,
+    take: validPageSize,
     orderBy: {
       updatedAt: "desc"
     },
@@ -186,6 +189,7 @@ async function DppsPageContent({ searchParams }: DppsPageProps) {
       currentPage={page}
       totalPages={totalPages}
       totalCount={totalCount}
+      pageSize={validPageSize}
       searchQuery={searchQuery}
       statusFilter={statusFilter}
       categoryFilter={categoryFilter}

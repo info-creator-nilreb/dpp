@@ -13,7 +13,8 @@ import {
   SettingsIcon,
   LogoutIcon,
   FeatureRegistryIcon,
-  PricingIcon
+  PricingIcon,
+  BillingIcon
 } from "./Icons"
 import TPassLogo from "./TPassLogo"
 import { apiFetch } from "@/lib/api-client"
@@ -26,6 +27,7 @@ const navigationItems = [
   { href: "/super-admin/templates", label: "Templates", icon: TemplatesIcon },
   { href: "/super-admin/feature-registry", label: "Funktionen", icon: FeatureRegistryIcon },
   { href: "/super-admin/pricing", label: "Preise & Abos", icon: PricingIcon },
+  { href: "/super-admin/billing", label: "Abrechnung & Erlöse", icon: BillingIcon },
   { href: "/super-admin/audit-logs", label: "Audit Logs", icon: AuditLogsIcon },
 ]
 

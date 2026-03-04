@@ -111,7 +111,7 @@ export default function DppBrandingTab({
             Logo, Farben und Schriftarten individuell gestalten.
           </p>
           <a
-            href="/app/settings/subscription"
+            href="/app/organization/subscription"
             style={{
               display: "inline-block",
               padding: "0.75rem 1.5rem",

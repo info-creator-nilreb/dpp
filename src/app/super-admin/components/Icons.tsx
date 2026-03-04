@@ -104,6 +104,15 @@ export const PricingIcon = () => (
   </svg>
 )
 
+export const BillingIcon = () => (
+  <svg {...iconProps}>
+    {/* Bar Chart / Erlöse – eindeutig für Abrechnung & Erlöse (nicht DPP/Templates) */}
+    <line x1="12" y1="20" x2="12" y2="10"/>
+    <line x1="18" y1="20" x2="18" y2="4"/>
+    <line x1="6" y1="20" x2="6" y2="16"/>
+  </svg>
+)
+
 export const PricingIconLarge = () => (
   <svg {...iconPropsLarge}>
     {/* Price Tag Icon - Large Version */}
@@ -185,6 +194,15 @@ export const UsersIconLarge = () => (
 export const AuditLogsIconLarge = () => (
   <svg {...iconPropsLarge}>
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+)
+
+export const BillingIconLarge = () => (
+  <svg {...iconPropsLarge}>
+    {/* Bar Chart / Erlöse – Abrechnung & Erlöse */}
+    <line x1="12" y1="20" x2="12" y2="10"/>
+    <line x1="18" y1="20" x2="18" y2="4"/>
+    <line x1="6" y1="20" x2="6" y2="16"/>
   </svg>
 )
 

@@ -41,12 +41,12 @@ export default function TPassLogo({
     )
   }
 
-  // Vollständiges Logo mit Text (für ausgeklappte Sidebar)
+  // Vollständiges Logo mit Text (Abstand 8px wie E-Mails/Rechnung/Screenshot)
   return (
     <div style={{
       display: "flex",
       alignItems: "center",
-      gap: "0.75rem",
+      gap: "8px",
     }}>
       <svg
         width={size}

@@ -15,7 +15,7 @@
  * - complianceOnly?: boolean (default: false)
  * - includeAIEvents?: boolean (default: true)
  * - page?: number (default: 1)
- * - limit?: number (default: 50, max: 200)
+ * - limit?: number (default: 25, max: 200)
  * - export?: "csv" | "json"
  */
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     const complianceOnly = searchParams.get("complianceOnly") === "true"
     const includeAIEvents = searchParams.get("includeAIEvents") !== "false"
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
-    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") || "50")))
+    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") || "25")))
     const exportFormat = searchParams.get("export") as "csv" | "json" | null
 
     // Super Admins always have access
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
         logs: [],
         pagination: {
           page: 1,
-          limit: 50,
+          limit: 25,
           total: 0,
           totalPages: 0,
         },
