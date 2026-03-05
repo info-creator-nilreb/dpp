@@ -162,10 +162,11 @@ export default function StatsTimeSeriesChart({
   const yTicks = useMemo(() => getYTicks(max), [max])
   const xTickIndices = useMemo(() => getXTickIndices(n), [n])
 
+  /** pixelX = x-Koordinate relativ zur linken Kante des Containers (z. B. e.clientX - rect.left). */
   const pixelToViewBoxX = useCallback((pixelX: number, rect: DOMRect) => {
     const scale = Math.min(rect.width / W, rect.height / CHART_HEIGHT)
     const offsetX = (rect.width - W * scale) / 2
-    return (pixelX - rect.left - offsetX) / scale
+    return (pixelX - offsetX) / scale
   }, [W])
 
   const handleMouseMove = useCallback(
