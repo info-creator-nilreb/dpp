@@ -66,9 +66,8 @@ export async function GET(req: NextRequest) {
       where: orgWhere,
     });
 
-    // KPI 2: Aktive Nutzer (users with activity in period)
-    // Note: We use createdAt as proxy for activity since User model doesn't have lastLoginAt
-    // In a production system, you'd track login/activity events separately
+    // KPI 2: Neue Nutzer = im Zeitraum neu registrierte User (createdAt im Range)
+    // Hinweis: Kein lastLoginAt vorhanden; bei Bedarf später echte „aktive Nutzer“ über Activity-Tracking
     const activeUsers = await prisma.user.count({
       where: {
         createdAt: {

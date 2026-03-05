@@ -2,6 +2,8 @@ interface KPICardProps {
   label: string;
   value: number | string;
   href?: string;
+  /** Browser-Tooltip (z. B. Definition der Kennzahl) */
+  title?: string;
   trend?: {
     value: number;
     isPositive: boolean;
@@ -13,9 +15,10 @@ interface KPICardProps {
  * 
  * Displays a single KPI with optional link and trend indicator
  */
-export default function KPICard({ label, value, href, trend }: KPICardProps) {
+export default function KPICard({ label, value, href, title, trend }: KPICardProps) {
   const content = (
     <div
+      title={title}
       style={{
         backgroundColor: "#FFFFFF",
         border: "1px solid #E5E5E5",

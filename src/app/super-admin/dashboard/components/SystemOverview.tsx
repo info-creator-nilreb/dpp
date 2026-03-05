@@ -154,9 +154,10 @@ export default function SystemOverview() {
           href="/super-admin/organizations"
         />
         <KPICard
-          label="Aktive Nutzer"
+          label="Neue Nutzer"
           value={kpiData.activeUsers}
           href="/super-admin/users"
+          title="Anzahl der im gewählten Zeitraum neu registrierten Nutzer (Klick führt zur Nutzerliste)"
         />
         <KPICard
           label="Aktive DPPs"

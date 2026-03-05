@@ -300,7 +300,7 @@ export default function KpiChart({
           width="100%"
           height={CHART_HEIGHT}
           viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="xMidYMid meet"
         style={{ overflow: "visible" }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
@@ -313,7 +313,7 @@ export default function KpiChart({
             <rect x={PADDING.left} y={PADDING.top} width={innerW} height={innerH} />
           </clipPath>
         </defs>
-        {/* Y: nur Einheiten links, keine Achsenlinie */}
+        {/* Y: Gitterlinien + Beschriftung (1:1 wie StatsTimeSeriesChart) */}
         {yTicks.map((v, i) => (
           <g key={i}>
             <line
@@ -322,7 +322,8 @@ export default function KpiChart({
               x2={PADDING.left + innerW}
               y2={toY(v)}
               stroke="#e2e8f0"
-              strokeWidth="1"
+              strokeDasharray="3 3"
+              strokeWidth={1}
             />
             <text
               x={PADDING.left - 8}
@@ -330,13 +331,13 @@ export default function KpiChart({
               textAnchor="end"
               dominantBaseline="middle"
               fill="#64748b"
-              fontSize={isMobile ? 20 : 13}
+              fontSize={14}
             >
-              {v}
+              {v >= 1000 && isMobile ? `${(v / 1000).toFixed(1)}k` : v.toLocaleString("de-DE")}
             </text>
           </g>
         ))}
-        {/* X: wie Statistik-Seite – Abstand zur Achse, erstes Label vom Schnittpunkt abgerückt */}
+        {/* X: mehr Abstand zur Achse (Shopify-Style), erstes Label vom Schnittpunkt abgerückt */}
         {xTickIndices.map((i) => (
           <text
             key={i}
@@ -344,7 +345,7 @@ export default function KpiChart({
             y={h - 20}
             textAnchor="middle"
             fill="#64748b"
-            fontSize={isMobile ? 20 : 13}
+            fontSize={14}
           >
             {formatDate(dates[i])}
           </text>
