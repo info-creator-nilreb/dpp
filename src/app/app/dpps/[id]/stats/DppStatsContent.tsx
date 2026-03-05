@@ -83,7 +83,7 @@ export default function DppStatsContent({ dppId }: { dppId: string }) {
 
   if (error || !data) {
     return (
-      <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "0 0 64px" }}>
+      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 0 64px" }}>
         <p style={{ color: "#7A7A7A", marginBottom: "1rem" }}>{error || "Fehler beim Laden"}</p>
         <Link
           href="/app/dpps"
@@ -103,7 +103,7 @@ export default function DppStatsContent({ dppId }: { dppId: string }) {
   const statusColor = data.dpp.status === "PUBLISHED" ? "#00A651" : "#7A7A7A"
 
   const statsContainer = {
-    maxWidth: "1000px",
+    maxWidth: "1400px",
     margin: "0 auto" as const,
     padding: "0 0 64px",
   }
