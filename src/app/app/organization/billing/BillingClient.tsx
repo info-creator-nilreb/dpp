@@ -191,7 +191,7 @@ export default function BillingClient() {
       <div style={{ padding: "clamp(0.75rem, 3vw, 1.5rem) 0 2rem" }}>
         <Link href="/app/organization" style={{ color: "#7A7A7A", textDecoration: "none", fontSize: "0.95rem" }}>← Zur Organisation</Link>
         <p style={{ marginTop: "1rem", color: "#7A7A7A" }}>
-          Sie haben keine Berechtigung für den Abrechnungsbereich. Nur Organisations-Administratoren haben Zugriff.
+          Sie haben keine Berechtigung für den Abrechnungsbereich. Nur Organisationseigentümer haben Zugriff.
         </p>
       </div>
     )

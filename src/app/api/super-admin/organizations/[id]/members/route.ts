@@ -26,7 +26,7 @@ export async function POST(
 
     const { id: organizationId } = await params
     const body = await request.json()
-    const { userId, role = "ORG_MEMBER" } = body
+    const { userId, role = "VIEWER" } = body
 
     if (!userId) {
       return NextResponse.json(
@@ -35,8 +35,8 @@ export async function POST(
       )
     }
 
-    // Validate role
-    const validRoles = ["ORG_OWNER", "ORG_ADMIN", "ORG_MEMBER", "ORG_VIEWER"]
+    // Validate role (Phase 1: nur Leser, Bearbeiter, Organisationseigentümer)
+    const validRoles = ["ORG_ADMIN", "EDITOR", "VIEWER"]
     if (!validRoles.includes(role)) {
       return NextResponse.json(
         { error: "Ungültige Rolle" },

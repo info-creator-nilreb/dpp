@@ -13,6 +13,7 @@ import VatIdInput from "@/components/VatIdInput"
 import Notification from "@/components/Notification"
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from "@/lib/format-date"
 import { getBillingEventTypeLabel, formatBillingEventPayload } from "@/lib/billing/event-labels"
+import { getRoleLabel } from "@/lib/phase1/roles"
 
 interface User {
   id: string
@@ -1606,7 +1607,7 @@ export default function OrganizationDetailContent({
                   fontSize: "0.85rem",
                   color: "#0A0A0A"
                 }}>
-                  {membership.role}
+                  {getRoleLabel(membership.role)}
                 </div>
               </div>
             ))}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
+import { getRoleLabel } from "@/lib/phase1/roles"
 
 const secondaryTextStyle = {
   fontSize: "clamp(0.8rem, 1.5vw, 0.875rem)",
@@ -309,12 +310,10 @@ export function PersonalDataPageContent() {
                   border: "1px solid #E2E8F0",
                 }}
               >
-                {userRole === "ORG_ADMIN" ? "Organisations-Administrator" : 
-                 userRole === "EDITOR" ? "Editor" : 
-                 userRole === "VIEWER" ? "Betrachter" : userRole}
+                {userRole ? getRoleLabel(userRole) : "—"}
               </p>
               <p style={secondaryTextStyle}>
-                Rollen können nur durch Organisations-Administratoren geändert werden.
+                Rollen können nur durch Organisationseigentümer geändert werden.
               </p>
             </div>
           )}

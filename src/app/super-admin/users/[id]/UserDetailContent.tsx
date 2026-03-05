@@ -5,6 +5,7 @@ import Link from "next/link"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import ConfirmationModal from "@/components/super-admin/ConfirmationModal"
 import { formatDateTimeDDMMYYYY } from "@/lib/format-date"
+import { getRoleLabel as getRoleLabelFromLib, PHASE1_ROLES, ROLE_LABELS } from "@/lib/phase1/roles"
 
 interface User {
   id: string
@@ -186,12 +187,7 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
 
   const getRoleLabel = (role: string | null) => {
     if (!role) return "—"
-    switch (role) {
-      case "ORG_ADMIN": return "Organisations-Administrator"
-      case "EDITOR": return "Editor"
-      case "VIEWER": return "Betrachter"
-      default: return role
-    }
+    return getRoleLabelFromLib(role)
   }
 
   return (
@@ -629,9 +625,9 @@ export default function UserDetailContent({ user: initialUser, canUpdate }: User
                     }}
                   >
                     <option value="">—</option>
-                    <option value="ORG_ADMIN">Organisations-Administrator</option>
-                    <option value="EDITOR">Editor</option>
-                    <option value="VIEWER">Betrachter</option>
+                    <option value={PHASE1_ROLES.VIEWER}>{ROLE_LABELS[PHASE1_ROLES.VIEWER]}</option>
+                    <option value={PHASE1_ROLES.EDITOR}>{ROLE_LABELS[PHASE1_ROLES.EDITOR]}</option>
+                    <option value={PHASE1_ROLES.ORG_ADMIN}>{ROLE_LABELS[PHASE1_ROLES.ORG_ADMIN]}</option>
                   </select>
                 ) : (
                   <p style={{

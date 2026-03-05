@@ -187,7 +187,7 @@ export default function SubscriptionPlanClient() {
           ← Zurück zur Organisation
         </Link>
         <div style={{ padding: "1.5rem", backgroundColor: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: "8px", color: "#92400E" }}>
-          Sie haben keine Berechtigung für Abonnement & Plan. Nur Organisations-Administratoren können diesen Bereich einsehen.
+          Sie haben keine Berechtigung für Abonnement & Plan. Nur Organisationseigentümer können diesen Bereich einsehen.
         </div>
       </div>
     )

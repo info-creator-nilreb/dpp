@@ -399,7 +399,7 @@ export default function CompanyDetailsClient() {
           marginBottom: "1.5rem",
           color: "#92400E",
         }}>
-          Sie haben nur Leseberechtigung. Nur Organisations-Administratoren können Änderungen vornehmen.
+          Sie haben nur Leseberechtigung. Nur Organisationseigentümer können Änderungen vornehmen.
         </div>
       )}
 

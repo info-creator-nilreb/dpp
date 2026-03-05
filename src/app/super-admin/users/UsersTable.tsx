@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { formatDateTimeDDMMYYYY } from "@/lib/format-date"
+import { getRoleLabel as getRoleLabelFromLib } from "@/lib/phase1/roles"
 
 interface User {
   id: string
@@ -51,12 +52,7 @@ export default function UsersTable({ users, canCreate }: UsersTableProps) {
 
   const getRoleLabel = (role: string | null) => {
     if (!role) return "—"
-    switch (role) {
-      case "ORG_ADMIN": return "Organisations-Administrator"
-      case "EDITOR": return "Editor"
-      case "VIEWER": return "Betrachter"
-      default: return role
-    }
+    return getRoleLabelFromLib(role)
   }
 
   return (

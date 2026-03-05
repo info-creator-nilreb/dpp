@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import bcrypt from "bcryptjs"
+import { PHASE1_ROLES, ROLE_LABELS } from "@/lib/phase1/roles"
 
 interface Organization {
   id: string
@@ -24,7 +25,7 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
     lastName: "",
     email: "",
     organizationId: "",
-    role: "VIEWER",
+    role: PHASE1_ROLES.VIEWER,
   })
 
   async function handleSubmit(e: React.FormEvent) {
@@ -239,9 +240,9 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
                 fontSize: "1rem"
               }}
             >
-              <option value="VIEWER">Betrachter</option>
-              <option value="EDITOR">Editor</option>
-              <option value="ORG_ADMIN">Organisations-Administrator</option>
+              <option value={PHASE1_ROLES.VIEWER}>{ROLE_LABELS[PHASE1_ROLES.VIEWER]}</option>
+              <option value={PHASE1_ROLES.EDITOR}>{ROLE_LABELS[PHASE1_ROLES.EDITOR]}</option>
+              <option value={PHASE1_ROLES.ORG_ADMIN}>{ROLE_LABELS[PHASE1_ROLES.ORG_ADMIN]}</option>
             </select>
           </div>
         </div>
