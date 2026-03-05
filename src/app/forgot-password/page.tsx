@@ -140,7 +140,15 @@ function ForgotPasswordContent() {
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+                e.preventDefault()
+                e.currentTarget.requestSubmit()
+              }
+            }}
+          >
             {error && (
               <div style={{
                 padding: "0.75rem",

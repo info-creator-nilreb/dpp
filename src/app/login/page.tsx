@@ -213,7 +213,16 @@ function LoginForm() {
           </h1>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+              e.preventDefault()
+              e.currentTarget.requestSubmit()
+            }
+          }}
+          noValidate
+        >
           {showVerificationSuccess && (
             <div style={{
               padding: "0.75rem",

@@ -445,7 +445,16 @@ export default function SignupForm({ initialInvitationToken }: SignupFormProps) 
           </div>
         ) : (
           <>
-            <form onSubmit={handleSubmit} noValidate>
+            <form
+              onSubmit={handleSubmit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+                  e.preventDefault()
+                  e.currentTarget.requestSubmit()
+                }
+              }}
+              noValidate
+            >
               {error && (
                 <div
                   style={{

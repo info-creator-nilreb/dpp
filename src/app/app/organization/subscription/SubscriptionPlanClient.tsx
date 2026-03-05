@@ -120,7 +120,6 @@ export default function SubscriptionPlanClient() {
   const [plans, setPlans] = useState<PlanForComparison[]>([])
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [openPlanvergleich, setOpenPlanvergleich] = useState(false)
-  const [openRechnungsinfo, setOpenRechnungsinfo] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false)
   const [isSubmittingReactivate, setIsSubmittingReactivate] = useState(false)
@@ -704,75 +703,6 @@ export default function SubscriptionPlanClient() {
         </div>
       )}
 
-      {/* 4. COLLAPSIBLE: Rechnungsinformationen – collapsed by default */}
-      <section style={{ margin: "24px 0" }}>
-        <button
-          type="button"
-          onClick={() => setOpenRechnungsinfo((v) => !v)}
-          style={collapsibleTriggerStyle}
-          aria-expanded={openRechnungsinfo}
-        >
-          <span>Rechnungsinformationen</span>
-          <span
-            style={{
-              transform: openRechnungsinfo ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.18s ease-out",
-              display: "inline-flex",
-              alignItems: "center",
-            }}
-          >
-            <ChevronDownIcon size={14} color="#9CA3AF" />
-          </span>
-        </button>
-        <div
-          style={{
-            overflow: "hidden",
-            maxHeight: openRechnungsinfo ? "500px" : "0",
-            transition: "max-height 0.2s ease-out",
-          }}
-        >
-          <div style={{ paddingTop: "16px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.9375rem" }}>
-              {(organization?.invoiceAddressStreet != null || organization?.invoiceAddressZip != null || organization?.invoiceAddressCity != null) && (
-                <div>
-                  <span style={{ color: "#6B7280", fontSize: "0.8125rem" }}>Rechnungsadresse</span>
-                  <div style={{ color: "#0A0A0A", marginTop: "0.25rem" }}>
-                    {[organization?.invoiceAddressStreet, organization?.invoiceAddressZip, organization?.invoiceAddressCity].filter(Boolean).join(", ")}
-                    {organization?.invoiceAddressCountry && `, ${organization.invoiceAddressCountry}`}
-                  </div>
-                </div>
-              )}
-              {organization?.billingEmail && (
-                <div>
-                  <span style={{ color: "#6B7280", fontSize: "0.8125rem" }}>Rechnungs-E-Mail</span>
-                  <div style={{ color: "#0A0A0A", marginTop: "0.25rem" }}>{organization.billingEmail}</div>
-                </div>
-              )}
-              {organization?.vatId && (
-                <div>
-                  <span style={{ color: "#6B7280", fontSize: "0.8125rem" }}>USt-IdNr.</span>
-                  <div style={{ color: "#0A0A0A", marginTop: "0.25rem" }}>{organization.vatId}</div>
-                </div>
-              )}
-              {paymentMethod && state !== SubscriptionStatus.EXPIRED && (
-                <div>
-                  <span style={{ color: "#6B7280", fontSize: "0.8125rem" }}>Zahlungsart</span>
-                  <div style={{ color: "#0A0A0A", marginTop: "0.25rem" }}>{paymentMethod}</div>
-                </div>
-              )}
-              {isSuperAdmin && subscription?.stripeSubscriptionId && (
-                <div>
-                  <span style={{ color: "#6B7280", fontSize: "0.8125rem" }}>Stripe Subscription ID</span>
-                  <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#4B5563", marginTop: "0.25rem", wordBreak: "break-all" }}>{subscription.stripeSubscriptionId}</div>
-                </div>
-              )}
-              {!organization?.billingEmail && !organization?.invoiceAddressStreet && !organization?.vatId && !paymentMethod && !(isSuperAdmin && subscription?.stripeSubscriptionId) && (
-                <p style={{ color: "#6B7280", margin: 0 }}>Keine Rechnungsinformationen hinterlegt.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

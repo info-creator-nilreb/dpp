@@ -136,7 +136,15 @@ export default function SuperAdminForgotPasswordPage() {
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+                e.preventDefault()
+                e.currentTarget.requestSubmit()
+              }
+            }}
+          >
             <div style={{ marginBottom: "1.5rem" }}>
               <label htmlFor="email" style={{
                 display: "block",

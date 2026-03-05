@@ -93,6 +93,8 @@ export default function StatsTimeSeriesChart({
     regional: { region: string; color: string; value: number }[]
     clientX: number
     clientY: number
+    /** Exakte ViewBox-X für stufenlose Hilfslinie (Desktop, wie Dashboard) */
+    hoverX?: number
   } | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [chartWidth, setChartWidth] = useState(MIN_CHART_WIDTH)
@@ -308,19 +310,29 @@ export default function StatsTimeSeriesChart({
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {tooltip != null && (
-              <>
-                <line
-                  x1={toX(tooltip.index)}
-                  y1={PADDING.top}
-                  x2={toX(tooltip.index)}
-                  y2={PADDING.top + INNER_H}
-                  stroke="#9CA3AF"
-                  strokeWidth={1}
-                  strokeDasharray="3 3"
-                />
-              </>
-            )}
+            {tooltip != null && (() => {
+              const x = tooltip.hoverX ?? toX(tooltip.index)
+              const fracIdx = Math.max(0, Math.min(n - 1, (x - PADDING.left) / INNER_W * (n - 1)))
+              const i0 = Math.floor(fracIdx)
+              const i1 = Math.min(i0 + 1, n - 1)
+              const t = fracIdx - i0
+              const interpolatedScans = (data[i0]?.scans ?? 0) * (1 - t) + (data[i1]?.scans ?? 0) * t
+              const cy = toY(interpolatedScans)
+              return (
+                <g>
+                  <line
+                    x1={x}
+                    y1={PADDING.top}
+                    x2={x}
+                    y2={PADDING.top + INNER_H}
+                    stroke="#9CA3AF"
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                  />
+                  <circle cx={x} cy={cy} r={4} fill={gesamtColor} stroke="#fff" strokeWidth={1.5} />
+                </g>
+              )
+            })()}
           </g>
         </svg>
       </div>

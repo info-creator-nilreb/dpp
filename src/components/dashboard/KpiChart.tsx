@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback, useId, useEffect } from "react";
+import { useState, useCallback, useId, useEffect, useRef } from "react";
 import type { KpiId } from "./DashboardKpiCard";
 
 const MOBILE_BREAKPOINT = 480;
+const MIN_CHART_WIDTH = 600;
 
 export interface KpiTimeSeries {
   dates: string[];
@@ -58,8 +59,6 @@ function pointsToSmoothPath(
   return parts.join(" ");
 }
 
-const INNER_W = 600 - PADDING.left - PADDING.right;
-
 /** Y-Achsen-Intervalle: 0 und sinnvolle Schritte bis max (z. B. 0, 1, 2 oder 0, 25, 50). */
 function getYTicks(max: number): number[] {
   if (max <= 0) return [0];
@@ -95,10 +94,12 @@ export default function KpiChart({
     date: string;
     current: number;
     previous: number;
-    /** Exakte X-Position in ViewBox-Koordinaten (wie bei Recharts/Statistik) */
+    /** Exakte X-Position in ViewBox-Koordinaten (stufenlose Hilfslinie) */
     hoverX?: number;
   } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [chartWidth, setChartWidth] = useState(MIN_CHART_WIDTH);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const mq = typeof window !== "undefined" ? window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`) : null;
@@ -107,6 +108,24 @@ export default function KpiChart({
     mq?.addEventListener("change", handler);
     return () => mq?.removeEventListener("change", handler);
   }, []);
+
+  useEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (rect?.width != null && rect.width > 0) {
+        setChartWidth(Math.max(Math.round(rect.width), MIN_CHART_WIDTH));
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const w = chartWidth;
+  const innerW = w - PADDING.left - PADDING.right;
+  const h = CHART_HEIGHT;
+  const innerH = h - PADDING.top - PADDING.bottom;
 
   const TOOLTIP_PADDING = 16;
   const TOOLTIP_APPROX_WIDTH = 260;
@@ -149,24 +168,21 @@ export default function KpiChart({
     [dates, current, previous, nPrevious]
   );
 
-  /** Pixel → ViewBox mit preserveAspectRatio xMidYMid meet (Letterboxing beachten) */
+  /** pixelX = x relativ zur linken Kante des Containers. ViewBox mit xMidYMid meet. */
   const pixelToViewBoxX = useCallback((pixelX: number, rect: DOMRect) => {
-    const vbW = 600;
-    const vbH = CHART_HEIGHT;
-    const scale = Math.min(rect.width / vbW, rect.height / vbH);
-    const offsetX = (rect.width - vbW * scale) / 2;
+    const scale = Math.min(rect.width / w, rect.height / CHART_HEIGHT);
+    const offsetX = (rect.width - w * scale) / 2;
     return (pixelX - offsetX) / scale;
-  }, []);
+  }, [w]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
       if (nCurrent === 0 || dates.length === 0) return;
       const rect = e.currentTarget.getBoundingClientRect();
       if (rect.width <= 0) return;
-      const vbW = 600;
       const pixelX = e.clientX - rect.left;
-      const hoverXViewBox = Math.max(PADDING.left, Math.min(vbW - PADDING.right, pixelToViewBoxX(pixelX, rect)));
-      const percent = Math.max(0, Math.min(1, (hoverXViewBox - PADDING.left) / INNER_W));
+      const hoverXViewBox = Math.max(PADDING.left, Math.min(w - PADDING.right, pixelToViewBoxX(pixelX, rect)));
+      const percent = Math.max(0, Math.min(1, (hoverXViewBox - PADDING.left) / innerW));
       const fracIdx = percent * (nCurrent - 1);
       const idx = Math.min(
         Math.max(0, Math.floor(fracIdx)),
@@ -174,7 +190,7 @@ export default function KpiChart({
       );
       updateTooltipFromPosition(e.clientX, e.clientY, idx, hoverXViewBox);
     },
-    [dates, nCurrent, updateTooltipFromPosition, pixelToViewBoxX]
+    [dates, nCurrent, updateTooltipFromPosition, pixelToViewBoxX, w, innerW]
   );
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
@@ -185,15 +201,14 @@ export default function KpiChart({
       const touch = e.touches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       if (rect.width <= 0) return;
-      const vbW = 600;
       const pixelX = touch.clientX - rect.left;
-      const hoverXViewBox = Math.max(PADDING.left, Math.min(vbW - PADDING.right, pixelToViewBoxX(pixelX, rect)));
-      const percent = Math.max(0, Math.min(1, (hoverXViewBox - PADDING.left) / INNER_W));
+      const hoverXViewBox = Math.max(PADDING.left, Math.min(w - PADDING.right, pixelToViewBoxX(pixelX, rect)));
+      const percent = Math.max(0, Math.min(1, (hoverXViewBox - PADDING.left) / innerW));
       const fracIdx = percent * (nCurrent - 1);
       const idx = Math.min(Math.max(0, Math.floor(fracIdx)), nCurrent - 1);
       updateTooltipFromPosition(touch.clientX, touch.clientY, idx, hoverXViewBox);
     },
-    [dates, nCurrent, updateTooltipFromPosition, pixelToViewBoxX]
+    [dates, nCurrent, updateTooltipFromPosition, pixelToViewBoxX, w, innerW]
   );
 
   const handleTouchEnd = useCallback(() => setTooltip(null), []);
@@ -236,10 +251,6 @@ export default function KpiChart({
     ...[...current, ...previous].filter((x) => Number.isFinite(x)),
     1
   );
-  const w = 600;
-  const h = CHART_HEIGHT;
-  const innerW = w - PADDING.left - PADDING.right;
-  const innerH = h - PADDING.top - PADDING.bottom;
 
   const toXCurrent = (i: number) =>
     PADDING.left + (nCurrent > 1 ? (i / (nCurrent - 1)) * innerW : 0);
@@ -284,10 +295,11 @@ export default function KpiChart({
       >
         {label}
       </div>
-      <svg
-        width="100%"
-        height={CHART_HEIGHT}
-        viewBox={`0 0 ${w} ${h}`}
+      <div ref={chartRef} style={{ width: "100%", minWidth: 0 }}>
+        <svg
+          width="100%"
+          height={CHART_HEIGHT}
+          viewBox={`0 0 ${w} ${h}`}
         preserveAspectRatio="xMidYMid meet"
         style={{ overflow: "visible" }}
         onMouseMove={handleMouseMove}
@@ -389,6 +401,7 @@ export default function KpiChart({
           })()}
         </g>
       </svg>
+      </div>
       {tooltip && (() => {
         const pct =
           tooltip.previous === 0
