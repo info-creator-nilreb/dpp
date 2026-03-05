@@ -25,8 +25,7 @@ interface StatsTimeSeriesChartProps {
 /** Exakt gleiche Konstanten und Kurvenlogik wie im Dashboard (KpiChart). */
 const CHART_HEIGHT = 280
 const PADDING = { top: 16, right: 16, bottom: 44, left: 36 }
-const W = 600
-const INNER_W = W - PADDING.left - PADDING.right
+const MIN_CHART_WIDTH = 600
 const INNER_H = CHART_HEIGHT - PADDING.top - PADDING.bottom
 
 function formatDate(s: string): string {
@@ -96,6 +95,7 @@ export default function StatsTimeSeriesChart({
     clientY: number
   } | null>(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [chartWidth, setChartWidth] = useState(MIN_CHART_WIDTH)
   const chartRef = useRef<HTMLDivElement>(null)
   const clipId = useId().replace(/:/g, "")
 
@@ -106,6 +106,22 @@ export default function StatsTimeSeriesChart({
     mq.addEventListener("change", handler)
     return () => mq.removeEventListener("change", handler)
   }, [])
+
+  useEffect(() => {
+    const el = chartRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect
+      if (rect?.width != null && rect.width > 0) {
+        setChartWidth(Math.max(Math.round(rect.width), MIN_CHART_WIDTH))
+      }
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const W = chartWidth
+  const INNER_W = W - PADDING.left - PADDING.right
 
   const n = data.length
   const scansValues = useMemo(() => data.map((d) => d.scans), [data])
@@ -123,7 +139,7 @@ export default function StatsTimeSeriesChart({
 
   const toX = useCallback(
     (i: number) => PADDING.left + (n > 1 ? (i / (n - 1)) * INNER_W : 0),
-    [n]
+    [n, INNER_W]
   )
   const toY = useCallback((v: number) => PADDING.top + INNER_H - (v / max) * INNER_H, [max])
 
@@ -150,7 +166,7 @@ export default function StatsTimeSeriesChart({
     const scale = Math.min(rect.width / W, rect.height / CHART_HEIGHT)
     const offsetX = (rect.width - W * scale) / 2
     return (pixelX - rect.left - offsetX) / scale
-  }, [])
+  }, [W])
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
@@ -175,7 +191,7 @@ export default function StatsTimeSeriesChart({
         clientY: e.clientY,
       })
     },
-    [data, n, regionalSeries, pixelToViewBoxX]
+    [data, n, regionalSeries, pixelToViewBoxX, W, INNER_W]
   )
 
   const handleMouseLeave = useCallback(() => setTooltip(null), [])
