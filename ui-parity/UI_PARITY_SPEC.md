@@ -11,7 +11,7 @@
 | UI-ID | Route | Kurzbeschreibung | CAP-IDs | FLOW-IDs | API-IDs (grob) |
 |-------|-------|------------------|---------|----------|-----------------|
 | UI-001 | /login | Login-Formular, 2FA-Feld | CAP-001 | FLOW-001 | API-001, API-007, API-012 |
-| UI-002 | /signup | Registrierung Phase 1 | CAP-002 | FLOW-002 | API-003 |
+| UI-002 | /signup, /signup?invitation=…, /signup/accept-invitation?token=… | Registrierung Phase 1 (inkl. Einladung: E-Mail vorausgefüllt) | CAP-002 | FLOW-002, FLOW-006 | API-003, API-004 |
 | UI-003 | /verify-email | E-Mail-Verifizierung (Token) | CAP-003 | FLOW-003 | API-005, API-006 |
 | UI-004 | /forgot-password | Passwort vergessen | CAP-004 | — | API-008 |
 | UI-005 | /reset-password | Passwort zurücksetzen (Token) | CAP-004 | — | API-009 |

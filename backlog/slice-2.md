@@ -71,7 +71,7 @@ Implementierung von Organisationsverwaltung, Einladungen und Join Requests. Alle
 - [ ] GET access: Zugriffsrechte
 - [ ] GET users: Benutzer der Organisation mit Rollen (über Membership)
 - [ ] DELETE users/[userId]: User aus Organisation entfernen (Soft-Remove)
-- [ ] GET/POST/DELETE invitations: Einladungen auflisten, erstellen, löschen
+- [ ] GET/POST/DELETE invitations: Einladungen auflisten, erstellen, löschen (POST: E-Mail darf nicht bereits registriert sein → 400 mit Hinweis)
 - [ ] GET/PUT billing, company-details, general: Org-Einstellungen
 - [ ] POST update-name: Organisationsname aktualisieren
 
@@ -100,6 +100,7 @@ Implementierung von Organisationsverwaltung, Einladungen und Join Requests. Alle
 | TC-U2-5 | DELETE users/[userId] | User entfernt, Notification | User gehört nicht zu Org → 400 | Sich selbst entfernen → 400 |
 | TC-U2-6 | POST invitations (bereits Mitglied) | 400 | — | — |
 | TC-U2-7 | POST join-requests (bereits Mitglied) | 400 | — | — |
+| TC-U2-8 | POST invitations (E-Mail bereits registriert) | 400, Hinweis „Konto registriert… Benutzer verwalten“ | — | — |
 
 ### Definition of Done
 

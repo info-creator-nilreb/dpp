@@ -33,20 +33,42 @@ interface EmailTemplateOptions {
  * Generiert ein konsistentes E-Mail-Template für alle Transaktions-E-Mails
  * Entspricht den B2B SaaS Design-Prinzipien: clean, minimal, produktorientiert
  */
-// Logo-SVG als Data-URI für E-Mail-Clients (viele blockieren inline-SVG; img mit Data-URI wird oft angezeigt)
+// Logo-SVG für E-Mails (als CID-Anhang für Gmail/Outlook, sonst Data-URI)
 const LOGO_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#24c598" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-const LOGO_IMG_SRC =
+const LOGO_IMG_SRC_DATA =
   "data:image/svg+xml;base64," + Buffer.from(LOGO_SVG).toString("base64")
 
-function generateEmailTemplate(options: EmailTemplateOptions): string {
+/** Inline-Logo-Anhang für E-Mails (cid:logo) – Gmail/Outlook zeigen das Icon so zuverlässig an */
+export function getEmailLogoAttachment(): {
+  filename: string
+  content: Buffer
+  cid: string
+  contentType?: string
+} {
+  return {
+    filename: "logo.svg",
+    content: Buffer.from(LOGO_SVG, "utf8"),
+    cid: "logo",
+    contentType: "image/svg+xml",
+  }
+}
+
+interface EmailTemplateOptionsWithCid {
+  logoCid?: string
+}
+
+function generateEmailTemplate(
+  options: EmailTemplateOptions & EmailTemplateOptionsWithCid
+): string {
   const appName = options.appName || process.env.APP_NAME || "Easy Pass"
   const baseUrl = options.baseUrl || getBaseUrl()
-  
-  // Logo-Einheit: Icon (img für Client-Kompatibilität) + „Easy Pass“ – in allen Mails einheitlich
+  const logoSrc = options.logoCid ? `cid:${options.logoCid}` : LOGO_IMG_SRC_DATA
+
+  // Logo-Einheit: Icon (cid für Gmail/Outlook, sonst Data-URI) + „Easy Pass“ – in allen Mails einheitlich
   const logoUnitHtml = `
     <div class="logo-unit" style="display: inline-flex; align-items: center; gap: 8px;">
-      <img src="${LOGO_IMG_SRC}" width="32" height="32" alt="" style="display: block; border: 0; flex-shrink: 0;" />
+      <img src="${logoSrc}" width="32" height="32" alt="" style="display: block; border: 0; flex-shrink: 0;" />
       <span class="logo-text" style="font-size: 1.25rem; font-weight: 700; color: #0A0A0A; white-space: nowrap;">${appName}</span>
     </div>
   `
@@ -313,7 +335,8 @@ export async function sendVerificationEmail(
     ctaUrl: verificationUrl,
     infoBox: "Wenn Sie sich nicht bei " + appName + " registriert haben, können Sie diese E-Mail ignorieren.",
     appName,
-    baseUrl
+    baseUrl,
+    logoCid: "logo",
   })
   
   const textContent = `E-Mail-Adresse verifizieren
@@ -339,6 +362,7 @@ Wenn Sie sich nicht bei ${appName} registriert haben, können Sie diese E-Mail i
       subject: `E-Mail-Adresse verifizieren – ${appName}`,
       text: textContent,
       html: htmlContent,
+      attachments: [getEmailLogoAttachment()],
     }
     
     const info = await transport.sendMail(mailOptions)
@@ -391,6 +415,7 @@ export async function sendPasswordResetEmail(
     infoBox: "Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorieren. Ihr Passwort bleibt unverändert.",
     appName,
     baseUrl,
+    logoCid: "logo",
   })
 
   const textContent = `Passwort zurücksetzen
@@ -416,6 +441,7 @@ Wenn Sie kein neues Passwort angefordert haben, können Sie diese E-Mail ignorie
       subject: `Passwort zurücksetzen – ${appName}`,
       text: textContent,
       html: htmlContent,
+      attachments: [getEmailLogoAttachment()],
     }
 
     const info = await transport.sendMail(mailOptions)
@@ -470,6 +496,7 @@ export async function send2FACodeEmail(
     infoBox: "Wenn Sie diesen Code nicht angefordert haben, ignorieren Sie diese E-Mail und prüfen Sie Ihr Konto.",
     appName,
     baseUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    logoCid: "logo",
   })
 
   const textContent = `Ihr 2FA-Code
@@ -490,6 +517,7 @@ Wenn Sie diesen Code nicht angefordert haben, ignorieren Sie diese E-Mail.`
       subject: `Ihr 2FA-Code – ${appName}`,
       text: textContent,
       html: htmlContent,
+      attachments: [getEmailLogoAttachment()],
     })
     if (process.env.SMTP_HOST) {
       console.log(`2FA-Code-E-Mail gesendet an: ${email}`)
@@ -538,6 +566,7 @@ export async function sendInvitationEmail(
     infoBox: "Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.",
     appName,
     baseUrl,
+    logoCid: "logo",
   })
   
   const textContent = `Einladung zu ${organizationName}
@@ -563,6 +592,7 @@ Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorier
       subject: `Einladung zu ${organizationName} – ${appName}`,
       text: textContent,
       html: htmlContent,
+      attachments: [getEmailLogoAttachment()],
     }
     
     const info = await transport.sendMail(mailOptions)
@@ -615,7 +645,8 @@ export async function sendSupplierDataRequestEmail(
     ctaUrl: data.contributeUrl,
     infoBox: "Wenn Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.",
     appName,
-    baseUrl
+    baseUrl,
+    logoCid: "logo",
   })
   
   const textContent = `Anfrage für Produktdaten
@@ -641,6 +672,7 @@ Wenn Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren
       subject: `Anfrage für Produktdaten – ${appName}`,
       text: textContent,
       html: htmlContent,
+      attachments: [getEmailLogoAttachment()],
     }
     
     const info = await transport.sendMail(mailOptions)
@@ -689,6 +721,7 @@ export async function sendInvoiceResendEmail(
     infoBox: "Die Rechnung finden Sie im Anhang dieser E-Mail (PDF).",
     appName,
     baseUrl: getBaseUrl(),
+    logoCid: "logo",
   })
 
   const textContent = `Ihre Rechnung ${invoiceNumber}
@@ -707,6 +740,7 @@ Ihr ${appName}-Team`
       text: textContent,
       html: htmlContent,
       attachments: [
+        getEmailLogoAttachment(),
         { filename: fileName, content: pdfBuffer, contentType: "application/pdf" },
       ],
     })

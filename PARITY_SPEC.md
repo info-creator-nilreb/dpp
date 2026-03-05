@@ -421,7 +421,7 @@ Prisma-Modelle aus `prisma/schema.prisma`:
 | FLOW-004 | Passwort vergessen | E-Mail gesendet → Reset-Link | E-Mail unbekannt → Kein Fehler (Security) | Rate Limit → 429 |
 | FLOW-005 | Passwort zurücksetzen | Token + neues Passwort → Erfolg | Token abgelaufen → Fehlerseite | Token ungültig → Fehlerseite |
 | FLOW-006 | Einladung annehmen | Token gültig → Membership, Redirect | Token abgelaufen → Fehlerseite | Bereits akzeptiert → Hinweis |
-| FLOW-007 | Organisation: User einladen | Einladung erstellen + E-Mail | Bereits Mitglied → Fehler | Limit erreicht → Fehler |
+| FLOW-007 | Organisation: User einladen | Einladung erstellen + E-Mail | Bereits Mitglied → Fehler | E-Mail bereits registriert → 400, Hinweis (Anmeldung + Benutzer verwalten) |
 | FLOW-008 | DPP erstellen | Template wählen → DPP + Content | Keine Org → Fehler | Template nicht gefunden → 404 |
 | FLOW-009 | DPP bearbeiten | Content/Blocks speichern → Update | Keine Edit-Rechte → 403 | DPP nicht gefunden → 404 |
 | FLOW-010 | Medien hochladen | Datei → DppMedia, Storage-URL | Dateityp nicht erlaubt → 400 | Größe überschritten → 400 |
