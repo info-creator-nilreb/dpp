@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import bcrypt from "bcryptjs"
-import { PHASE1_ROLES, ROLE_LABELS } from "@/lib/phase1/roles"
+import { type Phase1Role, PHASE1_ROLES, ROLE_LABELS } from "@/lib/phase1/roles"
 
 interface Organization {
   id: string
@@ -20,7 +20,13 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    firstName: string
+    lastName: string
+    email: string
+    organizationId: string
+    role: Phase1Role
+  }>({
     firstName: "",
     lastName: "",
     email: "",
@@ -230,7 +236,7 @@ export default function CreateUserContent({ organizations }: CreateUserContentPr
             </label>
             <select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value as Phase1Role })}
               required
               style={{
                 width: "100%",
